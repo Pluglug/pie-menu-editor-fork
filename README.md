@@ -1,7 +1,7 @@
 # Pie Menu Editor Fork
 
 ## Overview
-This repository is a community-driven maintenance project for the Blender addon "Pie Menu Editor (PME)." PME is a powerful tool for creating custom pie menus in Blender, and it remains one of the most versatile addons in its category.
+This repository is a community-driven maintenance project for the Blender addon "Pie Menu Editor (PME)." PME is a powerful tool for creating custom pie menus in Blender, making it one of the most versatile addons in its category.
 
 PME is currently available for purchase on both the [Blender Market](https://blendermarket.com/products/pie-menu-editor) and [Gumroad](https://roaoao.gumroad.com/l/pie_menu_editor).
 
@@ -10,25 +10,30 @@ This repository is created to support existing PME users by maintaining compatib
 
 ---
 
-## Repository Goals
-- **Maintain compatibility with new Blender versions**  
-  Ensure PME continues to function seamlessly with the latest updates to Blender.
-- **Fix reported bugs and improve stability**  
-  Address community-reported issues to provide a more reliable experience.
-- **Implement highly requested features**  
-  Add new functionalities that enhance PME based on user feedback.
+## Acknowledgment
+This project is a fork of the original Pie Menu Editor created by [roaoao].  
+We deeply respect roaoao's contributions and acknowledge their expertise in creating such a versatile tool.  
+The original copyrights remain with roaoao, and this repository is maintained in accordance with the terms of the GPL license.
 
+---
+
+## Repository Goals
+- **Maintain Blender Version Compatibility**  
+  Ensure PME continues to function seamlessly with the latest Blender updates.
+- **Enhance Stability**  
+  Address community-reported issues to provide a more reliable experience.
+- **Implement Community Features**  
+  Add new functionalities based on user feedback while maintaining PME's core design.
 
 ---
 
 ## Project Guidelines
-- **Collaborative Maintenance**:  
-  Foster a collaborative environment for PME users and contributors to share ideas and improvements.
-- **Respect for Original Licensing**:  
-  Require all users to have a legitimate license purchased from roaoao to use PME.
-- **Enhancements in Line with Original Intentions**:  
-  Make improvements while preserving the original design philosophy and functionality of PME.
-
+- **Collaborative Development**:  
+  Foster an open environment for PME users and contributors to share improvements.
+- **License Compliance**:  
+  Users must have a legitimate license purchased from roaoao to use PME.
+- **Design Philosophy**:  
+  Maintain PME's original design principles while implementing improvements.
 
 ---
 
@@ -41,22 +46,20 @@ This repository is created to support existing PME users by maintaining compatib
    Share ideas and collaborate with other participants in the [Discussions](../../discussions) section.
 
 **Trusted Contributors**  
-Active and trusted contributors may be invited to join the repository as collaborators, with additional permissions to help manage the project.
+Active contributors may be invited to join as collaborators with expanded project management permissions.
 
 ---
 
 ## License
-
-This project is licensed under the terms of the [GNU General Public License v3.0](./LICENSE).
-
-All contributors and users are required to adhere to the terms of the license. The original rights to Pie Menu Editor (PME) are retained by roaoao, the original developer, as specified in the license.
+This project is licensed under the [GNU General Public License v3.0](./LICENSE).  
+All original rights to Pie Menu Editor (PME) are retained by roaoao, the original developer.
 
 ---
 
 ## Disclaimer
 This repository and its maintainers are not affiliated with or endorsed by roaoao, the original creator of Pie Menu Editor.
 
-While the provided modification scripts aim to help the community maintain compatibility and improve usability, we make no guarantees regarding the software's functionality, safety, or legality.
+The provided modification scripts aim to maintain compatibility and improve usability, but we make no guarantees regarding the software's functionality, safety, or compliance with applicable laws.
 
 Any maintenance work conducted through this repository is performed in good faith to support PME's existing user base. The repository maintainers will promptly comply with any requests from the original creator to modify or remove content.
 
