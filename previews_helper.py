@@ -7,8 +7,7 @@ from . import pme
 
 
 class PreviewsHelper:
-
-    def __init__(self, folder="icons"):
+    def __init__(self, folder="resources\\icons"):
         self.path = os.path.join(os.path.dirname(__file__), folder)
         self.preview = None
 
