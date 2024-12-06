@@ -1,17 +1,20 @@
-import bpy
 import os
 import sys
+import tomllib
 import traceback
 
+import bpy
 
-VERSION = None
-BL_VERSION = None
-ADDON_ID = os.path.basename(os.path.dirname(os.path.abspath(__file__)))
+
+with open("blender_manifest.toml", "rb") as f:
+    data = tomllib.load(f)
+    VERSION = data.get('version')
+ADDON_ID = __package__
 ADDON_PATH = os.path.normpath(os.path.dirname(os.path.abspath(__file__)))
 SCRIPT_PATH = os.path.join(ADDON_PATH, "scripts/")
 SAFE_MODE = "--pme-safe-mode" in sys.argv
-ICON_ENUM_ITEMS = bpy.types.UILayout.bl_rna.functions[
-    "prop"].parameters["icon"].enum_items
+ICON_ENUM_ITEMS = \
+    bpy.types.UILayout.bl_rna.functions["prop"].parameters["icon"].enum_items
 
 
 def uprefs():
@@ -24,11 +27,13 @@ def prefs():
 
 
 def temp_prefs():
-    return getattr(getattr(bpy.context, "window_manager", None), "pme", None)
+    wm = getattr(bpy.context, "window_manager", None)
+    pme = getattr(wm, "pme", None)
+    return pme
 
 
 def check_bl_version(version=None):
-    version = version or BL_VERSION
+    version = version or bpy.app.version
     if version >= (2, 80, 0) and bpy.app.version < (2, 80, 0):
         return True
 

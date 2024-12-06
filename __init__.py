@@ -1,23 +1,20 @@
-bl_info = {
-    "name": "Pie Menu Editor",
-    "author": "roaoao",
-    "version": (1, 18, 7),
-    "blender": (2, 80, 0),
-    "warning": "",
-    "tracker_url": "http://blenderartists.org/forum/showthread.php?392910",
-    "wiki_url": (
-        "https://en.blender.org/index.php/User:Raa/Addons/Pie_Menu_Editor"),
-    "category": "User Interface"
-}
+import sys
+import inspect
+import importlib
 
 import bpy
 import _bpy
 from bpy.app.handlers import persistent
-import sys
-import inspect
-from .debug_utils import *
 
-MODULES = (
+from . import property_utils
+from . import pme
+from . import compatibility_fixes
+from . import addon
+from .debug_utils import *
+from .addon import prefs, temp_prefs
+
+
+module_names = (
     "addon",
     "pme",
     "c_utils",
@@ -56,162 +53,24 @@ MODULES = (
     "ed_property",
     "preferences",
 )
-
-CLASSES = []
-
-
-def get_classes():
-    ret = set()
-    bpy_struct = bpy.types.bpy_struct
-    cprop = bpy.props.CollectionProperty
-    pprop = bpy.props.PointerProperty
-    pdtype = getattr(bpy.props, "_PropertyDeferred", tuple)
-    mems = set()
-    mem_data = []
-    for mod in MODULES:
-        mod = sys.modules["%s.%s" % (__name__, mod)]
-        # mod = sys.modules[mod]
-        for name, mem in inspect.getmembers(mod):
-            if inspect.isclass(mem) and issubclass(mem, bpy_struct) and \
-                    mem not in mems:
-
-                mems.add(mem)
-                classes = []
-
-                if hasattr(mem, "__annotations__"):
-                    for pname, pd in mem.__annotations__.items():
-                        if not isinstance(pd, pdtype):
-                            continue
-
-                        pfunc = getattr(pd, "function", None) or pd[0]
-                        pkeywords = pd.keywords if hasattr(pd, "keywords") \
-                            else pd[1]
-                        if pfunc is cprop or pfunc is pprop:
-                            classes.append(pkeywords["type"])
-
-                if not classes:
-                    ret.add(mem)
-                else:
-                    mem_data.append(
-                        dict(
-                            mem=mem,
-                            classes=classes
-                        )
-                    )
-
-    mems.clear()
-
-    ret_post = []
-    if mem_data:
-        mem_data_len = -1
-        while len(mem_data):
-            if len(mem_data) == mem_data_len:
-                for data in mem_data:
-                    ret_post.append(data["mem"])
-                break
-
-            new_mem_data = []
-            for data in mem_data:
-                add = True
-                for cls in data["classes"]:
-                    if cls not in ret and cls not in ret_post:
-                        add = False
-                        break
-
-                if add:
-                    ret_post.append(data["mem"])
-                else:
-                    new_mem_data.append(data)
-
-            mem_data_len = len(mem_data)
-            mem_data.clear()
-            mem_data = new_mem_data
-
-    ret = list(ret)
-    ret.extend(ret_post)
-    return ret
-
-
-def register_module():
-    if hasattr(bpy.utils, "register_module"):
-        bpy.utils.register_module(__name__)
-    else:
-        for cls in get_classes():
-            bpy.utils.register_class(cls)
-
-
-def unregister_module():
-    if hasattr(bpy.utils, "unregister_module"):
-        bpy.utils.unregister_module(__name__)
-    else:
-        for cls in get_classes():
-            bpy.utils.unregister_class(cls)
-
-
 if not bpy.app.background:
-    import importlib
-    for mod in MODULES:
-        if mod in locals():
-            try:
-                importlib.reload(locals()[mod])
-                continue
-            except:
-                pass
-
-        importlib.import_module("pie_menu_editor." + mod)
-
-    from .addon import prefs, temp_prefs
-    from . import property_utils
-    from . import pme
-    from . import compatibility_fixes
-    from . import addon
-
-    addon.VERSION = bl_info["version"]
-    addon.BL_VERSION = bl_info["blender"]
+    modules = []
+    for module_name in module_names:
+        if module_name in locals():
+            modules.append(
+                importlib.reload(locals()[module_name])
+            )
+        else:
+            modules.append(
+                importlib.import_module(f".{module_name}", __package__)
+            )
 
 
-tmp_data = None
+tmp_data       = None
 re_enable_data = None
-tmp_filepath = None
-invalid_prefs = None
-timer = None
-
-
-@persistent
-def load_pre_handler(_):
-    DBG_INIT and logh("Load Pre (%s)" % bpy.data.filepath)
-
-    global tmp_data
-    tmp_data = property_utils.to_dict(prefs())
-
-    global tmp_filepath
-    tmp_filepath = bpy.data.filepath
-    if not tmp_filepath:
-        tmp_filepath = "__unsaved__"
-
-
-@persistent
-def load_post_handler(_):
-    DBG_INIT and logh("Load Post (%s)" % bpy.data.filepath)
-
-    global tmp_data
-    if tmp_data is None:
-        DBG_INIT and logw("Skip")
-        return
-
-    pr = prefs()
-    if not bpy.data.filepath:
-        property_utils.from_dict(pr, tmp_data)
-
-    tmp_data = None
-
-    if pr.missing_kms:
-        bpy.ops.pme.wait_keymaps(
-            dict(window=bpy.context.window_manager.windows[0]),
-            'INVOKE_DEFAULT')
-    else:
-        temp_prefs().init_tags()
-        pr.tree.update()
+tmp_filepath   = None
+invalid_prefs  = None
+timer          = None
 
 
 def on_context():
@@ -249,19 +108,81 @@ def on_context():
         re_enable_data.clear()
         re_enable_data = None
 
-    for mod in MODULES:
-        m = sys.modules["%s.%s" % (__name__, mod)]
-        if hasattr(m, "register"):
-            m.register()
+    for mod in modules:
+        if hasattr(mod, "register"):
+            mod.register()
 
     if pr.missing_kms:
-        DBG_INIT and logi("%d Missing Keymaps" % len(pr.missing_kms))
+        DBG_INIT and logi(f"{len(pr.missing_kms)} missing keymaps")
         bpy.ops.pme.wait_keymaps(
-            dict(window=bpy.context.window_manager.windows[0]),
-            'INVOKE_DEFAULT')
-
+            {'window': bpy.context.window_manager.windows[0]}, 'INVOKE_DEFAULT'
+        )
     else:
         compatibility_fixes.fix()
+
+
+def get_classes():
+    ret = set()
+    bpy_struct = bpy.types.bpy_struct
+    cprop = bpy.props.CollectionProperty
+    pprop = bpy.props.PointerProperty
+    pdtype = getattr(bpy.props, "_PropertyDeferred", tuple)
+    mems = set()
+    mem_data = []
+    for mod in modules:
+        for _name, mem in inspect.getmembers(mod):
+            if inspect.isclass(mem) \
+            and issubclass(mem, bpy_struct) \
+            and mem not in mems:
+                mems.add(mem)
+                classes = []
+
+                if hasattr(mem, "__annotations__"):
+                    for _pname, pd in mem.__annotations__.items():
+                        if not isinstance(pd, pdtype):
+                            continue
+
+                        pfunc = getattr(pd, "function", None) or pd[0]
+                        pkeywords = pd.keywords if hasattr(pd, "keywords") \
+                            else pd[1]
+                        if pfunc is cprop or pfunc is pprop:
+                            classes.append(pkeywords["type"])
+
+                if not classes:
+                    ret.add(mem)
+                else:
+                    mem_data.append(dict(mem=mem, classes=classes))
+    mems.clear()
+
+    ret_post = []
+    if mem_data:
+        mem_data_len = -1
+        while mem_data:
+            if len(mem_data) == mem_data_len:
+                for data in mem_data:
+                    ret_post.append(data["mem"])
+                break
+
+            new_mem_data = []
+            for data in mem_data:
+                add = True
+                for cls in data["classes"]:
+                    if cls not in ret and cls not in ret_post:
+                        add = False
+                        break
+
+                if add:
+                    ret_post.append(data["mem"])
+                else:
+                    new_mem_data.append(data)
+
+            mem_data_len = len(mem_data)
+            mem_data.clear()
+            mem_data = new_mem_data
+
+    ret = list(ret)
+    ret.extend(ret_post)
+    return ret
 
 
 def init_keymaps():
@@ -286,7 +207,6 @@ def init_keymaps():
 
 def on_timer():
     init_keymaps()
-
     global timer
     pr = prefs()
     if not pr.missing_kms or timer.elapsed_time > 10:
@@ -297,9 +217,46 @@ def on_timer():
 
 
 @persistent
-def load_post_context(scene):
+def load_post_context(_):
     bpy.app.handlers.load_post.remove(load_post_context)
     on_context()
+
+
+@persistent
+def load_pre_handler(_):
+    DBG_INIT and logh(f"Load Pre ({bpy.data.filepath})")
+
+    global tmp_data
+    tmp_data = property_utils.to_dict(prefs())
+
+    global tmp_filepath
+    tmp_filepath = bpy.data.filepath
+    if not tmp_filepath:
+        tmp_filepath = "__unsaved__"
+
+
+@persistent
+def load_post_handler(_):
+    DBG_INIT and logh(f"Load Post ({bpy.data.filepath})")
+
+    global tmp_data
+    if tmp_data is None:
+        DBG_INIT and logw("Skip")
+        return
+
+    pr = prefs()
+    if not bpy.data.filepath:
+        property_utils.from_dict(pr, tmp_data)
+
+    tmp_data = None
+
+    if pr.missing_kms:
+        bpy.ops.pme.wait_keymaps(
+            {'window': bpy.context.window_manager.windows[0]}, 'INVOKE_DEFAULT'
+        )
+    else:
+        temp_prefs().init_tags()
+        pr.tree.update()
 
 
 class PME_OT_wait_context(bpy.types.Operator):
@@ -308,6 +265,8 @@ class PME_OT_wait_context(bpy.types.Operator):
     bl_options = {'INTERNAL'}
 
     instances = []
+    timer     = None
+    cancelled = False
 
     def remove_timer(self):
         if self.timer:
@@ -351,6 +310,8 @@ class PME_OT_wait_keymaps(bpy.types.Operator):
     bl_options = {'INTERNAL'}
 
     instances = []
+    timer     = None
+    cancelled = False
 
     def remove_timer(self):
         if self.timer:
@@ -368,7 +329,7 @@ class PME_OT_wait_keymaps(bpy.types.Operator):
                 if self.cancelled:
                     return {'CANCELLED'}
 
-                DBG_INIT and logi("%d Missing Keymaps" % len(pr.missing_kms))
+                DBG_INIT and logi(f"{len(pr.missing_kms)} Missing Keymaps")
 
                 if pr.missing_kms:
                     print(
@@ -380,9 +341,7 @@ class PME_OT_wait_keymaps(bpy.types.Operator):
 
                 compatibility_fixes.fix()
                 return {'FINISHED'}
-
             return {'PASS_THROUGH'}
-
         return {'PASS_THROUGH'}
 
     def cancel(self, context):
@@ -401,8 +360,25 @@ class PME_OT_wait_keymaps(bpy.types.Operator):
         self.instances.append(self)
         context.window_manager.modal_handler_add(self)
         self.timer = context.window_manager.event_timer_add(
-            0.2, window=context.window)
+            0.2, window=context.window
+        )
         return {'RUNNING_MODAL'}
+
+
+def register_module():
+    if hasattr(bpy.utils, "register_module"):
+        bpy.utils.register_module(__name__)
+    else:
+        for cls in get_classes():
+            bpy.utils.register_class(cls)
+
+
+def unregister_module():
+    if hasattr(bpy.utils, "unregister_module"):
+        bpy.utils.unregister_module(__name__)
+    else:
+        for cls in get_classes():
+            bpy.utils.unregister_class(cls)
 
 
 def register():
@@ -435,7 +411,8 @@ def register():
         from .preferences import InvalidPMEPreferences
         invalid_prefs = type(
             "PMEPreferences",
-            (InvalidPMEPreferences, bpy.types.AddonPreferences), {})
+            (InvalidPMEPreferences, bpy.types.AddonPreferences), {}
+        )
         bpy.utils.register_class(invalid_prefs)
 
 
@@ -464,10 +441,9 @@ def unregister():
     global re_enable_data
     re_enable_data = property_utils.to_dict(prefs())
 
-    for mod in reversed(MODULES):
-        m = sys.modules["%s.%s" % (__name__, mod)]
-        if hasattr(m, "unregister"):
-            m.unregister()
+    for mod in modules:
+        if hasattr(mod, "unregister"):
+            mod.unregister()
 
     if hasattr(bpy.types.WindowManager, "pme"):
         delattr(bpy.types.WindowManager, "pme")

@@ -1,44 +1,35 @@
-import bpy
 import os
+import bpy
 import json
 import datetime
 import re
 from types import MethodType
 from bpy_extras.io_utils import ExportHelper, ImportHelper
 from .addon import (
-    ADDON_ID, ADDON_PATH, SCRIPT_PATH, SAFE_MODE,
-    prefs, uprefs, temp_prefs,
-    print_exc, ic, ic_fb, ic_cb, ic_eye, is_28)
+    ADDON_ID, ADDON_PATH, SCRIPT_PATH,
+    prefs, uprefs, temp_prefs, print_exc, ic, ic_fb, ic_cb, ic_eye, is_28
+)
 from . import constants as CC
 from . import operators as OPS
 from . import extra_operators as EOPS
-from .bl_utils import (
-    bp, uname, bl_context, gen_prop_path, ConfirmBoxHandler, message_box)
+from .bl_utils import uname, gen_prop_path, ConfirmBoxHandler, message_box
 from .collection_utils import BaseCollectionItem, sort_collection
 from .layout_helper import lh, operator, split
 from .debug_utils import *
 from .panel_utils import (
-    hide_panel, unhide_panel, add_panel,
-    hidden_panel, rename_panel_group, remove_panel_group,
-    panel_context_items, bl_panel_types, bl_menu_types, bl_header_types)
-from .macro_utils import add_macro, remove_macro, update_macro
+    hidden_panel, bl_panel_types, bl_menu_types, bl_header_types
+)
 from .modal_utils import encode_modal_data
 from . import compatibility_fixes
 from . import addon
 from . import keymap_helper
 from . import pme
 from . import operator_utils
-from .keymap_helper import (
-    KeymapHelper, MOUSE_BUTTONS,
-    add_mouse_button, remove_mouse_button, to_key_name, to_ui_hotkey)
+from .keymap_helper import KeymapHelper, to_key_name, to_ui_hotkey
 from .previews_helper import ph
 from .overlay import OverlayPrefs
-from .ui import (
-    tag_redraw, draw_addons_maximized, is_userpref_maximized
-)
-from .ui_utils import (
-    get_pme_menu_class, execute_script
-)
+from .ui import tag_redraw, draw_addons_maximized, is_userpref_maximized
+from .ui_utils import get_pme_menu_class, execute_script
 from . import utils as U
 from .property_utils import PropertyData, to_py_value
 from .types import Tag, PMItem, PMIItem, PMLink, EdProperties, UserProperties
@@ -47,8 +38,7 @@ from .ed_base import (
     PME_OT_pmi_cmd_generate, PME_OT_tags_filter, PME_OT_tags,
     PME_OT_pm_add, WM_OT_pmi_icon_tag_toggle
 )
-from .ed_panel_group import (
-    PME_OT_interactive_panels_toggle, draw_pme_panel, poll_pme_panel)
+from .ed_panel_group import PME_OT_interactive_panels_toggle
 from .ed_sticky_key import PME_OT_sticky_key_edit
 from .ed_modal import PME_OT_prop_data_reset
 
@@ -3311,12 +3301,13 @@ class PMEPreferences(bpy.types.AddonPreferences):
     def backup_menus(self, operator=None):
         DBG_INIT and logh("Backup")
         # gen new filename
-        backup_folder_path = os.path.abspath(os.path.join(
-            ADDON_PATH, os.pardir, ADDON_ID + "_data", "backups"))
+        backup_folder_path = os.path.abspath(
+            os.path.join(ADDON_PATH, "backups")
+        )
+        time = datetime.datetime.now().strftime("%Y.%m.%d_%H.%M.%S")
         new_backup_filepath = os.path.join(
-            backup_folder_path,
-            "backup_%s.json" % datetime.datetime.now().strftime(
-                "%Y.%m.%d_%H.%M.%S"))
+            backup_folder_path, f"backup_{time}.json"
+        )
         if os.path.isfile(new_backup_filepath):
             DBG_INIT and logi("Backup exists")
             if operator:

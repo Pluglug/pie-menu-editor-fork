@@ -1,6 +1,8 @@
+import os
+
 import bpy
 import bpy.utils.previews
-import os
+
 from . import pme
 
 
@@ -29,6 +31,8 @@ class PreviewsHelper:
         return self.preview.keys()
 
     def has_icon(self, name):
+        if self.preview is None:
+            return False
         return name in self.preview
 
     def refresh(self):
@@ -39,14 +43,14 @@ class PreviewsHelper:
         for f in os.listdir(self.path):
             if not f.endswith(".png"):
                 continue
-
             self.preview.load(
                 os.path.splitext(f)[0],
                 os.path.join(self.path, f),
-                'IMAGE')
+                'IMAGE'
+            )
 
     def unregister(self):
-        if not self.preview:
+        if self.preview is None:
             return
         bpy.utils.previews.remove(self.preview)
         self.preview = None
