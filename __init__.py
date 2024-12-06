@@ -32,7 +32,6 @@ module_names = (
     "overlay",
     "panel_utils",
     "pme",
-    "preferences",
     "previews_helper",
     "property_utils",
     "screen_utils",
@@ -52,7 +51,10 @@ module_names = (
     "editor.ed_popup",
     "editor.ed_property",
     "editor.ed_stack_key",
-    "editor.ed_sticky_key"
+    "editor.ed_sticky_key",
+
+    # NOTE: Must be last
+    "preferences"
 )
 if not bpy.app.background:
     modules = []
