@@ -43,6 +43,13 @@ This repository is created to support existing PME users by maintaining compatib
 **Trusted Contributors**  
 Active and trusted contributors may be invited to join the repository as collaborators, with additional permissions to help manage the project.
 
+---
+
+## License
+
+This project is licensed under the terms of the [GNU General Public License v3.0](./LICENSE).
+
+All contributors and users are required to adhere to the terms of the license. The original rights to Pie Menu Editor (PME) are retained by roaoao, the original developer, as specified in the license.
 
 ---
 
