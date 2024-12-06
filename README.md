@@ -11,7 +11,7 @@ This repository is created to support existing PME users by maintaining compatib
 ---
 
 ## Acknowledgment
-This project is a fork of the original Pie Menu Editor created by [roaoao].  
+This project is a fork of the original Pie Menu Editor created by [roaoao](https://github.com/roaoao).  
 We deeply respect roaoao's contributions and acknowledge their expertise in creating such a versatile tool.  
 The original copyrights remain with roaoao, and this repository is maintained in accordance with the terms of the GPL license.
 
@@ -51,7 +51,7 @@ Active contributors may be invited to join as collaborators with expanded projec
 ---
 
 ## License
-This project is licensed under the [GNU General Public License v3.0](./LICENSE).  
+This project is licensed under the [GNU General Public License v3.0](./LICENSE.md).  
 All original rights to Pie Menu Editor (PME) are retained by roaoao, the original developer.
 
 ---
