@@ -1,10 +1,10 @@
 import bpy
-from .ed_base import EditorBase
-from .addon import prefs, temp_prefs, SAFE_MODE
-from .layout_helper import lh
-from . import panel_utils as PAU
-from .ui import tag_redraw
-from .operators import *
+from ..editor.ed_base import EditorBase
+from ..addon import prefs, temp_prefs, SAFE_MODE
+from ..layout_helper import lh
+from .. import panel_utils as PAU
+from ..ui import tag_redraw
+from ..operators import *
 
 
 class PME_OT_hpanel_menu(bpy.types.Operator):

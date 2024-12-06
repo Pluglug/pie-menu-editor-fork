@@ -1,8 +1,8 @@
-from .ed_base import EditorBase
-from .constants import ARROW_ICONS
-from . import pme
-from .addon import ic, prefs
-from .layout_helper import lh
+from ..editor.ed_base import EditorBase
+from ..constants import ARROW_ICONS
+from .. import pme
+from ..addon import ic, prefs
+from ..layout_helper import lh
 
 
 pme.props.IntProperty("pm", "pm_radius", -1)

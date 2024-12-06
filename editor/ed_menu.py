@@ -1,14 +1,14 @@
 import bpy
-from .ed_base import (
+from ..editor.ed_base import (
     EditorBase, PME_OT_pmi_copy, PME_OT_pmi_paste, WM_OT_pmi_data_edit,
     PME_OT_pmi_remove, WM_OT_pmi_icon_select, PME_OT_pmi_toggle,
     extend_panel, unextend_panel)
-from .bl_utils import PME_OT_input_box
-from .addon import prefs, ic_eye
-from .layout_helper import lh, Col
-from .ui import tag_redraw, shorten_str
-from .constants import SPACER_SCALE_Y, SEPARATOR_SCALE_Y
-from . import pme
+from ..bl_utils import PME_OT_input_box
+from ..addon import prefs, ic_eye
+from ..layout_helper import lh, Col
+from ..ui import tag_redraw, shorten_str
+from ..constants import SPACER_SCALE_Y, SEPARATOR_SCALE_Y
+from .. import pme
 
 
 class WM_OT_rmi_add(bpy.types.Operator):

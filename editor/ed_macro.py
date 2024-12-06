@@ -1,11 +1,11 @@
 import bpy
-from . import pme
-from .addon import prefs
-from .constants import MAX_STR_LEN
-from .bl_utils import uname
-from .ed_base import EditorBase
-from .operators import PME_OT_sticky_key_base, PME_OT_modal_base
-from . import macro_utils as MAU
+from .. import pme
+from ..addon import prefs
+from ..constants import MAX_STR_LEN
+from ..bl_utils import uname
+from ..editor.ed_base import EditorBase
+from ..operators import PME_OT_sticky_key_base, PME_OT_modal_base
+from .. import macro_utils as MAU
 
 
 class PME_OT_macro_exec_base:

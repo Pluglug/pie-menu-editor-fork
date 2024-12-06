@@ -1,9 +1,9 @@
 import bpy
-from . import pme
-from .ed_base import EditorBase
-from .addon import prefs
-from .ui import tag_redraw
-from .operator_utils import find_statement
+from .. import pme
+from ..editor.ed_base import EditorBase
+from ..addon import prefs
+from ..ui import tag_redraw
+from ..operator_utils import find_statement
 
 
 class PME_OT_sticky_key_edit(bpy.types.Operator):

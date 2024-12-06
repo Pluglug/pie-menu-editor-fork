@@ -1,30 +1,30 @@
 import bpy
-from . import constants as CC
-from . import keymap_helper as KH
-from .addon import prefs, temp_prefs, ic_rb, ic_cb, ic_eye, ic_fb, ic
-from .constants import MAX_STR_LEN, EMODE_ITEMS
-from .debug_utils import *
-from .bl_utils import (
+from .. import constants as CC
+from .. import keymap_helper as KH
+from ..addon import prefs, temp_prefs, ic_rb, ic_cb, ic_eye, ic_fb, ic
+from ..constants import MAX_STR_LEN, EMODE_ITEMS
+from ..debug_utils import *
+from ..bl_utils import (
     find_context, re_operator, re_prop, re_prop_path, bp,
     message_box, uname, ConfirmBoxHandler, PME_OT_message_box
 )
-from .collection_utils import (
+from ..collection_utils import (
     sort_collection, AddItemOperator, MoveItemOperator, RemoveItemOperator,
 )
-from .ui import (
+from ..ui import (
     tag_redraw, shorten_str, gen_prop_name, gen_op_name, find_enum_args,
     utitle
 )
-from . import utils as U
-from . import screen_utils as SU
-from .ui_utils import get_pme_menu_class, toggle_menu, pme_menu_classes
-from .layout_helper import lh, operator, split, draw_pme_layout, L_SEP, L_LABEL
-from .property_utils import to_py_value
-from .types import Tag, PMItem, PMIItem
-from . import keymap_helper
-from . import pme
-from . import operator_utils
-from .operators import (
+from .. import utils as U
+from .. import screen_utils as SU
+from ..ui_utils import get_pme_menu_class, toggle_menu, pme_menu_classes
+from ..layout_helper import lh, operator, split, draw_pme_layout, L_SEP, L_LABEL
+from ..property_utils import to_py_value
+from ..types import Tag, PMItem, PMIItem
+from .. import keymap_helper
+from .. import pme
+from .. import operator_utils
+from ..operators import (
     popup_dialog_pie,
     PME_OT_exec,
     PME_OT_docs,

@@ -1,20 +1,17 @@
 import bpy
-from . import pme
-from .ed_base import (
-    EditorBase, PME_OT_pmi_add, WM_OT_pmi_icon_select, PME_OT_pmi_move,
-    WM_OT_pmi_data_edit
-)
-from .debug_utils import *
-from .addon import prefs, temp_prefs
-from .layout_helper import lh
-from .ui import tag_redraw, shorten_str
-from .bl_utils import uname
-from .extra_operators import PME_OT_popup_property
-from .collection_utils import (
+from .. import pme
+from ..editor.ed_base import EditorBase, PME_OT_pmi_add
+from ..debug_utils import *
+from ..addon import prefs, temp_prefs
+from ..layout_helper import lh
+from ..ui import tag_redraw, shorten_str
+from ..bl_utils import uname
+from ..extra_operators import PME_OT_popup_property
+from ..collection_utils import (
     MoveItemOperator
 )
-from . import operator_utils
-from . import constants as CC
+from .. import operator_utils
+from .. import constants as CC
 
 PROP_GETTERS = dict()
 PROP_SETTERS = dict()

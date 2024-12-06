@@ -1,23 +1,22 @@
 import bpy
-from . import constants as CC
-from .collection_utils import MoveItemOperator
-from .ed_base import EditorBase, PME_OT_pm_edit, PME_OT_pm_add
-from .addon import prefs, uprefs, ic, ic_cb, is_28
-from .layout_helper import lh, operator, draw_pme_layout
-from .ui import utitle, tag_redraw
-from .ui_utils import draw_menu
-from .bl_utils import bl_context
-from .operators import (
+from .. import constants as CC
+from ..collection_utils import MoveItemOperator
+from ..editor.ed_base import EditorBase, PME_OT_pm_edit, PME_OT_pm_add
+from ..addon import prefs, uprefs, ic, ic_cb, is_28
+from ..layout_helper import lh, draw_pme_layout
+from ..ui import utitle, tag_redraw
+from ..ui_utils import draw_menu
+from ..operators import (
     WM_OT_pm_select, WM_OT_pme_user_pie_menu_call, PME_OT_panel_hide,
     PME_OT_pm_search_and_select
 )
-from .extra_operators import PME_OT_clipboard_copy
-from . import panel_utils as PAU
-from .panel_utils import (
+from ..extra_operators import PME_OT_clipboard_copy
+from .. import panel_utils as PAU
+from ..panel_utils import (
     panel, PLayout,
 )
-from . import pme
-from . import c_utils
+from .. import pme
+from .. import c_utils
 
 
 class PME_OT_panel_sub_toggle(bpy.types.Operator):

@@ -1,19 +1,19 @@
 import bpy
 import re
-from .ed_base import (
+from ..editor.ed_base import (
     EditorBase, PME_OT_pmi_copy, PME_OT_pmi_paste, WM_OT_pmi_data_edit,
     WM_OT_pmi_icon_select, WM_OT_pmi_icon_tag_toggle, PME_OT_pmi_toggle,
     extend_panel, unextend_panel)
-from .addon import prefs, ic, ic_cb, ic_eye
-from . import constants as CC
-from .layout_helper import lh, draw_pme_layout, Row
-from .ui import tag_redraw, shorten_str
-from .collection_utils import MoveItemOperator, move_item, remove_item
-from .debug_utils import *
-from .bl_utils import PME_OT_message_box, ConfirmBoxHandler, enum_item_idx
-from .operators import popup_dialog_pie, WM_OT_pme_user_pie_menu_call
-from .keymap_helper import CTRL, SHIFT, ALT, OSKEY, test_mods
-from . import pme
+from ..addon import prefs, ic, ic_cb, ic_eye
+from .. import constants as CC
+from ..layout_helper import lh, draw_pme_layout, Row
+from ..ui import tag_redraw, shorten_str
+from ..collection_utils import MoveItemOperator, move_item, remove_item
+from ..debug_utils import *
+from ..bl_utils import PME_OT_message_box, ConfirmBoxHandler, enum_item_idx
+from ..operators import popup_dialog_pie
+from ..keymap_helper import CTRL, SHIFT, ALT, OSKEY, test_mods
+from .. import pme
 
 
 current_pdi = 0
