@@ -6,7 +6,8 @@ import traceback
 import bpy
 
 
-with open("blender_manifest.toml", "rb") as f:
+manifest_path = os.path.join(os.path.dirname(__file__), "blender_manifest.toml")
+with open(manifest_path, "rb") as f:
     data = tomllib.load(f)
     version = data.get('version')
     if version:
