@@ -8,7 +8,12 @@ import bpy
 
 with open("blender_manifest.toml", "rb") as f:
     data = tomllib.load(f)
-    VERSION = data.get('version')
+    version = data.get('version')
+    if version:
+        parts = []
+        for part in version.split('.'):
+            parts.append(int(part))
+        VERSION = tuple(parts)
 ADDON_ID = __package__
 ADDON_PATH = os.path.normpath(os.path.dirname(os.path.abspath(__file__)))
 SCRIPT_PATH = os.path.join(ADDON_PATH, "scripts/")
