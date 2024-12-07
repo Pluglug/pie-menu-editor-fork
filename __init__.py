@@ -1,3 +1,17 @@
+bl_info = {
+    "name": "Pie Menu Editor",
+    "author": "roaoao",
+    "version": (1, 18, 8),
+    "blender": (4, 2, 0),
+    "warning": "",
+    "tracker_url": "http://blenderartists.org/forum/showthread.php?392910",
+    "wiki_url": (
+        "https://en.blender.org/index.php/User:Raa/Addons/Pie_Menu_Editor"
+    ),
+    "category": "User Interface"
+}
+
+
 import sys
 import inspect
 import importlib
