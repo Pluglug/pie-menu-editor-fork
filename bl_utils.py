@@ -560,7 +560,7 @@ class PME_OT_confirm_box(bpy.types.Operator):
             self.__class__.func = None
         return {'FINISHED'}
 
-    def invoke(self, context, event):
+    def invoke(self, context, _event):
         kwargs = dict()
         if self.width:
             kwargs.update(width=self.width)
@@ -633,7 +633,7 @@ class PME_OT_input_box(bpy.types.Operator):
         PME_OT_input_box.prev_value = self.value
         return {'FINISHED'}
 
-    def invoke(self, context, event):
+    def invoke(self, context, _event):
         if self.prop:
             value = pme.context.eval(self.prop)
             if isinstance(value, str):

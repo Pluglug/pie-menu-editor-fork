@@ -290,7 +290,7 @@ class PME_OT_wait_context(bpy.types.Operator):
             bpy.context.window_manager.event_timer_remove(self.timer)
             self.timer = None
 
-    def modal(self, context, event):
+    def modal(self, _context, event):
         if event.type == 'TIMER':
             self.remove_timer()
             self.instances.remove(self)
@@ -302,17 +302,17 @@ class PME_OT_wait_context(bpy.types.Operator):
 
         return {'PASS_THROUGH'}
 
-    def cancel(self, context):
+    def cancel(self, _context):
         try:
             self.remove_timer()
             self.instances.remove(self)
         except:
             pass
 
-    def execute(self, context):
+    def execute(self, _context):
         return {'FINISHED'}
 
-    def invoke(self, context, event):
+    def invoke(self, context, _event):
         self.cancelled = False
         self.instances.append(self)
         context.window_manager.modal_handler_add(self)
@@ -335,7 +335,7 @@ class PME_OT_wait_keymaps(bpy.types.Operator):
             bpy.context.window_manager.event_timer_remove(self.timer)
             self.timer = None
 
-    def modal(self, context, event):
+    def modal(self, _context, event):
         if event.type == 'TIMER':
             init_keymaps()
 
@@ -361,7 +361,7 @@ class PME_OT_wait_keymaps(bpy.types.Operator):
             return {'PASS_THROUGH'}
         return {'PASS_THROUGH'}
 
-    def cancel(self, context):
+    def cancel(self, _context):
         try:
             self.remove_timer()
             self.instances.remove(self)
@@ -369,10 +369,10 @@ class PME_OT_wait_keymaps(bpy.types.Operator):
             pass
         DBG_INIT and logw("PME_OT_wait_keymaps Cancelled")
 
-    def execute(self, context):
+    def execute(self, _context):
         return {'FINISHED'}
 
-    def invoke(self, context, event):
+    def invoke(self, context, _event):
         self.cancelled = False
         self.instances.append(self)
         context.window_manager.modal_handler_add(self)

@@ -158,12 +158,12 @@ class PME_OT_pm_search_and_select(bpy.types.Operator):
         default=set(),
         options={'SKIP_SAVE', 'ENUM_FLAG'})
 
-    def execute(self, context):
+    def execute(self, _context):
         bpy.ops.wm.pm_select(pm_name=self.item)
         PME_OT_pm_search_and_select.enum_items = None
         return {'FINISHED'}
 
-    def invoke(self, context, event):
+    def invoke(self, context, _event):
         PME_OT_pm_search_and_select.enum_items = None
         context.window_manager.invoke_search_popup(self)
         return {'FINISHED'}
@@ -183,7 +183,7 @@ class WM_OT_pme_user_command_exec(bpy.types.Operator):
         name="Python Code", description="Python Code",
         maxlen=MAX_STR_LEN, options={'SKIP_SAVE', 'HIDDEN'})
 
-    def execute(self, context):
+    def execute(self, _context):
         pme.context.exec_operator = self
         exec_globals = pme.context.gen_globals()
         exec_globals.update(menu=self.menu, slot=self.slot)
@@ -208,7 +208,7 @@ class PME_OT_exec(bpy.types.Operator):
         name="Python Code", description="Python Code",
         maxlen=MAX_STR_LEN, options={'SKIP_SAVE', 'HIDDEN'})
 
-    def execute(self, context):
+    def execute(self, _context):
         exec_globals = pme.context.gen_globals()
         pme.context.exec_operator = self
         pme.context.exe(self.cmd, exec_globals)
@@ -293,7 +293,7 @@ class PME_OT_panel_hide(bpy.types.Operator):
         tag_redraw()
         return {'FINISHED'}
 
-    def invoke(self, context, event):
+    def invoke(self, context, _event):
         if not self.panel:
             PME_OT_panel_hide.enum_items = None
             context.window_manager.invoke_search_popup(self)
@@ -457,7 +457,7 @@ class PME_OT_panel_hide_by(bpy.types.Operator):
         tag_redraw()
         return {'FINISHED'}
 
-    def invoke(self, context, event):
+    def invoke(self, context, _event):
         PME_OT_panel_hide_by.space_items = None
         PME_OT_panel_hide_by.region_items = None
         PME_OT_panel_hide_by.ctx_items = None
@@ -503,7 +503,7 @@ class PME_OT_sticky_key_base:
         self.restart_flag = True
         self.add_timer()
 
-    def modal(self, context, event):
+    def modal(self, _context, event):
         if event.type == 'TIMER' and self.timer:
             if self.result:
                 self.remove_timer()
@@ -516,8 +516,7 @@ class PME_OT_sticky_key_base:
 
                 PME_OT_sticky_key.idx -= 1
                 return {'FINISHED'}
-
-            elif self.restart_flag:
+            if self.restart_flag:
                 self.remove_timer()
                 bpy.ops.pme.sticky_key('INVOKE_DEFAULT')
                 self.restart_flag = False
@@ -527,7 +526,6 @@ class PME_OT_sticky_key_base:
 
                 PME_OT_sticky_key.idx -= 1
                 return {'FINISHED'}
-
             return {'PASS_THROUGH'}
 
         if event.type == 'WINDOW_DEACTIVATE':
@@ -682,7 +680,7 @@ class PME_OT_timeout(bpy.types.Operator):
             self.delay, window=context.window)
         return {'RUNNING_MODAL'}
 
-    def invoke(self, context, event):
+    def invoke(self, context, _event):
         # if self.area != 'CURRENT':
         #     a = SU.find_area(self.area)
         #     if a:
@@ -755,10 +753,10 @@ class PME_OT_restore_mouse_pos(bpy.types.Operator):
 
         return {'PASS_THROUGH'}
 
-    def execute(self, context):
+    def execute(self, _context):
         return {'FINISHED'}
 
-    def invoke(self, context, event):
+    def invoke(self, context, _event):
         inst = self.__class__.inst
         if inst:
             inst.stop()
@@ -1334,10 +1332,10 @@ class PME_OT_restore_pie_radius(bpy.types.Operator):
 
         return {'PASS_THROUGH'}
 
-    def execute(self, context):
+    def execute(self, _context):
         return {'FINISHED'}
 
-    def invoke(self, context, event):
+    def invoke(self, context, _event):
         self.timer = context.window_manager.event_timer_add(
             CC.BL_TIMER_STEP, window=context.window)
         context.window_manager.modal_handler_add(self)
@@ -1686,7 +1684,7 @@ class WM_OT_pme_user_pie_menu_call(bpy.types.Operator):
 
         lh.restore()
 
-    def _draw_popup_dialog(self, menu, context):
+    def _draw_popup_dialog(self, menu, _context):
         pm = prefs().pie_menus[self.pie_menu_name]
         prop = pme.props.parse(pm.data)
 
@@ -1703,10 +1701,10 @@ class WM_OT_pme_user_pie_menu_call(bpy.types.Operator):
 
         draw_pme_layout(pm, column, WM_OT_pme_user_pie_menu_call._draw_item)
 
-    def cancel(self, context):
+    def cancel(self, _context):
         pass
 
-    def check(self, context):
+    def check(self, _context):
         return True
 
     def modal(self, context, event):
@@ -1873,7 +1871,7 @@ class WM_OT_pme_user_pie_menu_call(bpy.types.Operator):
     def stop(self):
         self.cancelled = True
 
-    def execute(self, context):
+    def execute(self, _context):
         return {'CANCELLED'}
 
     def execute_menu(self, context, event):
@@ -2252,7 +2250,7 @@ class WM_OT_pmi_submenu_select(bpy.types.Operator):
 
         return {'FINISHED'}
 
-    def invoke(self, context, event):
+    def invoke(self, context, _event):
         context.window_manager.invoke_search_popup(self)
         return {'FINISHED'}
 
@@ -2304,7 +2302,7 @@ class PME_OT_addonpref_search(bpy.types.Operator):
         tag_redraw()
         return {'FINISHED'}
 
-    def invoke(self, context, event):
+    def invoke(self, context, _event):
         self.__class__.items = None
         context.window_manager.invoke_search_popup(self)
         return {'FINISHED'}
@@ -2525,7 +2523,7 @@ class PME_OT_pmi_pm_search(bpy.types.Operator):
         tag_redraw()
         return {'FINISHED'}
 
-    def invoke(self, context, event):
+    def invoke(self, context, _event):
         if PME_OT_pmi_pm_search.items:
             PME_OT_pmi_pm_search.items.clear()
         context.window_manager.invoke_search_popup(self)
@@ -2591,7 +2589,7 @@ class PME_OT_pmi_operator_search(bpy.types.Operator):
         tag_redraw()
         return {'FINISHED'}
 
-    def invoke(self, context, event):
+    def invoke(self, context, _event):
         context.window_manager.invoke_search_popup(self)
         return {'FINISHED'}
 
@@ -2659,7 +2657,7 @@ class PME_OT_pmi_panel_search(bpy.types.Operator):
 
         return {'CANCELLED'}
 
-    def invoke(self, context, event):
+    def invoke(self, context, _event):
         PME_OT_pmi_panel_search.items = None
         context.window_manager.invoke_search_popup(self)
         return {'FINISHED'}
@@ -2698,7 +2696,7 @@ class PME_OT_pmi_area_search(bpy.types.Operator):
 
         return {'FINISHED'}
 
-    def invoke(self, context, event):
+    def invoke(self, context, _event):
         context.window_manager.popup_menu(
             self.draw_pmi_area_search, title="Area")
         return {'FINISHED'}
@@ -2940,7 +2938,7 @@ class SearchOperator:
     value: bpy.props.EnumProperty(
         name="Value", items=get_enum_items)
 
-    def invoke(self, context, event):
+    def invoke(self, context, _event):
         cls = getattr(bpy.types, self.__class__.__name__)
         if not hasattr(cls, "enum_items"):
             cls.enum_items = None
@@ -3082,7 +3080,7 @@ class PME_OT_script_open(bpy.types.Operator):
 
         return {'FINISHED'}
 
-    def invoke(self, context, event):
+    def invoke(self, context, _event):
         if not self.filepath:
             self.filepath = prefs().scripts_filepath
         context.window_manager.fileselect_add(self)

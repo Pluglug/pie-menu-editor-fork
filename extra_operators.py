@@ -21,10 +21,10 @@ class PME_OT_dummy(bpy.types.Operator):
     bl_label = ""
     bl_options = {'INTERNAL', 'REGISTER', 'UNDO'}
 
-    def execute(self, context):
+    def execute(self, _context):
         return {'FINISHED'}
 
-    def invoke(self, context, event):
+    def invoke(self, _context, _event):
         return {'FINISHED'}
 
 
@@ -49,7 +49,7 @@ class PME_OT_modal_dummy(bpy.types.Operator):
     def execute(self, context):
         return {'FINISHED'}
 
-    def invoke(self, context, event):
+    def invoke(self, context, _event):
         area_header_text_set(self.message)
         context.window_manager.modal_handler_add(self)
         return {'RUNNING_MODAL'}
@@ -65,7 +65,7 @@ class PME_OT_none(bpy.types.Operator):
     def execute(self, context):
         return {'PASS_THROUGH' if self.pass_through else 'CANCELLED'}
 
-    def invoke(self, context, event):
+    def invoke(self, context, _event):
         return {'PASS_THROUGH' if self.pass_through else 'CANCELLED'}
 
 
@@ -371,7 +371,7 @@ class PME_OT_select_popup_panel(bpy.types.Operator):
         bpy.ops.pme.popup_panel('INVOKE_DEFAULT', panel=self.item)
         return {'FINISHED'}
 
-    def invoke(self, context, event):
+    def invoke(self, context, _event):
         PME_OT_select_popup_panel.enum_items = None
         context.window_manager.invoke_search_popup(self)
         return {'FINISHED'}
@@ -430,7 +430,7 @@ class PME_OT_window_auto_close(bpy.types.Operator):
 
         return {'PASS_THROUGH'}
 
-    def invoke(self, context, event):
+    def invoke(self, context, _event):
         return self.execute(context)
 
 
@@ -791,7 +791,7 @@ class PME_OT_popup_area(bpy.types.Operator):
         else:
             not visible and bpy.ops.screen.header(d)
 
-    def execute(self, context):
+    def execute(self, _context):
         return {'FINISHED'}
 
     def invoke(self, context, event):

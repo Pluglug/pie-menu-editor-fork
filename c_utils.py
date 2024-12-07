@@ -539,7 +539,7 @@ class HeadModalHandler:
         context.window_manager.modal_handler_add(self)
         return {'RUNNING_MODAL'}
 
-    def invoke(self, context, event):
+    def invoke(self, context, _event):
         return self.execute(context)
 
 

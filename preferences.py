@@ -47,7 +47,7 @@ import_filepath = os.path.join(ADDON_PATH, "examples", "examples.json")
 export_filepath = os.path.join(ADDON_PATH, "examples", "my_pie_menus.json")
 
 
-def update_pmi_data(self, context, reset_prop_data=True):
+def update_pmi_data(_self, context, reset_prop_data=True):
     pr = prefs()
     pm = pr.selected_pm
     pmi_data = pr.pmi_data
@@ -149,25 +149,16 @@ class WM_OT_pm_import(bpy.types.Operator, ImportHelper):
         options={'HIDDEN', 'SKIP_SAVE'})
     show_password: bpy.props.BoolProperty(options={'HIDDEN'})
 
-    def _draw(self, menu, context):
+    def _draw(self, menu, _context):
         lh.lt(menu.layout, operator_context='INVOKE_DEFAULT')
+        lh.operator(WM_OT_pm_import.bl_idname, "Rename if exists",
+                    filepath=import_filepath, mode='RENAME')
+        lh.operator(WM_OT_pm_import.bl_idname, "Skip if exists",
+                    filepath=import_filepath, mode='SKIP')
+        lh.operator(WM_OT_pm_import.bl_idname, "Replace if exists",
+                    filepath=import_filepath, mode='REPLACE')
 
-        lh.operator(
-            WM_OT_pm_import.bl_idname, "Rename if exists",
-            filepath=import_filepath,
-            mode='RENAME')
-
-        lh.operator(
-            WM_OT_pm_import.bl_idname, "Skip if exists",
-            filepath=import_filepath,
-            mode='SKIP')
-
-        lh.operator(
-            WM_OT_pm_import.bl_idname, "Replace if exists",
-            filepath=import_filepath,
-            mode='REPLACE')
-
-    def draw(self, context):
+    def draw(self, _context):
         col = self.layout.column(align=True)
         col.label(text="Assign Tags:")
         col.prop(self, "tags", text="", icon=ic_fb(False))
@@ -374,7 +365,7 @@ class WM_OT_pm_import(bpy.types.Operator, ImportHelper):
 
             self.import_json(s)
 
-    def execute(self, context):
+    def execute(self, _context):
         global import_filepath
         pr = prefs()
         pr.tree.lock()
@@ -407,7 +398,7 @@ class WM_OT_pm_import(bpy.types.Operator, ImportHelper):
 
         return {'FINISHED'}
 
-    def invoke(self, context, event):
+    def invoke(self, context, _event):
         if not self.mode:
             context.window_manager.popup_menu(
                 self._draw, title=self.bl_description)
@@ -432,7 +423,7 @@ class WM_OT_pm_export(bpy.types.Operator, ExportHelper):
         name="Export Tags", description="Export tags",
         default=True, options={'SKIP_SAVE'})
 
-    def _draw(self, menu, context):
+    def _draw(self, menu, _context):
         lh.lt(menu.layout, operator_context='INVOKE_DEFAULT')
 
         lh.operator(
@@ -463,14 +454,14 @@ class WM_OT_pm_export(bpy.types.Operator, ExportHelper):
         lh.operator(
             PME_OT_backup.bl_idname, "Backup Now", 'FILE_HIDDEN')
 
-    def check(self, context):
+    def check(self, _context):
         return True
 
-    def draw(self, context):
+    def draw(self, _context):
         layout = self.layout
         layout.prop(self, "export_tags")
 
-    def execute(self, context):
+    def execute(self, _context):
         global export_filepath
 
         if not self.filepath:
@@ -492,18 +483,16 @@ class WM_OT_pm_export(bpy.types.Operator, ExportHelper):
         export_filepath = self.filepath
         return {'FINISHED'}
 
-    def invoke(self, context, event):
+    def invoke(self, context, _event):
         if not self.mode:
             context.window_manager.popup_menu(
                 self._draw, title=self.bl_description)
             return {'FINISHED'}
-
-        elif self.mode == 'TAG' and not self.tag:
+        if self.mode == 'TAG' and not self.tag:
             Tag.popup_menu(
                 self.bl_idname, "Export by Tag", invoke=True,
                 mode=self.mode)
             return {'FINISHED'}
-
         context.window_manager.fileselect_add(self)
         return {'RUNNING_MODAL'}
 
@@ -513,7 +502,7 @@ class PME_OT_backup(bpy.types.Operator):
     bl_label = "Backup Menus"
     bl_description = "Backup PME menus"
 
-    def invoke(self, context, event):
+    def invoke(self, _context, _event):
         prefs().backup_menus(operator=self)
         return {'FINISHED'}
 
@@ -524,7 +513,7 @@ class WM_OT_pm_duplicate(bpy.types.Operator):
     bl_description = "Duplicate the active item"
     bl_options = {'INTERNAL'}
 
-    def execute(self, context):
+    def execute(self, _context):
         pr = prefs()
         if len(pr.pie_menus) == 0:
             return {'FINISHED'}
@@ -541,7 +530,7 @@ class WM_OT_pm_duplicate(bpy.types.Operator):
         return {'FINISHED'}
 
     @classmethod
-    def poll(cls, context):
+    def poll(cls, _context):
         return len(prefs().pie_menus) > 0
 
 
@@ -584,7 +573,7 @@ class PME_OT_pm_remove(ConfirmBoxHandler, bpy.types.Operator):
         tag_redraw()
 
     @classmethod
-    def poll(cls, context):
+    def poll(cls, _context):
         return len(prefs().pie_menus) > 0
 
     def invoke(self, context, event):
@@ -601,13 +590,13 @@ class PME_OT_pm_enable_all(bpy.types.Operator):
 
     enable: bpy.props.BoolProperty(options={'SKIP_SAVE'})
 
-    def execute(self, context):
+    def execute(self, _context):
         for pm in prefs().pie_menus:
             pm.enabled = self.enable
         return {'FINISHED'}
 
     @classmethod
-    def poll(cls, context):
+    def poll(cls, _context):
         return prefs().pie_menus
 
 
@@ -620,7 +609,7 @@ class PME_OT_pm_enable_by_tag(bpy.types.Operator):
     enable: bpy.props.BoolProperty(options={'SKIP_SAVE'})
     tag: bpy.props.StringProperty(options={'SKIP_SAVE'})
 
-    def execute(self, context):
+    def execute(self, _context):
         if not self.tag:
             Tag.popup_menu(
                 self.bl_idname,
@@ -635,7 +624,7 @@ class PME_OT_pm_enable_by_tag(bpy.types.Operator):
         return {'FINISHED'}
 
     @classmethod
-    def poll(cls, context):
+    def poll(cls, _context):
         return prefs().pie_menus
 
 
@@ -647,7 +636,7 @@ class PME_OT_pm_remove_by_tag(bpy.types.Operator):
 
     tag: bpy.props.StringProperty(options={'SKIP_SAVE'})
 
-    def execute(self, context):
+    def execute(self, _context):
         if not self.tag:
             Tag.popup_menu(self.bl_idname, "Remove by Tag")
         else:
@@ -666,7 +655,7 @@ class PME_OT_pm_remove_by_tag(bpy.types.Operator):
         return {'FINISHED'}
 
     @classmethod
-    def poll(cls, context):
+    def poll(cls, _context):
         return prefs().pie_menus
 
 
@@ -678,7 +667,7 @@ class WM_OT_pm_move(bpy.types.Operator):
 
     direction: bpy.props.IntProperty()
 
-    def execute(self, context):
+    def execute(self, _context):
         pr = prefs()
         tpr = temp_prefs()
         if pr.tree_mode:
@@ -727,7 +716,7 @@ class WM_OT_pm_move(bpy.types.Operator):
         return {'FINISHED'}
 
     @classmethod
-    def poll(cls, context):
+    def poll(cls, _context):
         return len(prefs().pie_menus) > 1
 
 
@@ -748,7 +737,7 @@ class WM_OT_pm_sort(bpy.types.Operator):
         ),
         options={'SKIP_SAVE'})
 
-    def _draw(self, menu, context):
+    def _draw(self, menu, _context):
         lh.lt(menu.layout)
         lh.operator(
             WM_OT_pm_sort.bl_idname, "Name", 'SORTALPHA',
@@ -779,8 +768,7 @@ class WM_OT_pm_sort(bpy.types.Operator):
         pr = prefs()
         if len(pr.pie_menus) == 0:
             return {'FINISHED'}
-
-        items = [pm for pm in pr.pie_menus]
+        items = list(pr.pie_menus)
 
         if self.mode == 'NAME':
             items.sort(key=lambda pm: pm.name)
@@ -818,7 +806,7 @@ class WM_OT_pm_sort(bpy.types.Operator):
         return {'FINISHED'}
 
     @classmethod
-    def poll(cls, context):
+    def poll(cls, _context):
         return len(prefs().pie_menus) > 1
 
 
@@ -830,7 +818,7 @@ class PME_OT_pmi_name_apply(bpy.types.Operator):
 
     idx: bpy.props.IntProperty()
 
-    def execute(self, context):
+    def execute(self, _context):
         data = prefs().pmi_data
         data.name = data.sname
         return {'FINISHED'}
@@ -842,7 +830,7 @@ class PME_OT_pmi_name_apply(bpy.types.Operator):
 #     bl_description = "Clear Filter"
 #     bl_options = {'INTERNAL'}
 
-#     def execute(self, context):
+#     def execute(self, _context):
 #         prefs().icon_filter = ""
 #         return {'FINISHED'}
 
@@ -853,7 +841,7 @@ class PME_OT_icons_refresh(bpy.types.Operator):
     bl_description = "Refresh icons"
     bl_options = {'INTERNAL'}
 
-    def execute(self, context):
+    def execute(self, _context):
         ph.refresh()
         return {'FINISHED'}
 
@@ -898,7 +886,7 @@ class PMEData(bpy.types.PropertyGroup):
 
         PMEData.update_lock = False
 
-    def update_modal_item_prop_mode(self, context):
+    def update_modal_item_prop_mode(self, _context):
         if PMEData.update_lock:
             return
         PMEData.update_lock = True
@@ -1016,10 +1004,10 @@ class PMEData(bpy.types.PropertyGroup):
 
 
 class WM_UL_panel_list(bpy.types.UIList):
-
     def draw_item(
-            self, context, layout, data, item,
-            icon, active_data, active_propname, index):
+            self, _context, layout, _data, item,
+            _icon, _active_data, _active_propname, _index
+        ):
         tp = hidden_panel(item.text)
         pr = prefs()
         v = pr.panel_info_visibility
@@ -1041,8 +1029,7 @@ class WM_UL_panel_list(bpy.types.UIList):
 
 
 class WM_UL_pm_list(bpy.types.UIList):
-
-    def _draw_filter(self, context, layout):
+    def _draw_filter(self, _context, layout):
         pr = prefs()
 
         col = layout.column(align=True)
@@ -1053,15 +1040,16 @@ class WM_UL_pm_list(bpy.types.UIList):
     def draw_filter27(self, context, layout):
         self._draw_filter(context, layout)
 
-    def draw_filter28(self, context, layout, reverse=False):
+    def draw_filter28(self, context, layout, _reverse=False):
         self._draw_filter(context, layout)
 
     draw_filter = draw_filter27
     # draw_filter = draw_filter28 if is_28() else draw_filter27
 
     def draw_item(
-            self, context, layout, data, item,
-            icon, active_data, active_propname, index):
+            self, _context, layout, _data, item,
+            _icon, _active_data, _active_propname, _index
+        ):
         pr = prefs()
         pm = item
 
@@ -1136,9 +1124,9 @@ class WM_UL_pm_list(bpy.types.UIList):
 
             lh.label(hk)
 
-    def filter_items(self, context, data, propname):
+    def filter_items(self, _context, data, property):
         pr = prefs()
-        pie_menus = getattr(data, propname)
+        pie_menus = getattr(data, property)
         helper_funcs = bpy.types.UI_UL_list
 
         filtered = []
@@ -1519,8 +1507,8 @@ class PME_UL_pm_tree(bpy.types.UIList):
             tag_redraw()
 
     def draw_item(
-            self, context, layout, data, item,
-            icon, active_data, active_propname, index):
+            self, _context, layout, data, item,
+            icon, _active_data, _active_propname, index):
         pr = prefs()
         layout = layout.row(align=True)
         lh.lt(layout)
@@ -1628,7 +1616,7 @@ class PME_UL_pm_tree(bpy.types.UIList):
                 icon, group=item.label, idx=index,
                 all=True)
 
-    def _draw_filter(self, context, layout):
+    def _draw_filter(self, _context, layout):
         pr = prefs()
 
         col = layout.column(align=True)
@@ -1639,13 +1627,13 @@ class PME_UL_pm_tree(bpy.types.UIList):
     def draw_filter27(self, context, layout):
         self._draw_filter(context, layout)
 
-    def draw_filter28(self, context, layout, reverse=False):
+    def draw_filter28(self, context, layout, _reverse=False):
         self._draw_filter(context, layout)
 
     draw_filter = draw_filter27
     # draw_filter = draw_filter28 if is_28() else draw_filter27
 
-    def filter_items(self, context, data, propname):
+    def filter_items(self, _context, data, propname):
         pr = prefs()
 
         links = getattr(data, propname)
@@ -1691,7 +1679,7 @@ class PME_OT_tree_folder_toggle(bpy.types.Operator):
     folder: bpy.props.StringProperty()
     idx: bpy.props.IntProperty()
 
-    def execute(self, context):
+    def execute(self, _context):
         temp_prefs().links_idx = self.idx
         if self.folder:
             if self.folder in PME_UL_pm_tree.expanded_folders:
@@ -1709,7 +1697,7 @@ class PME_OT_tree_folder_toggle_all(bpy.types.Operator):
     bl_description = "Expand or collapse all items"
     bl_options = {'INTERNAL'}
 
-    def execute(self, context):
+    def execute(self, _context):
         if PME_UL_pm_tree.expanded_folders:
             PME_UL_pm_tree.expanded_folders.clear()
         else:
@@ -1731,7 +1719,7 @@ class PME_OT_tree_group_toggle(bpy.types.Operator):
     idx: bpy.props.IntProperty(options={'SKIP_SAVE'})
     all: bpy.props.BoolProperty(options={'SKIP_SAVE'})
 
-    def execute(self, context):
+    def execute(self, _context):
         tpr = temp_prefs()
 
         if self.idx != -1:
@@ -1797,7 +1785,7 @@ class PME_OT_list_specials(bpy.types.Operator):
     bl_description = "Extra tools"
     bl_options = {'INTERNAL'}
 
-    def draw_menu(self, menu, context):
+    def draw_menu(self, menu, _context):
         layout = menu.layout
         layout.operator_context = 'INVOKE_DEFAULT'
         operator(
@@ -1853,7 +1841,7 @@ class PMIData(bpy.types.PropertyGroup):
 
         return PMIData._kmi
 
-    def check_pmi_errors(self, context):
+    def check_pmi_errors(self, _context):
         pr = prefs()
         pm = pr.selected_pm
         pm.ed.on_pmi_check(pm, self)
@@ -1861,8 +1849,8 @@ class PMIData(bpy.types.PropertyGroup):
     def mode_update(self, context):
         tpr = temp_prefs()
         if prefs().selected_pm.mode == 'MODAL':
-            if self.mode == 'COMMAND' and \
-                    tpr.modal_item_prop_mode != 'KEY':
+            if self.mode == 'COMMAND' \
+            and tpr.modal_item_prop_mode != 'KEY':
                 tpr["modal_item_prop_mode"] = 0
                 tpr.modal_item_hk.key = 'NONE'
 
@@ -1896,7 +1884,7 @@ class PMIData(bpy.types.PropertyGroup):
     icon: bpy.props.StringProperty(description="Icon")
     name: bpy.props.StringProperty(description="Name")
 
-    def sname_update(self, context):
+    def sname_update(self, _context):
         if not self.name:
             self.name = self.sname
 
@@ -2024,7 +2012,7 @@ class TreeView:
 class InvalidPMEPreferences:
     bl_idname = ADDON_ID
 
-    def draw(self, context):
+    def draw(self, _context):
         col = self.layout.column(align=True)
         row = col.row()
         row.alignment = 'CENTER'
@@ -2080,7 +2068,7 @@ class PMEPreferences(bpy.types.AddonPreferences):
         default=10, min=5, max=50
     )
 
-    def update_interactive_panels(self, context=None):
+    def update_interactive_panels(self, _context=None):
         if PME_OT_interactive_panels_toggle.active == self.interactive_panels:
             return
 
@@ -2149,7 +2137,7 @@ class PMEPreferences(bpy.types.AddonPreferences):
         ),
         options={'HIDDEN'})
 
-    def update_show_names(self, context):
+    def update_show_names(self, _context):
         if not self.show_names and not self.show_hotkeys:
             self["show_hotkeys"] = True
 
@@ -2157,7 +2145,7 @@ class PMEPreferences(bpy.types.AddonPreferences):
         default=True, description="Show names",
         update=update_show_names)
 
-    def update_show_hotkeys(self, context):
+    def update_show_hotkeys(self, _context):
         if not self.show_hotkeys and not self.show_names:
             self["show_names"] = True
 
@@ -2165,10 +2153,10 @@ class PMEPreferences(bpy.types.AddonPreferences):
         default=True, description="Show hotkeys",
         update=update_show_hotkeys)
 
-    def update_tree(self, context=None):
+    def update_tree(self, _context=None):
         self.tree.update()
 
-    # def update_show_keymap_names(self, context=None):
+    # def update_show_keymap_names(self, _context=None):
     #     if self.tree_mode:
     #         if self.show_tags:
     #             self["show_tags"] = False
@@ -2179,7 +2167,7 @@ class PMEPreferences(bpy.types.AddonPreferences):
         name="Keymap Names",
         default=False, description="Show keymap names")
 
-    # def update_show_tags(self, context=None):
+    # def update_show_tags(self, _context=None):
     #     if self.tree_mode:
     #         if self.show_keymap_names:
     #             self["show_keymap_names"] = False
@@ -2190,7 +2178,7 @@ class PMEPreferences(bpy.types.AddonPreferences):
         name="Tags",
         default=False, description="Show tags")
 
-    def update_group_by(self, context=None):
+    def update_group_by(self, _context=None):
         if self.tree_mode:
             PME_UL_pm_tree.expanded_folders.clear()
             PME_UL_pm_tree.collapsed_groups.clear()
@@ -2302,7 +2290,7 @@ class PMEPreferences(bpy.types.AddonPreferences):
     # show_errors: bpy.props.BoolProperty(
     #     description="Show error messages")
 
-    def update_tree_mode(self, context):
+    def update_tree_mode(self, _context):
         if self.tree_mode:
             # if self.show_keymap_names and self.show_tags:
             #     self["show_keymap_names"] = False
@@ -2312,7 +2300,7 @@ class PMEPreferences(bpy.types.AddonPreferences):
     tree_mode: bpy.props.BoolProperty(
         description="Tree Mode", update=update_tree_mode)
 
-    def save_tree_update(self, context):
+    def save_tree_update(self, _context):
         if self.save_tree and self.tree_mode:
             PME_UL_pm_tree.save_state()
 
@@ -2344,7 +2332,7 @@ class PMEPreferences(bpy.types.AddonPreferences):
     pmi_data: bpy.props.PointerProperty(type=PMIData)
     scripts_filepath: bpy.props.StringProperty(subtype='FILE_PATH', default=SCRIPT_PATH)
 
-    def _update_mouse_threshold(self, context):
+    def _update_mouse_threshold(self, _context):
         OPS.PME_OT_modal_base.prop_data.clear()
 
     mouse_threshold_float: bpy.props.IntProperty(
@@ -2548,7 +2536,7 @@ class PMEPreferences(bpy.types.AddonPreferences):
         d = {}
         return d
 
-    def _draw_pm_item(self, context, layout):
+    def _draw_pm_item(self, _context, layout):
         pr = prefs()
         tpr = temp_prefs()
         pm = pr.selected_pm
@@ -2788,7 +2776,7 @@ class PMEPreferences(bpy.types.AddonPreferences):
             for info in data.infos:
                 lh.label(info, icon='QUESTION')
 
-    def _draw_icons(self, context, layout):
+    def _draw_icons(self, _context, layout):
         pr = prefs()
         tpr = temp_prefs()
         pm = pr.selected_pm
@@ -2898,7 +2886,7 @@ class PMEPreferences(bpy.types.AddonPreferences):
 
         layout.prop(pr, "num_icons_per_row", slider=True)
 
-    def _draw_tab_editor(self, context, layout):
+    def _draw_tab_editor(self, _context, layout):
         pr = prefs()
         tpr = temp_prefs()
         pm = None
@@ -3066,7 +3054,7 @@ class PMEPreferences(bpy.types.AddonPreferences):
                 emboss=False,
                 url=url)
 
-    def _draw_tab_settings(self, context, layout):
+    def _draw_tab_settings(self, _context, layout):
         pr = prefs()
         tpr = temp_prefs()
 
@@ -3455,7 +3443,7 @@ class PME_PT_preferences(bpy.types.Panel):
     bl_category = "PME"
 
     @classmethod
-    def poll(cls, context):
+    def poll(cls, _context):
         return prefs().show_sidepanel_prefs
 
     def draw(self, context):
@@ -3465,7 +3453,7 @@ class PME_PT_preferences(bpy.types.Panel):
 class PME_MT_button_context:
     bl_label = "Button Context Menu"
 
-    def draw(self, context):
+    def draw(self, _context):
         self.layout.separator()
 
 
@@ -3479,7 +3467,7 @@ class PME_OT_context_menu(bpy.types.Operator):
     operator: bpy.props.StringProperty(options={'SKIP_SAVE'})
     name: bpy.props.StringProperty(options={'SKIP_SAVE'})
 
-    def draw_menu(self, menu, context):
+    def draw_menu(self, menu, _context):
         layout = menu.layout
         layout.operator_context = 'INVOKE_DEFAULT'
         pr = prefs()
@@ -3561,14 +3549,12 @@ class PME_OT_context_menu(bpy.types.Operator):
 
 def button_context_menu(self, context):
     layout = self.layout
-
-    button_pointer = getattr(context, "button_pointer", None)
-    button_prop = getattr(context, "button_prop", None)
-    button_operator = getattr(context, "button_operator", None)
-
+    _button_pointer  = getattr(context, "button_pointer", None)
+    _button_prop     = getattr(context, "button_prop", None)
+    _button_operator = getattr(context, "button_operator", None)
     layout.operator(
-        PME_OT_context_menu.bl_idname, text="Pie Menu Editor",
-        icon=ic('COLOR'))
+        PME_OT_context_menu.bl_idname, text="Pie Menu Editor", icon=ic('COLOR')
+    )
 
 
 def add_rmb_menu():

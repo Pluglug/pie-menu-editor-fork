@@ -993,7 +993,7 @@ class PME_OT_mouse_state(bpy.types.Operator):
 
         return {'PASS_THROUGH'}
 
-    def invoke(self, context, event):
+    def invoke(self, context, _event):
         self.__class__.inst = self
         context.window_manager.modal_handler_add(self)
 
@@ -1032,7 +1032,7 @@ class PME_OT_mouse_state_wait(bpy.types.Operator):
 
         return {'PASS_THROUGH'}
 
-    def invoke(self, context, event):
+    def invoke(self, context, _event):
         self.cancelled = False
         context.window_manager.modal_handler_add(self)
         self.bl_timer = \
@@ -1050,7 +1050,7 @@ class PME_OT_mouse_state_init(bpy.types.Operator):
 
     key: bpy.props.StringProperty(options={'SKIP_SAVE'})
 
-    def invoke(self, context, event):
+    def invoke(self, _context, _event):
         if PME_OT_mouse_state.inst:
             if self.key != PME_OT_mouse_state.inst.key:
                 return {'PASS_THROUGH'}
@@ -1134,7 +1134,7 @@ class PME_OT_key_state(bpy.types.Operator):
 
         return {'PASS_THROUGH'}
 
-    def invoke(self, context, event):
+    def invoke(self, context, _event):
         self.active = True
         self.__class__.inst = self
         self.bl_timer = context.window_manager.event_timer_add(
@@ -1151,7 +1151,7 @@ class PME_OT_key_state_init(bpy.types.Operator):
 
     key: bpy.props.StringProperty(options={'SKIP_SAVE'})
 
-    def invoke(self, context, event):
+    def invoke(self, _context, _event):
         if PME_OT_key_state.inst:
             return {'PASS_THROUGH'}
         bpy.ops.pme.key_state('INVOKE_DEFAULT', key=self.key)
@@ -1168,7 +1168,7 @@ class PME_OT_mouse_btn_state(bpy.types.Operator, CTU.HeadModalHandler):
     def finish(self):
         self.__class__.inst = None
 
-    def invoke(self, context, event):
+    def invoke(self, context, _event):
         cls = self.__class__
         if cls.inst:
             return {'PASS_THROUGH'}
@@ -1270,7 +1270,7 @@ class PME_OT_key_is_pressed(bpy.types.Operator):
         self.restart_flag = True
         self.add_timer()
 
-    def modal(self, context, event):
+    def modal(self, _context, event):
         if event.type == 'TIMER' and self.timer:
             if not self.is_pressed and self.timer.time_duration > 0.2:
                 if self.instance:
