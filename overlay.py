@@ -2,7 +2,7 @@ import bpy
 import blf
 import bgl
 from time import time
-from .addon import ADDON_ID, prefs, uprefs, ic, is_28
+from .addon import prefs, uprefs, ic, is_28
 from .utils import multiton
 from .layout_helper import split
 from . import pme
@@ -502,7 +502,7 @@ class PME_OT_overlay(bpy.types.Operator):
         if context.area.type not in space_groups:
             return {'CANCELLED'}
 
-        pr = uprefs().addons[ADDON_ID].preferences
+        pr = uprefs().addons[__package__].preferences
 
         # if not pr.overlay.overlay:
         # if not hasattr(bgl, "glColor4f"):

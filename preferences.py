@@ -6,7 +6,7 @@ import re
 from types import MethodType
 from bpy_extras.io_utils import ExportHelper, ImportHelper
 from .addon import (
-    ADDON_ID, ADDON_PATH, SCRIPT_PATH,
+    ADDON_PATH, SCRIPT_PATH,
     prefs, uprefs, temp_prefs, print_exc, ic, ic_fb, ic_cb, ic_eye, is_28
 )
 from . import constants as CC
@@ -2010,7 +2010,7 @@ class TreeView:
 
 
 class InvalidPMEPreferences:
-    bl_idname = ADDON_ID
+    bl_idname = __package__
 
     def draw(self, _context):
         col = self.layout.column(align=True)
@@ -2022,7 +2022,7 @@ class InvalidPMEPreferences:
 
 
 class PMEPreferences(bpy.types.AddonPreferences):
-    bl_idname = ADDON_ID
+    bl_idname = __package__
 
     _mode = 'ADDON'
     editors = {}
@@ -2308,7 +2308,7 @@ class PMEPreferences(bpy.types.AddonPreferences):
         name="Save and Restore Tree View State",
         description=(
             "Save and restore tree view state\n"
-            "from %s/data/tree.json file") % ADDON_ID,
+            "from %s/data/tree.json file") % __package__,
         default=False,
         update=save_tree_update)
 

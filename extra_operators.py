@@ -1,7 +1,7 @@
 import bpy
 import addon_utils
 from bpy.app.handlers import persistent
-from .addon import ADDON_ID, prefs, uprefs, is_28
+from .addon import prefs, uprefs, is_28
 from .bl_utils import PopupOperator, popup_area, ctx_dict, area_header_text_set
 from .panel_utils import panel, panel_label, bl_panel_enum_items
 from .constants import (
@@ -269,7 +269,7 @@ class PME_OT_popup_addon_preferences(PopupOperator, bpy.types.Operator):
 
     def invoke(self, context, event):
         if not self.addon:
-            self.addon = ADDON_ID
+            self.addon = __package__
         return PopupOperator.invoke(self, context, event)
 
 

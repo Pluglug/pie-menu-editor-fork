@@ -3,11 +3,10 @@ import os
 import traceback
 from inspect import isclass
 from math import pi as PI
-from time import time
 from .addon import prefs, uprefs, temp_prefs, ADDON_PATH, print_exc, ic, is_28
 from .bl_utils import (
-    bl_context, gen_prop_path,
-    message_box, PME_OT_popup_close, PopupOperator, area_header_text_set)
+    bl_context, gen_prop_path, message_box, PopupOperator, area_header_text_set
+)
 from .layout_helper import lh, draw_pme_layout, operator
 from .overlay import Timer, Overlay, TablePainter
 from .ui import tag_redraw, utitle
@@ -15,7 +14,8 @@ from . import utils as U
 from . import c_utils as CTU
 from .panel_utils import (
     hide_panel, hidden_panel, is_panel_hidden, bl_panel_types,
-    bl_panel_enum_items, panel)
+    bl_panel_enum_items
+)
 from .constants import (
     I_DEBUG, SPACE_ITEMS, REGION_ITEMS, PM_ITEMS_M, MAX_STR_LEN, W_PMI_ADD_BTN,
     F_EXPAND, MODAL_CMD_MODES)
@@ -28,7 +28,7 @@ from . import (
     operator_utils,
     keymap_helper
 )
-from . import screen_utils as SU
+#from . import screen_utils as SU
 from .property_utils import PropertyData
 from .keymap_helper import (
     MOUSE_BUTTONS, is_key_pressed, StackKey, to_key_name, to_ui_hotkey)

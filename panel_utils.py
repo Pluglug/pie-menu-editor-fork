@@ -3,10 +3,9 @@ import re
 from inspect import isclass
 from itertools import chain
 from types import MethodType
-from .addon import prefs, uprefs, print_exc, ic, is_28
+from .addon import prefs, uprefs, print_exc, ic
 from . import constants as CC
 from . import c_utils as CTU
-from bl_ui import space_userpref
 from .bl_utils import bl_context, PopupOperator
 from .ui import utitle
 from .debug_utils import *

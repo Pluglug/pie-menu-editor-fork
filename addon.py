@@ -15,10 +15,9 @@ with open(manifest_path, "rb") as f:
         for part in version.split('.'):
             parts.append(int(part))
         VERSION = tuple(parts)
-ADDON_ID = __package__
-ADDON_PATH = os.path.normpath(os.path.dirname(os.path.abspath(__file__)))
-SCRIPT_PATH = os.path.join(ADDON_PATH, "scripts/")
-SAFE_MODE = "--pme-safe-mode" in sys.argv
+ADDON_PATH      = os.path.normpath(os.path.dirname(os.path.abspath(__file__)))
+SCRIPT_PATH     = os.path.join(ADDON_PATH, "scripts/")
+SAFE_MODE       = "--pme-safe-mode" in sys.argv
 ICON_ENUM_ITEMS = \
     bpy.types.UILayout.bl_rna.functions["prop"].parameters["icon"].enum_items
 
@@ -29,7 +28,7 @@ def uprefs():
 
 
 def prefs():
-    return uprefs().addons[ADDON_ID].preferences
+    return uprefs().addons[__package__].preferences
 
 
 def temp_prefs():
