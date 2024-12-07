@@ -33,14 +33,14 @@ from .ui_utils import get_pme_menu_class, execute_script
 from . import utils as U
 from .property_utils import PropertyData, to_py_value
 from .types import Tag, PMItem, PMIItem, PMLink, EdProperties, UserProperties
-from .editor.ed_base import (
+from .editor.editor import (
     WM_OT_pmi_icon_select, WM_OT_pmi_data_edit, PME_OT_pm_edit,
     PME_OT_pmi_cmd_generate, PME_OT_tags_filter, PME_OT_tags,
     PME_OT_pm_add, WM_OT_pmi_icon_tag_toggle
 )
-from .editor.ed_panel_group import PME_OT_interactive_panels_toggle
-from .editor.ed_sticky_key import PME_OT_sticky_key_edit
-from .editor.ed_modal import PME_OT_prop_data_reset
+from .editor.panel_group import PME_OT_interactive_panels_toggle
+from .editor.sticky_key import PME_OT_sticky_key_edit
+from .editor.modal import PME_OT_prop_data_reset
 
 pp = pme.props
 import_filepath = os.path.join(ADDON_PATH, "examples", "examples.json")

@@ -1,22 +1,21 @@
 import bpy
+
+from .editor import EditorBase, PME_OT_pm_edit, PME_OT_pm_add
 from .. import constants as CC
+from .. import pme
+from .. import c_utils
+from .. import panel_utils as PAU
 from ..collection_utils import MoveItemOperator
-from ..editor.ed_base import EditorBase, PME_OT_pm_edit, PME_OT_pm_add
-from ..addon import prefs, uprefs, ic, ic_cb, is_28
-from ..layout_helper import lh, draw_pme_layout
-from ..ui import utitle, tag_redraw
-from ..ui_utils import draw_menu
+from ..extra_operators import PME_OT_clipboard_copy
 from ..operators import (
     WM_OT_pm_select, WM_OT_pme_user_pie_menu_call, PME_OT_panel_hide,
     PME_OT_pm_search_and_select
 )
-from ..extra_operators import PME_OT_clipboard_copy
-from .. import panel_utils as PAU
-from ..panel_utils import (
-    panel, PLayout,
-)
-from .. import pme
-from .. import c_utils
+from ..panel_utils import PLayout, panel
+from ..addon import prefs, uprefs, ic, ic_cb, is_28
+from ..layout_helper import draw_pme_layout, lh
+from ..ui import utitle, tag_redraw
+from ..ui_utils import draw_menu
 
 
 class PME_OT_panel_sub_toggle(bpy.types.Operator):
@@ -587,7 +586,7 @@ class PME_OT_panel_add(bpy.types.Operator):
         tag_redraw()
         return {'FINISHED'}
 
-    def _draw(self, menu, context):
+    def _draw(self, menu, _context):
         pr = prefs()
         lh.lt(menu.layout, 'INVOKE_DEFAULT')
         lh.operator(
@@ -601,7 +600,7 @@ class PME_OT_panel_add(bpy.types.Operator):
 
         lh.prop(prefs(), "interactive_panels")
 
-    def invoke(self, context, event):
+    def invoke(self, context, _event):
         if not self.mode:
             context.window_manager.popup_menu(self._draw)
         elif not self.panel:

@@ -1,13 +1,13 @@
 import bpy
+
+from .editor import EditorBase
 from .. import pme
-from ..constants import (
-    MODAL_CMD_MODES, W_PMI_HOTKEY, I_MODAL_PROP_MOVE,
-    W_PMI_EXPR
-)
 from ..bl_utils import uname
-from ..editor.ed_base import EditorBase
 from ..addon import temp_prefs
 from ..modal_utils import encode_modal_data, decode_modal_data
+from ..constants import (
+    MODAL_CMD_MODES, W_PMI_HOTKEY, I_MODAL_PROP_MOVE, W_PMI_EXPR
+)
 
 
 class PME_OT_prop_data_reset(bpy.types.Operator):
@@ -16,7 +16,7 @@ class PME_OT_prop_data_reset(bpy.types.Operator):
     bl_description = "Reset values"
     bl_options = {'INTERNAL'}
 
-    def execute(self, context):
+    def execute(self, _context):
         tpr = temp_prefs()
         tpr.modal_item_prop_min = tpr.prop_data.min
         tpr.modal_item_prop_max = tpr.prop_data.max
@@ -119,7 +119,7 @@ class Editor(EditorBase):
         col.prop(pm, "mo_block_ui")
         col.prop(pm, "mo_lock")
 
-    def get_pmi_icon(self, pm, pmi, idx):
+    def get_pmi_icon(self, _pm, pmi, _idx):
         icon = 'BLENDER'
         if pmi.mode == 'COMMAND':
             icon = 'FILE_SCRIPT'

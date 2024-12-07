@@ -1,23 +1,23 @@
 import bpy
+
+from .editor import EditorBase, PME_OT_pmi_add
 from .. import pme
-from ..editor.ed_base import EditorBase, PME_OT_pmi_add
 from ..debug_utils import *
 from ..addon import prefs, temp_prefs
 from ..layout_helper import lh
 from ..ui import tag_redraw, shorten_str
 from ..bl_utils import uname
 from ..extra_operators import PME_OT_popup_property
-from ..collection_utils import (
-    MoveItemOperator
-)
+from ..collection_utils import MoveItemOperator
 from .. import operator_utils
 from .. import constants as CC
 
-PROP_GETTERS = dict()
-PROP_SETTERS = dict()
-PROP_UPDATES = dict()
-ARG_GETTERS = dict()
-ARG_SETTERS = dict()
+
+PROP_GETTERS = {}
+PROP_SETTERS = {}
+PROP_UPDATES = {}
+ARG_GETTERS  = {}
+ARG_SETTERS  = {}
 
 SUBTYPE_NUMBER_ARRAY_ITEMS = [
     'COLOR', 'TRANSLATION', 'DIRECTION', 'VELOCITY', 'ACCELERATION',
@@ -504,7 +504,7 @@ class PME_OT_prop_class_set(bpy.types.Operator):
 
     enum_items = None
 
-    def get_items(self, context):
+    def get_items(self, _context):
         if not PME_OT_prop_class_set.enum_items:
             enum_items = []
 
@@ -523,7 +523,7 @@ class PME_OT_prop_class_set(bpy.types.Operator):
     item: bpy.props.EnumProperty(items=get_items, options={'SKIP_SAVE'})
     add: bpy.props.BoolProperty(options={'SKIP_SAVE'})
 
-    def execute(self, context):
+    def execute(self, _context):
         PME_OT_prop_class_set.enum_items = None
         pm = prefs().selected_pm
         pmi = pm.pmis.get('CLASS', None)
@@ -545,7 +545,7 @@ class PME_OT_prop_class_set(bpy.types.Operator):
         tag_redraw()
         return {'FINISHED'}
 
-    def invoke(self, context, event):
+    def invoke(self, context, _event):
         PME_OT_prop_class_set.enum_items = None
         if self.add:
             context.window_manager.invoke_search_popup(self)

@@ -1,11 +1,12 @@
 import bpy
+
+from .editor import EditorBase
 from .. import pme
-from ..addon import prefs
-from ..constants import MAX_STR_LEN
-from ..bl_utils import uname
-from ..editor.ed_base import EditorBase
-from ..operators import PME_OT_sticky_key_base, PME_OT_modal_base
 from .. import macro_utils as MAU
+from ..operators import PME_OT_sticky_key_base, PME_OT_modal_base
+from ..addon import prefs
+from ..bl_utils import uname
+from ..constants import MAX_STR_LEN
 
 
 class PME_OT_macro_exec_base:
@@ -18,7 +19,7 @@ class PME_OT_macro_exec_base:
     cmd: bpy.props.StringProperty(
         maxlen=MAX_STR_LEN, options={'SKIP_SAVE', 'HIDDEN'})
 
-    def execute(self, context):
+    def execute(self, _context):
         if not pme.context.exe(
                 self.cmd, PME_OT_macro_exec_base.macro_globals):
             return {'CANCELLED'}
@@ -108,7 +109,7 @@ class Editor(EditorBase):
     def on_pmi_edit(self, pm, pmi):
         MAU.update_macro(pm)
 
-    def get_pmi_icon(self, pm, pmi, idx):
+    def get_pmi_icon(self, _pm, pmi, _idx):
         pr = prefs()
         icon = self.icon
         if pmi.icon:

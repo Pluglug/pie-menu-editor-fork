@@ -55,17 +55,17 @@ module_names = (
     "ui",
     "utils",
 
-    "editor.ed_base",
-    "editor.ed_hpanel_group",
-    "editor.ed_macro",
-    "editor.ed_menu",
-    "editor.ed_modal",
-    "editor.ed_panel_group",
-    "editor.ed_pie_menu",
-    "editor.ed_popup",
-    "editor.ed_property",
-    "editor.ed_stack_key",
-    "editor.ed_sticky_key",
+    "editor.editor",
+    "editor.hpanel_group",
+    "editor.macro",
+    "editor.menu",
+    "editor.modal",
+    "editor.panel_group",
+    "editor.pie_menu",
+    "editor.popup",
+    "editor.property",
+    "editor.stack_key",
+    "editor.sticky_key",
 
     # NOTE: Must be last
     "preferences"

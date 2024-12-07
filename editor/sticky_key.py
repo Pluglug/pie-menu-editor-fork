@@ -1,6 +1,7 @@
 import bpy
+
+from .editor import EditorBase
 from .. import pme
-from ..editor.ed_base import EditorBase
 from ..addon import prefs
 from ..ui import tag_redraw
 from ..operator_utils import find_statement

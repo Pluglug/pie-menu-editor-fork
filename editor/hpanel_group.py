@@ -1,10 +1,11 @@
 import bpy
-from ..editor.ed_base import EditorBase
+
+from .editor import EditorBase
+from ..operators import PME_OT_panel_hide, PME_OT_panel_hide_by
+from ..panel_utils import hide_panel, unhide_panel, unhide_panels
+from ..ui import tag_redraw
 from ..addon import prefs, temp_prefs, SAFE_MODE
 from ..layout_helper import lh
-from .. import panel_utils as PAU
-from ..ui import tag_redraw
-from ..operators import *
 
 
 class PME_OT_hpanel_menu(bpy.types.Operator):
@@ -12,7 +13,7 @@ class PME_OT_hpanel_menu(bpy.types.Operator):
     bl_label = "Hide Panels"
     bl_description = "Hide panels"
 
-    def _draw(self, menu, context):
+    def _draw(self, menu, _context):
         pr = prefs()
         lh.lt(menu.layout, 'INVOKE_DEFAULT')
         lh.operator(
@@ -37,17 +38,17 @@ class PME_OT_hpanel_remove(bpy.types.Operator):
 
     idx: bpy.props.IntProperty()
 
-    def execute(self, context):
+    def execute(self, _context):
         pm = prefs().selected_pm
 
         if self.idx == -1:
-            PAU.unhide_panels([pmi.text for pmi in pm.pmis])
+            unhide_panels([pmi.text for pmi in pm.pmis])
 
             pm.pmis.clear()
 
         else:
             pmi = pm.pmis[self.idx]
-            PAU.unhide_panel(pmi.text)
+            unhide_panel(pmi.text)
             pm.pmis.remove(self.idx)
 
         tag_redraw()
@@ -55,7 +56,6 @@ class PME_OT_hpanel_remove(bpy.types.Operator):
 
 
 class Editor(EditorBase):
-
     def __init__(self):
         self.id = 'HPANEL'
         EditorBase.__init__(self)
@@ -71,14 +71,14 @@ class Editor(EditorBase):
     def init_pm(self, pm):
         if pm.enabled and not SAFE_MODE:
             for pmi in pm.pmis:
-                PAU.hide_panel(pmi.text)
+                hide_panel(pmi.text)
 
     def on_pm_remove(self, pm):
         for pmi in pm.pmis:
-            PAU.unhide_panel(pmi.text)
+            unhide_panel(pmi.text)
         super().on_pm_remove(pm)
 
-    def on_pm_duplicate(self, from_pm, pm):
+    def on_pm_duplicate(self, _from_pm, _pm):
         pass
 
     def on_pm_enabled(self, pm, value):
@@ -86,15 +86,15 @@ class Editor(EditorBase):
 
         if pm.enabled:
             for pmi in pm.pmis:
-                PAU.hide_panel(pmi.text)
+                hide_panel(pmi.text)
 
         else:
-            PAU.unhide_panels([pmi.text for pmi in pm.pmis])
+            unhide_panels([pmi.text for pmi in pm.pmis])
 
-    def draw_keymap(self, layout, data):
+    def draw_keymap(self, _layout, _data):
         pass
 
-    def draw_hotkey(self, layout, data):
+    def draw_hotkey(self, _layout, _data):
         pass
 
     def draw_items(self, layout, pm):

@@ -1,14 +1,16 @@
 import bpy
-from ..editor.ed_base import (
+
+from .editor import (
     EditorBase, PME_OT_pmi_copy, PME_OT_pmi_paste, WM_OT_pmi_data_edit,
     PME_OT_pmi_remove, WM_OT_pmi_icon_select, PME_OT_pmi_toggle,
-    extend_panel, unextend_panel)
+    extend_panel, unextend_panel
+)
+from .. import pme
 from ..bl_utils import PME_OT_input_box
+from ..layout_helper import Col, lh
 from ..addon import prefs, ic_eye
-from ..layout_helper import lh, Col
 from ..ui import tag_redraw, shorten_str
 from ..constants import SPACER_SCALE_Y, SEPARATOR_SCALE_Y
-from .. import pme
 
 
 class WM_OT_rmi_add(bpy.types.Operator):
@@ -20,7 +22,7 @@ class WM_OT_rmi_add(bpy.types.Operator):
     mode: bpy.props.StringProperty()
     index: bpy.props.IntProperty()
 
-    def execute(self, context):
+    def execute(self, _context):
         pm = prefs().selected_pm
         pmi = pm.pmis.add()
 
@@ -59,7 +61,7 @@ class WM_OT_rmi_move(bpy.types.Operator):
     pm_item: bpy.props.IntProperty()
     idx: bpy.props.IntProperty()
 
-    def _draw(self, menu, context):
+    def _draw(self, menu, _context):
         pm = prefs().selected_pm
 
         row = menu.layout.row()
@@ -124,7 +126,7 @@ class WM_OT_rm_col_specials_call(bpy.types.Operator):
 
     col_idx: bpy.props.IntProperty()
 
-    def _draw(self, menu, context):
+    def _draw(self, menu, _context):
         pr = prefs()
         pm = pr.selected_pm
 
@@ -228,7 +230,7 @@ class WM_OT_rm_col_move(bpy.types.Operator):
     move_idx: bpy.props.IntProperty()
     cols = []
 
-    def _draw(self, menu, context):
+    def _draw(self, menu, _context):
         lh.lt(menu.layout)
 
         for idx, col in enumerate(WM_OT_rm_col_move.cols):
@@ -323,7 +325,7 @@ class WM_OT_rm_col_remove(bpy.types.Operator):
     ask: bpy.props.BoolProperty()
     mode: bpy.props.StringProperty()
 
-    def _draw(self, menu, context):
+    def _draw(self, menu, _context):
         lh.lt(menu.layout)
         lh.operator(
             WM_OT_rm_col_remove.bl_idname, "Remove", 'X',
@@ -347,10 +349,10 @@ class WM_OT_rm_col_remove(bpy.types.Operator):
                 pm.pmis.remove(self.col_idx)
 
             elif self.col_idx == 0 and not Col.is_column(pm.pmis[0]):
-                for i in range(self.col_idx, self.col_last_idx + 1):
+                for _ in range(self.col_idx, self.col_last_idx + 1):
                     pm.pmis.remove(self.col_idx)
             else:
-                for i in range(self.col_idx, self.col_last_idx):
+                for _ in range(self.col_idx, self.col_last_idx):
                     pm.pmis.remove(self.col_idx)
 
             tag_redraw()
@@ -445,7 +447,7 @@ class WM_OT_rmi_specials_call(bpy.types.Operator):
 
     pm_item: bpy.props.IntProperty()
 
-    def _draw(self, menu, context):
+    def _draw(self, menu, _context):
         pr = prefs()
         pm = pr.selected_pm
         pmi = pm.pmis[self.pm_item]

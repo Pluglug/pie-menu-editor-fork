@@ -1,19 +1,22 @@
-import bpy
 import re
-from ..editor.ed_base import (
+
+import bpy
+
+from .editor import (
     EditorBase, PME_OT_pmi_copy, PME_OT_pmi_paste, WM_OT_pmi_data_edit,
     WM_OT_pmi_icon_select, WM_OT_pmi_icon_tag_toggle, PME_OT_pmi_toggle,
-    extend_panel, unextend_panel)
-from ..addon import prefs, ic, ic_cb, ic_eye
-from .. import constants as CC
-from ..layout_helper import lh, draw_pme_layout, Row
-from ..ui import tag_redraw, shorten_str
-from ..collection_utils import MoveItemOperator, move_item, remove_item
-from ..debug_utils import *
-from ..bl_utils import PME_OT_message_box, ConfirmBoxHandler, enum_item_idx
-from ..operators import popup_dialog_pie
-from ..keymap_helper import CTRL, SHIFT, ALT, OSKEY, test_mods
+    extend_panel, unextend_panel
+)
 from .. import pme
+from .. import constants as CC
+from ..bl_utils import PME_OT_message_box, ConfirmBoxHandler, enum_item_idx
+from ..collection_utils import MoveItemOperator, move_item, remove_item
+from ..layout_helper import Row, draw_pme_layout, lh
+from ..debug_utils import *
+from ..ui import tag_redraw, shorten_str
+from ..operators import popup_dialog_pie
+from ..addon import prefs, ic, ic_cb, ic_eye
+from ..keymap_helper import test_mods, CTRL, SHIFT, ALT, OSKEY
 
 
 current_pdi = 0
@@ -160,7 +163,7 @@ class PME_OT_pdi_move(bpy.types.Operator):
     pm_item: bpy.props.IntProperty()
     idx: bpy.props.IntProperty()
 
-    def _draw(self, menu, context):
+    def _draw(self, menu, _context):
         pm = prefs().selected_pm
 
         layout = menu.layout.menu_pie()
@@ -170,8 +173,8 @@ class PME_OT_pdi_move(bpy.types.Operator):
         column = column.column(align=True)
         lh.lt(column)
 
-        def draw_pmi(pr, pm, pmi, idx):
-            text, icon, _, icon_only, hidden, _ = pmi.parse_edit()
+        def draw_pmi(_pr, _pm, pmi, idx):
+            text, icon, _, _icon_only, _hidden, _ = pmi.parse_edit()
 
             # if not text and not hidden:
             #     text = button_text(pmi, text)
@@ -189,7 +192,7 @@ class PME_OT_pdi_move(bpy.types.Operator):
 
         draw_pme_layout(pm, column, draw_pmi)
 
-    def execute(self, context):
+    def execute(self, _context):
         pm = prefs().selected_pm
 
         if self.idx != self.pm_item:
@@ -1071,7 +1074,7 @@ class PME_OT_pdi_menu(bpy.types.Operator):
 
     idx: bpy.props.IntProperty()
 
-    def _draw(self, menu, context):
+    def _draw(self, menu, _context):
         pr = prefs()
         pm = pr.selected_pm
         pmi = pm.pmis[current_pdi]
@@ -1286,7 +1289,7 @@ class PME_OT_pdi_menu(bpy.types.Operator):
                     PME_OT_pdi_alignment.bl_idname, "Clear", 'X',
                     idx=self.idx, value="")
 
-    def execute(self, context):
+    def execute(self, _context):
         return {'FINISHED'}
 
     def invoke(self, context, event):
@@ -1510,7 +1513,7 @@ class PME_OT_pdr_menu(bpy.types.Operator):
                 row_last_idx=self.row_last_idx,
                 mode='REMOVE')
 
-    def execute(self, context):
+    def execute(self, _context):
         return {'FINISHED'}
 
     def invoke(self, context, event):

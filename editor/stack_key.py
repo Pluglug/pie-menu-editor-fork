@@ -1,5 +1,6 @@
 import bpy
-from ..editor.ed_base import EditorBase
+
+from .editor import EditorBase
 from .. import pme
 
 pme.props.BoolProperty("s", "s_undo")
