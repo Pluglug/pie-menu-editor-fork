@@ -6,6 +6,10 @@ import bpy.utils.previews
 from . import pme
 
 
+def custom_icon(icon):
+    return ph.get_icon(icon)
+
+
 class PreviewsHelper:
     def __init__(self, folder="resources\\icons"):
         self.path = os.path.join(os.path.dirname(__file__), folder)
@@ -42,11 +46,9 @@ class PreviewsHelper:
         for f in os.listdir(self.path):
             if not f.endswith(".png"):
                 continue
-            self.preview.load(
-                os.path.splitext(f)[0],
-                os.path.join(self.path, f),
-                'IMAGE'
-            )
+            self.preview.load(os.path.splitext(f)[0],
+                              os.path.join(self.path, f),
+                              'IMAGE')
 
     def unregister(self):
         if self.preview is None:
@@ -55,20 +57,14 @@ class PreviewsHelper:
         self.preview = None
 
 
-def custom_icon(icon):
-    return ph.get_icon(icon)
-
-
 if "ph" in globals():
-    ph.unregister()
-
+    ph.unregister() # type: ignore
 ph = PreviewsHelper()
 ph.refresh()
 
 
 def register():
     pme.context.add_global("custom_icon", custom_icon)
-
 
 def unregister():
     ph.unregister()

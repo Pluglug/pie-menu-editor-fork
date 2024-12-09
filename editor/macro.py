@@ -2,10 +2,10 @@ import bpy
 
 from .editor import EditorBase
 from .. import pme
-from .. import macro_utils as MAU
 from ..operators import PME_OT_sticky_key_base, PME_OT_modal_base
 from ..addon import prefs
 from ..bl_utils import uname
+from ..macro_utils import add_macro, remove_macro, update_macro, init_macros
 from ..constants import MAX_STR_LEN
 
 
@@ -41,12 +41,10 @@ class PME_OT_macro_exec1(bpy.types.Operator):
 
     def execute(self, context):
         PME_OT_macro_exec_base.macro_globals = pme.context.gen_globals()
-
         return PME_OT_macro_exec_base.execute(self, context)
 
 
 class Editor(EditorBase):
-
     def __init__(self):
         self.id = 'MACRO'
         EditorBase.__init__(self)
@@ -60,54 +58,54 @@ class Editor(EditorBase):
 
     def init_pm(self, pm):
         if pm.enabled:
-            MAU.add_macro(pm)
+            add_macro(pm)
 
     def on_pm_add(self, pm):
         pmi = pm.pmis.add()
         pmi.mode = 'COMMAND'
         pmi.name = "Command 1"
-        MAU.add_macro(pm)
+        add_macro(pm)
 
     def on_pm_remove(self, pm):
-        MAU.remove_macro(pm)
+        remove_macro(pm)
         super().on_pm_remove(pm)
 
     def on_pm_duplicate(self, from_pm, pm):
         EditorBase.on_pm_duplicate(self, from_pm, pm)
-        MAU.add_macro(pm)
+        add_macro(pm)
 
     def on_pm_enabled(self, pm, value):
         super().on_pm_enabled(pm, value)
 
         if pm.enabled:
-            MAU.add_macro(pm)
+            add_macro(pm)
         else:
-            MAU.remove_macro(pm)
+            remove_macro(pm)
 
     def on_pm_rename(self, pm, name):
-        MAU.remove_macro(pm)
+        remove_macro(pm)
         super().on_pm_rename(pm, name)
-        MAU.add_macro(pm)
+        add_macro(pm)
 
     def on_pmi_add(self, pm, pmi):
         pmi.mode = 'COMMAND'
         pmi.name = uname(pm.pmis, "Command", " ", 1, False)
-        MAU.update_macro(pm)
+        update_macro(pm)
 
     def on_pmi_move(self, pm):
-        MAU.update_macro(pm)
+        update_macro(pm)
 
     def on_pmi_remove(self, pm):
-        MAU.update_macro(pm)
+        update_macro(pm)
 
-    def on_pmi_paste(self, pm, pmi):
-        MAU.update_macro(pm)
+    def on_pmi_paste(self, pm, _pmi):
+        update_macro(pm)
 
-    def on_pmi_toggle(self, pm, pmi):
-        MAU.update_macro(pm)
+    def on_pmi_toggle(self, pm, _pmi):
+        update_macro(pm)
 
-    def on_pmi_edit(self, pm, pmi):
-        MAU.update_macro(pm)
+    def on_pmi_edit(self, pm, _pmi):
+        update_macro(pm)
 
     def get_pmi_icon(self, _pm, pmi, _idx):
         pr = prefs()
@@ -122,7 +120,5 @@ class Editor(EditorBase):
 
 def register():
     Editor()
-
-    MAU.init_macros(
-        PME_OT_macro_exec1, PME_OT_macro_exec_base,
-        PME_OT_sticky_key_base, PME_OT_modal_base)
+    init_macros(PME_OT_macro_exec1, PME_OT_macro_exec_base,
+                    PME_OT_sticky_key_base, PME_OT_modal_base)

@@ -10,6 +10,11 @@ from ..constants import (
 )
 
 
+pme.props.BoolProperty("mo", "confirm",  False)
+pme.props.BoolProperty("mo", "block_ui", True)
+pme.props.BoolProperty("mo", "lock",     True)
+
+
 class PME_OT_prop_data_reset(bpy.types.Operator):
     bl_idname = "pme.prop_data_reset"
     bl_label = "Reset"
@@ -25,17 +30,10 @@ class PME_OT_prop_data_reset(bpy.types.Operator):
         return {'FINISHED'}
 
 
-pme.props.BoolProperty("mo", "confirm", False)
-pme.props.BoolProperty("mo", "block_ui", True)
-pme.props.BoolProperty("mo", "lock", True)
-
-
 class Editor(EditorBase):
-
     def __init__(self):
         self.id = 'MODAL'
         EditorBase.__init__(self)
-
         self.docs = "#Modal_Operator_Editor"
         self.use_slot_icon = False
         self.use_preview = False
@@ -46,7 +44,7 @@ class Editor(EditorBase):
             'MODAL'
         }
 
-    def init_pm(self, pm):
+    def init_pm(self, _pm):
         pass
 
     def on_pm_add(self, pm):
@@ -56,27 +54,26 @@ class Editor(EditorBase):
 
     def on_pmi_check(self, pm, pmi_data):
         EditorBase.on_pmi_check(self, pm, pmi_data)
-
         tpr = temp_prefs()
-        if pmi_data.mode in {'COMMAND', 'PROP'}:
-            if tpr.modal_item_custom:
-                try:
-                    compile(tpr.modal_item_custom, "<string>", "eval")
-                except:
-                    pmi_data.info(W_PMI_EXPR)
 
-        if pmi_data.mode == 'COMMAND' or \
-                pmi_data.mode == 'PROP' and tpr.modal_item_prop_mode == 'KEY':
+        if pmi_data.mode in {'COMMAND', 'PROP'} and tpr.modal_item_custom:
+            try:
+                compile(tpr.modal_item_custom, "<string>", "eval")
+            except:
+                pmi_data.info(W_PMI_EXPR)
+
+        if pmi_data.mode == 'COMMAND' \
+        or pmi_data.mode == 'PROP' \
+        and tpr.modal_item_prop_mode == 'KEY':
             if tpr.modal_item_hk.key == 'NONE':
                 pmi_data.info(W_PMI_HOTKEY)
-
         elif pmi_data.mode in MODAL_CMD_MODES:
             pmi_data.sname = bpy.types.UILayout.enum_item_name(
                 pmi_data, "mode", pmi_data.mode)
-
-        # elif pmi_data.mode == 'PROP':
-        #     pmi_data.sname = bpy.types.UILayout.enum_item_name(
-        #         tpr, "modal_item_prop_mode", tpr.modal_item_prop_mode)
+        #elif pmi_data.mode == 'PROP':
+        #    pmi_data.sname = bpy.types.UILayout.enum_item_name(
+        #        tpr, "modal_item_prop_mode", tpr.modal_item_prop_mode
+        #    )
 
         if pmi_data.mode == 'PROP' and tpr.modal_item_prop_mode == 'MOVE':
             pmi_data.info(I_MODAL_PROP_MOVE, False)
@@ -87,21 +84,18 @@ class Editor(EditorBase):
 
     def on_pmi_pre_edit(self, pm, pmi, data):
         EditorBase.on_pmi_pre_edit(self, pm, pmi, data)
-
         tpr = temp_prefs()
         tpr.prop_data.clear()
         if pmi.mode == 'PROP':
             tpr.prop_data.init(pmi.text, pme.context.globals)
-
         tpr.modal_item_prop_min = tpr.prop_data.min
         tpr.modal_item_prop_max = tpr.prop_data.max
         tpr.modal_item_prop_step = tpr.prop_data.step
         tpr.modal_item_prop_step_is_set = False
         tpr.modal_item_custom = ""
-
         decode_modal_data(pmi, None, tpr)
 
-    def on_pmi_edit(self, pm, pmi):
+    def on_pmi_edit(self, _pm, pmi):
         if pmi.mode == 'COMMAND' and pmi.icon in {'', 'NONE'}:
             pmi.mode = 'INVOKE'
 
@@ -124,8 +118,8 @@ class Editor(EditorBase):
         if pmi.mode == 'COMMAND':
             icon = 'FILE_SCRIPT'
         elif pmi.mode == 'PROP':
-            if 'WHEELUPMOUSE' in pmi.icon or \
-                    'WHEELDOWNMOUSE' in pmi.icon:
+            if 'WHEELUPMOUSE' in pmi.icon \
+            or 'WHEELDOWNMOUSE' in pmi.icon:
                 icon = 'DECORATE_OVERRIDE'
             elif pmi.icon.startswith('MOUSEMOVE'):
                 icon = 'CENTER_ONLY'
@@ -139,7 +133,6 @@ class Editor(EditorBase):
             icon = 'CHECKBOX_HLT'
         elif pmi.mode == 'UPDATE':
             icon = 'FILE_REFRESH'
-
         return icon
 
 

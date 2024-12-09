@@ -1,5 +1,5 @@
-from .addon import temp_prefs
 from .utils import isclose
+from .addon import temp_prefs
 
 
 def encode_modal_data(pmi):

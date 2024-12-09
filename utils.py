@@ -1,5 +1,5 @@
-from threading import Thread, Event, Lock, current_thread
-from time import time, sleep
+from threading import Thread, Event, Lock
+from time import time
 from sys import exc_info
 from traceback import format_exception_only
 

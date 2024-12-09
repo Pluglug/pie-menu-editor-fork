@@ -1,16 +1,17 @@
-import bpy
 from io import BytesIO
 from itertools import chain
 from tokenize import (
     tokenize, Untokenizer,
     OP, ENCODING, NAME, STRING, NUMBER, ENDMARKER, INDENT, DEDENT, NEWLINE, NL
 )
-from .addon import print_exc
+
+import bpy
+
 from . import pme
+from .addon import print_exc
 
 
 class _XUntokenizer(Untokenizer):
-
     def compat(self, token, iterable):
         indents = []
         toks_append = self.tokens.append
@@ -156,8 +157,7 @@ def _extract_args(stm, idx, encoding):
                     if len(arg) == 1:
                         args.pop()
 
-                    has_pos_args = has_pos_args or \
-                        len(args) > 0 and not equal
+                    has_pos_args = has_pos_args or len(args) > 0 and not equal
                     if args and not equal:
                         pos_args.append(args.pop())
 
@@ -209,7 +209,6 @@ def operator(bl_idname):
         get_rna_type(ret)
     except:
         ret = None
-
     return ret
 
 
@@ -318,7 +317,7 @@ def find_operator(text):
 
 
 def find_statement(text):
-    stms, encoding = _split_statement(text)
+    stms, _encoding = _split_statement(text)
 
     if len(stms) != 1:
         return None, None
@@ -360,7 +359,7 @@ def find_statement(text):
 def _apply_properties(dct, key, value):
     if isinstance(value, dict):
         if key not in dct:
-            dct[key] = dict()
+            dct[key] = {}
 
         d = getattr(dct, key, None)
         if d is None:
@@ -399,5 +398,4 @@ def get_rna_type(op):
 
     if hasattr(op, "get_rna"):
         return op.get_rna().rna_type
-    else:
-        return op.get_rna_type()
+    return op.get_rna_type()

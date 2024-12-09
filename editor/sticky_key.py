@@ -7,6 +7,9 @@ from ..ui import tag_redraw
 from ..operator_utils import find_statement
 
 
+pme.props.BoolProperty("sk", "sk_block_ui", False)
+
+
 class PME_OT_sticky_key_edit(bpy.types.Operator):
     bl_idname = "pme.sticky_key_edit"
     bl_label = "Save and Restore Previous Value"
@@ -26,7 +29,7 @@ class PME_OT_sticky_key_edit(bpy.types.Operator):
             PME_OT_sticky_key_edit.pmi_prop = prop
             PME_OT_sticky_key_edit.pmi_value = value
 
-    def execute(self, context):
+    def execute(self, _context):
         cl = self.__class__
         pr = prefs()
         pm = pr.selected_pm
@@ -43,11 +46,7 @@ class PME_OT_sticky_key_edit(bpy.types.Operator):
         return {'FINISHED'}
 
 
-pme.props.BoolProperty("sk", "sk_block_ui", False)
-
-
 class Editor(EditorBase):
-
     def __init__(self):
         self.id = 'STICKY'
         EditorBase.__init__(self)
@@ -62,7 +61,7 @@ class Editor(EditorBase):
         self.supported_slot_modes = {'COMMAND', 'HOTKEY'}
         self.toggleable_slots = False
 
-    def init_pm(self, pm):
+    def init_pm(self, _pm):
         pass
 
     def on_pm_add(self, pm):
@@ -83,7 +82,7 @@ class Editor(EditorBase):
         EditorBase.draw_extra_settings(self, layout, pm)
         layout.prop(pm, "sk_block_ui")
 
-    def get_pmi_icon(self, pm, pmi, idx):
+    def get_pmi_icon(self, _pm, _pmi, idx):
         return 'TRIA_DOWN_BAR' if idx == 0 else 'TRIA_UP'
 
 

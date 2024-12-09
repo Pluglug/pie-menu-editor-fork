@@ -1,20 +1,22 @@
-import bpy
 import os
 import sys
 import marshal
 import py_compile
 from traceback import format_exc
 from errno import ENOENT
-from .addon import ADDON_PATH, prefs, print_exc
+
+import bpy
+
 from . import pme
-from .layout_helper import lh, draw_pme_layout, CLayout
 from .operators import WM_OT_pme_user_pie_menu_call
+from .layout_helper import CLayout, draw_pme_layout, lh
+from .addon import prefs, print_exc, ADDON_PATH
 
 
 class WM_MT_pme:
     bl_label = ""
 
-    def draw(self, context):
+    def draw(self, _context):
         pr = prefs()
         pm = pr.pie_menus[self.bl_label]
 
@@ -122,11 +124,11 @@ def header_menu(areas):
     if not isinstance(areas, list):
         areas = [areas]
 
-    menu_types = dict(
-        TIMELINE="TIME_MT_editor_menus",
-        IMAGE="MASK_MT_editor_menus",
-        SEQUENCE="SEQUENCER_MT_editor_menus",
-    )
+    menu_types = {
+        'TIMELINE': "TIME_MT_editor_menus",
+        'IMAGE':    "MASK_MT_editor_menus",
+        'SEQUENCE': "SEQUENCER_MT_editor_menus",
+    }
 
     try:
         col = pme.context.layout.column()

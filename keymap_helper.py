@@ -1,14 +1,14 @@
 import bpy
-from . import constants as CC
-from .addon import uprefs, print_exc, is_28
+
+from . import pme
+from .c_utils import HeadModalHandler
 from .property_utils import DynamicPG, to_py_value
-from .debug_utils import *
-from . import c_utils as CTU
-from . import operator_utils as OU
-from . import (
-    pme,
-    selection_state,
-)
+from .selection_state import check, update
+from .addon import uprefs, print_exc, is_28
+from .operator_utils import find_statement, add_default_args #, operator
+from .debug_utils import DBG_INIT, DBG_STACK, loge, logh, logi
+from .constants import UPREFS, KEYMAP_SPLITTER
+
 
 MOUSE_BUTTONS = {
     'LEFTMOUSE', 'MIDDLEMOUSE', 'RIGHTMOUSE',
@@ -44,7 +44,7 @@ _keymap_names = {
     "Logic Editor": ('LOGIC_EDITOR', 'WINDOW'),
     "Property Editor": ('PROPERTIES', 'WINDOW'),
     "Outliner": ('OUTLINER', 'WINDOW'),
-    "User Preferences": (CC.UPREFS, 'WINDOW'),
+    "User Preferences": (UPREFS, 'WINDOW'),
     "Info": ('INFO', 'WINDOW'),
     "File Browser": ('FILE_BROWSER', 'WINDOW'),
     "Console": ('CONSOLE', 'WINDOW'),
@@ -161,12 +161,12 @@ class _ImageKMList(_KMList):
                 lst.append("Image Paint")
             elif mode == 'MASK':
                 lst.append("Mask Editing")
-            elif mode == 'VIEW' and not is_28() or \
-                    mode == 'UV' and is_28():
+            elif mode == 'VIEW' and not is_28() \
+              or mode == 'UV' and is_28():
                 ao = context.active_object
-                if ao and ao.data and \
-                        ao.type == 'MESH' and ao.mode == 'EDIT' and \
-                        ao.data.uv_layers.active:
+                if ao and ao.data \
+                and ao.type == 'MESH' and ao.mode == 'EDIT' \
+                and ao.data.uv_layers.active:
                     lst.append("UV Editor")
 
             lst.append("Image Generic")
@@ -365,7 +365,7 @@ _km_lists = {
             "Outliner"
         ]),
 
-    CC.UPREFS: _KMList(
+    UPREFS: _KMList(
         window=[
             "View2D Buttons List"
         ],
@@ -428,7 +428,7 @@ def is_default_select_key():
     return ret
 
 
-def to_blender_mouse_key(key, context):
+def to_blender_mouse_key(key, _context):
     default = is_default_select_key()
 
     if key == 'LEFTMOUSE':
@@ -439,7 +439,7 @@ def to_blender_mouse_key(key, context):
     return key
 
 
-def to_system_mouse_key(key, context):
+def to_system_mouse_key(key, _context):
     default = is_default_select_key()
 
     if key == 'ACTIONMOUSE':
@@ -454,8 +454,8 @@ def compare_km_names(name1, name2):
     if name1 == name2:
         return 2
 
-    name1 = set(s.strip() for s in name1.split(CC.KEYMAP_SPLITTER))
-    name2 = set(s.strip() for s in name2.split(CC.KEYMAP_SPLITTER))
+    name1 = set(s.strip() for s in name1.split(KEYMAP_SPLITTER))
+    name2 = set(s.strip() for s in name2.split(KEYMAP_SPLITTER))
     name = name1.intersection(name2)
 
     if name == name1:
@@ -540,23 +540,23 @@ def run_operator(context, key, ctrl, shift, alt, oskey, key_mod):
         key2 = 'RIGHTMOUSE' if default else 'LEFTMOUSE'
 
     km_names = _km_lists[area].get_keymaps(context)
-    km_item = None
+    #km_item = None
     keymaps = context.window_manager.keyconfigs.user.keymaps
     for km_name in km_names:
         if km_name not in keymaps:
             continue
         km = keymaps[km_name]
         for kmi in km.keymap_items:
-            if (kmi.type == key1 or kmi.type == key2) and \
-                    kmi.value == 'PRESS' and \
-                    kmi.active and \
-                    kmi.ctrl == ctrl and \
-                    kmi.shift == shift and \
-                    kmi.alt == alt and \
-                    kmi.oskey == oskey and \
-                    kmi.key_modifier == key_mod and \
-                    kmi.idname != "pme.mouse_state" and \
-                    kmi.idname != "wm.pme_user_pie_menu_call":
+            if (kmi.type == key1 or kmi.type == key2) \
+            and kmi.value == 'PRESS' \
+            and kmi.active \
+            and kmi.ctrl == ctrl \
+            and kmi.shift == shift \
+            and kmi.alt == alt \
+            and kmi.oskey == oskey \
+            and kmi.key_modifier == key_mod \
+            and kmi.idname not in ('pme.mouse_state',
+                                   'wm.pme_user_pie_menu_call'):
                 module, _, operator = kmi.idname.rpartition(".")
                 if not module or "." in module:
                     continue
@@ -571,7 +571,7 @@ def run_operator(context, key, ctrl, shift, alt, oskey, key_mod):
                 operator = getattr(module, operator)
                 if operator.poll():
 
-                    # operator = OU.operator(kmi.idname)
+                    # operator = operator(kmi.idname)
                     # if not operator:
                     #     return
 
@@ -600,12 +600,12 @@ def run_operator(context, key, ctrl, shift, alt, oskey, key_mod):
 
 
 def run_operator_by_hotkey(context, hotkey):
-    key, ctrl, shift, alt, oskey, any, key_mod, _ = parse_hotkey(hotkey)
+    key, ctrl, shift, alt, oskey, _any, key_mod, _ = parse_hotkey(hotkey)
     run_operator(context, key, ctrl, shift, alt, oskey, key_mod)
 
 
 def call_operator(hotkey):
-    key, ctrl, shift, alt, oskey, any, key_mod, _ = parse_hotkey(hotkey)
+    key, ctrl, shift, alt, oskey, _any, key_mod, _ = parse_hotkey(hotkey)
     run_operator(bpy.context, key, ctrl, shift, alt, oskey, key_mod)
 
 
@@ -702,8 +702,8 @@ class KeymapHelper:
         self.keymap_items[km.name].append(item)
 
     def available(self):
-        DBG_INIT and not bpy.context.window_manager.keyconfigs.addon and \
-            loge("KH is not available")
+        DBG_INIT and not bpy.context.window_manager.keyconfigs.addon \
+        and loge("KH is not available")
         return True if bpy.context.window_manager.keyconfigs.addon else False
 
     def keymap(self, name="Window", space_type='EMPTY', region_type='WINDOW'):
@@ -799,7 +799,7 @@ class KeymapHelper:
             return
 
         if hotkey:
-            key, ctrl, shift, alt, oskey, any, key_mod, _ = \
+            key, ctrl, shift, alt, oskey, _any, key_mod, _ = \
                 parse_hotkey(hotkey)
 
         item = self.km.keymap_items.new(
@@ -817,9 +817,9 @@ class KeymapHelper:
 
         keymaps = bpy.context.window_manager.keyconfigs.addon.keymaps
 
-        if self.km.name not in keymaps or \
-                self.km.name not in self.keymap_items or \
-                item not in self.keymap_items[self.km.name]:
+        if self.km.name not in keymaps \
+        or self.km.name not in self.keymap_items \
+        or item not in self.keymap_items[self.km.name]:
             return
 
         try:
@@ -972,13 +972,12 @@ class PME_OT_mouse_state(bpy.types.Operator):
         if event.value == 'PRESS':
             if event.type == 'ESC':
                 return {'CANCELLED'}
-            elif event.type != 'MOUSEMOVE' and \
-                    event.type != 'INBETWEEN_MOUSEMOVE':
+            if event.type not in ('MOUSEMOVE', 'INBETWEEN_MOUSEMOVE'):
                 update_mouse_state(self.key)
                 return {'PASS_THROUGH'}
 
         elif event.value == 'RELEASE':
-            if event.type == self.key or event.type == 'WINDOW_DEACTIVATE':
+            if event.type in (self.key, 'WINDOW_DEACTIVATE'):
                 self.stop()
 
                 if to_system_mouse_key(self.key, context) == 'RIGHTMOUSE':
@@ -1096,16 +1095,14 @@ class PME_OT_key_state(bpy.types.Operator):
             self.stop()
             return {'PASS_THROUGH'}
 
-        if event.type == 'MOUSEMOVE' or \
-                event.type == 'INBETWEEN_MOUSEMOVE':
+        if event.type in ('MOUSEMOVE', 'INBETWEEN_MOUSEMOVE'):
             self.active = True
             return {'PASS_THROUGH'}
 
         # if event.value == 'PRESS':
         #     if event.type == 'ESC':
         #         return {'CANCELLED'}
-        #     # elif event.type == 'MOUSEMOVE' or \
-        #     #         event.type == 'INBETWEEN_MOUSEMOVE':
+        #     # elif event.type in ('MOUSEMOVE', 'INBETWEEN_MOUSEMOVE'):
         #     #     self.active = True
         #     else:
         #         update_mouse_state(self.key)
@@ -1158,7 +1155,7 @@ class PME_OT_key_state_init(bpy.types.Operator):
         return {'PASS_THROUGH'}
 
 
-class PME_OT_mouse_btn_state(bpy.types.Operator, CTU.HeadModalHandler):
+class PME_OT_mouse_btn_state(bpy.types.Operator, HeadModalHandler):
     bl_idname = "pme.mouse_btn_state"
     bl_label = "Internal (PME)"
     bl_options = {'REGISTER'}
@@ -1179,13 +1176,13 @@ class PME_OT_mouse_btn_state(bpy.types.Operator, CTU.HeadModalHandler):
 
 
 def is_key_pressed(key):
-    ret = PME_OT_mouse_btn_state.inst and \
-        PME_OT_mouse_btn_state.inst.key == key
+    ret = PME_OT_mouse_btn_state.inst \
+      and PME_OT_mouse_btn_state.inst.key == key
     # ret = PME_OT_key_state.inst and PME_OT_key_state.inst.key == key
     return ret
-    # return PME_OT_mouse_state.inst and PME_OT_mouse_state.inst.key == key or \
-    #     PME_OT_mouse_state_wait.inst and \
-    #     PME_OT_mouse_state_wait.inst.key == key
+    # return PME_OT_mouse_state.inst and PME_OT_mouse_state.inst.key == key \
+    #     or PME_OT_mouse_state_wait.inst \
+    #    and ME_OT_mouse_state_wait.inst.key == key
 
 
 # def get_pressed_mouse_button():
@@ -1197,12 +1194,12 @@ def is_key_pressed(key):
 #     return None
 
 
-def update_mouse_state(key):
+def update_mouse_state(_key):
     pass
     # bpy.ops.pme.mouse_state_init('INVOKE_DEFAULT', key=key)
 
 
-added_mouse_buttons = dict()
+added_mouse_buttons = {}
 
 
 def add_mouse_button(key, kh, km="Screen Editing"):
@@ -1232,11 +1229,11 @@ def remove_mouse_button(key, kh, km="Screen Editing"):
         keymaps = bpy.context.window_manager.keyconfigs.addon.keymaps
 
         items = kh.keymap_items[km]
-        for i, item in enumerate(items):
-            if item.type == key and \
-                    item.idname == PME_OT_mouse_btn_state.bl_idname:
+        for idx, item in enumerate(items):
+            if item.type == key \
+            and item.idname == PME_OT_mouse_btn_state.bl_idname:
                 keymaps[km].keymap_items.remove(item)
-                items.pop(i)
+                items.pop(idx)
                 break
 
 
@@ -1307,8 +1304,7 @@ class PME_OT_key_is_pressed(bpy.types.Operator):
                 self.instance.stop()
             self.stop()
 
-        elif event.type == 'MOUSEMOVE' or \
-                event.type == 'INBETWEEN_MOUSEMOVE':
+        elif event.type in ('MOUSEMOVE', 'INBETWEEN_MOUSEMOVE'):
             return {'PASS_THROUGH'}
 
         if event.type == self.key:
@@ -1316,18 +1312,14 @@ class PME_OT_key_is_pressed(bpy.types.Operator):
                 if self.instance:
                     self.instance.stop()
                 self.stop()
-
             elif event.value == 'PRESS':
                 self.is_pressed = True
                 if self.instance and self.timer:
                     self.remove_timer()
-
             return {'PASS_THROUGH'}
 
-        if event.value != 'ANY' and event.value != 'NOTHING':
+        if event.value not in ('ANY', 'NOTHING'):
             self.restart()
-            return {'PASS_THROUGH'}
-
         return {'PASS_THROUGH'}
 
     def invoke(self, context, event):
@@ -1400,7 +1392,7 @@ class StackKey:
                 if pm.pmis[i].mode != 'COMMAND':
                     break
 
-                prop, value = OU.find_statement(pm.pmis[i].text)
+                prop, value = find_statement(pm.pmis[i].text)
                 if not prop:
                     break
 
@@ -1460,12 +1452,13 @@ class StackKey:
         else:
             StackKey.is_first = pm is not None and cpm.name != StackKey.name
 
-            lo = len(bpy.context.window_manager.operators) and \
-                bpy.context.window_manager.operators[-1].as_pointer()
+            lo = len(bpy.context.window_manager.operators) \
+             and bpy.context.window_manager.operators[-1].as_pointer()
 
-            if not StackKey.is_first and (
-                    lo == 0 and StackKey.lo or
-                    lo and StackKey.lo and lo != StackKey.lo):
+            if not StackKey.is_first and (lo == 0
+                                          and StackKey.lo or lo
+                                          and StackKey.lo
+                                          and lo != StackKey.lo):
                 StackKey.is_first = True
 
             StackKey.name = cpm.name
@@ -1473,11 +1466,12 @@ class StackKey:
             if StackKey.is_first:
                 StackKey.operator_mode = prop.s_undo
 
-            if not StackKey.is_first and StackKey.operator_mode and \
-                    StackKey.cur_idx == -1:
+            if not StackKey.is_first \
+            and StackKey.operator_mode \
+            and StackKey.cur_idx == -1:
                 if not lo or not StackKey.lo or lo != StackKey.lo:
                     StackKey.is_first = True
-                elif not selection_state.check():
+                elif not check():
                     StackKey.is_first = True
 
             if prop.s_state:
@@ -1497,8 +1491,8 @@ class StackKey:
             DBG_STACK and logi("AO: %s, LO: %s" % (str(lo), str(StackKey.lo)))
 
         try:
-            if slot == -1 and num_pmis > 1 and \
-                    prop.s_undo and not StackKey.is_first and pm:
+            if slot == -1 and num_pmis > 1 \
+            and prop.s_undo and not StackKey.is_first and pm:
                 bpy.ops.ed.undo()
 
             cur_idx = StackKey.idx
@@ -1511,22 +1505,20 @@ class StackKey:
                 run_operator_by_hotkey(bpy.context, pmi.text)
             elif pmi.mode == 'COMMAND':
                 StackKey.exec_globals.update(menu=cpm.name, slot=pmi.name)
-                pme.context.exe(
-                    OU.add_default_args(pmi.text),
-                    StackKey.exec_globals)
+                pme.context.exe(add_default_args(pmi.text),
+                                StackKey.exec_globals)
 
             if StackKey.idx == cur_idx and len(cpm.pmis) > 1:
-                selection_state.update()
+                update()
                 if slot == -1:
                     bpy.ops.pme.overlay('INVOKE_DEFAULT', text=pmi.name)
-
         except:
             print_exc()
 
         StackKey.cur_idx = -1
 
-        StackKey.lo = len(bpy.context.window_manager.operators) and \
-            bpy.context.window_manager.operators[-1].as_pointer()
+        StackKey.lo = len(bpy.context.window_manager.operators) \
+                  and bpy.context.window_manager.operators[-1].as_pointer()
         if lo != 0 and not StackKey.operator_mode:
             if StackKey.lo and lo != StackKey.lo:
                 StackKey.operator_mode = True

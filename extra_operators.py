@@ -1,19 +1,22 @@
 import bpy
 import addon_utils
 from bpy.app.handlers import persistent
-from .addon import prefs, uprefs, is_28
+
+from . import pme
 from .bl_utils import PopupOperator, popup_area, ctx_dict, area_header_text_set
+from .addon import prefs, uprefs, is_28
+from .operator_utils import get_rna_type
+from .c_utils import swap_spaces, resize_area
 from .panel_utils import panel, panel_label, bl_panel_enum_items
+from .screen_utils import (
+    toggle_sidebar, override_context, move_header, redraw_screen
+)
+from .layout_helper import split, lh
 from .constants import (
+    area_type_enum_items, header_action_enum_items,
     PME_TEMP_SCREEN, PME_SCREEN, MAX_STR_LEN,
     WINDOW_MIN_WIDTH, WINDOW_MIN_HEIGHT
 )
-from . import constants as CC
-from . import c_utils as CTU
-from . import screen_utils as SU
-from .layout_helper import lh, split
-from . import pme
-from . import operator_utils
 
 
 class PME_OT_dummy(bpy.types.Operator):
@@ -78,7 +81,7 @@ class WM_OT_pme_sidebar_toggle(bpy.types.Operator):
     tools: bpy.props.BoolProperty()
 
     def execute(self, context):
-        SU.toggle_sidebar(tools=self.tools)
+        toggle_sidebar(tools=self.tools)
         return {'FINISHED'}
 
 
@@ -112,7 +115,7 @@ class PME_OT_sidebar_toggle(bpy.types.Operator):
         elif self.action == 'HIDE':
             value = False
 
-        SU.toggle_sidebar(
+        toggle_sidebar(
             tools=self.sidebar == 'TOOLS',
             value=value)
 
@@ -206,8 +209,8 @@ class PME_OT_popup_user_preferences(PopupOperator, bpy.types.Operator):
         elif upr.active_section == 'FILES':
             tp = bpy.types.USERPREF_PT_file
         elif upr.active_section == 'SYSTEM':
-            tp = getattr(bpy.types, "USERPREF_PT_system", None) or \
-                getattr(bpy.types, "USERPREF_PT_system_general", None)
+            tp = getattr(bpy.types, "USERPREF_PT_system", None) \
+              or getattr(bpy.types, "USERPREF_PT_system_general", None)
 
         pme.context.layout = col
         panel(tp, frame=True, header=False, poll=False)
@@ -294,7 +297,7 @@ class PME_OT_popup_panel(PopupOperator, bpy.types.Operator):
         default=True, options={'SKIP_SAVE'})
     area: bpy.props.EnumProperty(
         name="Area Type", description="Area type",
-        items=CC.area_type_enum_items(), options={'SKIP_SAVE'})
+        items=area_type_enum_items(), options={'SKIP_SAVE'})
     width: bpy.props.IntProperty(
         name="Width", description="Width of the popup",
         default=-1, options={'SKIP_SAVE'})
@@ -357,7 +360,7 @@ class PME_OT_select_popup_panel(bpy.types.Operator):
 
     enum_items = None
 
-    def get_items(self, context):
+    def get_items(self, _context):
         if not PME_OT_select_popup_panel.enum_items:
             PME_OT_select_popup_panel.enum_items = bl_panel_enum_items()
 
@@ -383,11 +386,11 @@ class PME_OT_window_auto_close(bpy.types.Operator):
     bl_options = {'INTERNAL'}
 
     def execute(self, context):
-        # if context.window.screen.name.startswith(PME_SCREEN) or \
-        #         context.window.screen.name.startswith(PME_TEMP_SCREEN):
-        #     bpy.ops.wm.window_close(dict(window=context.window))
+        #if context.window.screen.name.startswith(PME_SCREEN) \
+        #or context.window.screen.name.startswith(PME_TEMP_SCREEN):
+        #    bpy.ops.wm.window_close({'window': context.window})
 
-        # return {'PASS_THROUGH'}
+        #return {'PASS_THROUGH'}
 
         if not context.window.screen.name.startswith(PME_TEMP_SCREEN):
             # delete_flag = False
@@ -397,7 +400,7 @@ class PME_OT_window_auto_close(bpy.types.Operator):
             # used_pme_screens = set()
             for w in wm.windows:
                 if w.screen.name.startswith(PME_TEMP_SCREEN):
-                    bpy.ops.screen.new(dict(window=w))
+                    bpy.ops.screen.new({'window': w})
                     bpy.ops.pme.timeout(
                         cmd="p = %d; "
                         "w = [w for w in C.window_manager.windows "
@@ -413,17 +416,17 @@ class PME_OT_window_auto_close(bpy.types.Operator):
             # for s in bpy.data.screens:
             #     if s.name.startswith(PME_TEMP_SCREEN):
             #         delete_flag = True
-            #         bpy.ops.screen.delete(dict(window=window, screen=s))
+            #         bpy.ops.screen.delete({'window': window, 'screen': s})
 
-            #     elif s.name.startswith(PME_SCREEN) and \
-            #             s.name not in used_pme_screens:
+            #     elif s.name.startswith(PME_SCREEN) \
+            #     and s.name not in used_pme_screens:
             #         delete_flag = True
-            #         bpy.ops.screen.delete(dict(window=window, screen=s))
+            #         bpy.ops.screen.delete({'window': window, 'screen': s})
 
             # if delete_flag:
             #     for s, w in zip(screens, wm.windows):
             #         bpy.ops.pme.screen_set(
-            #             dict(window=w, screen=s),
+            #             {'window': w, 'screen': s},
             #             'INVOKE_DEFAULT', name=s.name)
 
             prefs().enable_window_kmis(False)
@@ -442,7 +445,7 @@ class PME_OT_area_move(bpy.types.Operator):
 
     area: bpy.props.EnumProperty(
         name="Area Type", description="Area type",
-        items=CC.area_type_enum_items(),
+        items=area_type_enum_items(),
         options={'SKIP_SAVE'})
     edge: bpy.props.EnumProperty(
         name="Area Edge", description="Edge of the area to move",
@@ -471,34 +474,34 @@ class PME_OT_area_move(bpy.types.Operator):
             self.report({'WARNING'}, "Main area not found")
             return {'CANCELLED'}
 
-        bpy.ops.view2d.scroll_up(SU.override_context(a))
+        bpy.ops.view2d.scroll_up(override_context(a))
         return {'FINISHED'}
 
-        mx, my = event.mouse_x, event.mouse_y
-        x, y = mx, my
-        if self.edge == 'TOP':
-            y = a.y + a.height
-            my += self.delta * self.move_cursor
-        elif self.edge == 'BOTTOM':
-            y = a.y
-            my += self.delta * self.move_cursor
-        elif self.edge == 'RIGHT':
-            x = a.x + a.width
-            mx += self.delta * self.move_cursor
-        elif self.edge == 'LEFT':
-            x = a.x
-            mx += self.delta * self.move_cursor
-
-        bpy.context.window.cursor_warp(x, y)
-
-        bpy.ops.pme.timeout(
-            delay=0.0001,
-            cmd=(
-                "bpy.context.window.cursor_warp(%d, %d);"
-                "bpy.ops.screen.area_move(x=%d, y=%d, delta=%d);"
-            ) % (x, y, self.delta, mx, my)
-        )
-        return {'FINISHED'}
+        #mx, my = event.mouse_x, event.mouse_y
+        #x, y = mx, my
+        #if self.edge == 'TOP':
+        #    y = a.y + a.height
+        #    my += self.delta * self.move_cursor
+        #elif self.edge == 'BOTTOM':
+        #    y = a.y
+        #    my += self.delta * self.move_cursor
+        #elif self.edge == 'RIGHT':
+        #    x = a.x + a.width
+        #    mx += self.delta * self.move_cursor
+        #elif self.edge == 'LEFT':
+        #    x = a.x
+        #    mx += self.delta * self.move_cursor
+        #
+        #bpy.context.window.cursor_warp(x, y)
+        #
+        #bpy.ops.pme.timeout(
+        #    delay=0.0001,
+        #    cmd=(
+        #        "bpy.context.window.cursor_warp(%d, %d);"
+        #        "bpy.ops.screen.area_move(x=%d, y=%d, delta=%d);"
+        #    ) % (x, y, self.delta, mx, my)
+        #)
+        #return {'FINISHED'}
 
 
 class PME_OT_sidearea_toggle(bpy.types.Operator):
@@ -520,17 +523,17 @@ class PME_OT_sidearea_toggle(bpy.types.Operator):
     )
     main_area: bpy.props.EnumProperty(
         name="Main Area Type", description="Main area type",
-        items=CC.area_type_enum_items(current=False),
+        items=area_type_enum_items(current=False),
         default='VIEW_3D',
         options={'SKIP_SAVE'})
     area: bpy.props.EnumProperty(
         name="Side Area Type", description="Side area type",
-        items=CC.area_type_enum_items(current=False),
+        items=area_type_enum_items(current=False),
         default='OUTLINER',
         options={'SKIP_SAVE'})
     ignore_area: bpy.props.EnumProperty(
         name="Ignore Area Type", description="Area type to ignore",
-        items=CC.area_type_enum_items(current=False, none=True),
+        items=area_type_enum_items(current=False, none=True),
         default='NONE',
         options={'SKIP_SAVE'})
     side: bpy.props.EnumProperty(
@@ -545,7 +548,7 @@ class PME_OT_sidearea_toggle(bpy.types.Operator):
         subtype='PIXEL', options={'SKIP_SAVE'})
     header: bpy.props.EnumProperty(
         name="Header", description="Header options",
-        items=CC.header_action_enum_items(),
+        items=header_action_enum_items(),
         options={'SKIP_SAVE'})
     ignore_areas: bpy.props.StringProperty(
         name="Ignore Area Types",
@@ -555,8 +558,8 @@ class PME_OT_sidearea_toggle(bpy.types.Operator):
     def get_side_areas(self, area):
         l, r, b, t = None, None, None, None
         for a in bpy.context.screen.areas:
-            if a.height == area.height and a.y == area.y and \
-                    a.ui_type not in self.ia:
+            if a.height == area.height and a.y == area.y \
+            and a.ui_type not in self.ia:
                 if not l and a.x + a.width + 1 == area.x:
                     l = a
                 elif not r and area.x + area.width + 1 == a.x:
@@ -580,7 +583,7 @@ class PME_OT_sidearea_toggle(bpy.types.Operator):
 
     def move_header(self, area):
         if self.header != 'DEFAULT':
-            SU.move_header(
+            move_header(
                 area,
                 top='TOP' in self.header,
                 visible='HIDE' not in self.header)
@@ -593,7 +596,7 @@ class PME_OT_sidearea_toggle(bpy.types.Operator):
 
     def save_sidebars(self, area):
         if self.sidebars_state is None:
-            self.__class__.sidebars_state = dict()
+            self.__class__.sidebars_state = {}
 
         r_tools, r_ui = None, None
         for r in area.regions:
@@ -607,45 +610,44 @@ class PME_OT_sidearea_toggle(bpy.types.Operator):
             r_ui and r_ui.width or 0)
 
     def restore_sidebars(self, area):
-        if self.sidebars_state is None or \
-                area.ui_type not in self.sidebars_state:
+        if self.sidebars_state is None \
+        or area.ui_type not in self.sidebars_state:
             return
 
         state = self.sidebars_state[area.ui_type]
         if state[0] > 1:
-            SU.toggle_sidebar(area, True, True)
+            toggle_sidebar(area, True, True)
         if state[1] > 1:
-            SU.toggle_sidebar(area, False, True)
+            toggle_sidebar(area, False, True)
 
     def close_area(self, main, area):
-        CTU.swap_spaces(area, main, self.area)
+        swap_spaces(area, main, self.area)
         try:
-            bpy.ops.screen.area_close(dict(area=area))
+            bpy.ops.screen.area_close({'area': area})
             return
         except:
             pass
 
         if area.x < main.x:
             try:
-                bpy.ops.screen.area_join(
-                    min_x=area.x + 2, min_y=area.y + 2,
-                    max_x=area.x - 2, max_y=area.y + 2)
+                bpy.ops.screen.area_join(min_x=area.x + 2, min_y=area.y + 2,
+                                         max_x=area.x - 2, max_y=area.y + 2)
             except:
-                bpy.ops.screen.area_join(
-                    cursor=(area.x, area.y + 2))
+                bpy.ops.screen.area_join(cursor=(area.x, area.y + 2))
 
         else:
             try:
-                bpy.ops.screen.area_join(
-                    min_x=area.x + area.width - 2,
-                    min_y=area.y + area.height - 2,
-                    max_x=area.x + area.width + 2,
-                    max_y=area.y + area.height - 2)
+                bpy.ops.screen.area_join(min_x=area.x + area.width - 2,
+                                         min_y=area.y + area.height - 2,
+                                         max_x=area.x + area.width + 2,
+                                         max_y=area.y + area.height - 2)
             except:
                 bpy.ops.screen.area_swap(
-                    cursor=(area.x + area.width - 2, area.y + 2))
+                    cursor=(area.x + area.width - 2, area.y + 2)
+                )
                 bpy.ops.screen.area_join(
-                    cursor=(area.x + area.width - 2, area.y + 2))
+                    cursor=(area.x + area.width - 2, area.y + 2)
+                )
 
     def execute(self, context):
         self.ia = set(a.strip() for a in self.ignore_areas.split(","))
@@ -662,35 +664,35 @@ class PME_OT_sidearea_toggle(bpy.types.Operator):
 
         l, r = self.get_side_areas(a)
 
-        if l and self.side == 'LEFT' and \
-                self.action in ('TOGGLE', 'SHOW') and \
-                l.ui_type != self.area:
+        if l and self.side == 'LEFT' \
+        and self.action in ('TOGGLE', 'SHOW') \
+        and l.ui_type != self.area:
             self.save_sidebars(l)
-            CTU.swap_spaces(l, a, l.ui_type)
+            swap_spaces(l, a, l.ui_type)
             self.add_space(a, self.area)
             l.ui_type = self.area
-            CTU.swap_spaces(l, a, self.area)
+            swap_spaces(l, a, self.area)
 
             if l.width != self.width:
-                CTU.resize_area(l, self.width, direction='RIGHT')
-                SU.redraw_screen()
+                resize_area(l, self.width, direction='RIGHT')
+                redraw_screen()
 
             self.restore_sidebars(l)
             self.move_header(l)
             self.fix_area(l)
 
-        elif r and self.side == 'RIGHT' and \
-                self.action in ('TOGGLE', 'SHOW') and \
-                r.ui_type != self.area:
+        elif r and self.side == 'RIGHT' \
+        and self.action in ('TOGGLE', 'SHOW') \
+        and r.ui_type != self.area:
             self.save_sidebars(r)
-            CTU.swap_spaces(r, a, r.ui_type)
+            swap_spaces(r, a, r.ui_type)
             self.add_space(a, self.area)
             r.ui_type = self.area
-            CTU.swap_spaces(r, a, self.area)
+            swap_spaces(r, a, self.area)
 
             if r.width != self.width:
-                CTU.resize_area(r, self.width, direction='LEFT')
-                SU.redraw_screen()
+                resize_area(r, self.width, direction='LEFT')
+                redraw_screen()
 
             self.restore_sidebars(r)
             self.move_header(r)
@@ -699,16 +701,16 @@ class PME_OT_sidearea_toggle(bpy.types.Operator):
         elif l and self.side == 'LEFT' and self.action in ('TOGGLE', 'HIDE'):
             self.save_sidebars(l)
             self.close_area(a, l)
-            SU.redraw_screen()
+            redraw_screen()
 
         elif r and self.side == 'RIGHT' and self.action in ('TOGGLE', 'HIDE'):
             self.save_sidebars(r)
             self.close_area(a, r)
-            SU.redraw_screen()
+            redraw_screen()
 
         elif (not l and self.side == 'LEFT' or
-                not r and self.side == 'RIGHT') and \
-                self.action in ('TOGGLE', 'SHOW'):
+              not r and self.side == 'RIGHT') \
+        and self.action in ('TOGGLE', 'SHOW'):
             if self.width > a.width >> 1:
                 self.width = a.width >> 1
 
@@ -718,8 +720,8 @@ class PME_OT_sidearea_toggle(bpy.types.Operator):
 
             self.add_space(a, self.area)
             mouse = {}
-            area_split_props = operator_utils.get_rna_type(
-                bpy.ops.screen.area_split).properties
+            area_split_props = \
+                get_rna_type(bpy.ops.screen.area_split).properties
 
             if "cursor" in area_split_props:
                 mouse["cursor"] = [a.x + 1, a.y + 1]
@@ -728,14 +730,14 @@ class PME_OT_sidearea_toggle(bpy.types.Operator):
                 mouse["mouse_y"] = a.y + 1
 
             bpy.ops.screen.area_split(
-                SU.override_context(a),
+                override_context(a),
                 direction='VERTICAL',
                 factor=factor,
                 **mouse)
 
             new_area = context.screen.areas[-1]
             new_area.ui_type = self.area
-            CTU.swap_spaces(new_area, a, self.area)
+            swap_spaces(new_area, a, self.area)
 
             self.restore_sidebars(new_area)
             self.move_header(new_area)
@@ -762,13 +764,13 @@ class PME_OT_popup_area(bpy.types.Operator):
         name="Center", description="Center", options={'SKIP_SAVE'})
     area: bpy.props.EnumProperty(
         name="Area", description="Area",
-        items=CC.area_type_enum_items(), options={'SKIP_SAVE'})
+        items=area_type_enum_items(), options={'SKIP_SAVE'})
     auto_close: bpy.props.BoolProperty(
         default=True, name="Auto Close",
         description="Click outside to close the window", options={'SKIP_SAVE'})
     header: bpy.props.EnumProperty(
         name="Header", description="Header options",
-        items=CC.header_action_enum_items(),
+        items=header_action_enum_items(),
         options={'SKIP_SAVE'})
     cmd: bpy.props.StringProperty(
         name="Exec on Open",
@@ -802,7 +804,7 @@ class PME_OT_popup_area(bpy.types.Operator):
             self.area = context.area.ui_type if is_28() else context.area.type
 
         area_name = ""
-        for item in CC.area_type_enum_items():
+        for item in area_type_enum_items():
             if item[0] == self.area:
                 area_name = item[1]
                 break
@@ -888,11 +890,11 @@ class PME_OT_popup_area(bpy.types.Operator):
             # if screen_name in bpy.data.screens:
             if False:
                 bpy.ops.screen.delete(
-                    dict(
-                        window=new_window,
-                        screen=bpy.data.screens[new_screen_name]))
-                bpy.ops.pme.screen_set(
-                    dict(window=new_window), name=screen_name)
+                    {'window': new_window,
+                     'screen': bpy.data.screens[new_screen_name]}
+                )
+                bpy.ops.pme.screen_set({'window': new_window,
+                                        'name': screen_name})
             else:
                 new_window.screen.name = screen_name
                 new_window.screen.user_clear()

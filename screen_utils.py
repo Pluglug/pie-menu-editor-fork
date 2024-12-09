@@ -1,11 +1,11 @@
 import bpy
-from . import c_utils as CTU
+
 from . import pme
 from .addon import uprefs
 from .bl_utils import ctx_dict
 
 
-def redraw_screen(area=None):
+def redraw_screen(_area=None):
     # area = area or bpy.context.area or bpy.context.screen.areas[0]
     # if not area:
     #     return
@@ -136,7 +136,7 @@ def override_context(
         screen = bpy.data.screens.get(screen, bpy.context.screen)
 
     if not screen:
-        return dict()
+        return {}
 
     if isinstance(area, str):
         for a in screen.areas:
@@ -144,7 +144,7 @@ def override_context(
                 area = a
                 break
         else:
-            return dict()
+            return {}
 
     if isinstance(region, str):
         for r in area.regions:
@@ -154,14 +154,14 @@ def override_context(
         else:
             region = area.regions[0]
 
-    return dict(
-        region=region,
-        area=area,
-        screen=screen,
-        window=window,
-        blend_data=bpy.context.blend_data,
+    return {
+        'region':     region,
+        'area':       area,
+        'screen':     screen,
+        'window':     window,
+        'blend_data': bpy.context.blend_data,
         **kwargs
-    )
+    }
 
 
 def toggle_sidebar(area=None, tools=True, value=None):

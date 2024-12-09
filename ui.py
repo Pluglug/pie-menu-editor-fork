@@ -1,11 +1,14 @@
-import bpy
 import traceback
-from . import constants as CC
-from .debug_utils import *
+
+import bpy
+
 from . import operator_utils
 from . import pme
-from .bl_utils import bp, ctx_dict
+from .bl_utils import bp
 from .addon import uprefs, ic
+from .debug_utils import DBG, loge
+from .constants import UPREFS
+
 
 uilayout_getattribute = bpy.types.UILayout.__getattribute__
 draw_addons_default = None
@@ -40,7 +43,6 @@ def find_enum_args(mo):
                 elif hasattr(tp, arg):
                     if 'Enum' in getattr(tp, arg)[0]:
                         enum_args.append(arg)
-
     except:
         pass
 
@@ -83,7 +85,7 @@ def tag_redraw(all=False):
     if all:
         tag_redraw_windows()
     else:
-        tag_redraw_windows(CC.UPREFS, 'WINDOW')
+        tag_redraw_windows(UPREFS, 'WINDOW')
 
 
 def tag_redraw_windows(area=None, region=None):
@@ -93,8 +95,8 @@ def tag_redraw_windows(area=None, region=None):
 
     for w in wm.windows:
         for a in w.screen.areas:
-            if area is None or a.type == area or \
-                    area == CC.UPREFS and not a.type:
+            if area is None or a.type == area \
+            or area == UPREFS and not a.type:
                 for r in a.regions:
                     if region is None or r.type == region:
                         r.tag_redraw()
@@ -135,7 +137,7 @@ class PME_OT_userpref_show(bpy.types.Operator):
     addon: bpy.props.StringProperty(options={'SKIP_SAVE'})
 
     def execute(self, context):
-        if context.area.type != CC.UPREFS:
+        if context.area.type != UPREFS:
             bpy.ops.screen.userpref_show('INVOKE_DEFAULT')
 
         if self.addon:

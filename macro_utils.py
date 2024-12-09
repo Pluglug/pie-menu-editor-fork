@@ -1,9 +1,11 @@
-import bpy
 import re
-from . import operator_utils
-from .debug_utils import *
-from .addon import prefs, print_exc
+
+import bpy
+
 from .bl_utils import uname
+from .addon import prefs, print_exc
+from .operator_utils import find_operator, parse_pos_args
+from .debug_utils import DBG_MACRO, logh, logi
 
 
 _operators = {}
@@ -58,7 +60,7 @@ def _gen_op(tp, idx, **kwargs):
     bl_idname = tp.bl_idname + str(idx + 1)
 
     if tpname not in _operators:
-        defs = dict(bl_idname=bl_idname)
+        defs = {'bl_idname': bl_idname}
         defs.update(kwargs)
         new_tp = type(tpname, (tp, bpy.types.Operator), defs)
         bpy.utils.register_class(new_tp)
@@ -80,7 +82,7 @@ def _gen_modal_op(pm, idx):
     bl_idname += str(idx + 1)
 
     if tpname not in _operators:
-        defs = dict(bl_idname=bl_idname)
+        defs = {'bl_idname': bl_idname}
         if not lock:
             defs["bl_options"] = {'REGISTER'}
         new_tp = type(tpname, (_modal_op, bpy.types.Operator), defs)
@@ -119,10 +121,10 @@ def add_macro(pm):
 
             pmi.icon = ''
             if pmi.mode == 'COMMAND':
-                sub_op_idname, _, pos_args = operator_utils.find_operator(
+                sub_op_idname, _, pos_args = find_operator(
                     pmi.text)
 
-                _, sub_op_exec_ctx, _ = operator_utils.parse_pos_args(pos_args)
+                _, sub_op_exec_ctx, _ = parse_pos_args(pos_args)
 
                 if sub_op_idname and sub_op_exec_ctx.startswith('INVOKE'):
                     sub_tp = eval("bpy.ops." + sub_op_idname).idname()
@@ -198,10 +200,10 @@ def _fill_props(props, pm, idx=1):
             continue
 
         if pmi.mode == 'COMMAND':
-            sub_op_idname, args, pos_args = operator_utils.find_operator(
+            sub_op_idname, args, pos_args = find_operator(
                 pmi.text)
 
-            _, sub_op_exec_ctx, _ = operator_utils.parse_pos_args(pos_args)
+            _, sub_op_exec_ctx, _ = parse_pos_args(pos_args)
 
             if sub_op_idname and sub_op_exec_ctx.startswith('INVOKE'):
                 args = ",".join(args)
@@ -211,19 +213,19 @@ def _fill_props(props, pm, idx=1):
             else:
                 # while len(_macro_execs) < idx:
                 #     add_macro_exec()
-                props["PME_OT_macro_exec%d" % idx] = dict(cmd=pmi.text)
+                props["PME_OT_macro_exec%d" % idx] = {'cmd': pmi.text}
                 idx += 1
 
         elif pmi.mode == 'MENU':
             sub_pm = pr.pie_menus[pmi.text]
             if sub_pm.mode == 'STICKY':
                 props[_gen_op(_sticky_op, sticky_idx)] = \
-                    dict(pm_name=sub_pm.name)
+                    {'pm_name': sub_pm.name}
                 sticky_idx += 1
 
             elif sub_pm.mode == 'MODAL':
                 idname = _gen_modal_op(sub_pm, modal_idx)
-                props[idname] = dict(pm_name=sub_pm.name)
+                props[idname] = {'pm_name': sub_pm.name}
                 modal_idx += 1
 
             elif sub_pm.mode == 'MACRO':

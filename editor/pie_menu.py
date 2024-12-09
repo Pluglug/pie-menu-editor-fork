@@ -12,7 +12,6 @@ pme.props.BoolProperty("pm", "pm_flick", True)
 
 
 class Editor(EditorBase):
-
     def __init__(self):
         self.id = 'PMENU'
         EditorBase.__init__(self)
@@ -24,7 +23,7 @@ class Editor(EditorBase):
         self.supported_open_modes = {'PRESS', 'HOLD', 'DOUBLE_CLICK'}
 
     def on_pm_add(self, pm):
-        for i in range(0, 10):
+        for _ in range(0, 10):
             pm.pmis.add()
 
     def on_pmi_rename(self, pm, pmi, old_name, name):
@@ -54,9 +53,10 @@ class Editor(EditorBase):
                     "prefs().selected_pm.pm_confirm = -1"
         layout.prop(pm, "pm_flick")
 
-        # if pm.pm_radius != -1:
-        #     layout.label(
-        #         text="Custom radius disables pie menu animation", icon='INFO')
+        #if pm.pm_radius != -1:
+        #    layout.label(
+        #        text="Custom radius disables pie menu animation", icon='INFO'
+        #    )
 
     def draw_items(self, layout, pm):
         pr = prefs()
@@ -71,7 +71,7 @@ class Editor(EditorBase):
             if idx == 7:
                 column.separator()
 
-    def get_pmi_icon(self, pm, pmi, idx):
+    def get_pmi_icon(self, _pm, _pmi, idx):
         return ARROW_ICONS[idx]
 
 

@@ -13,6 +13,9 @@ from ..ui import tag_redraw, shorten_str
 from ..constants import SPACER_SCALE_Y, SEPARATOR_SCALE_Y
 
 
+pme.props.BoolProperty("rm", "rm_title", True)
+
+
 class WM_OT_rmi_add(bpy.types.Operator):
     bl_idname = "wm.rmi_add"
     bl_label = "Add Slot or Column"
@@ -301,9 +304,8 @@ class WM_OT_rm_col_move(bpy.types.Operator):
                 if col_last_idx >= len(pm.pmis):
                     pm.pmis.move(col_idx, col_last_idx - 1)
 
-                if (col_last_idx < len(pm.pmis) or
-                        col_idx + 1 != col_last_idx) and \
-                        Col.is_column(pm.pmis[col_idx]):
+                if (col_last_idx < len(pm.pmis) or col_idx + 1 != col_last_idx)\
+                and Col.is_column(pm.pmis[col_idx]):
                     col_idx += 1
 
                 for i in range(0, col_last_idx - col_idx + 1):
@@ -399,8 +401,8 @@ class WM_OT_rm_col_paste(bpy.types.Operator):
         pm = pr.selected_pm
 
         idx = self.idx if self.left else self.last_idx
-        if self.left and Col.is_column(pm.pmis[idx]) and \
-                self.idx != self.last_idx:
+        if self.left and Col.is_column(pm.pmis[idx]) \
+        and self.idx != self.last_idx:
             idx += 1
 
         last_idx = len(pm.pmis)
@@ -529,9 +531,6 @@ class WM_OT_rmi_specials_call(bpy.types.Operator):
     def execute(self, context):
         context.window_manager.popup_menu(self._draw)
         return {'FINISHED'}
-
-
-pme.props.BoolProperty("rm", "rm_title", True)
 
 
 class Editor(EditorBase):

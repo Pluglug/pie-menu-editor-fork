@@ -1,46 +1,60 @@
 import os
-import bpy
 import json
 import datetime
 import re
 from types import MethodType
+
+import bpy
 from bpy_extras.io_utils import ExportHelper, ImportHelper
-from .addon import (
-    ADDON_PATH, SCRIPT_PATH,
-    prefs, uprefs, temp_prefs, print_exc, ic, ic_fb, ic_cb, ic_eye, is_28
-)
-from . import constants as CC
-from . import operators as OPS
-from . import extra_operators as EOPS
-from .bl_utils import uname, gen_prop_path, ConfirmBoxHandler, message_box
-from .collection_utils import BaseCollectionItem, sort_collection
-from .layout_helper import lh, operator, split
-from .debug_utils import *
-from .panel_utils import (
-    hidden_panel, bl_panel_types, bl_menu_types, bl_header_types
-)
-from .modal_utils import encode_modal_data
-from . import compatibility_fixes
-from . import addon
-from . import keymap_helper
+
 from . import pme
-from . import operator_utils
-from .keymap_helper import KeymapHelper, to_key_name, to_ui_hotkey
-from .previews_helper import ph
 from .overlay import OverlayPrefs
-from .ui import tag_redraw, draw_addons_maximized, is_userpref_maximized
-from .ui_utils import get_pme_menu_class, execute_script
-from . import utils as U
+from .extra_operators import PME_OT_none, PME_OT_window_auto_close
+from .pme_types import Tag, PMItem, PMIItem, PMLink, EdProperties, UserProperties
+from .editor.panel_group import PME_OT_interactive_panels_toggle
+from .editor.sticky_key import PME_OT_sticky_key_edit
+from .editor.modal import PME_OT_prop_data_reset
 from .property_utils import PropertyData, to_py_value
-from .types import Tag, PMItem, PMIItem, PMLink, EdProperties, UserProperties
+from .collection_utils import BaseCollectionItem, sort_collection
+from .bl_utils import ConfirmBoxHandler, uname, gen_prop_path, message_box
+from .operators import (
+    PME_OT_modal_base, PME_OT_pmidata_specials_call, PME_OT_exec,
+    WM_OT_pm_select, PME_OT_pm_search_and_select, PME_OT_docs
+)
 from .editor.editor import (
     WM_OT_pmi_icon_select, WM_OT_pmi_data_edit, PME_OT_pm_edit,
     PME_OT_pmi_cmd_generate, PME_OT_tags_filter, PME_OT_tags,
     PME_OT_pm_add, WM_OT_pmi_icon_tag_toggle
 )
-from .editor.panel_group import PME_OT_interactive_panels_toggle
-from .editor.sticky_key import PME_OT_sticky_key_edit
-from .editor.modal import PME_OT_prop_data_reset
+from .keymap_helper import (
+    KeymapHelper, Hotkey, to_key_name, to_ui_hotkey, parse_hotkey, key_items
+)
+from .modal_utils import encode_modal_data
+from .utils import extract_str_flags, isclose
+from .compatibility_fixes import fix, fix_json
+from .ui_utils import get_pme_menu_class, execute_script
+from .ui import tag_redraw, draw_addons_maximized, is_userpref_maximized
+from .operator_utils import (
+    find_operator, apply_properties, operator_label, to_bl_idname
+)
+from .panel_utils import (
+    hidden_panel, bl_panel_types, bl_menu_types, bl_header_types
+)
+from .addon import (
+    prefs, uprefs, temp_prefs, print_exc, ic, ic_fb, ic_cb, ic_eye, is_28,
+    ADDON_PATH, SCRIPT_PATH, VERSION
+)
+from .layout_helper import operator, split, lh
+from .previews_helper import ph
+from .debug_utils import DBG_TREE, DBG_PM, DBG, DBG_INIT, logw, logi, logh
+from .constants import (
+    MODAL_CMD_MODES, W_JSON, DEFAULT_POLL, W_KEY, W_FILE, SETTINGS_TAB_ITEMS,
+    SETTINGS_TAB_DEFAULT, TREE_SPLITTER, UNTAGGED, TREE_ROOT, F_EXPAND,
+    ICON_OFF, ICON_ON, EMODE_ITEMS, MAX_STR_LEN, OP_CTX_ITEMS, UPREFS,
+    PM_ITEMS_M, PM_ITEMS_M_DEFAULT, PD_MODE_ITEMS, W_PMI_SYNTAX, F_CB,
+    W_PMI_MENU, W_PMI_HOTKEY, W_PMI_EXPR, F_CUSTOM_ICON, LIST_PADDING
+)
+
 
 pp = pme.props
 import_filepath = os.path.join(ADDON_PATH, "examples", "examples.json")
@@ -54,11 +68,11 @@ def update_pmi_data(_self, context, reset_prop_data=True):
     pmi_data.check_pmi_errors(context)
 
     data_mode = pmi_data.mode
-    if data_mode in CC.MODAL_CMD_MODES:
+    if data_mode in MODAL_CMD_MODES:
         data_mode = 'COMMAND'
 
     if data_mode == 'COMMAND' and pr.use_cmd_editor:
-        op_idname, args, pos_args = operator_utils.find_operator(pmi_data.cmd)
+        op_idname, args, pos_args = find_operator(pmi_data.cmd)
 
         pmi_data.kmi.idname = ""
         pmi_data.cmd_ctx = 'INVOKE_DEFAULT'
@@ -103,8 +117,7 @@ def update_pmi_data(_self, context, reset_prop_data=True):
         for k in keys:
             del pmi_data.kmi.properties[k]
 
-        operator_utils.apply_properties(
-            pmi_data.kmi.properties, args, pm, pmi_data)
+        apply_properties(pmi_data.kmi.properties, args, pm, pmi_data)
 
     if pm.mode == 'MODAL':
         if data_mode == 'PROP':
@@ -181,7 +194,7 @@ class WM_OT_pm_import(bpy.types.Operator, ImportHelper):
         try:
             data = json.loads(json_data)
         except:
-            self.report({'WARNING'}, CC.W_JSON)
+            self.report({'WARNING'}, W_JSON)
             return
 
         pr = prefs()
@@ -195,10 +208,10 @@ class WM_OT_pm_import(bpy.types.Operator, ImportHelper):
                 version = data["version"]
                 menus = data["menus"]
             except:
-                self.report({'WARNING'}, CC.W_JSON)
+                self.report({'WARNING'}, W_JSON)
                 return
         else:
-            self.report({'WARNING'}, CC.W_JSON)
+            self.report({'WARNING'}, W_JSON)
             return
 
         if not menus:
@@ -229,7 +242,7 @@ class WM_OT_pm_import(bpy.types.Operator, ImportHelper):
             # pm = pr.add_pm(mode, menu[0], True)
             pm = pr.pie_menus.add()
             pm.mode = mode
-            compatibility_fixes.fix_json(pm, menu, version)
+            fix_json(pm, menu, version)
             pm.name = pr.unique_pm_name(menu[0] or pm.ed.default_name)
             pm.km_name = menu[1]
 
@@ -239,7 +252,7 @@ class WM_OT_pm_import(bpy.types.Operator, ImportHelper):
             if n > 6:
                 pm.open_mode = menu[6]
             if n > 7:
-                pm.poll_cmd = menu[7] or CC.DEFAULT_POLL
+                pm.poll_cmd = menu[7] or DEFAULT_POLL
             if n > 8:
                 pm.tag = menu[8]
 
@@ -252,19 +265,19 @@ class WM_OT_pm_import(bpy.types.Operator, ImportHelper):
                 try:
                     pm.key, pm.ctrl, pm.shift, pm.alt, pm.oskey, \
                         pm.any, pm.key_mod, pm.chord = \
-                        keymap_helper.parse_hotkey(menu[2])
+                        parse_hotkey(menu[2])
                 except:
-                    self.report({'WARNING'}, CC.W_KEY % menu[2])
+                    self.report({'WARNING'}, W_KEY % menu[2])
 
             items = menu[3]
-            for i in range(0, len(items)):
-                item = items[i]
+            for item in items:
                 # pmi = pm.pmis[i] if mode == 'PMENU' else pm.pmis.add()
                 pmi = pm.pmis.add()
                 n = len(item)
                 if n >= 4:
-                    if self.mode == 'RENAME' and \
-                            item[1] == 'MENU' and item[3] in new_names:
+                    if self.mode == 'RENAME' \
+                    and item[1] == 'MENU' \
+                    and item[3] in new_names:
                         item[3] = new_names[item[3]]
 
                     try:
@@ -298,7 +311,7 @@ class WM_OT_pm_import(bpy.types.Operator, ImportHelper):
 
         pms = [pr.pie_menus[menu[0]] for menu in menus]
 
-        compatibility_fixes.fix(pms, version)
+        fix(pms, version)
 
         for pm in pms:
             pm.ed.init_pm(pm)
@@ -360,7 +373,7 @@ class WM_OT_pm_import(bpy.types.Operator, ImportHelper):
                 with open(filepath, "r") as f:
                     s = f.read()
             except:
-                self.report({'WARNING'}, CC.W_FILE)
+                self.report({'WARNING'}, W_FILE)
                 return
 
             self.import_json(s)
@@ -563,8 +576,8 @@ class PME_OT_pm_remove(ConfirmBoxHandler, bpy.types.Operator):
             i = 0
             while i < len(pr.pie_menus):
                 pm = pr.pie_menus[i]
-                if pm.enabled and self.mode == 'ENABLED' or \
-                        not pm.enabled and self.mode == 'DISABLED':
+                if pm.enabled and self.mode == 'ENABLED' \
+                or not pm.enabled and self.mode == 'DISABLED':
                     pr.remove_pm(pm=pm)
                 else:
                     i += 1
@@ -693,8 +706,9 @@ class WM_OT_pm_move(bpy.types.Operator):
                         return {'CANCELLED'}
 
                 else:
-                    if new_link.label or new_link.is_folder or \
-                            not new_link.path:
+                    if new_link.label \
+                    or new_link.is_folder \
+                    or not new_link.path:
                         return {'CANCELLED'}
 
                 pm_idx = pr.pie_menus.find(new_link.pm_name)
@@ -906,9 +920,9 @@ class PMEData(bpy.types.PropertyGroup):
     hidden_panels_idx: bpy.props.IntProperty()
     pie_menus: bpy.props.CollectionProperty(type=BaseCollectionItem)
     # modal_item_hk: bpy.props.EnumProperty(
-    #     items=keymap_helper.key_items,
+    #     items=key_items,
     #     description="Key pressed", update=update_modal_item_hk)
-    modal_item_hk: bpy.props.PointerProperty(type=keymap_helper.Hotkey)
+    modal_item_hk: bpy.props.PointerProperty(type=Hotkey)
     modal_item_prop_mode: bpy.props.EnumProperty(
         items=(
             ('KEY', "Hotkey", (
@@ -956,10 +970,10 @@ class PMEData(bpy.types.PropertyGroup):
         get=modal_item_show_get, set=modal_item_show_set)
 
     settings_tab: bpy.props.EnumProperty(
-        items=CC.SETTINGS_TAB_ITEMS,
+        items=SETTINGS_TAB_ITEMS,
         name="Settings", description="Settings",
         # options={'ENUM_FLAG'},
-        default=CC.SETTINGS_TAB_DEFAULT
+        default=SETTINGS_TAB_DEFAULT
     )
     icons_tab: bpy.props.EnumProperty(
         name="Icons", description="Icons",
@@ -1074,7 +1088,7 @@ class WM_UL_pm_list(bpy.types.UIList):
         lh.label("", item.ed.icon)
         # mark_row = layout.row(align=True)
         # mark_row.scale_y = 0.95
-        # mark_row.operator(EOPS.PME_OT_none.bl_idname, text="", icon=item.ed.icon)
+        # mark_row.operator(PME_OT_none.bl_idname, text="", icon=item.ed.icon)
 
         col = 0
 
@@ -1156,8 +1170,8 @@ class PME_UL_pm_tree(bpy.types.UIList):
     groups = []
     collapsed_groups = set()
     expanded_folders = set()
-    # keymap_names = None
     has_folders = False
+    #keymap_names = None
 
     @staticmethod
     def save_state():
@@ -1165,18 +1179,17 @@ class PME_UL_pm_tree(bpy.types.UIList):
         if not pr.tree_mode or not pr.save_tree:
             return
 
-        data = dict(
-            group_by=pr.group_by,
-            groups=[v for v in PME_UL_pm_tree.collapsed_groups],
-            folders=[v for v in PME_UL_pm_tree.expanded_folders],
-        )
+        data = {
+            'group_by': pr.group_by,
+            'groups':   list(PME_UL_pm_tree.collapsed_groups),
+            'folders':  list(PME_UL_pm_tree.expanded_folders)
+        }
         path = os.path.join(ADDON_PATH, "data", "tree.json")
         os.makedirs(os.path.dirname(path), exist_ok=True)
         with open(path, "wb+") as f:
             f.write(
-                json.dumps(
-                    data, indent=2, separators=(", ", ": "),
-                    ensure_ascii=False).encode("utf8"))
+                json.dumps(data, indent=2, separators=(", ", ": "),
+                           ensure_ascii=False).encode("utf8"))
 
     @staticmethod
     def load_state():
@@ -1218,7 +1231,7 @@ class PME_UL_pm_tree(bpy.types.UIList):
                 for v in folders:
                     v = v.strip()
                     if v:
-                        elems = v.split(CC.TREE_SPLITTER)
+                        elems = v.split(TREE_SPLITTER)
                         for i, e in enumerate(elems):
                             if i == 0:
                                 if e not in existing_groups:
@@ -1234,7 +1247,7 @@ class PME_UL_pm_tree(bpy.types.UIList):
         p = link.group
         for i in range(0, len(path)):
             if p:
-                p += CC.TREE_SPLITTER
+                p += TREE_SPLITTER
             p += path[i]
             if p not in PME_UL_pm_tree.expanded_folders:
                 return True
@@ -1256,8 +1269,8 @@ class PME_UL_pm_tree(bpy.types.UIList):
         num_links = len(tpr.links)
         sel_link, sel_folder = None, None
         sel_link = 0 <= tpr.links_idx < num_links and tpr.links[tpr.links_idx]
-        if not sel_link or not sel_link.pm_name or \
-                sel_link.pm_name not in pr.pie_menus:
+        if not sel_link or not sel_link.pm_name \
+        or sel_link.pm_name not in pr.pie_menus:
             sel_link = None
         sel_folder = sel_link and sel_link.path and sel_link.path[-1]
 
@@ -1273,7 +1286,7 @@ class PME_UL_pm_tree(bpy.types.UIList):
             if not pr.use_filter or pm.filter_list(pr)
         ]
         if pr.group_by == 'TAG':
-            groups[CC.UNTAGGED] = []
+            groups[UNTAGGED] = []
             for t in tpr.tags:
                 groups[t.name] = []
             pms.sort(key=lambda pm: pm.tag)
@@ -1284,7 +1297,7 @@ class PME_UL_pm_tree(bpy.types.UIList):
         elif pr.group_by == 'KEY':
             pms.sort(key=lambda pm: to_key_name(pm.key))
         else:
-            groups[CC.TREE_ROOT] = True
+            groups[TREE_ROOT] = True
             pms.sort(key=lambda pm: pm.name)
 
         for pm in pms:
@@ -1294,7 +1307,7 @@ class PME_UL_pm_tree(bpy.types.UIList):
                     for t in tags:
                         groups[t].append(pm)
                 else:
-                    groups[CC.UNTAGGED].append(pm)
+                    groups[UNTAGGED].append(pm)
             elif pr.group_by == 'KEYMAP':
                 kms = pm.km_name.split(", ")
                 for km in kms:
@@ -1313,11 +1326,11 @@ class PME_UL_pm_tree(bpy.types.UIList):
 
             for pmi in pm.pmis:
                 if pmi.mode == 'MENU':
-                    name, *_ = U.extract_str_flags(
-                        pmi.text, CC.F_EXPAND, CC.F_EXPAND)
-                    if name not in pr.pie_menus or \
-                            pr.use_filter and \
-                            not pr.pie_menus[name].filter_list(pr):
+                    name, *_ = extract_str_flags(
+                        pmi.text, F_EXPAND, F_EXPAND)
+                    if name not in pr.pie_menus \
+                    or pr.use_filter \
+                    and not pr.pie_menus[name].filter_list(pr):
                         continue
 
                     if pm.name not in folders:
@@ -1366,8 +1379,8 @@ class PME_UL_pm_tree(bpy.types.UIList):
 
         groups_to_remove = []
         for k, v in groups.items():
-            if not v or pr.group_by == 'TAG' and \
-                    pr.tag_filter and k != pr.tag_filter:
+            if not v or pr.group_by == 'TAG' \
+            and pr.tag_filter and k != pr.tag_filter:
                 groups_to_remove.append(k)
 
         for g in groups_to_remove:
@@ -1376,12 +1389,12 @@ class PME_UL_pm_tree(bpy.types.UIList):
         # PME_UL_pm_tree.keymap_names = \
         group_names = sorted(groups.keys())
 
-        if pr.group_by == 'TAG' and group_names and \
-                group_names[-1] != CC.UNTAGGED and CC.UNTAGGED in group_names:
-            group_names.remove(CC.UNTAGGED)
-            group_names.append(CC.UNTAGGED)
-        elif pr.group_by == 'KEY' and group_names and \
-                group_names[-1] != "None" and "None" in group_names:
+        if pr.group_by == 'TAG' and group_names \
+        and group_names[-1] != UNTAGGED and UNTAGGED in group_names:
+            group_names.remove(UNTAGGED)
+            group_names.append(UNTAGGED)
+        elif pr.group_by == 'KEY' and group_names \
+        and group_names[-1] != "None" and "None" in group_names:
             group_names.remove("None")
             group_names.append("None")
 
@@ -1446,14 +1459,14 @@ class PME_UL_pm_tree(bpy.types.UIList):
                     can_be_removed = False
                     for link in links:
                         if len(link.path) == 0:
-                            if can_be_removed and \
-                                    link.pm_name not in fixed_links:
+                            if can_be_removed \
+                            and link.pm_name not in fixed_links:
                                 links_to_remove.add(link.name)
                                 DBG_TREE and logi("REMOVE", link.pm_name)
                         else:
-                            if not can_be_removed and \
-                                    link.name not in links_to_remove and \
-                                    link.path[0] != pm_name:
+                            if not can_be_removed \
+                            and link.name not in links_to_remove \
+                            and link.path[0] != pm_name:
                                 fixed_links.add(link.path[0])
                                 DBG_TREE and logi("FIXED", link.path[0])
                                 can_be_removed = True
@@ -1500,8 +1513,8 @@ class PME_UL_pm_tree(bpy.types.UIList):
                 sel_link = tpr.links[tpr.links_idx]
                 if sel_link.pm_name:
                     pm = pr.selected_pm
-                    if pr.group_by == 'KEYMAP' and \
-                            pm.km_name in PME_UL_pm_tree.collapsed_groups:
+                    if pr.group_by == 'KEYMAP' \
+                    and pm.km_name in PME_UL_pm_tree.collapsed_groups:
                         PME_UL_pm_tree.collapsed_groups.remove(pm.km_name)
 
             tag_redraw()
@@ -1528,7 +1541,7 @@ class PME_UL_pm_tree(bpy.types.UIList):
                 lh.row()
 
             lh.prop(
-                pm, "enabled", "", CC.ICON_ON if pm.enabled else CC.ICON_OFF,
+                pm, "enabled", "", ICON_ON if pm.enabled else ICON_OFF,
                 emboss=False)
 
             for i in range(0, len(item.path)):
@@ -1537,7 +1550,7 @@ class PME_UL_pm_tree(bpy.types.UIList):
             lh.label("", pm.ed.icon)
             # mark_row = layout.row(align=True)
             # mark_row.scale_y = 0.95
-            # mark_row.operator(EOPS.PME_OT_none.bl_idname, text="", icon=pm.ed.icon)
+            # mark_row.operator(PME_OT_none.bl_idname, text="", icon=pm.ed.icon)
 
             if item.is_folder:
                 icon = 'TRIA_DOWN' \
@@ -1599,22 +1612,15 @@ class PME_UL_pm_tree(bpy.types.UIList):
 
         else:
             lh.row()
-            # lh.layout.active = False
             lh.layout.scale_y = 0.95
-            icon = 'TRIA_RIGHT_BAR' \
-                if item.label in PME_UL_pm_tree.collapsed_groups else \
-                'TRIA_DOWN_BAR'
-            lh.operator(
-                PME_OT_tree_group_toggle.bl_idname, item.label,
-                icon, group=item.label, idx=index, all=False)
-            # lh.label()
-            icon = 'TRIA_LEFT_BAR' \
-                if item.label in PME_UL_pm_tree.collapsed_groups else \
-                'TRIA_DOWN_BAR'
-            lh.operator(
-                PME_OT_tree_group_toggle.bl_idname, "",
-                icon, group=item.label, idx=index,
-                all=True)
+            icon = \
+                'TRIA_RIGHT_BAR' if item.label in PME_UL_pm_tree.collapsed_groups else 'TRIA_DOWN_BAR'
+            lh.operator(PME_OT_tree_group_toggle.bl_idname, item.label,
+                        icon, group=item.label, idx=index, all=False)
+            icon = \
+                'TRIA_LEFT_BAR' if item.label in PME_UL_pm_tree.collapsed_groups else 'TRIA_DOWN_BAR'
+            lh.operator(PME_OT_tree_group_toggle.bl_idname, "",
+                        icon, group=item.label, idx=index, all=True)
 
     def _draw_filter(self, _context, layout):
         pr = prefs()
@@ -1726,8 +1732,8 @@ class PME_OT_tree_group_toggle(bpy.types.Operator):
             tpr.links_idx = self.idx
 
         if self.all:
-            add = len(PME_UL_pm_tree.collapsed_groups) != \
-                len(PME_UL_pm_tree.groups)
+            add = len(PME_UL_pm_tree.collapsed_groups) \
+                  != len(PME_UL_pm_tree.groups)
             if self.group:
                 add = True
 
@@ -1737,8 +1743,8 @@ class PME_OT_tree_group_toggle(bpy.types.Operator):
                 else:
                     PME_UL_pm_tree.collapsed_groups.discard(group)
 
-            if self.group and \
-                    self.group in PME_UL_pm_tree.collapsed_groups:
+            if self.group \
+            and self.group in PME_UL_pm_tree.collapsed_groups:
                 PME_UL_pm_tree.collapsed_groups.remove(self.group)
 
         else:
@@ -1762,7 +1768,7 @@ class PMIClipboard:
         self.text = pmi.text
         self.name = pmi.name
 
-    def paste(self, pm, pmi):
+    def paste(self, _pm, pmi):
         pmi.name = self.name
         pmi.icon = self.icon
         pmi.mode = self.mode
@@ -1790,11 +1796,11 @@ class PME_OT_list_specials(bpy.types.Operator):
         layout.operator_context = 'INVOKE_DEFAULT'
         operator(
             layout, PME_OT_pm_enable_by_tag.bl_idname,
-            "Enable by Tag", CC.ICON_ON,
+            "Enable by Tag", ICON_ON,
             enable=True)
         operator(
             layout, PME_OT_pm_enable_by_tag.bl_idname,
-            "Disable by Tag", CC.ICON_OFF,
+            "Disable by Tag", ICON_OFF,
             enable=False)
 
         layout.separator()
@@ -1836,7 +1842,7 @@ class PMIData(bpy.types.PropertyGroup):
         pr = prefs()
         if not PMIData._kmi:
             pr.kh.keymap()
-            PMIData._kmi = pr.kh.operator(EOPS.PME_OT_none)
+            PMIData._kmi = pr.kh.operator(PME_OT_none)
             PMIData._kmi.active = False
 
         return PMIData._kmi
@@ -1857,19 +1863,19 @@ class PMIData(bpy.types.PropertyGroup):
         self.check_pmi_errors(context)
 
     mode: bpy.props.EnumProperty(
-        items=CC.EMODE_ITEMS, description="Type of the item",
+        items=EMODE_ITEMS, description="Type of the item",
         update=mode_update)
     cmd: bpy.props.StringProperty(
-        description="Python code", maxlen=CC.MAX_STR_LEN, update=update_data)
+        description="Python code", maxlen=MAX_STR_LEN, update=update_data)
     cmd_ctx: bpy.props.EnumProperty(
-        items=CC.OP_CTX_ITEMS,
+        items=OP_CTX_ITEMS,
         name="Execution Context",
         description="Execution context")
     cmd_undo: bpy.props.BoolProperty(
         name="Undo Flag",
         description="'Undo' positional argument")
     custom: bpy.props.StringProperty(
-        description="Python code", maxlen=CC.MAX_STR_LEN, update=update_data)
+        description="Python code", maxlen=MAX_STR_LEN, update=update_data)
     prop: bpy.props.StringProperty(
         description="Property", update=update_data)
     menu: bpy.props.StringProperty(
@@ -1891,7 +1897,7 @@ class PMIData(bpy.types.PropertyGroup):
     sname: bpy.props.StringProperty(
         description="Suggested name", update=sname_update)
     key: bpy.props.EnumProperty(
-        items=keymap_helper.key_items, description="Key pressed",
+        items=key_items, description="Key pressed",
         update=update_data)
     any: bpy.props.BoolProperty(
         description="Any key pressed",
@@ -1909,7 +1915,7 @@ class PMIData(bpy.types.PropertyGroup):
         description="Operating system key pressed",
         update=update_data)
     key_mod: bpy.props.EnumProperty(
-        items=keymap_helper.key_items,
+        items=key_items,
         description="Regular key pressed as a modifier",
         update=update_data)
 
@@ -2091,7 +2097,7 @@ class PMEPreferences(bpy.types.AddonPreferences):
                     tp.remove(PME_OT_interactive_panels_toggle._draw_menu)
 
         for tp in bl_panel_types():
-            if getattr(tp, "bl_space_type", None) == CC.UPREFS:
+            if getattr(tp, "bl_space_type", None) == UPREFS:
                 continue
 
             if tp.__name__ == "PROPERTIES_PT_navigation_bar":
@@ -2119,7 +2125,7 @@ class PMEPreferences(bpy.types.AddonPreferences):
         name="Expand Slot Tools", description="Expand slot tools")
     icon_filter: bpy.props.StringProperty(
         description="Filter", options={'TEXTEDIT_UPDATE'})
-    hotkey: bpy.props.PointerProperty(type=keymap_helper.Hotkey)
+    hotkey: bpy.props.PointerProperty(type=Hotkey)
     hold_time: bpy.props.IntProperty(
         name="Hold Mode Timeout", description="Hold timeout (ms)",
         default=200, min=50, max=1000, step=10)
@@ -2219,7 +2225,7 @@ class PMEPreferences(bpy.types.AddonPreferences):
     use_filter: bpy.props.BoolProperty(
         description="Use filters", update=update_tree)
     mode_filter: bpy.props.EnumProperty(
-        items=CC.PM_ITEMS_M, default=CC.PM_ITEMS_M_DEFAULT,
+        items=PM_ITEMS_M, default=PM_ITEMS_M_DEFAULT,
         description="Show items",
         options={'ENUM_FLAG'},
         update=update_tree
@@ -2257,7 +2263,7 @@ class PMEPreferences(bpy.types.AddonPreferences):
         default=False)
     default_popup_mode: bpy.props.EnumProperty(
         description="Default popup mode",
-        items=CC.PD_MODE_ITEMS,
+        items=PD_MODE_ITEMS,
         default='PANEL',
         update=lambda s, c: s.ed('DIALOG').update_default_pmi_data()
     )
@@ -2333,7 +2339,7 @@ class PMEPreferences(bpy.types.AddonPreferences):
     scripts_filepath: bpy.props.StringProperty(subtype='FILE_PATH', default=SCRIPT_PATH)
 
     def _update_mouse_threshold(self, _context):
-        OPS.PME_OT_modal_base.prop_data.clear()
+        PME_OT_modal_base.prop_data.clear()
 
     mouse_threshold_float: bpy.props.IntProperty(
         name="Slider (Float)", description="Slider (Float)",
@@ -2499,8 +2505,8 @@ class PMEPreferences(bpy.types.AddonPreferences):
                 if i < 0:
                     break
                 link = tpr.links[i]
-                if not link.label and not link.path and \
-                        link.pm_name != apm.name:
+                if not link.label and not link.path \
+                and link.pm_name != apm.name:
                     tpr["links_idx"] = i
                     new_idx = self.pie_menus.find(link.pm_name)
                     break
@@ -2522,8 +2528,8 @@ class PMEPreferences(bpy.types.AddonPreferences):
 
         if new_idx >= 0:
             self.active_pie_menu_idx = new_idx
-        elif self.active_pie_menu_idx >= len(self.pie_menus) and \
-                self.active_pie_menu_idx > 0:
+        elif self.active_pie_menu_idx >= len(self.pie_menus) \
+        and self.active_pie_menu_idx > 0:
             self.active_pie_menu_idx -= 1
 
     def unique_pm_name(self, name):
@@ -2576,13 +2582,13 @@ class PMEPreferences(bpy.types.AddonPreferences):
         lh.row(mode_col)
         pm.ed.draw_slot_modes(lh.layout, pm, data, pme.context.edit_item_idx)
         lh.operator(
-            OPS.PME_OT_pmidata_specials_call.bl_idname, "", 'COLLAPSEMENU')
+            PME_OT_pmidata_specials_call.bl_idname, "", 'COLLAPSEMENU')
 
         lh.box(mode_col)
         subcol = lh.column()
 
         data_mode = data.mode
-        if data_mode in CC.MODAL_CMD_MODES:
+        if data_mode in MODAL_CMD_MODES:
             data_mode = 'COMMAND'
 
         if data_mode == 'COMMAND':
@@ -2592,11 +2598,11 @@ class PMEPreferences(bpy.types.AddonPreferences):
                     tpr, "modal_item_show", "",
                     ic_eye(tpr.modal_item_show))
 
-            icon = 'ERROR' if data.has_errors(CC.W_PMI_SYNTAX) else 'NONE'
+            icon = 'ERROR' if data.has_errors(W_PMI_SYNTAX) else 'NONE'
             lh.prop(data, "cmd", "", icon)
 
-            if pm.mode == 'STICKY' and PME_OT_sticky_key_edit.pmi_prop and \
-                    pme.context.edit_item_idx == 0 and not data.has_errors():
+            if pm.mode == 'STICKY' and PME_OT_sticky_key_edit.pmi_prop \
+            and pme.context.edit_item_idx == 0 and not data.has_errors():
                 lh.lt(subcol)
                 lh.operator(PME_OT_sticky_key_edit.bl_idname)
 
@@ -2607,7 +2613,7 @@ class PMEPreferences(bpy.types.AddonPreferences):
                     tpr, "modal_item_show", "",
                     ic_eye(tpr.modal_item_show))
 
-            icon = 'ERROR' if data.has_errors(CC.W_PMI_SYNTAX) else 'NONE'
+            icon = 'ERROR' if data.has_errors(W_PMI_SYNTAX) else 'NONE'
             lh.prop(data, "prop", "", icon)
 
             lh.lt(subcol)
@@ -2617,21 +2623,21 @@ class PMEPreferences(bpy.types.AddonPreferences):
             lh.operator(
                 WM_OT_pmi_icon_tag_toggle.bl_idname,
                 "Use Checkboxes instead of Toggle Buttons",
-                ic_cb(CC.F_CB in data.icon),
+                ic_cb(F_CB in data.icon),
                 idx=-1,
-                tag=CC.F_CB,
+                tag=F_CB,
                 emboss=False)
 
         elif data_mode == 'MENU':
-            icon = 'ERROR' if data.has_errors(CC.W_PMI_MENU) else 'NONE'
+            icon = 'ERROR' if data.has_errors(W_PMI_MENU) else 'NONE'
             if data.menu in pr.pie_menus:
                 icon = pr.pie_menus[data.menu].ed.icon
             row = lh.row(subcol)
             row.prop_search(
                 data, "menu", tpr, "pie_menus", text="", icon=ic(icon))
 
-            sub_pm = data.menu and data.menu in pr.pie_menus and \
-                pr.pie_menus[data.menu]
+            sub_pm = data.menu and data.menu in pr.pie_menus \
+                 and pr.pie_menus[data.menu]
             if sub_pm:
                 label = None
                 if sub_pm.mode == 'RMENU':
@@ -2643,8 +2649,9 @@ class PMEPreferences(bpy.types.AddonPreferences):
                     lh.sep()
                     lh.prop(data, "expand_menu", label)
 
-                if sub_pm.mode == 'DIALOG' and pm.mode == 'PMENU' and \
-                        data.expand_menu:
+                if sub_pm.mode == 'DIALOG' \
+                and pm.mode == 'PMENU' \
+                and data.expand_menu:
                     lh.prop(data, "use_frame")
                     lh.operator(
                         "pme.exec",
@@ -2660,7 +2667,7 @@ class PMEPreferences(bpy.types.AddonPreferences):
 
         elif data_mode == 'HOTKEY':
             row = lh.row(subcol)
-            icon = 'ERROR' if data.has_errors(CC.W_PMI_HOTKEY) else 'NONE'
+            icon = 'ERROR' if data.has_errors(W_PMI_HOTKEY) else 'NONE'
             row.alert = icon == 'ERROR'
             lh.prop(data, "key", "", icon, event=True)
 
@@ -2673,16 +2680,15 @@ class PMEPreferences(bpy.types.AddonPreferences):
 
         elif data_mode == 'CUSTOM':
             lh.row(subcol)
-            icon = 'ERROR' if data.has_errors(CC.W_PMI_SYNTAX) else 'NONE'
+            icon = 'ERROR' if data.has_errors(W_PMI_SYNTAX) else 'NONE'
             lh.prop(data, "custom", "", icon)
 
-        if pr.use_cmd_editor and data_mode == 'COMMAND' and \
-                data.kmi.idname and not data.has_errors(CC.W_PMI_SYNTAX):
+        if pr.use_cmd_editor and data_mode == 'COMMAND' \
+        and data.kmi.idname and not data.has_errors(W_PMI_SYNTAX):
             lh.lt(mode_col.box().column(align=True))
 
             lh.save()
-            lh.label(
-                operator_utils.operator_label(data.kmi.idname) + " Operator:")
+            lh.label(operator_label(data.kmi.idname) + " Operator:")
             lh.sep()
             lh.row(align=False)
             lh.prop(data, "cmd_ctx", "")
@@ -2706,14 +2712,14 @@ class PMEPreferences(bpy.types.AddonPreferences):
 
                 if tpr.modal_item_custom != 'HIDDEN':
                     if tpr.modal_item_custom:
-                        lh.layout.alert = data.has_errors(CC.W_PMI_EXPR)
+                        lh.layout.alert = data.has_errors(W_PMI_EXPR)
                         lh.prop(tpr, "modal_item_custom", "")
                         lh.operator(
-                            OPS.PME_OT_exec.bl_idname, "", 'X',
+                            PME_OT_exec.bl_idname, "", 'X',
                             cmd="temp_prefs().modal_item_custom = ''")
                     else:
                         lh.operator(
-                            OPS.PME_OT_exec.bl_idname, "Display Custom Value",
+                            PME_OT_exec.bl_idname, "Display Custom Value",
                             cmd="temp_prefs().modal_item_custom = "
                             "'\"Path or string\"'")
 
@@ -2729,8 +2735,8 @@ class PMEPreferences(bpy.types.AddonPreferences):
                 if tpr.prop_data.path:
                     lh.row(subcol)
                     pd = tpr.prop_data
-                    min_active = not U.isclose(pd.min, tpr.modal_item_prop_min)
-                    max_active = not U.isclose(pd.max, tpr.modal_item_prop_max)
+                    min_active = not isclose(pd.min, tpr.modal_item_prop_min)
+                    max_active = not isclose(pd.max, tpr.modal_item_prop_max)
                     step_active = tpr.modal_item_prop_step_is_set
                     lh.prop(tpr, "modal_item_prop_min", active=min_active)
                     lh.prop(tpr, "modal_item_prop_max", active=max_active)
@@ -2741,14 +2747,14 @@ class PMEPreferences(bpy.types.AddonPreferences):
                     lh.row(subcol)
                     if tpr.modal_item_custom != 'HIDDEN':
                         if tpr.modal_item_custom:
-                            lh.layout.alert = data.has_errors(CC.W_PMI_EXPR)
+                            lh.layout.alert = data.has_errors(W_PMI_EXPR)
                             lh.prop(tpr, "modal_item_custom", "")
                             lh.operator(
-                                OPS.PME_OT_exec.bl_idname, "", 'X',
+                                PME_OT_exec.bl_idname, "", 'X',
                                 cmd="temp_prefs().modal_item_custom = ''")
                         else:
                             lh.operator(
-                                OPS.PME_OT_exec.bl_idname, "Display Custom Value",
+                                PME_OT_exec.bl_idname, "Display Custom Value",
                                 cmd="temp_prefs().modal_item_custom = "
                                 "'\"Path or string\"'")
 
@@ -2872,7 +2878,7 @@ class PMEPreferences(bpy.types.AddonPreferences):
                     WM_OT_pmi_icon_select.bl_idname, text="",
                     icon_value=ph.get_icon(icon), emboss=False)
                 p.idx = pme.context.edit_item_idx
-                p.icon = CC.F_CUSTOM_ICON + icon
+                p.icon = F_CUSTOM_ICON + icon
                 idx += 1
                 if idx > pr.num_icons_per_row - 1:
                     idx = 0
@@ -2957,7 +2963,7 @@ class PMEPreferences(bpy.types.AddonPreferences):
 
             if len(pr.pie_menus):
                 lh.operator(
-                    OPS.PME_OT_pm_search_and_select.bl_idname, "", 'VIEWZOOM')
+                    PME_OT_pm_search_and_select.bl_idname, "", 'VIEWZOOM')
 
                 lh.sep()
 
@@ -2984,23 +2990,22 @@ class PMEPreferences(bpy.types.AddonPreferences):
                 lh.sep()
 
             lh.operator(
-                PME_OT_pm_enable_all.bl_idname, "", CC.ICON_ON).enable = True
+                PME_OT_pm_enable_all.bl_idname, "", ICON_ON).enable = True
             lh.operator(
-                PME_OT_pm_enable_all.bl_idname, "", CC.ICON_OFF).enable = False
+                PME_OT_pm_enable_all.bl_idname, "", ICON_OFF).enable = False
 
             if pr.tree_mode and PME_UL_pm_tree.has_folders:
                 lh.sep(group='EXP_COL_ALL')
                 icon = 'TRIA_RIGHT' \
-                    if PME_UL_pm_tree.expanded_folders else \
-                    'TRIA_DOWN'
+                    if PME_UL_pm_tree.expanded_folders else 'TRIA_DOWN'
                 lh.operator(PME_OT_tree_folder_toggle_all.bl_idname, "", icon)
 
             if pr.use_groups and len(pr.pie_menus):
                 lh.sep(group='EXP_COL_ALL')
                 icon = 'TRIA_LEFT_BAR' \
                     if len(PME_UL_pm_tree.collapsed_groups) != \
-                    len(PME_UL_pm_tree.groups) else \
-                    'TRIA_DOWN_BAR'
+                    len(PME_UL_pm_tree.groups) \
+                    else 'TRIA_DOWN_BAR'
                 lh.operator(
                     PME_OT_tree_group_toggle.bl_idname, "", icon,
                     group="",
@@ -3015,7 +3020,7 @@ class PMEPreferences(bpy.types.AddonPreferences):
                 subcol = column3.box().column(align=True)
                 subrow = subcol.row()
                 subrow.enabled = False
-                subrow.scale_y = pr.num_list_rows + CC.LIST_PADDING
+                subrow.scale_y = pr.num_list_rows + LIST_PADDING
                 subrow.alignment = 'CENTER'
                 subrow.label(text=link.label)
                 subcol.row(align=True)
@@ -3023,7 +3028,7 @@ class PMEPreferences(bpy.types.AddonPreferences):
                 subcol = column3.box().column(align=True)
                 subrow = subcol.row()
                 subrow.enabled = False
-                subrow.scale_y = pr.num_list_rows + CC.LIST_PADDING
+                subrow.scale_y = pr.num_list_rows + LIST_PADDING
                 subrow.alignment = 'CENTER'
                 subrow.label(text=" ")
                 subcol.row(align=True)
@@ -3041,7 +3046,7 @@ class PMEPreferences(bpy.types.AddonPreferences):
         row.prop(data, prop)
         if url:
             operator(
-                row, OPS.PME_OT_docs.bl_idname, "", 'QUESTION',
+                row, PME_OT_docs.bl_idname, "", 'QUESTION',
                 emboss=False,
                 url=url)
 
@@ -3050,7 +3055,7 @@ class PMEPreferences(bpy.types.AddonPreferences):
         row.label(text=text)
         if url:
             operator(
-                row, OPS.PME_OT_docs.bl_idname, "", 'QUESTION',
+                row, PME_OT_docs.bl_idname, "", 'QUESTION',
                 emboss=False,
                 url=url)
 
@@ -3271,10 +3276,10 @@ class PMEPreferences(bpy.types.AddonPreferences):
             if 'MENU' in pm.ed.supported_slot_modes:
                 for pmi in pm.pmis:
                     if pmi.mode == 'MENU':
-                        menu_name, mouse_over, _ = U.extract_str_flags(
-                            pmi.text, CC.F_EXPAND, CC.F_EXPAND)
-                        if mouse_over and menu_name in pr.pie_menus and \
-                                pr.pie_menus[menu_name].mode == 'RMENU':
+                        menu_name, mouse_over, _ = extract_str_flags(
+                            pmi.text, F_EXPAND, F_EXPAND)
+                        if mouse_over and menu_name in pr.pie_menus \
+                        and pr.pie_menus[menu_name].mode == 'RMENU':
                             get_pme_menu_class(menu_name)
 
             km_names = pm.parse_keymap(False)
@@ -3360,8 +3365,8 @@ class PMEPreferences(bpy.types.AddonPreferences):
         def parse_children(pmis):
             for pmi in pmis:
                 if pmi.mode == 'MENU':
-                    menu_name, _, _ = U.extract_str_flags(
-                        pmi.text, CC.F_EXPAND, CC.F_EXPAND)
+                    menu_name, _, _ = extract_str_flags(
+                        pmi.text, F_EXPAND, F_EXPAND)
                     if menu_name in pr.pie_menus:
                         if menu_name not in pms_to_export:
                             pms_to_export.append(menu_name)
@@ -3384,9 +3389,9 @@ class PMEPreferences(bpy.types.AddonPreferences):
         for pm in gen_pms():
             if mode == 'ENABLED' and not pm.enabled:
                 continue
-            elif mode == 'ACTIVE' and pm.name != apm_name:
+            if mode == 'ACTIVE' and pm.name != apm_name:
                 continue
-            elif mode == 'TAG' and not pm.has_tag(tag):
+            if mode == 'TAG' and not pm.has_tag(tag):
                 continue
 
             pms_to_export.append(pm.name)
@@ -3423,14 +3428,13 @@ class PMEPreferences(bpy.types.AddonPreferences):
                 pm.mode,
                 pm.data,
                 pm.open_mode,
-                "" if pm.poll_cmd == CC.DEFAULT_POLL else pm.poll_cmd,
+                "" if pm.poll_cmd == DEFAULT_POLL else pm.poll_cmd,
                 pm.tag if export_tags else ""
             )
             menus.append(menu)
 
-        return dict(
-            version=".".join(str(i) for i in addon.VERSION),
-            menus=menus)
+        return {'version': ".".join(str(i) for i in VERSION),
+                'menus':   menus}
 
     def ed(self, id):
         return self.editors[id]
@@ -3485,10 +3489,10 @@ class PME_OT_context_menu(bpy.types.Operator):
             layout.separator()
 
         operator(
-            layout, OPS.WM_OT_pm_select.bl_idname, None, 'COLLAPSEMENU',
+            layout, WM_OT_pm_select.bl_idname, None, 'COLLAPSEMENU',
             pm_name="", use_mode_icons=False)
         operator(
-            layout, OPS.PME_OT_pm_search_and_select.bl_idname, None,
+            layout, PME_OT_pm_search_and_select.bl_idname, None,
             'VIEWZOOM')
 
         layout.separator()
@@ -3525,7 +3529,7 @@ class PME_OT_context_menu(bpy.types.Operator):
         button_operator = getattr(context, "button_operator", None)
         if button_operator:
             tpname = button_operator.__class__.__name__
-            idname = operator_utils.to_bl_idname(tpname)
+            idname = to_bl_idname(tpname)
             args = ""
             keys = button_operator.keys()
             if keys:
@@ -3604,7 +3608,7 @@ def register():
     pr.show_only_new_pms = False
     pr.maximize_prefs = False
     pr.show_advanced_settings = False
-    pr.mode_filter = CC.PM_ITEMS_M_DEFAULT
+    pr.mode_filter = PM_ITEMS_M_DEFAULT
     pr["tag_filter"] = ""
     Tag.filter()
 
@@ -3630,11 +3634,11 @@ def register():
             WM_OT_pmi_data_edit, key='ESC', idx=-1).properties.hotkey = True
 
         pr.window_kmis.append(
-            pr.kh.operator(EOPS.PME_OT_window_auto_close, 'Any+LEFTMOUSE'))
+            pr.kh.operator(PME_OT_window_auto_close, 'Any+LEFTMOUSE'))
         pr.window_kmis.append(
-            pr.kh.operator(EOPS.PME_OT_window_auto_close, 'Any+RIGHTMOUSE'))
+            pr.kh.operator(PME_OT_window_auto_close, 'Any+RIGHTMOUSE'))
         pr.window_kmis.append(
-            pr.kh.operator(EOPS.PME_OT_window_auto_close, 'Any+MIDDLEMOUSE'))
+            pr.kh.operator(PME_OT_window_auto_close, 'Any+MIDDLEMOUSE'))
         pr.enable_window_kmis(False)
 
     pr.selected_pm.ed.register_props(pr.selected_pm)

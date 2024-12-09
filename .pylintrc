@@ -4,6 +4,7 @@ ignore=__pycache__, .vscode, _source
 disable=
 	no-member,
 	global-statement,
+	protected-access,
 	too-many-arguments,
 	too-few-public-methods,
 	logging-format-interpolation,

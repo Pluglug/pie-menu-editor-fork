@@ -25,22 +25,22 @@ def open_csm(prefix="", suffix=""):
     elif obj.type == "MESH":
         if obj.mode == 'EDIT':
             msm = context.tool_settings.mesh_select_mode
-            msm[0] and open_menu(p + "Vertex" + s) or \
-                msm[1] and open_menu(p + "Edge" + s) or \
-                msm[2] and open_menu(p + "Face" + s) or \
-                open_menu(p + "Edit" + s) or \
-                open_menu(p + "Mesh" + s) or \
-                open_menu(p + "Any Object" + s)
+            msm[0] and open_menu(p + "Vertex" + s) \
+         or msm[1] and open_menu(p + "Edge" + s) \
+         or msm[2] and open_menu(p + "Face" + s) \
+         or open_menu(p + "Edit" + s) \
+         or open_menu(p + "Mesh" + s) \
+         or open_menu(p + "Any Object" + s)
 
         else:
-            open_menu(p + obj.mode.replace("_", " ").title() + s) or \
-                open_menu(p + "Mesh" + s) or \
-                open_menu(p + "Any Object" + s)
+            open_menu(p + obj.mode.replace("_", " ").title() + s) \
+         or open_menu(p + "Mesh" + s) \
+         or open_menu(p + "Any Object" + s)
 
     else:
-        open_menu(p + obj.mode.replace("_", " ").title() + s) or \
-            open_menu(p + obj.type.replace("_", " ").title() + s) or \
-            open_menu(p + "Any Object" + s)
+        open_menu(p + obj.mode.replace("_", " ").title() + s) \
+     or open_menu(p + obj.type.replace("_", " ").title() + s) \
+     or open_menu(p + "Any Object" + s)
 
 
 kwargs = locals().get("kwargs", {})

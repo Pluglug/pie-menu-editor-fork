@@ -9,10 +9,10 @@ import bpy
 manifest_path = os.path.join(os.path.dirname(__file__), "blender_manifest.toml")
 with open(manifest_path, "rb") as f:
     data = tomllib.load(f)
-    version = data.get('version')
-    if version:
+    VERSION_RAW = data.get('version')
+    if VERSION_RAW:
         parts = []
-        for part in version.split('.'):
+        for part in VERSION_RAW.split('.'):
             parts.append(int(part))
         VERSION = tuple(parts)
 ADDON_PATH      = os.path.normpath(os.path.dirname(os.path.abspath(__file__)))
@@ -23,8 +23,8 @@ ICON_ENUM_ITEMS = \
 
 
 def uprefs():
-    return getattr(bpy.context, "user_preferences", None) or \
-        getattr(bpy.context, "preferences", None)
+    return getattr(bpy.context, "user_preferences", None) \
+        or getattr(bpy.context, "preferences", None)
 
 
 def prefs():
@@ -33,15 +33,13 @@ def prefs():
 
 def temp_prefs():
     wm = getattr(bpy.context, "window_manager", None)
-    pme = getattr(wm, "pme", None)
-    return pme
+    return getattr(wm, "pme", None)
 
 
 def check_bl_version(version=None):
     version = version or bpy.app.version
     if version >= (2, 80, 0) and bpy.app.version < (2, 80, 0):
         return True
-
     return bpy.app.version >= version
 
 
@@ -71,17 +69,17 @@ def ic(icon):
     if icon in ICON_ENUM_ITEMS:
         return icon
 
-    bl28_icons = dict(
-        ZOOMIN="ADD",
-        ZOOMOUT="REMOVE",
-        ROTACTIVE="TRIA_RIGHT",
-        ROTATE="TRIA_RIGHT_BAR",
-        ROTATECOLLECTION="NEXT_KEYFRAME",
-        NORMALIZE_FCURVES="ANIM_DATA",
-        OOPS="NODETREE",
-        SPLITSCREEN="MOUSE_MMB",
-        GHOST="DUPLICATE",
-    )
+    bl28_icons = {
+        'ZOOMIN':            "ADD",
+        'ZOOMOUT':           "REMOVE",
+        'ROTACTIVE':         "TRIA_RIGHT",
+        'ROTATE':            "TRIA_RIGHT_BAR",
+        'ROTATECOLLECTION':  "NEXT_KEYFRAME",
+        'NORMALIZE_FCURVES': "ANIM_DATA",
+        'OOPS':              "NODETREE",
+        'SPLITSCREEN':       "MOUSE_MMB",
+        'GHOST':             "DUPLICATE"
+    }
 
     if icon in bl28_icons and bl28_icons[icon] in ICON_ENUM_ITEMS:
         return bl28_icons[icon]

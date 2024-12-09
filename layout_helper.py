@@ -1,12 +1,13 @@
 import bpy
+
 from . import pme
-from . import c_utils as CTU
-from .addon import prefs, print_exc, ic, is_28
-from .constants import SCALE_X, SPACER_SCALE_Y, F_CUSTOM_ICON
-from .bl_utils import bp, PME_OT_message_box
+from .bl_utils import PME_OT_message_box, bp
 from .utils import format_exception
-from .debug_utils import *
+from .addon import prefs, print_exc, ic, is_28
+from .c_utils import is_row, c_layout, c_last_btn
 from .previews_helper import ph
+from .debug_utils import DBG_LAYOUT, logi, logh
+from .constants import SCALE_X, SPACER_SCALE_Y, F_CUSTOM_ICON
 
 
 L_SEP = 1 << 0
@@ -57,15 +58,15 @@ class CLayout:
 
         if use_mouse_over_open is True or CLayout.use_mouse_over_open is True:
             # UI_LAYOUT_HEADER = 1
-            c_layout = CTU.c_layout(CLayout.layout)
-            # root_type = c_layout.root.contents.type
-            # c_layout.root.contents.type = UI_LAYOUT_HEADER
+            layout = c_layout(CLayout.layout)
+            # root_type = layout.root.contents.type
+            # layout.root.contents.type = UI_LAYOUT_HEADER
 
         elif use_mouse_over_open is False:
             # UI_LAYOUT_PANEL = 0
-            c_layout = CTU.c_layout(CLayout.layout)
-            # root_type = c_layout.root.contents.type
-            # c_layout.root.contents.type = UI_LAYOUT_PANEL
+            layout = c_layout(CLayout.layout)
+            # root_type = layout.root.contents.type
+            # layout.root.contents.type = UI_LAYOUT_PANEL
 
         if text is None:
             CLayout.layout.menu(
@@ -79,21 +80,20 @@ class CLayout:
 
         if use_mouse_over_open is True or CLayout.use_mouse_over_open is True:
             UI_BTYPE_PULLDOWN = 27 << 9
-            c_btn = CTU.c_last_btn(c_layout)
+            c_btn = c_last_btn(layout)
             c_btn.type = UI_BTYPE_PULLDOWN
-            # c_layout.root.contents.type = root_type
+            # layout.root.contents.type = root_type
 
         elif use_mouse_over_open is False:
             UI_BTYPE_MENU = 4 << 9
-            c_btn = CTU.c_last_btn(c_layout)
+            c_btn = c_last_btn(layout)
             c_btn.type = UI_BTYPE_MENU
-            # c_layout.root.contents.type = root_type
+            # layout.root.contents.type = root_type
 
         bpy.types.UILayout.__getattribute__ = CLayout.getattribute
 
 
 class LayoutHelper:
-
     def __init__(self, previews_helper=None):
         self.layout = None
         self.saved_layouts = []
@@ -338,15 +338,14 @@ class LayoutHelper:
         p = data.bl_rna.properties[prop]
         tp = p.__class__.__name__
         size = getattr(p, "array_length", 0)
-        if size > 1 or \
-                tp == "StringProperty" or \
-                tp == "EnumProperty" and not p.is_enum_flag and not expand:
+        if size > 1 \
+        or tp == "StringProperty" \
+        or tp == "EnumProperty" and not p.is_enum_flag and not expand:
             text = ""
-        if size > 1 and (tp == "IntProperty" or tp == "FloatProperty"):
+        if size > 1 and tp in ("IntProperty", "FloatProperty"):
             icon = 'NONE'
 
-        is_row = CTU.is_row(self.layout)
-        if is_row:
+        if is_row(self.layout):
             if tp == "EnumProperty" and expand:
                 icon_only = True
                 for v in p.enum_items:
@@ -439,8 +438,8 @@ class LayoutHelper:
             return
         if parent is None:
             parent = self.layout
-        if group and group != self.prev_sep_group or \
-                not group and (not check or not self.has_sep):
+        if group and group != self.prev_sep_group \
+        or not group and (not check or not self.has_sep):
             parent.separator()
         self.has_sep = True
         self.prev_sep_group = group
@@ -627,8 +626,7 @@ def draw_pme_layout(pm, column, draw_pmi, rows=None, icon_btn_scale_x=-1):
 
             elif pmi.text.startswith("spacer"):
                 prop = pp.parse(pmi.text)
-                if prop.subrow == 'BEGIN' or prop.subrow == 'END' or \
-                        prop.hsep == 'COLUMN':
+                if prop.subrow in ('BEGIN', 'END') or prop.hsep == 'COLUMN':
                     if is_subrow and not subrow_is_expanded and al_l == -1:
                         row_prop = pp.parse(pm.pmis[row_idx].text)
                         cur_subrow.alignment = row_prop.align
@@ -754,10 +752,10 @@ has_aligners = False
 
 
 def _parse_empty_pdi(
-        prefs, pm, idx, row_idx, layout, row, has_columns, is_subrow):
-    global cur_column, cur_subrow, \
-        num_btns, num_spacers, max_btns, max_spacers, al_split, has_aligners, \
-        al_l, al_r
+        _prefs, pm, idx, row_idx, layout, row, has_columns, is_subrow
+    ):
+    global cur_column, cur_subrow, num_btns, num_spacers, max_btns, \
+           max_spacers, al_split, has_aligners, al_l, al_r
     pp = pme.props
     pmi = pm.pmis[idx]
     r = pp.parse(pmi.text)
@@ -765,7 +763,7 @@ def _parse_empty_pdi(
     if pmi.text.startswith("row"):
         if row and r.vspacer != 'NONE':
             lh.lt(layout)
-            for i in range(0, r.value("vspacer")):
+            for _ in range(0, r.value("vspacer")):
                 lh.sep()
 
         row_prop = pp.parse(pm.pmis[row_idx].text)
@@ -793,7 +791,7 @@ def _parse_empty_pdi(
                 if prop.hsep == 'COLUMN':
                     has_columns = True
                     break
-                elif prop.hsep == 'ALIGNER':
+                if prop.hsep == 'ALIGNER':
                     has_aligners = True
                     if al_l == -1:
                         al_l = idx
@@ -802,8 +800,8 @@ def _parse_empty_pdi(
 
         if row_b == -1:
             row_b = num_pmis
-        if al_l != -1 and al_r != -1 and \
-                al_l == row_a + 1 and al_r == row_b - 1:
+        if al_l != -1 and al_r != -1 \
+        and al_l == row_a + 1 and al_r == row_b - 1:
             al_c = True
 
         if has_aligners:
@@ -816,8 +814,8 @@ def _parse_empty_pdi(
                 al_split = lh.split(layout)
             row = lh.row()
             row.alignment = 'LEFT'
-        elif has_columns and row_prop.fixed_col or \
-                not has_columns and row_prop.fixed_but:
+        elif has_columns and row_prop.fixed_col \
+        or not has_columns and row_prop.fixed_but:
             row = lh.split(layout, align=not has_columns)
         else:
             row = lh.row(layout, align=not has_columns)
@@ -904,8 +902,7 @@ def operator(
         layout, idname, text=None, icon='NONE',
         emboss=True, icon_value=0, depress=None,
         **kwargs):
-    d = dict(
-        icon=ic(icon), icon_value=icon_value, emboss=emboss)
+    d = {'icon': ic(icon), 'icon_value': icon_value, 'emboss': emboss}
 
     if text is not None:
         d["text"] = text
@@ -923,11 +920,10 @@ def operator(
 
 def split(layout, factor=None, align=True):
     if bpy.app.version < (2, 80, 0):
-        return layout.split(align=align) if factor is None else \
-            layout.split(factor, align)
-
-    return layout.split(align=align) if factor is None else \
-        layout.split(factor=factor, align=align)
+        return layout.split(align=align) if factor is None \
+          else layout.split(factor, align)
+    return layout.split(align=align) if factor is None \
+      else layout.split(factor=factor, align=align)
 
 
 def register():

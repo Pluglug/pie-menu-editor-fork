@@ -1,12 +1,14 @@
-import bpy
 from types import BuiltinFunctionType
 from mathutils import Euler
 from math import pi as PI
 
-from .addon import prefs, temp_prefs, print_exc
-from . import operator_utils
+import bpy
 
-bpy.context.window_manager["pme_temp"] = dict()
+from .operator_utils import to_bl_idname, get_rna_type
+from .addon import prefs, temp_prefs, print_exc
+
+
+bpy.context.window_manager["pme_temp"] = {}
 IDPropertyGroup = type(bpy.context.window_manager["pme_temp"])
 del bpy.context.window_manager["pme_temp"]
 
@@ -44,8 +46,7 @@ class PropertyData:
 
     @property
     def step(self):
-        if self.rna_prop and \
-                self.rna_prop.subtype == 'ANGLE':
+        if self.rna_prop and self.rna_prop.subtype == 'ANGLE':
             return PI * self._step / 180
 
         return self._step
@@ -55,7 +56,7 @@ class PropertyData:
             return
 
         if exec_locals is None:
-            exec_locals = dict()
+            exec_locals = {}
 
         pr = prefs()
         self.clear()
@@ -97,8 +98,8 @@ class PropertyData:
                 elif rna_prop_type == bpy.types.BoolProperty:
                     self.threshold = pr.get_threshold('BOOL')
 
-                if rna_prop_type == bpy.types.IntProperty or \
-                        rna_prop_type == bpy.types.FloatProperty:
+                if rna_prop_type in (bpy.types.IntProperty,
+                                     bpy.types.FloatProperty):
                     self.min = rna_prop.soft_min
                     self.max = rna_prop.soft_max
                     self._step = rna_prop.step
@@ -180,14 +181,14 @@ def to_dict(obj):
         pd = obj.__class__.__annotations__[k]
         pfunc = getattr(pd, "function", None) or pd[0]
         pkeywords = pd.keywords if hasattr(pd, "keywords") else pd[1]
-        if not isinstance(pd, pdtype) or \
-                isinstance(pd, tuple) and len(pd) != 2 or \
-                not isinstance(pfunc, BuiltinFunctionType):
+        if not isinstance(pd, pdtype) \
+        or isinstance(pd, tuple) and len(pd) != 2 \
+        or not isinstance(pfunc, BuiltinFunctionType):
             continue
 
         try:
-            if pfunc is bpy.props.CollectionProperty or \
-                    pfunc is bpy.props.PointerProperty:
+            if pfunc is bpy.props.CollectionProperty \
+            or pfunc is bpy.props.PointerProperty:
                 value = getattr(obj, k)
             else:
                 value = obj[k]
@@ -232,12 +233,11 @@ def to_py_value(data, key, value):
         return None
 
     if isinstance(value, bpy.types.OperatorProperties):
-        rna_type = operator_utils.get_rna_type(
-            operator_utils.to_bl_idname(key))
+        rna_type = get_rna_type(to_bl_idname(key))
         if not rna_type:
             return None
 
-        d = dict()
+        d = {}
         for k in value.keys():
             py_value = to_py_value(rna_type, k, getattr(value, k))
             if py_value is None or isinstance(py_value, dict) and not py_value:

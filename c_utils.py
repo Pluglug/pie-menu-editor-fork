@@ -1,10 +1,12 @@
-import bpy
 import re
 from itertools import islice
 from ctypes import (
     Structure, POINTER, cast, addressof, pointer,
     c_short, c_uint, c_int, c_float, c_bool, c_char, c_char_p, c_void_p
 )
+
+import bpy
+
 from . import pme
 
 
@@ -43,8 +45,8 @@ def gen_fields(*args):
     bl_version = bpy.app.version
     for a in args:
         if isinstance(a, tuple):
-            if a[0] and bl_version < a[1] or \
-                    not a[0] and bl_version >= a[1]:
+            if a[0] and bl_version < a[1] \
+            or not a[0] and bl_version >= a[1]:
                 continue
 
             cur_tp = a[2]
@@ -82,15 +84,13 @@ class _ListBase:
 
     def insert(self, prevlink, newlink):
         if prevlink:
-            a = prevlink if isinstance(prevlink, int) else \
-                addressof(prevlink)
+            a = prevlink if isinstance(prevlink, int) else addressof(prevlink)
             prevlink_p = cast(a, POINTER(Link)).contents
         else:
             prevlink_p = None
 
         if newlink:
-            a = newlink if isinstance(newlink, int) else \
-                addressof(newlink)
+            a = newlink if isinstance(newlink, int) else addressof(newlink)
             newlink_p = cast(a, POINTER(Link)).contents
         else:
             newlink_p = None

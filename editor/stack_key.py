@@ -9,7 +9,6 @@ pme.props.BoolProperty("s", "s_state")
 
 
 class Editor(EditorBase):
-
     def __init__(self):
         self.id = 'SCRIPT'
         EditorBase.__init__(self)

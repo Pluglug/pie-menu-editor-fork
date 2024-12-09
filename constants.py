@@ -1,6 +1,8 @@
 import bpy
-from .addon import ic, is_28
+
+from .addon import ic
 from .previews_helper import ph
+
 
 MAX_STR_LEN = 1024
 UNTAGGED = "Untagged"
@@ -172,8 +174,8 @@ W_PMI_ADD_BTN = "Can't add this button"
 W_PMI_LONG_CMD = "The command is too long"
 
 
-ARROW_ICONS = (
-    "@p4", "@p6", "@p2", "@p8", "@p7", "@p9", "@p1", "@p3", "@pA", "@pB")
+ARROW_ICONS = \
+    ("@p4", "@p6", "@p2", "@p8", "@p7", "@p9", "@p1", "@p3", "@pA", "@pB")
 
 SPACE_ITEMS = (
     ('VIEW_3D', "3D Viewport", "", 'VIEW3D', 0),

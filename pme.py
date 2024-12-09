@@ -1,4 +1,5 @@
 import bpy
+
 from .addon import prefs, temp_prefs, print_exc
 
 
@@ -14,14 +15,13 @@ class UserData:
 
 
 class PMEContext:
-
     def __init__(self):
-        self._globals = dict(
-            bpy=bpy,
-            pme_context=self,
-            drag_x=0,
-            drag_y=0,
-        )
+        self._globals = {
+            'bpy':         bpy,
+            'pme_context': self,
+            'drag_x':      0,
+            'drag_y':      0,
+        }
         self.pm = None
         self.pmi = None
         self.index = None
@@ -33,7 +33,7 @@ class PMEContext:
         self.is_first_draw = True
         self.exec_globals = None
         self.exec_locals = None
-        self.exec_user_locals = dict()
+        self.exec_user_locals = {}
         self._layout = None
         self._event = None
         self.edit_item_idx = None
@@ -88,21 +88,21 @@ class PMEContext:
         return self._globals
 
     def gen_globals(self, **kwargs):
-        ret = dict(
-            text=self.text,
-            icon=self.icon,
-            icon_value=self.icon_value,
-            PME=temp_prefs(),
-            PREFS=prefs(),
+        ret = {
+            'text':       self.text,
+            'icon':       self.icon,
+            'icon_value': self.icon_value,
+            'PME':        temp_prefs(),
+            'PREFS':      prefs(),
             **kwargs
-        )
+        }
 
         ret.update(self.exec_user_locals)
         ret.update(self.globals)
 
         return ret
 
-    def eval(self, expression, globals=None, menu=None, slot=None):
+    def eval(self, expression, globals=None, _menu=None, _slot=None):
         if globals is None:
             globals = self.gen_globals()
 
@@ -117,7 +117,7 @@ class PMEContext:
 
         return value
 
-    def exe(self, data, globals=None, menu=None, slot=None, use_try=True):
+    def exe(self, data, globals=None, _menu=None, _slot=None, use_try=True):
         if globals is None:
             globals = self.gen_globals()
 

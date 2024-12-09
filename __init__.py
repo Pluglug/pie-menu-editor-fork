@@ -17,15 +17,14 @@ import inspect
 import importlib
 
 import bpy
-import _bpy
+import _bpy # pylint: disable=E0401
 from bpy.app.handlers import persistent
 
-from . import property_utils
 from . import pme
-from . import compatibility_fixes
-from . import addon
-from .debug_utils import *
+from .compatibility_fixes import fix
 from .addon import prefs, temp_prefs
+from .property_utils import from_dict, to_dict
+from .debug_utils import DBG_INIT, logi, logh, logw
 
 
 module_names = (
@@ -46,11 +45,11 @@ module_names = (
     "overlay",
     "panel_utils",
     "pme",
+    "pme_types",
     "previews_helper",
     "property_utils",
     "screen_utils",
     "selection_state",
-    "types",
     "ui_utils",
     "ui",
     "utils",
@@ -121,7 +120,7 @@ def on_context():
     global re_enable_data
     if re_enable_data is not None:
         if len(pr.pie_menus) == 0 and re_enable_data:
-            property_utils.from_dict(pr, re_enable_data)
+            from_dict(pr, re_enable_data)
         re_enable_data.clear()
         re_enable_data = None
 
@@ -135,7 +134,7 @@ def on_context():
             {'window': bpy.context.window_manager.windows[0]}, 'INVOKE_DEFAULT'
         )
     else:
-        compatibility_fixes.fix()
+        fix()
 
 
 def get_classes():
@@ -148,27 +147,29 @@ def get_classes():
     mem_data = []
     for mod in modules:
         for _name, mem in inspect.getmembers(mod):
-            if inspect.isclass(mem) \
-            and issubclass(mem, bpy_struct) \
-            and mem not in mems:
-                mems.add(mem)
-                classes = []
+            if not inspect.isclass(mem) \
+            or not issubclass(mem, bpy_struct) \
+            or mem in mems:
+                continue
 
-                if hasattr(mem, "__annotations__"):
-                    for _pname, pd in mem.__annotations__.items():
-                        if not isinstance(pd, pdtype):
-                            continue
+            mems.add(mem)
+            classes = []
 
-                        pfunc = getattr(pd, "function", None) or pd[0]
-                        pkeywords = pd.keywords if hasattr(pd, "keywords") \
-                            else pd[1]
-                        if pfunc is cprop or pfunc is pprop:
-                            classes.append(pkeywords["type"])
+            if hasattr(mem, "__annotations__"):
+                for _pname, pd in mem.__annotations__.items():
+                    if not isinstance(pd, pdtype):
+                        continue
 
-                if not classes:
-                    ret.add(mem)
-                else:
-                    mem_data.append(dict(mem=mem, classes=classes))
+                    pfunc = getattr(pd, "function", None) or pd[0]
+                    pkeywords = pd.keywords if hasattr(pd, "keywords") \
+                        else pd[1]
+                    if pfunc is cprop or pfunc is pprop:
+                        classes.append(pkeywords["type"])
+
+            if not classes:
+                ret.add(mem)
+            else:
+                mem_data.append({'mem': mem, 'classes': classes})
     mems.clear()
 
     ret_post = []
@@ -229,8 +230,7 @@ def on_timer():
     if not pr.missing_kms or timer.elapsed_time > 10:
         timer.cancel()
         timer = None
-
-        compatibility_fixes.fix()
+        fix()
 
 
 @persistent
@@ -244,7 +244,7 @@ def load_pre_handler(_):
     DBG_INIT and logh(f"Load Pre ({bpy.data.filepath})")
 
     global tmp_data
-    tmp_data = property_utils.to_dict(prefs())
+    tmp_data = to_dict(prefs())
 
     global tmp_filepath
     tmp_filepath = bpy.data.filepath
@@ -263,7 +263,7 @@ def load_post_handler(_):
 
     pr = prefs()
     if not bpy.data.filepath:
-        property_utils.from_dict(pr, tmp_data)
+        from_dict(pr, tmp_data)
 
     tmp_data = None
 
@@ -356,7 +356,7 @@ class PME_OT_wait_keymaps(bpy.types.Operator):
                 temp_prefs().init_tags()
                 pr.tree.update()
 
-                compatibility_fixes.fix()
+                fix()
                 return {'FINISHED'}
             return {'PASS_THROUGH'}
         return {'PASS_THROUGH'}
@@ -404,7 +404,7 @@ def register():
 
     DBG_INIT and logh("PME Register")
 
-    if addon.check_bl_version():
+    if bpy.app.version >= (2, 80, 0):
         if _bpy.context.window:
             bpy_context = bpy.context
             bpy.context = _bpy.context
@@ -456,7 +456,7 @@ def unregister():
         return
 
     global re_enable_data
-    re_enable_data = property_utils.to_dict(prefs())
+    re_enable_data = to_dict(prefs())
 
     for mod in modules:
         if hasattr(mod, "unregister"):

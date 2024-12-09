@@ -1,12 +1,14 @@
+from time import time
+
 import bpy
 import blf
 import bgl
-from time import time
+
+from . import pme
 from .addon import prefs, uprefs, ic, is_28
 from .utils import multiton
 from .layout_helper import split
-from . import pme
-from . import constants as CC
+from .constants import UPREFS, UPREFS_CLS
 
 
 OVERLAY_ALIGNMENT_ITEMS = (
@@ -59,7 +61,7 @@ class SpaceGroup:
         self.shadow = True
 
 
-space_groups = dict()
+space_groups = {}
 
 
 def add_space_group(id, tp_name):
@@ -85,7 +87,7 @@ add_space_group("PROPERTIES", "SpaceProperties")
 add_space_group("SEQUENCE_EDITOR", "SpaceSequenceEditor")
 add_space_group("TEXT_EDITOR", "SpaceTextEditor")
 add_space_group("TIMELINE", "SpaceTimeline")
-add_space_group(CC.UPREFS, "Space" + CC.UPREFS_CLS)
+add_space_group(UPREFS, "Space" + UPREFS_CLS)
 add_space_group("VIEW_3D", "SpaceView3D")
 
 del add_space_group
@@ -97,7 +99,7 @@ _line_y = 0
 def _draw_line(space, r, g, b, a):
     ctx = bpy.context
     blf.size(0, space.size)
-    w, h = blf.dimensions(0, space.text)
+    w, _h = blf.dimensions(0, space.text)
 
     global _line_y
 
@@ -224,7 +226,7 @@ class TablePainter(Painter):
         if data is not None:
             self.cols.clear()
 
-            for i in range(0, self.num_cols):
+            for _ in range(0, self.num_cols):
                 self.cols.append(Col())
 
             if isinstance(data, str):
@@ -374,7 +376,7 @@ class Overlay:
 
 
 class OverlayPrefs(bpy.types.PropertyGroup):
-    def size_update(self, context):
+    def size_update(self, _context):
         Text.default_style.size = self.size
         Text.secondary_style.size = self.size
         # TablePainter.col_styles[0].size = \
@@ -384,10 +386,10 @@ class OverlayPrefs(bpy.types.PropertyGroup):
 
         TablePainter.line_width = 1 if self.size < 18 else 2
 
-    def color_update(self, context):
+    def color_update(self, _context):
         Text.default_style.update(list(self.color))
 
-    def color2_update(self, context):
+    def color2_update(self, _context):
         Text.secondary_style.update(list(self.color2))
 
     overlay: bpy.props.BoolProperty(

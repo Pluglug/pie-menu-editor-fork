@@ -1,20 +1,23 @@
-import bpy
-import _bpy
 import re
-from .addon import print_exc, ic, uprefs, is_28
-from .debug_utils import *
-from . import constants as CC
+
+import bpy
+import _bpy # pylint: disable=E0401
+
 from . import pme
-from . import c_utils
+from .addon import print_exc, ic, uprefs, is_28
+from .c_utils import set_area, set_region, area_rect
+from .debug_utils import DBG_PROP_PATH, logi
+from .constants import UPREFS_CLS, UPREFS_ID, POPUP_PADDING, WINDOW_MARGIN
+
 
 cdll = None
 
-re_operator = re.compile(r"^(?:bpy\.ops|O)\.(\w+\.\w+)(\(.*)")
-re_prop = re.compile(r"^([^\s]*?)([^.\s]+\.[^.\s]+)(\s*=\s*(.*))$")
+re_operator = re.compile( r"^(?:bpy\.ops|O)\.(\w+\.\w+)(\(.*)")
+re_prop = re.compile(     r"^([^\s]*?)([^.\s]+\.[^.\s]+)(\s*=\s*(.*))$")
 re_prop_path = re.compile(r"^([^\s]*?)([^.\s]+\.[^.\s]+)$")
-re_prop_set = re.compile(r"^([^\s]*?)([^.\s]+\.[^.\s]+)(\s*=\s*(.*))?$")
-re_name_idx = re.compile(r"^(.*)\.(\d+)$")
-re_icon = re.compile(r"^([A-Z]*_).*")
+re_prop_set = re.compile( r"^([^\s]*?)([^.\s]+\.[^.\s]+)(\s*=\s*(.*))?$")
+re_name_idx = re.compile( r"^(.*)\.(\d+)$")
+re_icon = re.compile(     r"^([A-Z]*_).*")
 
 uprefs_path = "C.user_preferences"
 if not hasattr(bpy.context, "user_preferences"):
@@ -22,32 +25,31 @@ if not hasattr(bpy.context, "user_preferences"):
     uprefs_cls = "Preferences"
 
 CTX_PATHS = {
-    "Scene": "C.scene",
-    "World": "C.scene.world",
-    "Object": "C.object",
+    "Scene":    "C.scene",
+    "World":    "C.scene.world",
+    "Object":   "C.object",
     "Material": "C.object.active_material",
-
-    "Area": "C.area",
-    "Region": "C.region",
-    "SpaceUVEditor": "C.space_data.uv_editor",
-    "GPUFXSettings": "C.space_data.fx_settings",
-    "GPUSSAOSettings": "C.space_data.fx_settings.ssao",
-    "GPUDOFSettings": "C.space_data.fx_settings.dof",
-    "DopeSheet": "C.space_data.dopesheet",
-    "FileSelectParams": "C.space_data.params",
-    CC.UPREFS_CLS + "Input": "C.%s.inputs" % CC.UPREFS_ID,
-    CC.UPREFS_CLS + "Edit": "C.%s.edit" % CC.UPREFS_ID,
-    CC.UPREFS_CLS + "FilePaths": "C.%s.filepaths" % CC.UPREFS_ID,
-    CC.UPREFS_CLS + "System": "C.%s.system" % CC.UPREFS_ID,
-    CC.UPREFS_CLS + "View": "C.%s.view" % CC.UPREFS_ID,
+    "Area":                    "C.area",
+    "Region":                  "C.region",
+    "SpaceUVEditor":           "C.space_data.uv_editor",
+    "GPUFXSettings":           "C.space_data.fx_settings",
+    "GPUSSAOSettings":         "C.space_data.fx_settings.ssao",
+    "GPUDOFSettings":          "C.space_data.fx_settings.dof",
+    "DopeSheet":               "C.space_data.dopesheet",
+    "FileSelectParams":        "C.space_data.params",
+    UPREFS_CLS + "Input":     f"C.{UPREFS_ID}.inputs",
+    UPREFS_CLS + "Edit":      f"C.{UPREFS_ID}.edit",
+    UPREFS_CLS + "FilePaths": f"C.{UPREFS_ID}.filepaths",
+    UPREFS_CLS + "System":    f"C.{UPREFS_ID}.system",
+    UPREFS_CLS + "View":      f"C.{UPREFS_ID}.view"
 }
-CTX_FULLPATHS = dict(
-    CompositorNodeComposite="C.active_node",
-    View3DShading="C.space_data.shading",
-    View3DOverlay="C.space_data.overlay",
-    BrushGpencilSettings="paint_settings().brush.gpencil_settings",
-    TransformOrientationSlot="C.scene.transform_orientation_slots[0]",
-)
+CTX_FULLPATHS = {
+    'CompositorNodeComposite':  "C.active_node",
+    'View3DShading':            "C.space_data.shading",
+    'View3DOverlay':            "C.space_data.overlay",
+    'BrushGpencilSettings':     "paint_settings().brush.gpencil_settings",
+    'TransformOrientationSlot': "C.scene.transform_orientation_slots[0]"
+}
 
 
 def find_context(area_type):
@@ -74,12 +76,10 @@ def paint_settings(context=None):
     sd = context.space_data
     if sd and sd.type == 'IMAGE_EDITOR':
         return context.tool_settings.image_paint
-
     if context.mode == 'GPENCIL_PAINT':
         return context.tool_settings.gpencil_paint
-    elif context.mode == 'GPENCIL_SCULPT':
+    if context.mode == 'GPENCIL_SCULPT':
         return context.tool_settings.gpencil_sculpt
-
     return unified_paint_panel().paint_settings(context)
 
 
@@ -132,27 +132,26 @@ class BlContext:
     bl_region = None
     bl_space_data = None
 
-    mods = dict(
-        fracture='FRACTURE',
-        cloth='CLOTH',
-        dynamic_paint='DYNAMIC_PAINT',
-        smoke='SMOKE',
-        fluid='FLUID_SIMULATION',
-        collision='COLLISION',
-        soft_body='SOFT_BODY',
-        particle_system='PARTICLE_SYSTEM',
-    )
-
-    data = dict(
-        armature="ARMATURE",
-        camera="CAMERA",
-        curve="CURVE",
-        lamp="LAMP",
-        lattice="LATTICE",
-        mesh="MESH",
-        meta_ball="META",
-        speaker="SPEAKER",
-    )
+    mods = {
+        'fracture':        'FRACTURE',
+        'cloth':           'CLOTH',
+        'dynamic_paint':   'DYNAMIC_PAINT',
+        'smoke':           'SMOKE',
+        'fluid':           'FLUID_SIMULATION',
+        'collision':       'COLLISION',
+        'soft_body':       'SOFT_BODY',
+        'particle_system': 'PARTICLE_SYSTEM'
+    }
+    data = {
+        'armature':  "ARMATURE",
+        'camera':    "CAMERA",
+        'curve':     "CURVE",
+        'lamp':      "LAMP",
+        'lattice':   "LATTICE",
+        'mesh':      "MESH",
+        'meta_ball': "META",
+        'speaker':   "SPEAKER"
+    }
 
     def __init__(self):
         self.texture_context = 'MATERIAL'
@@ -168,23 +167,16 @@ class BlContext:
                 return mod
 
     def __getattr__(self, attr):
-        # if not BlContext.context:
-        #     BlContext.context = bpy.context
-
         C = bpy.context
         BlContext.context = _bpy.context
 
-        texture_context = self.texture_context
-
         if attr == "user_preferences":
-            return getattr(_bpy.context, "user_preferences", None) or \
-                getattr(_bpy.context, "preferences", None)
-
-        elif attr == "preferences":
-            return getattr(_bpy.context, "preferences", None) or \
-                getattr(_bpy.context, "user_preferences", None)
-
-        elif attr == "space_data":
+            return getattr(_bpy.context, "user_preferences", None) \
+                or getattr(_bpy.context, "preferences", None)
+        if attr == "preferences":
+            return getattr(_bpy.context, "preferences", None) \
+                or getattr(_bpy.context, "user_preferences", None)
+        if attr == "space_data":
             if self.areas:
                 value = self.area_map[self.areas[-1]]
             else:
@@ -192,113 +184,88 @@ class BlContext:
 
             if not value:
                 value = BlContext.bl_space_data
-
         else:
             value = getattr(_bpy.context, attr, None)
 
+        if value:
+            return value
+
         ao = getattr(BlContext.context, "active_object", None)
+        try:
+            if attr == "region":
+                value = BlContext.bl_region
+            elif attr == "area":
+                value = BlContext.bl_area
+            elif attr == "material_slot":
+                if ao and ao.active_material_index < len(ao.material_slots):
+                    value = ao.material_slots[ao.active_material_index]
+            elif attr == "material":
+                if self.areas:
+                    sd = self.area_map[self.areas[-1]]
+                    if sd.type == 'PROPERTIES':
+                        self.texture_context = getattr(
+                            sd, "texture_context", None)
+                if self.texture_context == 'MATERIAL':
+                    value = ao and ao.active_material
+            elif attr == "world":
+                value = hasattr(BlContext.context, "scene") \
+                    and BlContext.context.scene.world
+            elif attr == "brush":
+                ps = paint_settings(BlContext.context)
+                value = ps.brush if ps and hasattr(ps, "brush") else None
+            elif attr == "bone":
+                value = C.object.data.bones.active
+            elif attr == "light":
+                value = C.object.data
+            elif attr == "lightprobe":
+                value = C.object.data
+            elif attr == "edit_bone":
+                value = C.object.data.edit_bones.active
+            elif attr == "texture":
+                if self.areas:
+                    sd = self.area_map[self.areas[-1]]
+                    if sd.type == 'PROPERTIES':
+                        self.texture_context = sd.texture_context
 
-        if not value:
-            try:
-                if attr == "region":
-                    value = BlContext.bl_region
-
-                elif attr == "area":
-                    value = BlContext.bl_area
-
-                elif attr == "material_slot":
-                    if ao and ao.active_material_index < len(
-                            ao.material_slots):
-                        value = ao.material_slots[ao.active_material_index]
-
-                elif attr == "material":
-                    if self.areas:
-                        sd = self.area_map[self.areas[-1]]
-                        if sd.type == 'PROPERTIES':
-                            texture_context = getattr(
-                                sd, "texture_context", None)
-
-                    # if True:
-                    if texture_context == 'MATERIAL':
-                        value = ao and ao.active_material
-
-                elif attr == "world":
-                    value = hasattr(BlContext.context, "scene") and \
-                        BlContext.context.scene.world
-
-                elif attr == "brush":
-                    ps = paint_settings(BlContext.context)
-                    value = ps.brush if ps and hasattr(ps, "brush") else None
-
-                elif attr == "bone":
-                    value = C.object.data.bones.active
-
-                elif attr == "light":
-                    value = C.object.data
-
-                elif attr == "lightprobe":
-                    value = C.object.data
-
-                elif attr == "edit_bone":
-                    value = C.object.data.edit_bones.active
-
-                elif attr == "texture":
-                    if self.areas:
-                        sd = self.area_map[self.areas[-1]]
-                        if sd.type == 'PROPERTIES':
-                            texture_context = sd.texture_context
-
-                    if texture_context == 'WORLD':
-                        value = C.scene.world.active_texture
-                    elif texture_context == 'MATERIAL':
-                        value = ao and ao.active_material.active_texture
-                    else:
-                        value = None
-
-                elif attr == "texture_slot":
-                    if self.areas:
-                        sd = self.area_map[self.areas[-1]]
-                        if sd.type == 'PROPERTIES':
-                            texture_context = sd.texture_context
-
-                    if texture_context == 'WORLD':
-                        value = C.scene.world.texture_slots[
-                            C.scene.world.active_texture_index]
-                    elif texture_context == 'MATERIAL':
-                        value = ao and ao.active_material.texture_slots[
-                            ao.active_material.active_texture_index]
-                    else:
-                        value = None
-
-                elif attr == "texture_node":
+                if self.texture_context == 'WORLD':
+                    value = C.scene.world.active_texture
+                elif self.texture_context == 'MATERIAL':
+                    value = ao and ao.active_material.active_texture
+                else:
                     value = None
+            elif attr == "texture_slot":
+                if self.areas:
+                    sd = self.area_map[self.areas[-1]]
+                    if sd.type == 'PROPERTIES':
+                        self.texture_context = sd.texture_context
 
-                elif attr == "line_style":
+                if self.texture_context == 'WORLD':
+                    value = C.scene.world.texture_slots[
+                        C.scene.world.active_texture_index]
+                elif self.texture_context == 'MATERIAL':
+                    value = ao and ao.active_material.texture_slots[
+                        ao.active_material.active_texture_index]
+                else:
                     value = None
-
-                elif attr in BlContext.data:
-                    if ao and ao.type == BlContext.data[attr]:
-                        value = ao.data
-
-                elif attr == "particle_system":
-                    if ao and len(ao.particle_systems):
-                        value = ao.particle_systems[
-                            ao.particle_systems.active_index]
-                    else:
-                        value = None
-
-                elif attr == "pose_bone":
-                    value = BlContext.context.active_pose_bone
-
-                elif attr in BlContext.mods:
-                    value = self.get_modifier_by_type(ao, BlContext.mods[attr])
-
-            except:
-                print_exc()
-
-        # if not value:
-        #     print("PME: 'Context' object has no attribute '%s'" % attr)
-
+            elif attr == "texture_node":
+                value = None
+            elif attr == "line_style":
+                value = None
+            elif attr in BlContext.data:
+                if ao and ao.type == BlContext.data[attr]:
+                    value = ao.data
+            elif attr == "particle_system":
+                if ao and len(ao.particle_systems):
+                    value = ao.particle_systems[
+                        ao.particle_systems.active_index]
+                else:
+                    value = None
+            elif attr == "pose_bone":
+                value = BlContext.context.active_pose_bone
+            elif attr in BlContext.mods:
+                value = self.get_modifier_by_type(ao, BlContext.mods[attr])
+        except:
+            print_exc()
         return value
 
     def set_context(self, context):
@@ -393,10 +360,10 @@ class PopupOperator:
         ),
         options={'SKIP_SAVE'})
 
-    def check(self, context):
+    def check(self, _context):
         return True
 
-    def cancel(self, context):
+    def cancel(self, _context):
         PopupOperator.active -= 1
 
     def draw(self, context, title=None):
@@ -416,16 +383,16 @@ class PopupOperator:
             context.window.cursor_warp(self.mx, self.my)
             self.mx = -1
 
-        c_utils.set_area(context, bl_context.bl_area)
-        c_utils.set_region(context, bl_context.bl_region)
+        set_area(context, bl_context.bl_area)
+        set_region(context, bl_context.bl_region)
 
         return layout
 
     def draw_post(self, context):
-        c_utils.set_area(context)
-        c_utils.set_region(context)
+        set_area(context)
+        set_region(context)
 
-    def execute(self, context):
+    def execute(self, _context):
         PopupOperator.active -= 1
         return {'FINISHED'}
 
@@ -435,8 +402,8 @@ class PopupOperator:
         bl_context.reset(context)
 
         popup_padding = round(
-            2 * CC.POPUP_PADDING * uprefs().view.ui_scale +
-            CC.WINDOW_MARGIN)
+            2 * POPUP_PADDING * uprefs().view.ui_scale +
+            WINDOW_MARGIN)
         if self.width > context.window.width - popup_padding:
             self.width = context.window.width - popup_padding
 
@@ -454,9 +421,9 @@ class PopupOperator:
             offset = round(30 * uprefs().view.ui_scale)
             w2 = self.width >> 1
             mid_x = context.window.width >> 1
-            min_x = w2 + CC.POPUP_PADDING + offset
+            min_x = w2 + POPUP_PADDING + offset
             max_x = context.window.width - (
-                self.width >> 1) - CC.POPUP_PADDING - offset
+                self.width >> 1) - POPUP_PADDING - offset
             mx, my = event.mouse_x, event.mouse_y
             if self.auto_close:
                 min_x -= w2
@@ -466,23 +433,18 @@ class PopupOperator:
                 if self.auto_close:
                     self.mx, self.my = max_x + w2, my
                 context.window.cursor_warp(max_x, my)
-
             elif mid_x > min_x > event.mouse_x:
                 if self.auto_close:
                     self.mx, self.my = min_x + w2, my
                 context.window.cursor_warp(min_x, my)
-
             else:
                 if self.auto_close:
                     self.mx, self.my = mx, my
                     context.window.cursor_warp(self.mx - w2, self.my)
 
         if self.auto_close:
-            return context.window_manager.invoke_popup(
-                self, width=self.width)
-        else:
-            return context.window_manager.invoke_props_dialog(
-                self, width=self.width)
+            return context.window_manager.invoke_popup(self, width=self.width)
+        return context.window_manager.invoke_props_dialog(self,width=self.width)
 
 
 class ConfirmBoxHandler:
@@ -506,7 +468,7 @@ class ConfirmBoxHandler:
 
         return {'PASS_THROUGH'}
 
-    def execute(self, context):
+    def execute(self, _context):
         self.on_confirm(True)
         return {'FINISHED'}
 
@@ -561,7 +523,7 @@ class PME_OT_confirm_box(bpy.types.Operator):
         return {'FINISHED'}
 
     def invoke(self, context, _event):
-        kwargs = dict()
+        kwargs = {}
         if self.width:
             kwargs.update(width=self.width)
 
@@ -587,7 +549,7 @@ class PME_OT_message_box(bpy.types.Operator):
     icon: bpy.props.StringProperty(
         default='INFO', options={'SKIP_SAVE'})
 
-    def draw_message_box(self, menu, context):
+    def draw_message_box(self, menu, _context):
         lines = self.message.split("\n")
         icon = self.icon
         for line in lines:
@@ -760,7 +722,7 @@ def get_space_data(area_type):
 
 
 def get_context_data(area_type):
-    ret = dict()
+    ret = {}
     ret["space_data"] = get_space_data(area_type)
     return ret
 
@@ -783,14 +745,14 @@ def ctx_dict(
         if bpy.app.version < (2, 80, 0):
             scene = scene or screen.scene
 
-    return dict(
-        window=window or bl_context.window,
-        workspace=workspace or bl_context.workspace,
-        screen=screen or bl_context.screen,
-        area=area or bl_context.area,
-        region=region or bl_context.region,
-        scene=scene or bl_context.scene,
-    )
+    return {
+        'window':    window    or bl_context.window,
+        'workspace': workspace or bl_context.workspace,
+        'screen':    screen    or bl_context.screen,
+        'area':      area      or bl_context.area,
+        'region':    region    or bl_context.region,
+        'scene':     scene     or bl_context.scene,
+    }
 
 
 def area_header_text_set(text=None, area=None):
@@ -806,7 +768,7 @@ def area_header_text_set(text=None, area=None):
 
 
 def popup_area(area, width=320, height=400, x=None, y=None):
-    r = c_utils.area_rect(area)
+    r = area_rect(area)
 
     C = bpy.context
     window = C.window

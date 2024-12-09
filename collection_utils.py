@@ -1,4 +1,5 @@
 import bpy
+
 from . import pme
 from .layout_helper import lh
 from .bl_utils import ConfirmBoxHandler
@@ -74,10 +75,10 @@ class AddItemOperator:
     def get_collection(self):
         return None
 
-    def finish(self, item):
+    def finish(self, _item):
         pass
 
-    def execute(self, context):
+    def execute(self, _context):
         collection = self.get_collection()
         item = collection.add()
 
@@ -105,7 +106,7 @@ class MoveItemOperator:
     def get_collection(self):
         return None
 
-    def get_icon(self, item, idx):
+    def get_icon(self, _item, idx):
         return 'SPACE2' if idx == self.old_idx else 'SPACE3'
 
     def get_title(self):
@@ -114,10 +115,10 @@ class MoveItemOperator:
     def get_title_icon(self):
         return 'ARROW_LEFTRIGHT' if self.swap else 'FORWARD'
 
-    def filter_item(self, item, idx):
+    def filter_item(self, _item, _idx):
         return True
 
-    def draw_menu(self, menu, context):
+    def draw_menu(self, menu, _context):
         lh.lt(menu.layout)
         collection = self.get_collection()
 
@@ -142,7 +143,7 @@ class MoveItemOperator:
     def finish(self):
         pass
 
-    def execute(self, context):
+    def execute(self, _context):
         collection = self.get_collection()
         if self.old_idx < 0 or self.old_idx >= len(collection):
             return {'CANCELLED'}
