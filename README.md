@@ -1,12 +1,13 @@
 # Pie Menu Editor Fork
 
 ## Overview
-This repository is a community-driven maintenance project for the Blender addon "Pie Menu Editor (PME)." PME is a powerful tool for creating custom pie menus in Blender, making it one of the most versatile addons in its category.
+This repository is a community-driven maintenance project for the Blender addon "Pie Menu Editor (PME)" Under the terms of the GPL license, we are exploring a sustainable development model and focusing on expanding PME’s reach to a broader user base.
 
-PME is currently available for purchase on both the [Blender Market](https://blendermarket.com/products/pie-menu-editor) and [Gumroad](https://roaoao.gumroad.com/l/pie_menu_editor).
+PME was originally developed by [roaoao](https://github.com/roaoao) in 2016 and made available on the [Blender Market](https://blendermarket.com/products/pie-menu-editor) and [Gumroad](https://roaoao.gumroad.com/l/pie_menu_editor).
 
-**We strongly encourage all PME users to first purchase the original product.**  
-This repository is created to support existing PME users by maintaining compatibility with new Blender versions and addressing issues, while respecting the intellectual property rights of roaoao, PME's original developer.
+With PME, users could easily extend their custom UI and enhance their efficiency when working with Blender. Its ease of use and extensibility have consistently earned high praise from the user community.
+
+Our goal is to ensure the long-term stability and growth of this exceptional tool within the Blender ecosystem.
 
 ---
 
@@ -27,16 +28,6 @@ The original copyrights remain with roaoao, and this repository is maintained in
 
 ---
 
-## Project Guidelines
-- **Collaborative Development**:  
-  Foster an open environment for PME users and contributors to share improvements.
-- **License Compliance**:  
-  Users must have a legitimate license purchased from roaoao to use PME.
-- **Design Philosophy**:  
-  Maintain PME's original design principles while implementing improvements.
-
----
-
 ## How to Contribute
 1. **Report Issues**  
    Submit bugs and improvement suggestions through the [Issues](../../issues) section.
@@ -52,7 +43,7 @@ Active contributors may be invited to join as collaborators with expanded projec
 
 ## License
 This project is licensed under the [GNU General Public License v3.0](./LICENSE.md).  
-All original rights to Pie Menu Editor (PME) are retained by roaoao, the original developer.
+All original rights to Pie Menu Editor are retained by roaoao, the original developer.
 
 ---
 
