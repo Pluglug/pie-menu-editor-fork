@@ -23,7 +23,7 @@ from .modal_utils import decode_modal_data
 #from .screen_utils import override_context, find_area
 from .layout_helper import draw_pme_layout, operator, lh
 from .utils import extract_str_flags, extract_str_flags_b, format_exception
-from .addon import prefs, uprefs, temp_prefs, print_exc, ic, is_28, ADDON_PATH
+from .addon import prefs, uprefs, temp_prefs, print_exc, ic, ADDON_PATH
 from .operator_utils import (
     find_operator, operator_label, get_rna_type,
     apply_properties, add_default_args, to_bl_idname
@@ -664,46 +664,43 @@ class PME_OT_timeout(bpy.types.Operator):
 
             if self.timer.time_duration >= self.delay:
                 self.cancelled = True
-                if False:
-                    pass
-                # if self.area != 'CURRENT':
-                #     bpy.ops.pme.timeout(
-                #         SU.override_context(self.area),
-                #         'INVOKE_DEFAULT', cmd=self.cmd, delay=self.delay)
-                else:
-                    pme.context.exec_operator = self
-                    pme.context.exe(self.cmd)
-                    pme.context.exec_operator = None
+                pme.context.exec_operator = self
+                pme.context.exe(self.cmd)
+                pme.context.exec_operator = None
+
+                #if self.area != 'CURRENT':
+                #    bpy.ops.pme.timeout(SU.override_context(self.area),
+                #                        'INVOKE_DEFAULT',
+                #                        cmd=self.cmd, delay=self.delay)
         return {'PASS_THROUGH'}
 
     def execute(self, context):
         self.cancelled = False
-
         context.window_manager.modal_handler_add(self)
         self.timer = context.window_manager.event_timer_add(
-            self.delay, window=context.window)
+            self.delay, window=context.window
+        )
         return {'RUNNING_MODAL'}
 
-    def invoke(self, context, _event):
-        # if self.area != 'CURRENT':
-        #     a = SU.find_area(self.area)
-        #     if a:
-        #         x, y = event.mouse_x, event.mouse_y
-        #         dx = a.x + 20 - x
-        #         if dx < 0:
-        #             dx += a.width - 40
-        #             if dx > 0:
-        #                 dx = 0
-
-        #         dy = a.y + 20 - y
-        #         if dy < 0:
-        #             dy += a.height - 40
-        #             if dy > 0:
-        #                 dy = 0
-
-        #         context.window.cursor_warp(x + dx, y + dy)
-
-        return self.execute(context)
+    #def invoke(self, context, _event):
+    #    if self.area == 'CURRENT':
+    #        return self.execute(context)
+    #    a = SU.find_area(self.area)
+    #    if not a:
+    #        return self.execute(context)
+    #    x, y = event.mouse_x, event.mouse_y
+    #    dx = a.x + 20 - x
+    #    if dx < 0:
+    #        dx += a.width - 40
+    #        if dx > 0:
+    #            dx = 0
+    #    dy = a.y + 20 - y
+    #    if dy < 0:
+    #        dy += a.height - 40
+    #        if dy > 0:
+    #            dy = 0
+    #    context.window.cursor_warp(x + dx, y + dy)
+    #    return self.execute(context)
 
 
 class PME_OT_restore_mouse_pos(bpy.types.Operator):
@@ -1523,20 +1520,16 @@ class WM_OT_pme_user_pie_menu_call(bpy.types.Operator):
                 else:
                     lh.prop(obj, prop, text, icon, toggle=toggle)
             except:
-                # lh.error(text)
                 print_exc(pmi.text)
                 if pm.mode == 'DIALOG':
                     pass
-                    # text and lh.spacer() or lh.blank()
                 elif pm.mode == 'PMENU':
                     lh.sep()
 
         elif pmi.mode == 'HOTKEY':
             text, icon, *_ = pmi.parse()
-            lh.operator(
-                WM_OT_pme_hotkey_call.bl_idname,
-                text, icon,
-                hotkey=pmi.text)
+            lh.operator(WM_OT_pme_hotkey_call.bl_idname,
+                        text, icon, hotkey=pmi.text)
 
         elif pmi.mode == 'CUSTOM':
             text, icon, *_ = pmi.parse()
@@ -1553,11 +1546,6 @@ class WM_OT_pme_user_pie_menu_call(bpy.types.Operator):
                 pme.context.exe(pmi.text, exec_globals, use_try=False)
             except:
                 lh.error(text)
-                # print_exc()
-                # if pm.mode == 'DIALOG':
-                #     text and lh.spacer() or lh.blank()
-                # elif pm.mode == 'PMENU':
-                #     lh.sep()
 
     def _draw_pm(self, menu, _context):
         pr = prefs()
@@ -1665,11 +1653,9 @@ class WM_OT_pme_user_pie_menu_call(bpy.types.Operator):
     @staticmethod
     def _draw_slot(name, use_frame=None):
         pm = prefs().pie_menus[name]
-        # prop = pme.props.parse(pm.data)
 
         lh.save()
         layout = lh.layout
-        # if prop.pd_box:
         if use_frame:
             column = layout.box()
         else:
@@ -1736,19 +1722,15 @@ class WM_OT_pme_user_pie_menu_call(bpy.types.Operator):
 
             if self.pm_tweak and event.type == 'MOUSEMOVE' \
             and self.invoke_mode == 'HOTKEY':
-                tt = getattr(
-                    uprefs().inputs,
-                    "drag_threshold" if is_28() else "tweak_threshold")
+                tt = getattr(uprefs().inputs, "drag_threshold")
                 if abs(self.x - event.mouse_x) > tt \
                 or abs(self.y - event.mouse_y) > tt:
                     self.modal_stop()
                     self.executed = True
                     if not self.cancelled:
                         context.window.cursor_warp(self.mouse_x, self.mouse_y)
-                        pme.context.add_global(
-                            "drag_x", event.mouse_x - self.x)
-                        pme.context.add_global(
-                            "drag_y", event.mouse_y - self.y)
+                        pme.context.add_global("drag_x", event.mouse_x - self.x)
+                        pme.context.add_global("drag_y", event.mouse_y - self.y)
                         bpy.ops.wm.pme_user_pie_menu_call(
                             'INVOKE_DEFAULT', pie_menu_name=self.pm_tweak.name,
                             invoke_mode='TWEAK')
@@ -1835,18 +1817,15 @@ class WM_OT_pme_user_pie_menu_call(bpy.types.Operator):
                     self.pm_timer = None
                 return self.modal_stop()
 
-        if pm.mode == 'PMENU' and not pme.props.parse(pm.data).pm_flick and (
-                self.invoke_mode == 'HOTKEY' or self.invoke_mode == 'HOLD' or
-                self.invoke_mode == 'TWEAK'):
+        if pm.mode == 'PMENU' and not pme.props.parse(pm.data).pm_flick \
+        and self.invoke_mode in ('HOTKEY', 'HOLD', 'TWEAK'):
             return {'RUNNING_MODAL'}
-
         return ret
 
     def modal_start(self, add_timer=True):
         wm = bpy.context.window_manager
         if add_timer:
-            self.bl_timer = wm.event_timer_add(
-                0.05, window=bpy.context.window)
+            self.bl_timer = wm.event_timer_add(0.05, window=bpy.context.window)
         wm.modal_handler_add(self)
         DBG_PM and logi("START", self)
         if self.pie_menu_name in self.__class__.active_ops:
@@ -1937,16 +1916,12 @@ class WM_OT_pme_user_pie_menu_call(bpy.types.Operator):
                     self.pm_timer = Timer(
                         0.05 + view.pie_animation_timeout / 100)
                     return self.modal_start()
-
-            return {'CANCELLED'}
-
         elif pm.mode == 'RMENU':
             prop = pme.props.parse(pm.data)
             if prop.rm_title:
                 context.window_manager.popup_menu(self._draw_rm, title=pm.name)
             else:
                 context.window_manager.popup_menu(self._draw_rm)
-
         elif pm.mode == 'DIALOG':
             prop = pme.props.parse(pm.data)
             if prop.pd_panel:
@@ -1958,23 +1933,18 @@ class WM_OT_pme_user_pie_menu_call(bpy.types.Operator):
                     width=int(prop.pd_width))
             else:
                 popup_dialog_pie(event, self._draw_popup_dialog)
-
         elif pm.mode == 'SCRIPT':
             StackKey.next(pm, self.slot)
-
         elif pm.mode == 'STICKY':
             bpy.ops.pme.sticky_key('INVOKE_DEFAULT', pm_name=pm.name)
-
         elif pm.mode == 'MACRO':
             execute_macro(pm)
-
         elif pm.mode == 'MODAL':
             prop = pme.props.parse(pm.data)
             if prop.lock:
                 bpy.ops.pme.modal_grab('INVOKE_DEFAULT', pm_name=pm.name)
             else:
                 bpy.ops.pme.modal('INVOKE_DEFAULT', pm_name=pm.name)
-
         return {'CANCELLED'}
 
     def __str__(self):
@@ -1988,19 +1958,18 @@ class WM_OT_pme_user_pie_menu_call(bpy.types.Operator):
         elif pm.open_mode == 'CHORDS':
             self.pm_chord = pm
             self.chord_pms = []
-            for v in prefs().pie_menus:
-                if v.chord \
-                and compare_km_names(self.keymap, v.km_name) \
-                and v.open_mode == 'CHORDS' \
-                and v.chord != 'NONE' \
-                and pm.key == v.key \
-                and pm.any == v.any \
-                and pm.ctrl == v.ctrl \
-                and pm.shift == v.shift \
-                and pm.alt == v.alt \
-                and pm.oskey == v.oskey:
-                    self.chord_pms.append(v)
-
+            pies = [pie for pie in prefs().pie_menus if pie.chord]
+            for pie in pies:
+                if compare_km_names(self.keymap, pie.km_name) \
+                and pie.open_mode == 'CHORDS' \
+                and pie.chord != 'NONE' \
+                and pm.key == pie.key \
+                and pm.any == pie.any \
+                and pm.ctrl == pie.ctrl \
+                and pm.shift == pie.shift \
+                and pm.alt == pie.alt \
+                and pm.oskey == pie.oskey:
+                    self.chord_pms.append(pie)
         elif pm.open_mode == 'TWEAK' and self.invoke_mode == 'HOTKEY':
             self.pm_tweak = pm
 
@@ -2067,8 +2036,7 @@ class WM_OT_pme_user_pie_menu_call(bpy.types.Operator):
 
         elif self.invoke_mode == 'HOTKEY':
             self.__class__.pressed_key = \
-                to_system_mouse_key(
-                    event.type, context)
+                to_system_mouse_key(event.type, context)
 
             if self.pie_menu_name in self.__class__.active_ops:
                 apm = self.__class__.active_ops[self.pie_menu_name]
@@ -2136,25 +2104,23 @@ class WM_OT_pme_user_pie_menu_call(bpy.types.Operator):
         self.x = event.mouse_x
         self.y = event.mouse_y
 
-        if self.invoke_mode == 'HOTKEY':
-            if cpm.open_mode == 'HOLD':
-                self.hold_timer = Timer(pr.hold_time / 1000)
-                self.__class__.hold_inst = self
-                return self.modal_start()
-
-            elif cpm.open_mode == 'TWEAK':
-                return self.modal_start(False)
-
-            elif cpm.open_mode == 'CHORDS':
-                self.chord_timer = Timer(pr.chord_time / 1000)
-                if pr.use_chord_hint:
-                    area_header_text_set(
-                        "Waiting next key chord in the sequence: " +
-                        ", ".join(sorted(
-                            {key_names[v.chord]
-                                for v in self.chord_pms})))
-                return self.modal_start()
-
+        if self.invoke_mode != 'HOTKEY':
+            return self.execute_menu(context, event)
+        if cpm.open_mode == 'HOLD':
+            self.hold_timer = Timer(pr.hold_time / 1000)
+            self.__class__.hold_inst = self
+            return self.modal_start()
+        if cpm.open_mode == 'TWEAK':
+            return self.modal_start(False)
+        if cpm.open_mode == 'CHORDS':
+            self.chord_timer = Timer(pr.chord_time / 1000)
+            if pr.use_chord_hint:
+                area_header_text_set(
+                    "Waiting next key chord in the sequence: " + ", ".join(
+                        sorted({key_names[v.chord] for v in self.chord_pms})
+                    )
+                )
+            return self.modal_start()
         return self.execute_menu(context, event)
 
 
@@ -2180,9 +2146,7 @@ class WM_OT_pme_user_dialog_call(bpy.types.Operator, PopupOperator):
         pr = prefs()
         if self.pie_menu_name not in pr.pie_menus:
             return {'CANCELLED'}
-
         pme.context.event = event
-
         return PopupOperator.invoke(self, context, event)
 
 
@@ -2192,29 +2156,30 @@ class WM_OT_pme_keyconfig_wait(bpy.types.Operator):
     bl_options = {'INTERNAL'}
 
     def modal(self, context, event):
+        if event.type != 'TIMER':
+            return {'PASS_THROUGH'}
+
         pr = prefs()
-        if event.type == 'TIMER':
-            keymaps = bpy.context.window_manager.keyconfigs.user.keymaps
-            registered_kms = []
-            for km in pr.missing_kms:
-                if km in keymaps:
-                    registered_kms.append(km)
-            for km in registered_kms:
-                pr.missing_kms.remove(km)
+        keymaps = bpy.context.window_manager.keyconfigs.user.keymaps
+        registered_kms = []
+        for km in pr.missing_kms:
+            if km in keymaps:
+                registered_kms.append(km)
+        for km in registered_kms:
+            pr.missing_kms.remove(km)
 
-            if not pr.missing_kms or self.t.update():
-                while pr.unregistered_pms:
-                    pr.unregistered_pms.pop().register_hotkey()
-                context.window_manager.event_timer_remove(self.timer)
-                self.timer = None
-                return {'FINISHED'}
-
+        if not pr.missing_kms or self.t.update():
+            while pr.unregistered_pms:
+                pr.unregistered_pms.pop().register_hotkey()
+            context.window_manager.event_timer_remove(self.timer)
+            self.timer = None
+            return {'FINISHED'}
         return {'PASS_THROUGH'}
 
     def execute(self, context):
         self.t = Timer(10)
-        self.timer = context.window_manager.event_timer_add(
-            0.1, window=context.window)
+        self.timer = \
+            context.window_manager.event_timer_add(0.1, window=context.window)
         context.window_manager.modal_handler_add(self)
         return {'RUNNING_MODAL'}
 
@@ -2233,16 +2198,14 @@ class WM_OT_pmi_submenu_select(bpy.types.Operator):
     pm_item: bpy.props.IntProperty()
     enumprop: bpy.props.EnumProperty(items=get_items)
 
-    def execute(self, context):
+    def execute(self, _context):
         pr = prefs()
         pm = pr.selected_pm
         pmi = pm.pmis[self.pm_item]
         pmi.mode = 'MENU'
         pmi.name = self.enumprop
         pmi.text = self.enumprop
-
         tag_redraw()
-
         return {'FINISHED'}
 
     def invoke(self, context, _event):
@@ -2276,15 +2239,13 @@ class PME_OT_addonpref_search(bpy.types.Operator):
 
     enumprop: bpy.props.EnumProperty(items=get_items)
 
-    def execute(self, context):
+    def execute(self, _context):
         pr = prefs()
         if pr.pmi_data.mode not in MODAL_CMD_MODES:
             pr.pmi_data.mode = 'COMMAND'
         pr.pmi_data.cmd = ""
-        pr.pmi_data.cmd += (
-            "bpy.ops.pme.popup_addon_preferences("
-            "addon='%s', center=True)"
-        ) % self.enumprop
+        pr.pmi_data.cmd += ("bpy.ops.pme.popup_addon_preferences("
+                            f"addon='{self.enumprop}', center=True)")
 
         sname = ""
         for item in PME_OT_addonpref_search.items:
@@ -2306,9 +2267,7 @@ class PME_OT_addonpref_search(bpy.types.Operator):
 class PME_OT_pmi_custom_set(bpy.types.Operator):
     bl_idname = "pme.pmi_custom_set"
     bl_label = ""
-    bl_description = (
-        "Draw custom layout of widgets"
-    )
+    bl_description = "Draw custom layout of widgets"
     bl_options = {'INTERNAL'}
 
     mode: bpy.props.EnumProperty(items=(
@@ -2326,7 +2285,7 @@ class PME_OT_pmi_custom_set(bpy.types.Operator):
         ('MODIFIERS', "Modifiers Panel", "", 'MODIFIER', 11),
     ))
 
-    def execute(self, context):
+    def execute(self, _context):
         pr = prefs()
         pm = pr.selected_pm
 
@@ -2420,8 +2379,7 @@ class PME_OT_pmi_custom_set(bpy.types.Operator):
 
         elif self.mode == 'RECENT_FILES':
             recent_files_menu = "INFO_MT_file_open_recent"
-            if is_28():
-                recent_files_menu = "TOPBAR_MT_file_open_recent"
+            recent_files_menu = "TOPBAR_MT_file_open_recent"
 
             pr.pmi_data.custom = (
                 "L.menu('%s', "
@@ -2448,7 +2406,7 @@ class PME_OT_preview(bpy.types.Operator):
 
     pie_menu_name: bpy.props.StringProperty()
 
-    def execute(self, context):
+    def execute(self, _context):
         bpy.ops.wm.pme_user_pie_menu_call(
             'INVOKE_DEFAULT', pie_menu_name=self.pie_menu_name,
             invoke_mode='RELEASE')
@@ -2464,7 +2422,7 @@ class PME_OT_docs(bpy.types.Operator):
     id: bpy.props.StringProperty(options={'SKIP_SAVE'})
     url: bpy.props.StringProperty(options={'SKIP_SAVE'})
 
-    def execute(self, context):
+    def execute(self, _context):
         if self.id:
             self.url = (
                 "https://en.blender.org/index.php/User:Raa/"
@@ -2502,9 +2460,8 @@ class PME_OT_pmi_pm_search(bpy.types.Operator):
     enumprop: bpy.props.EnumProperty(items=get_items)
     custom: bpy.props.BoolProperty(options={'SKIP_SAVE'})
 
-    def execute(self, context):
+    def execute(self, _context):
         pr = prefs()
-
         if self.custom:
             pr.pmi_data.mode = 'CUSTOM'
             pr.pmi_data.custom = "draw_menu(\"%s\")" % self.enumprop
@@ -2512,7 +2469,6 @@ class PME_OT_pmi_pm_search(bpy.types.Operator):
             if pr.pmi_data.mode not in MODAL_CMD_MODES:
                 pr.pmi_data.mode = 'COMMAND'
             pr.pmi_data.cmd = "open_menu(\"%s\")" % self.enumprop
-
         pr.pmi_data.sname = self.enumprop
 
         tag_redraw()
@@ -2561,7 +2517,7 @@ class PME_OT_pmi_operator_search(bpy.types.Operator):
 
     operator: bpy.props.EnumProperty(items=get_items)
 
-    def execute(self, context):
+    def execute(self, _context):
         pr = prefs()
         pm = pr.selected_pm
         pmi = pm.pmis[self.idx]
@@ -2678,22 +2634,19 @@ class PME_OT_pmi_area_search(bpy.types.Operator):
                 area=item[0], cmd=self.cmd)
 
     def execute(self, _context):
-        pr = prefs()
-
         for item in area_type_enum_items():
             if item[0] == self.area:
                 break
-
+        pr = prefs()
         pr.pmi_data.mode = 'COMMAND'
         pr.pmi_data.cmd = self.cmd % self.area
-
         pr.pmi_data.sname = item[1]
-
         return {'FINISHED'}
 
     def invoke(self, context, _event):
         context.window_manager.popup_menu(
-            self.draw_pmi_area_search, title="Area")
+            self.draw_pmi_area_search, title="Area"
+        )
         return {'FINISHED'}
 
 
@@ -2810,10 +2763,9 @@ class PME_OT_pmidata_specials_call(bpy.types.Operator):
 
         lh.sep()
 
-        if is_28():
-            lh.operator(
-                PME_OT_pmi_panel_search.bl_idname,
-                "Popover Panel", 'WINDOW', popover=True)
+        lh.operator(
+            PME_OT_pmi_panel_search.bl_idname,
+            "Popover Panel", 'WINDOW', popover=True)
 
         lh.operator(
             PME_OT_pmi_panel_search.bl_idname,
@@ -2940,7 +2892,6 @@ class SearchOperator:
         elif not self.use_cache and cls.enum_items:
             cls.enum_items.clear()
             cls.enum_items = None
-
         context.window_manager.invoke_search_popup(self)
         return {'FINISHED'}
 
@@ -3205,7 +3156,6 @@ class PME_OT_pm_hotkey_remove(bpy.types.Operator):
         if event.shift:
             if 'FINISHED' in bpy.ops.pme.pm_hotkey_convert():
                 return {'FINISHED'}
-
         return self.execute(context)
 
 

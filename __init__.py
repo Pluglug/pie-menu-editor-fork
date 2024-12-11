@@ -55,21 +55,17 @@ module_names = (
     # NOTE: Must be last
     "preferences"
 )
-if not bpy.app.background:
-    modules = []
-    for module_name in module_names:
-        if module_name in locals():
-            modules.append(importlib.reload(locals()[module_name]))
-        else:
-            modules.append(
-                importlib.import_module(f".{module_name}", __package__)
-            )
+modules = []
+for module_name in module_names:
+    if module_name in locals():
+        modules.append(importlib.reload(locals()[module_name]))
+    else:
+        modules.append(importlib.import_module(f".{module_name}", __package__))
 
 
 tmp_data       = None
 re_enable_data = None
 tmp_filepath   = None
-invalid_prefs  = None
 timer          = None
 
 
@@ -386,42 +382,25 @@ def register():
         return
 
     DBG_INIT and logh("PME Register")
-
-    if bpy.app.version >= (2, 80, 0):
-        if _bpy.context.window:
-            bpy_context = bpy.context
-            bpy.context = _bpy.context
-            try:
-                bpy.utils.register_class(PME_OT_wait_context)
-            except:
-                pass
-
-            bpy.ops.pme.wait_context('INVOKE_DEFAULT')
-            bpy.context = bpy_context
-        else:
-            try:
-                bpy.utils.register_class(PME_OT_wait_keymaps)
-            except:
-                pass
-
-            bpy.app.handlers.load_post.append(load_post_context)
-
+    if _bpy.context.window:
+        bpy_context = bpy.context
+        bpy.context = _bpy.context
+        try:
+            bpy.utils.register_class(PME_OT_wait_context)
+        except:
+            pass
+        bpy.ops.pme.wait_context('INVOKE_DEFAULT')
+        bpy.context = bpy_context
     else:
-        global invalid_prefs
-        from .preferences import InvalidPMEPreferences
-        invalid_prefs = type(
-            "PMEPreferences",
-            (InvalidPMEPreferences, bpy.types.AddonPreferences), {}
-        )
-        bpy.utils.register_class(invalid_prefs)
+        try:
+            bpy.utils.register_class(PME_OT_wait_keymaps)
+        except:
+            pass
+        bpy.app.handlers.load_post.append(load_post_context)
 
 
 def unregister():
     if bpy.app.background:
-        return
-
-    if invalid_prefs:
-        bpy.utils.unregister_class(invalid_prefs)
         return
 
     DBG_INIT and logh("PME Unregister")

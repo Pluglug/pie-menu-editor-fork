@@ -4,7 +4,7 @@ import bpy
 import _bpy # pylint: disable=E0401
 
 from . import pme
-from .addon import print_exc, ic, uprefs, is_28
+from .addon import print_exc, ic, uprefs
 from .c_utils import set_area, set_region, area_rect
 from .debug_utils import DBG_PROP_PATH, logi
 from .constants import UPREFS_CLS, UPREFS_ID, POPUP_PADDING, WINDOW_MARGIN
@@ -12,12 +12,12 @@ from .constants import UPREFS_CLS, UPREFS_ID, POPUP_PADDING, WINDOW_MARGIN
 
 cdll = None
 
-re_operator = re.compile( r"^(?:bpy\.ops|O)\.(\w+\.\w+)(\(.*)")
-re_prop = re.compile(     r"^([^\s]*?)([^.\s]+\.[^.\s]+)(\s*=\s*(.*))$")
+re_operator  = re.compile(r"^(?:bpy\.ops|O)\.(\w+\.\w+)(\(.*)")
+re_prop      = re.compile(r"^([^\s]*?)([^.\s]+\.[^.\s]+)(\s*=\s*(.*))$")
 re_prop_path = re.compile(r"^([^\s]*?)([^.\s]+\.[^.\s]+)$")
-re_prop_set = re.compile( r"^([^\s]*?)([^.\s]+\.[^.\s]+)(\s*=\s*(.*))?$")
-re_name_idx = re.compile( r"^(.*)\.(\d+)$")
-re_icon = re.compile(     r"^([A-Z]*_).*")
+re_prop_set  = re.compile(r"^([^\s]*?)([^.\s]+\.[^.\s]+)(\s*=\s*(.*))?$")
+re_name_idx  = re.compile(r"^(.*)\.(\d+)$")
+re_icon      = re.compile(r"^([A-Z]*_).*")
 
 uprefs_path = "C.user_preferences"
 if not hasattr(bpy.context, "user_preferences"):
@@ -578,7 +578,7 @@ class PME_OT_input_box(bpy.types.Operator):
     value: bpy.props.StringProperty()
     prop: bpy.props.StringProperty(options={'SKIP_SAVE'})
 
-    def draw(self, context):
+    def draw(self, _context):
         if self.prop:
             data_path, _, prop = self.prop.rpartition(".")
             data = pme.context.eval(data_path)
@@ -588,7 +588,7 @@ class PME_OT_input_box(bpy.types.Operator):
         else:
             self.layout.prop(self, "value", text="")
 
-    def execute(self, context):
+    def execute(self, _context):
         if PME_OT_input_box.func:
             PME_OT_input_box.func(self.value)
 
@@ -741,30 +741,21 @@ def ctx_dict(
                     break
             else:
                 region = area.regions[0]
-
-        if bpy.app.version < (2, 80, 0):
-            scene = scene or screen.scene
-
-    return {
-        'window':    window    or bl_context.window,
-        'workspace': workspace or bl_context.workspace,
-        'screen':    screen    or bl_context.screen,
-        'area':      area      or bl_context.area,
-        'region':    region    or bl_context.region,
-        'scene':     scene     or bl_context.scene,
-    }
+    return {'window':    window    or bl_context.window,
+            'workspace': workspace or bl_context.workspace,
+            'screen':    screen    or bl_context.screen,
+            'area':      area      or bl_context.area,
+            'region':    region    or bl_context.region,
+            'scene':     scene     or bl_context.scene}
 
 
 def area_header_text_set(text=None, area=None):
     if not area:
         area = bpy.context.area
-
     if text:
         area.header_text_set(text=text)
-    elif is_28():
-        area.header_text_set(text=None)
     else:
-        area.header_text_set()
+        area.header_text_set(text=None)
 
 
 def popup_area(area, width=320, height=400, x=None, y=None):
@@ -804,7 +795,6 @@ def enum_item_idx(data, prop, identifier):
     for i, e in enumerate(items):
         if e.identifier == identifier:
             return i
-
     return -1
 
 

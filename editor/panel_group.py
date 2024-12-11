@@ -11,8 +11,8 @@ from ..operators import (
 from ..panel_utils import PLayout, panel
 from ..ui_utils import draw_menu
 from ..ui import utitle, tag_redraw
-from ..c_utils import c_layout, c_style
-from ..addon import prefs, uprefs, ic, ic_cb, is_28
+from ..c_utils import c_layout
+from ..addon import prefs, uprefs, ic, ic_cb
 from ..panel_utils import (
     hidden_panel, bl_panel_types, get_hidden_panels, remove_panel, add_panel_group, remove_panel_group, rename_panel_group
 )
@@ -110,26 +110,15 @@ class PME_PT_toolbar(bpy.types.Panel):
 
     def draw(self, context):
         lh.lt(self.layout)
-        if not is_28():
-            self.layout.scale_y = 0.001
 
         layout = c_layout(self.layout)
-        style = c_style(layout)
 
-        if is_28():
-            margin = round(4 * uprefs().view.ui_scale)
-            layout.y += margin
-        else:
-            margin = round(3 * uprefs().view.ui_scale)
-            layout.y += style.panelspace - margin
+        margin = round(4 * uprefs().view.ui_scale)
+        layout.y += margin
 
         if context.area.width <= context.area.height:
-            if is_28():
-                layout.w += 2 * margin
-                layout.x -= margin
-            else:
-                layout.w += 2 * style.panelspace - 2 * margin
-                layout.x -= style.panelspace - margin
+            layout.w += 2 * margin
+            layout.x -= margin
 
         def_name = "Toolbar"
         scr_name = def_name + " " + context.screen.name
@@ -319,14 +308,13 @@ class PME_OT_panel_menu(bpy.types.Operator):
                         "panel='%s', frame=True, area='%s')"
                     ) % (self.panel, context.area.type))
 
-                if is_28():
-                    lh.operator(PME_OT_pm_edit.bl_idname,
-                                f"Add as Popover to '{pm.name}'",
-                                'ZOOMIN', auto=False, name=label, mode='CUSTOM',
-                                text=("L.popover("
-                                      f"panel='{self.panel}', "
-                                      "text=slot, icon=icon, "
-                                      "icon_value=icon_value)"))
+                lh.operator(PME_OT_pm_edit.bl_idname,
+                            f"Add as Popover to '{pm.name}'",
+                            'ZOOMIN', auto=False, name=label, mode='CUSTOM',
+                            text=("L.popover("
+                                    f"panel='{self.panel}', "
+                                    "text=slot, icon=icon, "
+                                    "icon_value=icon_value)"))
             op_text = f"Add as Panel to '{pm.name}'"
             if pm.mode == 'PANEL':
                 lh.operator(PME_OT_panel_add.bl_idname, op_text,

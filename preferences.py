@@ -41,7 +41,7 @@ from .panel_utils import (
     hidden_panel, bl_panel_types, bl_menu_types, bl_header_types
 )
 from .addon import (
-    prefs, uprefs, temp_prefs, print_exc, ic, ic_fb, ic_cb, ic_eye, is_28,
+    prefs, uprefs, temp_prefs, print_exc, ic, ic_fb, ic_cb, ic_eye,
     ADDON_PATH, SCRIPT_PATH, VERSION
 )
 from .layout_helper import operator, split, lh
@@ -416,7 +416,6 @@ class WM_OT_pm_import(bpy.types.Operator, ImportHelper):
             context.window_manager.popup_menu(
                 self._draw, title=self.bl_description)
             return {'FINISHED'}
-
         context.window_manager.fileselect_add(self)
         return {'RUNNING_MODAL'}
 
@@ -1058,7 +1057,6 @@ class WM_UL_pm_list(bpy.types.UIList):
         self._draw_filter(context, layout)
 
     draw_filter = draw_filter27
-    # draw_filter = draw_filter28 if is_28() else draw_filter27
 
     def draw_item(
             self, _context, layout, _data, item,
@@ -1186,7 +1184,7 @@ class PME_UL_pm_tree(bpy.types.UIList):
         }
         path = os.path.join(ADDON_PATH, "data", "tree.json")
         os.makedirs(os.path.dirname(path), exist_ok=True)
-        with open(path, "wb+", encoding='utf-8') as f:
+        with open(path, "wb+") as f:
             f.write(
                 json.dumps(data, indent=2, separators=(", ", ": "),
                            ensure_ascii=False).encode("utf8"))
@@ -1201,7 +1199,7 @@ class PME_UL_pm_tree(bpy.types.UIList):
         if not os.path.isfile(path):
             return
 
-        with open(path, "rb", encoding='utf-8') as f:
+        with open(path, "rb") as f:
             data = f.read()
             try:
                 data = json.loads(data)
@@ -1637,7 +1635,6 @@ class PME_UL_pm_tree(bpy.types.UIList):
         self._draw_filter(context, layout)
 
     draw_filter = draw_filter27
-    # draw_filter = draw_filter28 if is_28() else draw_filter27
 
     def filter_items(self, _context, data, propname):
         pr = prefs()
@@ -2000,7 +1997,6 @@ class PieMenuRadius:
 
 
 class TreeView:
-
     def expand_km(self, name):
         if name in PME_UL_pm_tree.collapsed_groups:
             PME_UL_pm_tree.collapsed_groups.remove(name)
@@ -2013,18 +2009,6 @@ class TreeView:
 
     def update(self):
         PME_UL_pm_tree.update_tree()
-
-
-class InvalidPMEPreferences:
-    bl_idname = __package__
-
-    def draw(self, _context):
-        col = self.layout.column(align=True)
-        row = col.row()
-        row.alignment = 'CENTER'
-        row.label(
-            text="Please update Blender to the latest version",
-            icon=ic('ERROR'))
 
 
 class PMEPreferences(bpy.types.AddonPreferences):
@@ -3106,10 +3090,8 @@ class PMEPreferences(bpy.types.AddonPreferences):
 
             self._draw_hlabel(col, "Hotkey Modes:")
             subcol = col.column(align=True)
-            subcol.prop(
-                uprefs().inputs,
-                "drag_threshold" if is_28() else "tweak_threshold",
-                text="Tweak Mode Threshold")
+            subcol.prop(uprefs().inputs,
+                        "drag_threshold", text="Tweak Mode Threshold")
             subcol.prop(pr, "hold_time")
             subcol.prop(pr, "chord_time")
 

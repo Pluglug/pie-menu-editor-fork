@@ -44,14 +44,11 @@ pme_menu_classes = {}
 
 def get_pme_menu_class(name):
     if name not in pme_menu_classes:
-        class_name = "PME_MT_menu_%d" % len(pme_menu_classes)
+        class_name = "PME_MT_menu_" + len(pme_menu_classes)
         pme_menu_classes[name] = type(
-            class_name,
-            (WM_MT_pme, bpy.types.Menu), {
-                'bl_label': name,
-            })
+            class_name, (WM_MT_pme, bpy.types.Menu), {'bl_label': name}
+        )
         bpy.utils.register_class(pme_menu_classes[name])
-
     return pme_menu_classes[name].__name__
 
 
@@ -82,17 +79,14 @@ def header_menu(areas):
                             break
                     if sd:
                         break
-
             if not sd:
                 menu_type = "None"
             elif sd.mode == 'TRACKING':
                 menu_type = "CLIP_MT_tracking_editor_menus"
             elif sd.mode == 'MASK':
                 menu_type = "CLIP_MT_masking_editor_menus"
-
         elif area in menu_types:
             menu_type = menu_types[area]
-
         else:
             menu_type = area + "_MT_editor_menus"
 
@@ -124,11 +118,9 @@ def header_menu(areas):
     if not isinstance(areas, list):
         areas = [areas]
 
-    menu_types = {
-        'TIMELINE': "TIME_MT_editor_menus",
-        'IMAGE':    "MASK_MT_editor_menus",
-        'SEQUENCE': "SEQUENCER_MT_editor_menus",
-    }
+    menu_types = {'TIMELINE': "TIME_MT_editor_menus",
+                  'IMAGE':    "MASK_MT_editor_menus",
+                  'SEQUENCE': "SEQUENCER_MT_editor_menus"}
 
     try:
         col = pme.context.layout.column()
@@ -173,7 +165,7 @@ def execute_script(path, **kwargs):
             else:
                 cpath = py_compile.compile(path)
 
-            with open(cpath, "rb", encoding='utf-8') as f:
+            with open(cpath, "rb") as f:
                 if sys.version_info >= (3, 7, 0):
                     f.read(16)
                 else:
@@ -271,15 +263,11 @@ def open_menu(name, slot=None, **kwargs):
             #         slot = i
             #         break
 
-        bpy.ops.wm.pme_user_pie_menu_call(
-            'INVOKE_DEFAULT', pie_menu_name=name,
-            # invoke_mode=pme.context.last_operator.invoke_mode)
-            invoke_mode=invoke_mode,
-            slot=slot)
+        bpy.ops.wm.pme_user_pie_menu_call('INVOKE_DEFAULT', pie_menu_name=name,
+                                          invoke_mode=invoke_mode, slot=slot)
 
         pme.context.exec_user_locals.clear()
         return True
-
     return False
 
 

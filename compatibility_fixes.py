@@ -1,7 +1,6 @@
 import re
 
-from . import addon
-from .addon import prefs
+from .addon import prefs, VERSION
 from .debug_utils import DBG_INIT, logh
 from .constants import F_EXPAND, KEYMAP_SPLITTER
 
@@ -10,7 +9,7 @@ def fix(pms=None, version=None):
     DBG_INIT and logh("PME Fixes")
     pr = prefs()
     pr_version = version or tuple(pr.version)
-    if pr_version == addon.VERSION:
+    if pr_version == VERSION:
         return
 
     fixes = []
@@ -21,7 +20,7 @@ def fix(pms=None, version=None):
             continue
 
         fix_version = (int(mo.group(1)), int(mo.group(2)), int(mo.group(3)))
-        if fix_version <= pr_version or fix_version > addon.VERSION:
+        if fix_version <= pr_version or fix_version > VERSION:
             continue
         fixes.append((fix_version, v))
 
@@ -34,7 +33,7 @@ def fix(pms=None, version=None):
         for fix_version, fix_func in fixes:
             fix_func(pr, pm)
 
-    pr.version = addon.VERSION
+    pr.version = VERSION
 
 
 def fix_json(pm, menu, version):

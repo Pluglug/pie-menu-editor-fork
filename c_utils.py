@@ -35,11 +35,9 @@ def gen_fields(*args):
         mo = re_field.match(arg)
         p, f, n = mo.groups()
         tp = POINTER(cur_tp) if p else cur_tp
-
         if n:
             for n in reversed(re.findall(r"\[(\d+)\]", n)):
                 tp *= int(n)
-
         ret.append((f, tp))
 
     bl_version = bpy.app.version
@@ -48,17 +46,13 @@ def gen_fields(*args):
             if a[0] and bl_version < a[1] \
             or not a[0] and bl_version >= a[1]:
                 continue
-
             cur_tp = a[2]
             for t_arg in islice(a, 3, None):
                 parse_str(t_arg)
-
         elif isinstance(a, str):
             parse_str(a)
-
         else:
             cur_tp = a
-
     return ret
 
 
@@ -539,9 +533,6 @@ class HeadModalHandler:
         context.window_manager.modal_handler_add(self)
         return {'RUNNING_MODAL'}
 
-    def invoke(self, context, _event):
-        return self.execute(context)
-
 
 def c_layout(layout):
     ret = cast(layout.as_pointer(), POINTER(uiLayout)).contents
@@ -562,11 +553,6 @@ def c_style(clayout):
 def c_context(context):
     ret = cast(context.as_pointer(), POINTER(bContext)).contents
     return ret
-
-
-# def c_event(event):
-#     ret = cast(event.as_pointer(), POINTER(wmEvent)).contents
-#     return ret
 
 
 def c_window(v):

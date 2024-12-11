@@ -252,7 +252,6 @@ class PME_OT_pdi_move(bpy.types.Operator):
             popup_dialog_pie(event, self._draw)
         else:
             self.execute(context)
-
         return {'FINISHED'}
 
 

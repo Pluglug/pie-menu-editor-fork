@@ -2,10 +2,9 @@ from time import time
 
 import bpy
 import blf
-import bgl
 
 from . import pme
-from .addon import prefs, uprefs, ic, is_28
+from .addon import prefs, uprefs, ic
 from .utils import multiton
 from .layout_helper import split
 from .constants import UPREFS, UPREFS_CLS
@@ -19,13 +18,6 @@ OVERLAY_ALIGNMENT_ITEMS = (
     ('BOTTOM_LEFT', "Bottom Left", ""),
     ('BOTTOM_RIGHT', "Bottom Right", ""),
 )
-
-
-def blf_color(r, g, b, a):
-    if is_28():
-        blf.color(0, r, g, b, a)
-    else:
-        bgl.glColor4f(r, g, b, a)
 
 
 class Timer:
@@ -118,7 +110,7 @@ def _draw_line(space, r, g, b, a):
         _line_y += space.size + 3
 
     blf.position(0, x, y, 0)
-    blf_color(r, g, b, a)
+    blf.color(0, r, g, b, a)
     blf.draw(0, space.text)
 
 
@@ -181,7 +173,7 @@ class Text:
         self.width, self.height = blf.dimensions(0, text)
 
     def draw(self, x, y):
-        blf_color(*self.style.color)
+        blf.color(0, *self.style.color)
         blf.position(0, x, y, 0)
         blf.size(0, self.size)
         blf.draw(0, self.text)
@@ -282,15 +274,6 @@ class TablePainter(Painter):
             x = round(self.x + self.header.center(self.width))
             y = round(self.y - self.header.size)
             self.header.draw(x, y)
-
-            if not is_28():
-                bgl.glLineWidth(self.line_width)
-                blf_color(*self.header.style.color)
-                bgl.glBegin(bgl.GL_LINES)
-                bgl.glVertex2f(self.x, y - self.spacing_h - self.line_width)
-                bgl.glVertex2f(
-                    self.x + self.width, y - self.spacing_h - self.line_width)
-                bgl.glEnd()
 
         x = 0
         for i in range(0, self.num_cols - self.align_right):

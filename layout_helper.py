@@ -3,7 +3,7 @@ import bpy
 from . import pme
 from .bl_utils import PME_OT_message_box, bp
 from .utils import format_exception
-from .addon import prefs, print_exc, ic, is_28
+from .addon import prefs, print_exc, ic
 from .c_utils import is_row, c_layout, c_last_btn
 from .previews_helper import ph
 from .debug_utils import DBG_LAYOUT, logi, logh
@@ -907,7 +907,7 @@ def operator(
     if text is not None:
         d["text"] = text
 
-    if depress is not None and is_28():
+    if depress is not None:
         d["depress"] = depress
 
     properties = layout.operator(idname, **d)

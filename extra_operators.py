@@ -4,7 +4,7 @@ from bpy.app.handlers import persistent
 
 from . import pme
 from .bl_utils import PopupOperator, popup_area, ctx_dict, area_header_text_set
-from .addon import prefs, uprefs, is_28
+from .addon import prefs, uprefs
 from .operator_utils import get_rna_type
 from .c_utils import swap_spaces, resize_area
 from .panel_utils import panel, panel_label, bl_panel_enum_items
@@ -39,17 +39,18 @@ class PME_OT_modal_dummy(bpy.types.Operator):
         name="Message", options={'SKIP_SAVE'},
         default="OK: Enter/LClick, Cancel: Esc/RClick)")
 
-    def modal(self, context, event):
-        if event.value == 'PRESS':
-            if event.type in {'ESC', 'RIGHTMOUSE'}:
-                area_header_text_set()
-                return {'CANCELLED'}
-            elif event.type in {'RET', 'LEFTMOUSE'}:
-                area_header_text_set()
-                return {'FINISHED'}
+    def modal(self, _context, event):
+        if event.value != 'PRESS':
+            return {'RUNNING_MODAL'}
+        if event.type in {'ESC', 'RIGHTMOUSE'}:
+            area_header_text_set()
+            return {'CANCELLED'}
+        if event.type in {'RET', 'LEFTMOUSE'}:
+            area_header_text_set()
+            return {'FINISHED'}
         return {'RUNNING_MODAL'}
 
-    def execute(self, context):
+    def execute(self, _context):
         return {'FINISHED'}
 
     def invoke(self, context, _event):
@@ -65,7 +66,7 @@ class PME_OT_none(bpy.types.Operator):
 
     pass_through: bpy.props.BoolProperty(options={'SKIP_SAVE'})
 
-    def execute(self, context):
+    def execute(self, _context):
         return {'PASS_THROUGH' if self.pass_through else 'CANCELLED'}
 
     def invoke(self, context, _event):
@@ -80,7 +81,7 @@ class WM_OT_pme_sidebar_toggle(bpy.types.Operator):
 
     tools: bpy.props.BoolProperty()
 
-    def execute(self, context):
+    def execute(self, _context):
         toggle_sidebar(tools=self.tools)
         return {'FINISHED'}
 
@@ -108,17 +109,13 @@ class PME_OT_sidebar_toggle(bpy.types.Operator):
         options={'SKIP_SAVE'}
     )
 
-    def execute(self, context):
+    def execute(self, _context):
         value = None
         if self.action == 'SHOW':
             value = True
         elif self.action == 'HIDE':
             value = False
-
-        toggle_sidebar(
-            tools=self.sidebar == 'TOOLS',
-            value=value)
-
+        toggle_sidebar(tools=self.sidebar == 'TOOLS', value=value)
         return {'FINISHED'}
 
 
@@ -133,15 +130,11 @@ class PME_OT_screen_set(bpy.types.Operator):
     def execute(self, context):
         if self.name not in bpy.data.workspaces:
             return {'CANCELLED'}
-
         if context.screen.show_fullscreen:
             bpy.ops.screen.back_to_previous()
-
         if context.screen.show_fullscreen:
             bpy.ops.screen.back_to_previous()
-
         context.window.workspace = bpy.data.workspaces[self.name]
-
         return {'FINISHED'}
 
 
@@ -221,7 +214,6 @@ class PME_OT_popup_user_preferences(PopupOperator, bpy.types.Operator):
                 uprefs().active_section = self.tab
             except:
                 pass
-
         return PopupOperator.invoke(self, context, event)
 
 
@@ -343,11 +335,9 @@ class PME_OT_popup_panel(PopupOperator, bpy.types.Operator):
 
     def invoke(self, context, event):
         pme.context.reset()
-
         if self.width == -1:
             panel_groups = self.panel.split(";")
             self.width = 300 * len(panel_groups)
-
         return PopupOperator.invoke(self, context, event)
 
 
@@ -369,7 +359,7 @@ class PME_OT_select_popup_panel(bpy.types.Operator):
     item: bpy.props.EnumProperty(
         items=get_items, options={'SKIP_SAVE', 'HIDDEN'})
 
-    def execute(self, context):
+    def execute(self, _context):
         PME_OT_select_popup_panel.enum_items = None
         bpy.ops.pme.popup_panel('INVOKE_DEFAULT', panel=self.item)
         return {'FINISHED'}
@@ -433,9 +423,6 @@ class PME_OT_window_auto_close(bpy.types.Operator):
 
         return {'PASS_THROUGH'}
 
-    def invoke(self, context, _event):
-        return self.execute(context)
-
 
 class PME_OT_area_move(bpy.types.Operator):
     bl_idname = "pme.area_move"
@@ -443,37 +430,29 @@ class PME_OT_area_move(bpy.types.Operator):
     bl_description = "Move area"
     bl_options = {'INTERNAL'}
 
-    area: bpy.props.EnumProperty(
-        name="Area Type", description="Area type",
-        items=area_type_enum_items(),
-        options={'SKIP_SAVE'})
+    area: bpy.props.EnumProperty(name="Area Type", description="Area type",
+                                 items=area_type_enum_items(),
+                                 options={'SKIP_SAVE'})
     edge: bpy.props.EnumProperty(
         name="Area Edge", description="Edge of the area to move",
-        items=(
-            ('TOP', "Top", "", 'TRIA_TOP_BAR', 0),
-            ('BOTTOM', "Bottom", "", 'TRIA_BOTTOM_BAR', 1),
-            ('LEFT', "Left", "", 'TRIA_LEFT_BAR', 2),
-            ('RIGHT', "Right", "", 'TRIA_RIGHT_BAR', 3),
-        ),
+        items=(('TOP', "Top", "", 'TRIA_TOP_BAR', 0),
+               ('BOTTOM', "Bottom", "", 'TRIA_BOTTOM_BAR', 1),
+               ('LEFT', "Left", "", 'TRIA_LEFT_BAR', 2),
+               ('RIGHT', "Right", "", 'TRIA_RIGHT_BAR', 3)),
         options={'SKIP_SAVE'})
-    delta: bpy.props.IntProperty(
-        name="Delta", description="Delta", default=300,
-        options={'SKIP_SAVE'})
-    move_cursor: bpy.props.BoolProperty(
-        name="Move Cursor", description="Move cursor",
-        options={'SKIP_SAVE'})
+    delta: bpy.props.IntProperty(name="Delta", description="Delta",
+                                 default=300, options={'SKIP_SAVE'})
+    move_cursor: bpy.props.BoolProperty(name="Move Cursor",
+                                        description="Move cursor",
+                                        options={'SKIP_SAVE'})
 
     def execute(self, context):
-        return {'FINISHED'}
-
-    def invoke(self, context, event):
         for a in reversed(context.screen.areas):
             if a.type == self.area:
                 break
         else:
             self.report({'WARNING'}, "Main area not found")
             return {'CANCELLED'}
-
         bpy.ops.view2d.scroll_up(override_context(a))
         return {'FINISHED'}
 
@@ -800,8 +779,7 @@ class PME_OT_popup_area(bpy.types.Operator):
         if self.area == 'CURRENT':
             if not context.area:
                 return {'CANCELLED'}
-
-            self.area = context.area.ui_type if is_28() else context.area.type
+            self.area = context.area.ui_type
 
         area_name = ""
         for item in area_type_enum_items():
@@ -813,19 +791,9 @@ class PME_OT_popup_area(bpy.types.Operator):
         screen_name += area_name
 
         area_type = None
-        new_screen_flag = False
-        # if screen_name in bpy.data.screens:
-        if False:
-            area = bpy.data.screens[screen_name].areas[0]
-        else:
-            new_screen_flag = True
-            area = context.screen.areas[0]
-            if is_28():
-                area_type = area.ui_type
-                area.ui_type = self.area
-            else:
-                area_type = area.type
-                area.type = self.area
+        area = context.screen.areas[0]
+        area_type = area.ui_type
+        area.ui_type = self.area
 
         rh, rw = None, None
         for r in area.regions:
@@ -844,15 +812,13 @@ class PME_OT_popup_area(bpy.types.Operator):
         self.update_header(header_on_top, header_visible, header_dict)
 
         window = context.window
-        windows = [w for w in context.window_manager.windows]
+        windows = list(context.window_manager.windows)
 
         if self.width == -1:
             if self.area == 'PROPERTIES':
-                self.width = round(
-                    350 * uprefs().view.ui_scale)
+                self.width = round(350 * uprefs().view.ui_scale)
             elif self.area == 'OUTLINER':
-                self.width = round(
-                    400 * uprefs().view.ui_scale)
+                self.width = round(400 * uprefs().view.ui_scale)
             else:
                 self.width = round(window.width * 0.8)
 
@@ -883,33 +849,24 @@ class PME_OT_popup_area(bpy.types.Operator):
             if self.cmd:
                 getattr(bpy.ops.pme, "timeout")(
                     ctx_dict(window=new_window),
-                    'INVOKE_DEFAULT',
-                    cmd=self.cmd)
-
-            new_screen_name = new_window.screen.name
-            # if screen_name in bpy.data.screens:
-            if False:
-                bpy.ops.screen.delete(
-                    {'window': new_window,
-                     'screen': bpy.data.screens[new_screen_name]}
+                    'INVOKE_DEFAULT', cmd=self.cmd
                 )
-                bpy.ops.pme.screen_set({'window': new_window,
-                                        'name': screen_name})
-            else:
-                new_window.screen.name = screen_name
-                new_window.screen.user_clear()
+            new_window.screen.name = screen_name
+            new_window.screen.user_clear()
 
-        if new_screen_flag:
-            self.update_header(header_on_top, header_visible, header_dict)
+            #bpy.ops.screen.delete(
+            #    {'window': new_window,
+            #     'screen': bpy.data.screens[new_screen_name]}
+            #)
+            #bpy.ops.pme.screen_set({'window': new_window,
+            #                        'name': screen_name})
+
+        self.update_header(header_on_top, header_visible, header_dict)
 
         if area_type:
-            if is_28():
-                area.ui_type = area_type
-            else:
-                area.type = area_type
+            area.ui_type = area_type
 
         prefs().enable_window_kmis()
-
         return {'FINISHED'}
 
 

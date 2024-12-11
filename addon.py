@@ -7,7 +7,7 @@ import bpy
 
 
 manifest_path = os.path.join(os.path.dirname(__file__), "blender_manifest.toml")
-with open(manifest_path, "rb", encoding='utf-8') as f:
+with open(manifest_path, "rb") as f:
     data = tomllib.load(f)
     VERSION_RAW = data.get('version')
     if VERSION_RAW:
@@ -36,13 +36,6 @@ def temp_prefs():
     return getattr(wm, "pme", None)
 
 
-def check_bl_version(version=None):
-    version = version or bpy.app.version
-    if version >= (2, 80, 0) and bpy.app.version < (2, 80, 0):
-        return True
-    return bpy.app.version >= version
-
-
 def check_context():
     return isinstance(bpy.context, bpy.types.Context)
 
@@ -56,10 +49,6 @@ def print_exc(text=None):
         print(">>>", text)
 
     traceback.print_exc()
-
-
-def is_28():
-    return bpy.app.version >= (2, 80, 0)
 
 
 def ic(icon):

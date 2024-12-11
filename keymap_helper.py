@@ -4,7 +4,7 @@ from . import pme
 from .c_utils import HeadModalHandler
 from .property_utils import DynamicPG, to_py_value
 from .selection_state import check, update
-from .addon import uprefs, print_exc, is_28
+from .addon import uprefs, print_exc
 from .operator_utils import find_statement, add_default_args #, operator
 from .debug_utils import DBG_INIT, DBG_STACK, loge, logh, logi
 from .constants import UPREFS, KEYMAP_SPLITTER
@@ -161,8 +161,7 @@ class _ImageKMList(_KMList):
                 lst.append("Image Paint")
             elif mode == 'MASK':
                 lst.append("Mask Editing")
-            elif mode == 'VIEW' and not is_28() \
-              or mode == 'UV' and is_28():
+            elif mode == 'UV':
                 ao = context.active_object
                 if ao and ao.data \
                 and ao.type == 'MESH' and ao.mode == 'EDIT' \
@@ -995,7 +994,6 @@ class PME_OT_mouse_state(bpy.types.Operator):
     def invoke(self, context, _event):
         self.__class__.inst = self
         context.window_manager.modal_handler_add(self)
-
         return {'RUNNING_MODAL'}
 
 
@@ -1037,7 +1035,6 @@ class PME_OT_mouse_state_wait(bpy.types.Operator):
         self.bl_timer = \
             context.window_manager.event_timer_add(
                 0.0001, window=context.window)
-
         self.__class__.inst = self
         return {'RUNNING_MODAL'}
 
@@ -1058,7 +1055,6 @@ class PME_OT_mouse_state_init(bpy.types.Operator):
             if self.key != PME_OT_mouse_state_wait.inst.key:
                 return {'PASS_THROUGH'}
             PME_OT_mouse_state_wait.inst.stop()
-
         bpy.ops.pme.mouse_state_wait('INVOKE_DEFAULT', key=self.key)
         return {'PASS_THROUGH'}
 
@@ -1137,7 +1133,6 @@ class PME_OT_key_state(bpy.types.Operator):
         self.bl_timer = context.window_manager.event_timer_add(
             0.01, window=bpy.context.window)
         context.window_manager.modal_handler_add(self)
-
         return {'RUNNING_MODAL'}
 
 
@@ -1169,9 +1164,7 @@ class PME_OT_mouse_btn_state(bpy.types.Operator, HeadModalHandler):
         cls = self.__class__
         if cls.inst:
             return {'PASS_THROUGH'}
-
         cls.inst = self
-
         return self.execute(context)
 
 

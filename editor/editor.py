@@ -687,13 +687,10 @@ class WM_OT_pmi_edit_clipboard(bpy.types.Operator):
     def invoke(self, context, event):
         text = context.window_manager.clipboard
         text = text.strip("\n")
-
         if len(text) > MAX_STR_LEN:
             message_box(W_PMI_LONG_CMD)
             return {'CANCELLED'}
-
         _edit_pmi(self, text, event)
-
         return {'CANCELLED'}
 
 
@@ -1330,11 +1327,10 @@ class WM_OT_pmi_data_edit(bpy.types.Operator):
         return {'FINISHED'}
 
     def invoke(self, context, _event):
-        if self.hotkey and (
-                not context.area or context.area.type != UPREFS or
-                prefs().mode != 'PMI'):
+        if self.hotkey and (not context.area
+                             or context.area.type != UPREFS
+                             or prefs().mode != 'PMI'):
             return {'PASS_THROUGH'}
-
         return self.execute(context)
 
 
@@ -1440,11 +1436,10 @@ class WM_OT_pmi_icon_select(bpy.types.Operator):
         return {'FINISHED'}
 
     def invoke(self, context, _event):
-        if self.hotkey and (
-                not context.area or context.area.type != UPREFS or
-                prefs().mode != 'ICONS'):
+        if self.hotkey and (not context.area
+                             or context.area.type != UPREFS
+                             or prefs().mode != 'ICONS'):
             return {'PASS_THROUGH'}
-
         return self.execute(context)
 
 
