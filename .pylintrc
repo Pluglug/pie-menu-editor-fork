@@ -5,6 +5,7 @@ disable=
 	no-member,
 	global-statement,
 	protected-access,
+	expression-not-assigned,
 	too-many-arguments,
 	too-few-public-methods,
 	logging-format-interpolation,

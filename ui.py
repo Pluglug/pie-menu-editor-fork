@@ -81,8 +81,8 @@ def gen_prop_name(mo, is_prop=False, strict=False):
     return name, icon
 
 
-def tag_redraw(all=False):
-    if all:
+def tag_redraw(redraw_all=False):
+    if redraw_all:
         tag_redraw_windows()
     else:
         tag_redraw_windows(UPREFS, 'WINDOW')
@@ -159,7 +159,7 @@ class PME_OT_userpref_restore(bpy.types.Operator):
     bl_idname = "pme.userpref_restore"
     bl_label = "Restore User Preferences Area"
 
-    def execute(self, context):
+    def execute(self, _context):
         bpy.types.USERPREF_PT_addons.draw = draw_addons_default
         return {'FINISHED'}
 

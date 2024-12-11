@@ -82,41 +82,41 @@ class _ListBase:
 
         return ret
 
-    def insert(self, prevlink, newlink):
-        if prevlink:
-            a = prevlink if isinstance(prevlink, int) else addressof(prevlink)
-            prevlink_p = cast(a, POINTER(Link)).contents
+    def insert(self, prev_link, new_link):
+        if prev_link:
+            a = prev_link if isinstance(prev_link, int) else addressof(prev_link)
+            prev_link_p = cast(a, POINTER(Link)).contents
         else:
-            prevlink_p = None
+            prev_link_p = None
 
-        if newlink:
-            a = newlink if isinstance(newlink, int) else addressof(newlink)
-            newlink_p = cast(a, POINTER(Link)).contents
+        if new_link:
+            a = new_link if isinstance(new_link, int) else addressof(new_link)
+            new_link_p = cast(a, POINTER(Link)).contents
         else:
-            newlink_p = None
+            new_link_p = None
 
-        if not newlink_p:
+        if not new_link_p:
             return
 
         if not self.first:
-            self.first = self.last = addressof(newlink_p)
+            self.first = self.last = addressof(new_link_p)
             return
 
-        if not prevlink_p:
-            newlink_p.prev = None
-            newlink_p.next = gen_pointer(self.first)
-            newlink_p.next.contents.prev = gen_pointer(newlink_p)
-            self.first = addressof(newlink_p)
+        if not prev_link_p:
+            new_link_p.prev = None
+            new_link_p.next = gen_pointer(self.first)
+            new_link_p.next.contents.prev = gen_pointer(new_link_p)
+            self.first = addressof(new_link_p)
             return
 
-        if self.last == addressof(prevlink_p):
-            self.last = addressof(newlink_p)
+        if self.last == addressof(prev_link_p):
+            self.last = addressof(new_link_p)
 
-        newlink_p.next = prevlink_p.next
-        newlink_p.prev = gen_pointer(prevlink_p)
-        prevlink_p.next = gen_pointer(newlink_p)
-        if newlink_p.next:
-            newlink_p.next.contents.prev = gen_pointer(newlink_p)
+        new_link_p.next = prev_link_p.next
+        new_link_p.prev = gen_pointer(prev_link_p)
+        prev_link_p.next = gen_pointer(new_link_p)
+        if new_link_p.next:
+            new_link_p.next.contents.prev = gen_pointer(new_link_p)
 
     def remove(self, link):
         if link:
@@ -140,7 +140,7 @@ class _ListBase:
             return None
 
         link_lp = cast(self.first, POINTER(Link))
-        for i in range(idx):
+        for _ in range(idx):
             link_lp = link_lp.contents.next
 
         return link_lp.contents if link_lp else None
@@ -624,10 +624,10 @@ def is_row(layout):
 
 
 def swap_spaces(from_area, to_area, to_area_space_type):
-    idx = -1
-    for i, s in enumerate(to_area.spaces):
+    idx_to_find = -1
+    for idx, s in enumerate(to_area.spaces):
         if s.type == to_area_space_type:
-            idx = i
+            idx_to_find = idx
             break
     else:
         return
@@ -636,7 +636,7 @@ def swap_spaces(from_area, to_area, to_area_space_type):
     to_area_p = c_area(to_area)
 
     from_space_a = from_area_p.spacedata.first
-    to_space_p = to_area_p.spacedata.find(idx)
+    to_space_p = to_area_p.spacedata.find(idx_to_find)
     to_space_a = addressof(to_space_p)
     to_prev_space_a = addressof(to_space_p.prev.contents)
 

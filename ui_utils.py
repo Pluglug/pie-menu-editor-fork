@@ -173,7 +173,7 @@ def execute_script(path, **kwargs):
             else:
                 cpath = py_compile.compile(path)
 
-            with open(cpath, "rb") as f:
+            with open(cpath, "rb", encoding='utf-8') as f:
                 if sys.version_info >= (3, 7, 0):
                     f.read(16)
                 else:
@@ -189,7 +189,7 @@ def execute_script(path, **kwargs):
 
     else:
         try:
-            with open(path) as f:
+            with open(path, encoding='utf-8') as f:
                 exec(f.read(), exec_globals)
         except:
             if pr.debug_mode:

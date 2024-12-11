@@ -7,7 +7,7 @@ import bpy
 
 
 manifest_path = os.path.join(os.path.dirname(__file__), "blender_manifest.toml")
-with open(manifest_path, "rb") as f:
+with open(manifest_path, "rb", encoding='utf-8') as f:
     data = tomllib.load(f)
     VERSION_RAW = data.get('version')
     if VERSION_RAW:

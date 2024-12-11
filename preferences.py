@@ -370,7 +370,7 @@ class WM_OT_pm_import(bpy.types.Operator, ImportHelper):
                         f.extract(info, path=ADDON_PATH)
         else:
             try:
-                with open(filepath, "r") as f:
+                with open(filepath, "r", encoding='utf-8') as f:
                     s = f.read()
             except:
                 self.report({'WARNING'}, W_FILE)
@@ -487,7 +487,7 @@ class WM_OT_pm_export(bpy.types.Operator, ExportHelper):
             export_tags=self.export_tags, mode=self.mode, tag=self.tag)
         data = json.dumps(data, indent=2, separators=(", ", ": "))
         try:
-            with open(self.filepath, 'w') as f:
+            with open(self.filepath, 'w', encoding='utf-8') as f:
                 f.write(data)
         except:
             print_exc()
@@ -1186,7 +1186,7 @@ class PME_UL_pm_tree(bpy.types.UIList):
         }
         path = os.path.join(ADDON_PATH, "data", "tree.json")
         os.makedirs(os.path.dirname(path), exist_ok=True)
-        with open(path, "wb+") as f:
+        with open(path, "wb+", encoding='utf-8') as f:
             f.write(
                 json.dumps(data, indent=2, separators=(", ", ": "),
                            ensure_ascii=False).encode("utf8"))
@@ -1201,7 +1201,7 @@ class PME_UL_pm_tree(bpy.types.UIList):
         if not os.path.isfile(path):
             return
 
-        with open(path, "rb") as f:
+        with open(path, "rb", encoding='utf-8') as f:
             data = f.read()
             try:
                 data = json.loads(data)
@@ -3324,7 +3324,9 @@ class PMEPreferences(bpy.types.AddonPreferences):
         # open last backup
         last_data = None
         if len(backups):
-            with open(os.path.join(backup_folder_path, backups[-1])) as f:
+            with open(
+                os.path.join(backup_folder_path, backups[-1]), encoding='utf-8'
+            ) as f:
                 last_data = f.read()
 
         data = self.get_export_data()
@@ -3344,7 +3346,7 @@ class PMEPreferences(bpy.types.AddonPreferences):
                 os.remove(os.path.join(backup_folder_path, backups[i]))
 
         # save new backup
-        with open(new_backup_filepath, "w") as f:
+        with open(new_backup_filepath, "w", encoding='utf-8') as f:
             f.write(data)
             DBG_INIT and logi("New backup", new_backup_filepath)
             if operator:

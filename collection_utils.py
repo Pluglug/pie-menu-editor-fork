@@ -28,18 +28,16 @@ def sort_collection(collection, key, data=None, idx_prop=None):
 
 def move_item(collection, old_idx, new_idx, indices=None):
     collection.move(old_idx, new_idx)
-
     if indices:
         n = len(indices)
-        for i in range(n):
-            if indices[i] == old_idx:
-                indices[i] = new_idx
-            elif old_idx < indices[i] <= new_idx:
-                indices[i] -= 1
-            elif new_idx <= indices[i] < old_idx:
-                indices[i] += 1
+        for idx in range(n):
+            if indices[idx] == old_idx:
+                indices[idx] = new_idx
+            elif old_idx < indices[idx] <= new_idx:
+                indices[idx] -= 1
+            elif new_idx <= indices[idx] < old_idx:
+                indices[idx] += 1
         return indices[0] if n == 1 else indices
-
     return None
 
 
@@ -125,20 +123,18 @@ class MoveItemOperator:
         lh.label(self.get_title(), self.get_title_icon())
         lh.sep()
 
-        for i, item in enumerate(collection):
-            if not self.filter_item(item, i):
+        for idx, item in enumerate(collection):
+            if not self.filter_item(item, idx):
                 continue
 
             name = getattr(item, self.label_prop, None) or "..."
-            icon = self.get_icon(item, i)
+            icon = self.get_icon(item, idx)
 
-            lh.operator(
-                self.bl_idname, name, icon,
-                old_idx=self.old_idx,
-                old_idx_last=self.old_idx_last,
-                new_idx=i,
-                swap=self.swap
-            )
+            lh.operator(self.bl_idname, name, icon,
+                        old_idx=self.old_idx,
+                        old_idx_last=self.old_idx_last,
+                        new_idx=i,
+                        swap=self.swap)
 
     def finish(self):
         pass

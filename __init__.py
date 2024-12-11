@@ -59,9 +59,7 @@ if not bpy.app.background:
     modules = []
     for module_name in module_names:
         if module_name in locals():
-            modules.append(
-                importlib.reload(locals()[module_name])
-            )
+            modules.append(importlib.reload(locals()[module_name]))
         else:
             modules.append(
                 importlib.import_module(f".{module_name}", __package__)
@@ -93,8 +91,7 @@ def on_context():
     pme.context.add_global("EnumProperty", bpy.props.EnumProperty)
     pme.context.add_global("CollectionProperty", bpy.props.CollectionProperty)
     pme.context.add_global("PointerProperty", bpy.props.PointerProperty)
-    pme.context.add_global(
-        "FloatVectorProperty", bpy.props.FloatVectorProperty)
+    pme.context.add_global("FloatVectorProperty", bpy.props.FloatVectorProperty)
 
     for k, v in globals().items():
         if k.startswith("__"):
