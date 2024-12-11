@@ -11,6 +11,11 @@ Our goal is to ensure the long-term stability and growth of this exceptional too
 
 ---
 
+**Documentation (WIP)**:  
+For more details, guides, and instructions, please visit our documentation site: [PME Docs](https://pluglug.github.io/pme-docs/)
+
+---
+
 ## Acknowledgment
 This project is a fork of the original Pie Menu Editor created by [roaoao](https://github.com/roaoao).  
 We deeply respect roaoao's contributions and acknowledge their expertise in creating such a versatile tool.  
