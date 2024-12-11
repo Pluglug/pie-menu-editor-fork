@@ -1,7 +1,7 @@
 # Join 2 areas
 
 # Usage (Command tab):
-# execute_script("scripts/command_area_join.py")
+# execute_script("scripts/area_join.py")
 
 import bpy
 from pie_menu_editor import pme

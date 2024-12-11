@@ -4,10 +4,10 @@
 # Import ./examples/context_sensitive_menu.json file
 
 # Usage 2 (Command tab):
-# execute_script("scripts/command_context_sensitive_menu.py")
+# execute_script("scripts/context_sensitive_menu.py")
 
 # Usage 3 (Command tab):
-# from .scripts.command_context_sensitive_menu import open_csm; open_csm()
+# from .scripts.context_sensitive_menu import open_csm; open_csm()
 
 import bpy
 from pie_menu_editor import pme

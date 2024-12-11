@@ -2,7 +2,7 @@
 # Press MMB to toggle direction
 
 # Usage (Command tab):
-# execute_script("scripts/command_area_split.py", mode='AUTO')
+# execute_script("scripts/area_split.py", mode='AUTO')
 
 import bpy
 

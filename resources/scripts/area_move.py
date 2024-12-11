@@ -1,7 +1,7 @@
 # Moves the edge (TOP, BOTTOM, LEFT or RIGHT) of the area
 
 # Usage (Command tab):
-# execute_script("scripts/command_area_move.py", area=C.area, edge='TOP', delta=300, move_cursor=False)
+# execute_script("scripts/area_move.py", area=C.area, edge='TOP', delta=300, move_cursor=False)
 
 import bpy
 

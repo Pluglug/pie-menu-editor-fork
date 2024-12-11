@@ -3,13 +3,13 @@
 # Usage (Command tab):
 
 # Open panels by tab/category
-# from .scripts.command_panel import open_tab; open_tab("Tools", region='ANY')
+# from .scripts.panel import open_tab; open_tab("Tools", region='ANY')
 
 # Open panel by name
-# from .scripts.command_panel import open_panel; open_panel("3D Cursor", region='ANY')
+# from .scripts.panel import open_panel; open_panel("3D Cursor", region='ANY')
 
 # Restore hidden panels
-# from .scripts.command_panel import restore_panels; restore_panels()
+# from .scripts.panel import restore_panels; restore_panels()
 
 import bpy
 from inspect import isclass
@@ -19,7 +19,7 @@ hidden_panels = {}
 
 
 @classmethod
-def _dummy_poll(cls, context):
+def _dummy_poll(_cls, _context):
     return False
 
 

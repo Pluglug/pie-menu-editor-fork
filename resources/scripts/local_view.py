@@ -1,15 +1,15 @@
 # Toggle Local/Global view mode without changing the view
 
 # Usage 1 (Command tab):
-# execute_script("scripts/command_localview.py", mode='TOGGLE')
+# execute_script("scripts/local_view.py", mode='TOGGLE')
 
 # Usage 2 (Command tab):
-# from .scripts.command_localview import localview; localview('TOGGLE')
+# from .scripts.local_view import local_view; local_view('TOGGLE')
 
 import bpy
 
 
-def localview(mode='TOGGLE'):
+def local_view(mode='TOGGLE'):
     context = bpy.context
     area = context.area
     area_type = area.ui_type if hasattr(area, "ui_type") else area.type
@@ -51,4 +51,4 @@ def localview(mode='TOGGLE'):
 
 
 mode = locals().get("kwargs", {}).get("mode", 'TOGGLE')
-localview(mode)
+local_view(mode)

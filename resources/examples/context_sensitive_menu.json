@@ -1,130 +1,130 @@
 {
-  "version": "1.15.16", 
+  "version": "1.15.16",
   "menus": [
     [
-      "CSM: Mesh", 
-      "Window", 
-      "", 
+      "CSM: Mesh",
+      "Window",
+      "",
       [
         [
           ""
-        ], 
+        ],
         [
           ""
-        ], 
+        ],
         [
           ""
-        ], 
+        ],
         [
           ""
-        ], 
+        ],
         [
           ""
-        ], 
+        ],
         [
           ""
-        ], 
+        ],
         [
           ""
-        ], 
+        ],
         [
           ""
         ]
-      ], 
-      "PMENU", 
-      "pm?", 
-      "PRESS", 
-      "", 
+      ],
+      "PMENU",
+      "pm?",
+      "PRESS",
+      "",
       "Examples"
-    ], 
+    ],
     [
-      "Context Sensitive Menu", 
-      "Object Non-modal", 
-      "F1", 
+      "Context Sensitive Menu",
+      "Object Non-modal",
+      "F1",
       [
         [
-          "Open Menu by Selected Object's Type", 
-          "COMMAND", 
-          "", 
-          "execute_script(\"scripts/command_context_sensitive_menu.py\", prefix=\"CSM: \")"
+          "Open Menu by Selected Object's Type",
+          "COMMAND",
+          "",
+          "execute_script(\"scripts/context_sensitive_menu.py\", prefix=\"CSM: \")"
         ]
-      ], 
-      "SCRIPT", 
-      "s?", 
-      "PRESS", 
-      "", 
+      ],
+      "SCRIPT",
+      "s?",
+      "PRESS",
+      "",
       "Examples"
-    ], 
+    ],
     [
-      "CSM: None Object", 
-      "Window", 
-      "", 
+      "CSM: None Object",
+      "Window",
+      "",
       [
         [
           ""
-        ], 
+        ],
         [
           ""
-        ], 
+        ],
         [
           ""
-        ], 
+        ],
         [
           ""
-        ], 
+        ],
         [
           ""
-        ], 
+        ],
         [
           ""
-        ], 
+        ],
         [
           ""
-        ], 
+        ],
         [
           ""
         ]
-      ], 
-      "PMENU", 
-      "pm?", 
-      "PRESS", 
-      "", 
+      ],
+      "PMENU",
+      "pm?",
+      "PRESS",
+      "",
       "Examples"
-    ], 
+    ],
     [
-      "CSM: Any Object", 
-      "Window", 
-      "", 
+      "CSM: Any Object",
+      "Window",
+      "",
       [
         [
           ""
-        ], 
+        ],
         [
           ""
-        ], 
+        ],
         [
           ""
-        ], 
+        ],
         [
           ""
-        ], 
+        ],
         [
           ""
-        ], 
+        ],
         [
           ""
-        ], 
+        ],
         [
           ""
-        ], 
+        ],
         [
           ""
         ]
-      ], 
-      "PMENU", 
-      "pm?", 
-      "PRESS", 
-      "", 
+      ],
+      "PMENU",
+      "pm?",
+      "PRESS",
+      "",
       "Examples"
     ]
   ]
