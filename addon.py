@@ -22,13 +22,21 @@ ICON_ENUM_ITEMS = \
     bpy.types.UILayout.bl_rna.functions["prop"].parameters["icon"].enum_items
 
 
-def uprefs():
-    return getattr(bpy.context, "user_preferences", None) \
-        or getattr(bpy.context, "preferences", None)
+def uprefs(context=bpy.context):
+    """Retrieves Blender's user preferences."""
+    preferences = getattr(context, "preferences", None)
+    if preferences is None:
+        raise AttributeError("No preferences attribute found in the context.")
+    return preferences
 
 
-def prefs():
-    return uprefs().addons[__package__].preferences
+def prefs(context=bpy.context):
+    """Retrieves the preferences of this addon."""
+    preferences = uprefs(context)
+    addon_prefs = preferences.addons.get(__package__)
+    if addon_prefs is None:
+        raise KeyError(f"Addon preferences not found: {__package__}")
+    return addon_prefs.preferences
 
 
 def temp_prefs():
