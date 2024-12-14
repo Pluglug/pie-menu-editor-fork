@@ -5,8 +5,6 @@ import traceback
 
 import bpy
 
-from .debug_utils import loge
-
 
 manifest_path = os.path.join(os.path.dirname(__file__), "blender_manifest.toml")
 with open(manifest_path, "rb") as f:
@@ -24,28 +22,13 @@ ICON_ENUM_ITEMS = \
     bpy.types.UILayout.bl_rna.functions["prop"].parameters["icon"].enum_items
 
 
-def uprefs(context=bpy.context):
-    """Retrieves Blender's user preferences."""
-    preferences = getattr(context, "preferences", None)
-    if preferences is None:
-        loge("Failed to retrieve user preferences.")
-        return None
-    return preferences
+def uprefs():
+    return getattr(bpy.context, "user_preferences", None) \
+        or getattr(bpy.context, "preferences", None)
 
 
-def prefs(context=bpy.context):
-    """Retrieves the preferences of this addon."""
-    preferences = uprefs(context)
-    if preferences is None:
-        loge("No preferences attribute found in the context.")
-        return None
-
-    addon_prefs = preferences.addons.get(__package__)
-    if addon_prefs is None:
-        loge(f"Addon preferences not found for package: {__package__}")
-        raise KeyError(f"Addon preferences not found: {__package__}")
-
-    return addon_prefs.preferences
+def prefs():
+    return uprefs().addons[__package__].preferences
 
 
 def temp_prefs():
