@@ -10,7 +10,7 @@ import bpy
 from . import pme
 from .operators import WM_OT_pme_user_pie_menu_call
 from .layout_helper import CLayout, draw_pme_layout, lh
-from .addon import prefs, print_exc, ADDON_PATH
+from .addon import prefs, print_exc, ADDON_PATH, SCRIPT_PATH
 
 
 class WM_MT_pme:
@@ -191,6 +191,20 @@ def execute_script(path, **kwargs):
                     pme.context.exec_operator.report({'ERROR'}, s)
 
     return exec_globals.get("return_value", True)
+
+
+def execute_scripts_in_subdir(subdir: str) -> None:
+    """
+    Execute all Python scripts in the specified subdirectory, 
+    providing a central point for future script management and customization.
+    """
+    directory = os.path.join(SCRIPT_PATH, subdir)
+    for root, dirs, files in os.walk(directory, followlinks=True):
+        dirs[:] = [d for d in dirs if d != "__pycache__"]
+        files = [f for f in files if f.endswith('.py')]
+        files.sort()
+        for file in files:
+            execute_script(os.path.join(root, file))
 
 
 def draw_menu(name, frame=False, dx=0, dy=0, layout=None):
