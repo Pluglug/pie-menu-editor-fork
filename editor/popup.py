@@ -1606,9 +1606,11 @@ class Editor(EditorBase):
         self.default_pmi_data = "pd?pd_panel=1"
 
     def update_default_pmi_data(self):
-        pr = prefs()
-        if pr is None:
+        try:
+            pr = prefs()
+        except (AttributeError, KeyError):
             return
+
         self.default_pmi_data = "pd?pd_panel=%d" % enum_item_idx(
             pr, "default_popup_mode", pr.default_popup_mode)
 
