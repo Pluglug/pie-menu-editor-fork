@@ -1,15 +1,15 @@
-DBG = True
-DBG_INIT = True
-DBG_LAYOUT = True
-DBG_TREE = True
-DBG_CMD_EDITOR = True
-DBG_MACRO = True
-DBG_STICKY = True
-DBG_STACK = True
-DBG_PANEL = True
-DBG_PM = True
-DBG_PROP = True
-DBG_PROP_PATH = True
+DBG = False
+DBG_INIT = False
+DBG_LAYOUT = False
+DBG_TREE = False
+DBG_CMD_EDITOR = False
+DBG_MACRO = False
+DBG_STICKY = False
+DBG_STACK = False
+DBG_PANEL = False
+DBG_PM = False
+DBG_PROP = False
+DBG_PROP_PATH = False
 
 
 def _log(color, *args):

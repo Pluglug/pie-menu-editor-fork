@@ -56,18 +56,12 @@ module_names = (
     "preferences"
 )
 modules = []
-
-logh("PME Initialization: Starting module setup process")
-logi("Pre-check of 'previews_helper' module state:", sys.modules.get(f"{__package__}.previews_helper"))
-
 for module_name in module_names:
     if module_name in locals():
         # modules.append(importlib.reload(locals()[module_name]))
         pass
     else:
         modules.append(importlib.import_module(f".{module_name}", __package__))
-
-logi("Post-check of 'previews_helper' module state:", sys.modules.get(f"{__package__}.previews_helper"))
 
 
 tmp_data       = None
@@ -121,10 +115,6 @@ def on_context():
         )
     else:
         fix()
-    
-    from .previews_helper import ph
-    logi("PME on_context: Icons currently loaded:", ph.preview.keys() if ph.preview else "No preview")
-    # ph.refresh()
 
 
 def get_classes():
@@ -409,9 +399,6 @@ def register():
             pass
         bpy.app.handlers.load_post.append(load_post_context)
 
-    from .previews_helper import ph
-    logi("PME register: Icons currently loaded:", ph.preview.keys() if ph.preview else "No preview")
-    # ph.refresh()
 
 def unregister():
     if bpy.app.background:

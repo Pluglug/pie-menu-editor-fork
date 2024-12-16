@@ -4,7 +4,7 @@ import bpy
 import bpy.utils.previews
 
 from . import pme
-from .debug_utils import logh, logi, logw, loge
+
 
 def custom_icon(icon):
     return ph.get_icon(icon)
@@ -14,13 +14,8 @@ class PreviewsHelper:
     def __init__(self, folder="resources\\icons"):
         self.path = os.path.join(os.path.dirname(__file__), folder)
         self.preview = None
-        logh(f"PreviewsHelper.__init__ : Loading icons from {self.path}")
 
     def get_icon(self, name):
-        logi(f"PreviewsHelper.get_icon : Looking for icon {name}")
-        if self.preview is None:
-            loge("PreviewsHelper.get_icon : No icons loaded")
-            return None
         return self.preview[name].icon_id
 
     def get_icon_name_by_id(self, id):
@@ -48,20 +43,12 @@ class PreviewsHelper:
             self.unregister()
 
         self.preview = bpy.utils.previews.new()
-        logh(f"PreviewsHelper.refresh : Looking for icons in {self.path}")
-        if not os.path.exists(self.path):
-            loge(f"PreviewsHelper.refresh : Folder not found: {self.path}")
-        else:
-            for f in os.listdir(self.path):
-                logi(f"PreviewsHelper.refresh : Loading icon {f}")
-                if not f.endswith(".png"):
-                    continue
-                self.preview.load(os.path.splitext(f)[0],
-                                os.path.join(self.path, f),
-                                'IMAGE')
-
-            logi(f"PreviewsHelper.refresh : Loaded icons: {list(self.preview.keys())}")
-
+        for f in os.listdir(self.path):
+            if not f.endswith(".png"):
+                continue
+            self.preview.load(os.path.splitext(f)[0],
+                              os.path.join(self.path, f),
+                              'IMAGE')
 
     def unregister(self):
         if self.preview is None:
@@ -75,16 +62,9 @@ if "ph" in globals():
 ph = PreviewsHelper()
 ph.refresh()
 
-# ph = None
 
 def register():
-    # global ph
-    # ph = PreviewsHelper()
-    # ph.refresh()
-    # logw("previews_helper register: Loaded icons:", list(ph.get_names()))
-
     pme.context.add_global("custom_icon", custom_icon)
 
 def unregister():
-    if ph:
-        ph.unregister()
+    ph.unregister()
