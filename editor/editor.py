@@ -2210,6 +2210,7 @@ class EditorBase:
         subcol.scale_y = 2
         subcol.operator(PME_OT_pm_open_mode_select.bl_idname,
                         text="") #, icon_value=item[3]
+                        # text="", icon_value=item[3])
 
         subcol = row.column(align=True)
         if data.open_mode != 'CHORDS':
