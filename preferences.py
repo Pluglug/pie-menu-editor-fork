@@ -32,7 +32,7 @@ from .keymap_helper import (
 from .modal_utils import encode_modal_data
 from .utils import extract_str_flags, isclose
 from .compatibility_fixes import fix, fix_json
-from .ui_utils import get_pme_menu_class, execute_script
+from .ui_utils import get_pme_menu_class, execute_scripts_in_subdir
 from .ui import tag_redraw, draw_addons_maximized, is_userpref_maximized
 from .operator_utils import (
     find_operator, apply_properties, operator_label, to_bl_idname
@@ -57,8 +57,8 @@ from .constants import (
 
 
 pp = pme.props
-import_filepath = os.path.join(ADDON_PATH, "examples", "examples.json")
-export_filepath = os.path.join(ADDON_PATH, "examples", "my_pie_menus.json")
+import_filepath = os.path.join(ADDON_PATH, "resources", "examples", "examples.json")
+export_filepath = os.path.join(ADDON_PATH, "resources", "examples", "my_pie_menus.json")
 
 
 def update_pmi_data(_self, context, reset_prop_data=True):
@@ -331,7 +331,7 @@ class WM_OT_pm_import(bpy.types.Operator, ImportHelper):
 
                 for info in f.infolist():
                     if info.is_dir():
-                        if info.filename == "icons/":
+                        if info.filename == "resources/icons/":
                             self.refresh_icons_flag = True
 
                         try:
@@ -3631,19 +3631,8 @@ def register():
     pr.tree.update()
     PME_UL_pm_tree.load_state()
 
-    for root, dirs, files in os.walk(
-            os.path.join(SCRIPT_PATH, "autorun"), followlinks=True):
-        dirs[:] = [d for d in dirs if d != "__pycache__"]
-        for file in files:
-            if file.endswith('.py'):
-                execute_script(os.path.join(root, file))
-
-    for root, dirs, files in os.walk(
-            os.path.join(SCRIPT_PATH, "register"), followlinks=True):
-        dirs[:] = [d for d in dirs if d != "__pycache__"]
-        for file in files:
-            if file.endswith('.py'):
-                execute_script(os.path.join(root, file))
+    execute_scripts_in_subdir("autorun")
+    execute_scripts_in_subdir("register")
 
 
 def unregister():
@@ -3656,9 +3645,4 @@ def unregister():
     if hasattr(bpy.types, "WM_MT_button_context"):
         bpy.types.WM_MT_button_context.remove(button_context_menu)
 
-    for root, dirs, files in os.walk(
-            os.path.join(SCRIPT_PATH, "unregister"), followlinks=True):
-        dirs[:] = [d for d in dirs if d != "__pycache__"]
-        for file in files:
-            if file.endswith('.py'):
-                execute_script(os.path.join(root, file))
+    execute_scripts_in_subdir("unregister")
