@@ -44,7 +44,7 @@ pme_menu_classes = {}
 
 def get_pme_menu_class(name):
     if name not in pme_menu_classes:
-        class_name = "PME_MT_menu_" + len(pme_menu_classes)
+        class_name = f"PME_MT_menu_{len(pme_menu_classes)}"
         pme_menu_classes[name] = type(
             class_name, (WM_MT_pme, bpy.types.Menu), {'bl_label': name}
         )

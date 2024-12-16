@@ -57,8 +57,8 @@ from .constants import (
 
 
 pp = pme.props
-import_filepath = os.path.join(ADDON_PATH, "examples", "examples.json")
-export_filepath = os.path.join(ADDON_PATH, "examples", "my_pie_menus.json")
+import_filepath = os.path.join(ADDON_PATH, "resources", "examples", "examples.json")
+export_filepath = os.path.join(ADDON_PATH, "resources", "examples", "my_pie_menus.json")
 
 
 def update_pmi_data(_self, context, reset_prop_data=True):
@@ -331,7 +331,7 @@ class WM_OT_pm_import(bpy.types.Operator, ImportHelper):
 
                 for info in f.infolist():
                     if info.is_dir():
-                        if info.filename == "icons/":
+                        if info.filename == "resources/icons/":
                             self.refresh_icons_flag = True
 
                         try:
