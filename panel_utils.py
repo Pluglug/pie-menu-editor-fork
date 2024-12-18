@@ -353,7 +353,7 @@ class PME_OT_panel_toggle(bpy.types.Operator):
 
     panel_id: bpy.props.StringProperty()
 
-    def execute(self, context):
+    def execute(self, _context):
         if self.panel_id in self.__class__.collapsed_panels:
             self.__class__.collapsed_panels.remove(self.panel_id)
         else:
@@ -369,7 +369,7 @@ class PME_OT_panel_reset(bpy.types.Operator):
 
     item_id: bpy.props.StringProperty()
 
-    def execute(self, context):
+    def execute(self, _context):
         PLayout.idx_map[self.item_id].clear()
         return {'FINISHED'}
 
@@ -382,7 +382,7 @@ class PME_OT_panel_editor_toggle(bpy.types.Operator):
 
     idx: bpy.props.IntProperty()
 
-    def execute(self, context):
+    def execute(self, _context):
         PLayout.editor = not PLayout.editor
         return {'FINISHED'}
 
@@ -396,7 +396,7 @@ class PME_OT_btn_hide(bpy.types.Operator):
     idx: bpy.props.IntProperty()
     item_id: bpy.props.StringProperty()
 
-    def execute(self, context):
+    def execute(self, _context):
         indices = PLayout.idx_map[self.item_id]
         if self.idx in indices:
             indices.remove(self.idx)

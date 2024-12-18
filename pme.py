@@ -16,12 +16,10 @@ class UserData:
 
 class PMEContext:
     def __init__(self):
-        self._globals = {
-            'bpy':         bpy,
-            'pme_context': self,
-            'drag_x':      0,
-            'drag_y':      0,
-        }
+        self._globals = {'bpy':         bpy,
+                         'pme_context': self,
+                         'drag_x':      0,
+                         'drag_y':      0}
         self.pm = None
         self.pmi = None
         self.index = None
@@ -133,7 +131,6 @@ class PMEContext:
         except:
             print_exc(data)
             return False
-
         return True
 
 
@@ -151,10 +148,11 @@ class PMEProp:
     def decode_value(self, value):
         if self.ptype == 'STR':
             return value
-        elif self.ptype == 'BOOL':
-            return value == "True" or value == "1"
-        elif self.ptype == 'INT':
+        if self.ptype == 'BOOL':
+            return value in ("True", "1")
+        if self.ptype == 'INT':
             return int(value) if value else 0
+        return None
 
 
 class PMEProps:
@@ -242,7 +240,6 @@ props = PMEProps()
 
 
 class ParsedData:
-
     def __init__(self, text):
         self.type, _, data = text.partition("?")
 
@@ -270,7 +267,6 @@ class ParsedData:
         for item in props.get(name).items:
             if getattr(self, name) == item[0]:
                 return item[2]
-
         return 0
 
 

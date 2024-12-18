@@ -208,14 +208,14 @@ REGION_ITEMS = (
 )
 
 OPEN_MODE_ITEMS = (
-    ('PRESS', "Press", "Press the key", ph.get_icon("pPress"), 0),
-    ('HOLD', "Hold", "Hold down the key", ph.get_icon("pHold"), 1),
+    ('PRESS', "Press", "Press the key", ph.get_icon_id("pPress"), 0),
+    ('HOLD', "Hold", "Hold down the key", ph.get_icon_id("pHold"), 1),
     ('DOUBLE_CLICK', "Double Click", "Double click the key",
-        ph.get_icon("pDouble"), 2),
+        ph.get_icon_id("pDouble"), 2),
     ('TWEAK', "Click Drag", "Hold down the key and move the mouse",
-        ph.get_icon("pTweak"), 3),
+        ph.get_icon_id("pTweak"), 3),
     ('CHORDS', "Key Chords", "Click sequence of 2 keys",
-        ph.get_icon("pChord"), 4),
+        ph.get_icon_id("pChord"), 4),
 )
 
 

@@ -283,7 +283,7 @@ class LayoutHelper:
             if self.ph:
                 icon = icon[1:]
                 if self.ph.has_icon(icon):
-                    icon_value = self.ph.get_icon(icon)
+                    icon_value = self.ph.get_icon_id(icon)
                     icon_id = 'NONE'
 
         return icon_id, icon_value

@@ -7,38 +7,37 @@ from . import pme
 
 
 def custom_icon(icon):
-    return ph.get_icon(icon)
+    return ph.get_icon_id(icon)
 
 
 class PreviewsHelper:
-    def __init__(self, folder="resources\\icons"):
+    def __init__(self, folder="resources\\icons") -> None:
         self.path = os.path.join(os.path.dirname(__file__), folder)
         self.preview = None
 
-    def get_icon(self, name):
+    def get_icon_id(self, name) -> int:
         return self.preview[name].icon_id
 
-    def get_icon_name_by_id(self, id):
+    def get_icon_name(self, index) -> int | None:
         name = None
         min_id = 99999999
-        for k, i in self.preview.items():
-            if i.icon_id == id:
-                return k
-            if min_id > i.icon_id:
-                min_id = i.icon_id
-                name = k
-
+        for icon_id, idx in self.preview.items():
+            if idx.icon_id == index:
+                return icon_id
+            if min_id > idx.icon_id:
+                min_id = idx.icon_id
+                name = icon_id
         return name
 
-    def get_names(self):
+    def get_names(self) -> list[int]:
         return self.preview.keys()
 
-    def has_icon(self, name):
+    def has_icon(self, name) -> bool:
         if self.preview is None:
             return False
         return name in self.preview
 
-    def refresh(self):
+    def refresh(self) -> None:
         if self.preview:
             self.unregister()
 
@@ -50,7 +49,7 @@ class PreviewsHelper:
                               os.path.join(self.path, f),
                               'IMAGE')
 
-    def unregister(self):
+    def unregister(self) -> None:
         if self.preview is None:
             return
         bpy.utils.previews.remove(self.preview)

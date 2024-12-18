@@ -2860,7 +2860,7 @@ class PMEPreferences(bpy.types.AddonPreferences):
 
                 p = row.operator(
                     WM_OT_pmi_icon_select.bl_idname, text="",
-                    icon_value=ph.get_icon(icon), emboss=False)
+                    icon_value=ph.get_icon_id(icon), emboss=False)
                 p.idx = pme.context.edit_item_idx
                 p.icon = F_CUSTOM_ICON + icon
                 idx += 1
