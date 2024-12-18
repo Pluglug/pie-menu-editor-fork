@@ -58,10 +58,8 @@ module_names = (
 modules = []
 for module_name in module_names:
     if module_name in locals():
-        # modules.append(importlib.reload(locals()[module_name]))
-        pass
-    else:
-        modules.append(importlib.import_module(f".{module_name}", __package__))
+        continue
+    modules.append(importlib.import_module(f".{module_name}", __package__))
 
 
 tmp_data       = None
