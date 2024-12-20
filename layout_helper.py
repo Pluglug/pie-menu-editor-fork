@@ -78,17 +78,17 @@ class CLayout:
                 menu, text=text, text_ctxt=text_ctxt,
                 translate=translate, icon=ic(icon), icon_value=icon_value)
 
-        if use_mouse_over_open is True or CLayout.use_mouse_over_open is True:
-            UI_BTYPE_PULLDOWN = 27 << 9
-            c_btn = c_last_btn(layout)
-            c_btn.type = UI_BTYPE_PULLDOWN
-            # layout.root.contents.type = root_type
+        # if use_mouse_over_open is True or CLayout.use_mouse_over_open is True:
+        #     UI_BTYPE_PULLDOWN = 27 << 9
+        #     c_btn = c_last_btn(layout)
+        #     c_btn.type = UI_BTYPE_PULLDOWN
+        #     # layout.root.contents.type = root_type
 
-        elif use_mouse_over_open is False:
-            UI_BTYPE_MENU = 4 << 9
-            c_btn = c_last_btn(layout)
-            c_btn.type = UI_BTYPE_MENU
-            # layout.root.contents.type = root_type
+        # elif use_mouse_over_open is False:
+        #     UI_BTYPE_MENU = 4 << 9
+        #     c_btn = c_last_btn(layout)
+        #     c_btn.type = UI_BTYPE_MENU
+        #     # layout.root.contents.type = root_type
 
         bpy.types.UILayout.__getattribute__ = CLayout.getattribute
 
