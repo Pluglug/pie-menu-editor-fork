@@ -95,7 +95,7 @@ _line_y = 0
 
 def _draw_line(space, r, g, b, a):
     ctx = bpy.context
-    blf.size(0, space.size, 72)
+    blf.size(0, space.size)
     w, h = blf.dimensions(0, space.text)
 
     global _line_y
@@ -174,13 +174,13 @@ class Text:
 
     def update(self, text):
         self.text = text
-        blf.size(0, self.size, 72)
+        blf.size(0, self.size)
         self.width, self.height = blf.dimensions(0, text)
 
     def draw(self, x, y):
         blf_color(*self.style.color)
         blf.position(0, x, y, 0)
-        blf.size(0, self.size, 72)
+        blf.size(0, self.size)
         blf.draw(0, self.text)
 
 
