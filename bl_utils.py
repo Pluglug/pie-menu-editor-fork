@@ -759,7 +759,7 @@ def get_space_data(area_type):
     return ret
 
 
-def get_context_data(area_type):
+def get_context_data(area_type):  # TODO(B4.0): Replace dictionary override with context.temp_override
     ret = dict()
     ret["space_data"] = get_space_data(area_type)
     return ret
@@ -859,4 +859,4 @@ def register():
     pme.context.add_global("message_box", message_box)
     pme.context.add_global("input_box", input_box)
     pme.context.add_global("close_popups", close_popups)
-    pme.context.add_global("ctx", get_context_data)
+    pme.context.add_global("ctx", get_context_data)  # TODO(B4.0): Replace dictionary override with context.temp_override
