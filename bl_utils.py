@@ -764,7 +764,7 @@ def get_context_data(area_type):
     ret["space_data"] = get_space_data(area_type)
     return ret
 
-
+# TODO(B4.0): Replace dictionary override with context.temp_override
 def ctx_dict(
         window=None, screen=None, area=None, region=None, scene=None,
         workspace=None):
@@ -829,7 +829,7 @@ def popup_area(area, width=320, height=400, x=None, y=None):
     upr.view.ui_scale = 1
     upr.view.ui_line_width = 'THIN'
 
-    bpy.ops.screen.area_dupli(ctx_dict(area=area), 'INVOKE_DEFAULT')
+    bpy.ops.screen.area_dupli(ctx_dict(area=area), 'INVOKE_DEFAULT')  # TODO(B4.0): Replace dictionary override with context.temp_override
 
     upr.view.ui_scale = ui_scale
     upr.view.ui_line_width = ui_line_width

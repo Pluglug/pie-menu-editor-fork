@@ -662,7 +662,7 @@ class PME_OT_timeout(bpy.types.Operator):
 
             if self.timer.time_duration >= self.delay:
                 self.cancelled = True
-                if False:
+                if False:  # TODO(B4.0): Replace dictionary override with context.temp_override
                     pass
                 # if self.area != 'CURRENT':
                 #     bpy.ops.pme.timeout(

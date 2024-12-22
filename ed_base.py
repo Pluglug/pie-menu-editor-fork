@@ -731,6 +731,7 @@ class WM_OT_pmi_edit_auto(bpy.types.Operator):
         return {'FINISHED'}
 
     def invoke(self, context, event):
+        # TODO(B4.0): Replace dictionary override with context.temp_override
         ctx = find_context('INFO')
         area_type = not ctx and context.area.type
         args = []
@@ -1226,6 +1227,7 @@ class PME_OT_pmi_cmd_generate(bpy.types.Operator):
             if pos_args and args:
                 pos_args.append("")
 
+            # TODO(B4.0): Replace dictionary override with context.temp_override
             cmd = "bpy.ops.%s(%s%s)" % (
                 op_idname, ", ".join(pos_args), ", ".join(args))
 

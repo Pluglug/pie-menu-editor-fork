@@ -10,7 +10,7 @@ def redraw_screen(area=None):
     # if not area:
     #     return
 
-    # bpy.ops.screen.screen_full_area(override_context(area))
+    # bpy.ops.screen.screen_full_area(override_context(area))  # TODO(B4.0): Replace dictionary override with context.temp_override
     # bpy.ops.screen.screen_full_area(override_context(area))
 
     view = uprefs().view
@@ -51,7 +51,7 @@ def move_header(area=None, top=None, visible=None, auto=None):
     else:
         is_top = rh.y > area.y
 
-    d = ctx_dict(area=area, region=rh)
+    d = ctx_dict(area=area, region=rh)  # TODO(B4.0): Replace dictionary override with context.temp_override
     if auto:
         if top:
             if is_top:
@@ -123,9 +123,9 @@ def focus_area(area, center=False, cmd=None):
         bpy.context.window.cursor_warp(x, y)
 
     if cmd:
-        bpy.ops.pme.timeout(override_context(area), cmd=cmd)
+        bpy.ops.pme.timeout(override_context(area), cmd=cmd)  # TODO(B4.0): Replace dictionary override with context.temp_override
 
-
+# TODO(B4.0): Replace dictionary override with context.temp_override
 def override_context(
         area, screen=None, window=None, region='WINDOW', **kwargs):
     window = window or bpy.context.window

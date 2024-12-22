@@ -383,6 +383,8 @@ class PME_OT_window_auto_close(bpy.types.Operator):
     bl_options = {'INTERNAL'}
 
     def execute(self, context):
+        # TODO(B4.0): Replace dictionary override with context.temp_override
+
         # if context.window.screen.name.startswith(PME_SCREEN) or \
         #         context.window.screen.name.startswith(PME_TEMP_SCREEN):
         #     bpy.ops.wm.window_close(dict(window=context.window))
@@ -471,7 +473,7 @@ class PME_OT_area_move(bpy.types.Operator):
             self.report({'WARNING'}, "Main area not found")
             return {'CANCELLED'}
 
-        bpy.ops.view2d.scroll_up(SU.override_context(a))
+        bpy.ops.view2d.scroll_up(SU.override_context(a))  # TODO(B4.0): Replace dictionary override with context.temp_override
         return {'FINISHED'}
 
         mx, my = event.mouse_x, event.mouse_y
@@ -620,7 +622,7 @@ class PME_OT_sidearea_toggle(bpy.types.Operator):
     def close_area(self, main, area):
         CTU.swap_spaces(area, main, self.area)
         try:
-            bpy.ops.screen.area_close(dict(area=area))
+            bpy.ops.screen.area_close(dict(area=area))  # TODO(B4.0): Replace dictionary override with context.temp_override
             return
         except:
             pass
@@ -731,7 +733,7 @@ class PME_OT_sidearea_toggle(bpy.types.Operator):
                 SU.override_context(a),
                 direction='VERTICAL',
                 factor=factor,
-                **mouse)
+                **mouse)  # TODO(B4.0): Replace dictionary override with context.temp_override
 
             new_area = context.screen.areas[-1]
             new_area.ui_type = self.area
@@ -781,7 +783,7 @@ class PME_OT_popup_area(bpy.types.Operator):
 
         if 'TOP' in self.header:
             # not on_top and bpy.ops.screen.header_flip(d)
-            not on_top and bpy.ops.screen.region_flip(d)
+            not on_top and bpy.ops.screen.region_flip(d)  # TODO(B4.0): Replace dictionary override with context.temp_override
         else:
             # on_top and bpy.ops.screen.header_flip(d)
             on_top and bpy.ops.screen.region_flip(d)
@@ -882,11 +884,11 @@ class PME_OT_popup_area(bpy.types.Operator):
                 getattr(bpy.ops.pme, "timeout")(
                     ctx_dict(window=new_window),
                     'INVOKE_DEFAULT',
-                    cmd=self.cmd)
+                    cmd=self.cmd)  # TODO(B4.0): Replace dictionary override with context.temp_override
 
             new_screen_name = new_window.screen.name
             # if screen_name in bpy.data.screens:
-            if False:
+            if False:  # TODO(B4.0): Replace dictionary override with context.temp_override
                 bpy.ops.screen.delete(
                     dict(
                         window=new_window,

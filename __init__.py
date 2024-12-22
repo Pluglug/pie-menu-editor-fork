@@ -208,7 +208,7 @@ def load_post_handler(_):
     if pr.missing_kms:
         bpy.ops.pme.wait_keymaps(
             dict(window=bpy.context.window_manager.windows[0]),
-            'INVOKE_DEFAULT')
+            'INVOKE_DEFAULT')  # TODO(B4.0): Replace dictionary override with context.temp_override
     else:
         temp_prefs().init_tags()
         pr.tree.update()
@@ -258,7 +258,7 @@ def on_context():
         DBG_INIT and logi("%d Missing Keymaps" % len(pr.missing_kms))
         bpy.ops.pme.wait_keymaps(
             dict(window=bpy.context.window_manager.windows[0]),
-            'INVOKE_DEFAULT')
+            'INVOKE_DEFAULT')  # TODO(B4.0): Replace dictionary override with context.temp_override
 
     else:
         compatibility_fixes.fix()
