@@ -1,4 +1,7 @@
 import bpy
+
+from typing import Union
+
 from . import c_utils as CTU
 from . import pme
 from .addon import uprefs
@@ -73,31 +76,52 @@ def move_header(area=None, top=None, visible=None, auto=None):
     return True
 
 
-def find_area(area_type, screen=None):
-    screen = screen or bpy.context.screen
-    if isinstance(screen, str):
-        screen = bpy.data.screens.get(screen, None)
+def find_area(
+    area_or_type: Union[str, bpy.types.Area] = bpy.context.area,
+    screen_or_name: Union[str, bpy.types.Screen, None] = None,
+) -> Union[bpy.types.Area, None]:
+    """Find and return an Area object."""
+    if isinstance(area_or_type, bpy.types.Area):
+        return area_or_type
+
+    screen = None
+    if isinstance(screen_or_name, bpy.types.Screen):
+        screen = screen_or_name
+    elif isinstance(screen_or_name, str):
+        screen = bpy.data.screens.get(screen_or_name, None)
+    else:
+        screen = bpy.context.screen
 
     if screen:
         for a in screen.areas:
-            if a.type == area_type:
+            if a.type == area_or_type:
                 return a
 
     return None
 
 
-def find_region(area, region_type):
+def find_region(
+    region_or_type: Union[str, bpy.types.Region] = bpy.context.region,
+    area_or_type: Union[str, bpy.types.Area] = None,
+    screen_or_name: Union[str, bpy.types.Screen, None] = None,
+) -> Union[bpy.types.Region, None]:
+    """Find and return a Region object within the specified Area."""
+    area = find_area(area_or_type, screen_or_name)
+    if not area:
+        return None
+
+    if isinstance(region_or_type, bpy.types.Region):
+        return region_or_type
+
     for r in area.regions:
-        if r.type == region_type:
+        if r.type == region_or_type:
             return r
 
     return None
 
 
 def focus_area(area, center=False, cmd=None):
-    if isinstance(area, str):
-        area = find_area(area)
-
+    area = find_area(area)
     if not area:
         return
 
@@ -125,49 +149,55 @@ def focus_area(area, center=False, cmd=None):
     if cmd:
         bpy.ops.pme.timeout(override_context(area), cmd=cmd)  # TODO(B4.0): Replace dictionary override with context.temp_override
 
+
 # TODO(B4.0): Replace dictionary override with context.temp_override
 def override_context(
         area, screen=None, window=None, region='WINDOW', **kwargs):
+    # This is no longer necessary
+    # but is documented in the old user docs so keeping it for now
+
+    import traceback
+    import warnings
+    caller = traceback.extract_stack(None, 2)[0]
+    warnings.warn(
+        f"Deprecated: 'override_context' is deprecated, use 'get_override_args' instead. "
+        f"Called from {caller.name} at {caller.line}",
+        DeprecationWarning,
+        stacklevel=2
+    )
+    return get_override_args(area, region, screen, window, **kwargs)
+
+
+def get_override_args(
+    area: Union[str, bpy.types.Area] = None,
+    region: Union[str, bpy.types.Region] = "WINDOW",
+    screen: Union[str, bpy.types.Screen] = None,
+    window: bpy.types.Window = None,
+    **kwargs,
+):
+    """Get the override context arguments"""
     window = window or bpy.context.window
     screen = screen or bpy.context.screen
-    region = region or bpy.context.region
 
-    if isinstance(screen, str):
-        screen = bpy.data.screens.get(screen, bpy.context.screen)
+    area = find_area(area, screen)
+    region = find_region(region, area)
 
-    if not screen:
-        return dict()
+    override_args = {
+        "area": area,
+        "region": region,
+        "screen": screen,
+        "window": window,
+        "blend_data": bpy.context.blend_data,
+    }
 
-    if isinstance(area, str):
-        for a in screen.areas:
-            if a.type == area:
-                area = a
-                break
-        else:
-            return dict()
+    override_args.update(kwargs)
+    override_args = {k: v for k, v in override_args.items() if v is not None}
 
-    if isinstance(region, str):
-        for r in area.regions:
-            if r.type == region:
-                region = r
-                break
-        else:
-            region = area.regions[0]
-
-    return dict(
-        region=region,
-        area=area,
-        screen=screen,
-        window=window,
-        blend_data=bpy.context.blend_data,
-        **kwargs
-    )
+    return override_args
 
 
 def toggle_sidebar(area=None, tools=True, value=None):
-    area = area or bpy.context.area
-    if isinstance(area, str):
-        area = find_area(area)
+    area = find_area(area)
 
     s = area.spaces.active
     if tools and hasattr(s, "show_region_toolbar"):

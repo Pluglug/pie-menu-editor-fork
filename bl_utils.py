@@ -2,10 +2,11 @@ import bpy
 import _bpy
 import re
 from .addon import print_exc, ic, uprefs, is_28
-from .debug_utils import *
+from .screen_utils import get_override_args
 from . import constants as CC
 from . import pme
 from . import c_utils
+from .debug_utils import *
 
 cdll = None
 
@@ -764,33 +765,34 @@ def get_context_data(area_type):  # TODO(B4.0): Replace dictionary override with
     ret["space_data"] = get_space_data(area_type)
     return ret
 
+
 # TODO(B4.0): Replace dictionary override with context.temp_override
 def ctx_dict(
         window=None, screen=None, area=None, region=None, scene=None,
         workspace=None):
-    if window:
-        screen = screen or window.screen
-        workspace = workspace or window.workspace
-        area = area or screen.areas[0]
-        if region is None:
-            for r in area.regions:
-                if r.type == 'WINDOW':
-                    region = r
-                    break
-            else:
-                region = area.regions[0]
+    import warnings
+    warnings.warn(
+        "ctx_dict() is deprecated, use get_override_args() instead",
+        DeprecationWarning, stacklevel=2)
 
-        if bpy.app.version < (2, 80, 0):
-            scene = scene or screen.scene
+    d = get_override_args(area=area, region=region, screen=screen,
+                window=window, scene=scene, workspace=workspace)
 
-    return dict(
-        window=window or bl_context.window,
-        workspace=workspace or bl_context.workspace,
-        screen=screen or bl_context.screen,
-        area=area or bl_context.area,
-        region=region or bl_context.region,
-        scene=scene or bl_context.scene,
-    )
+    default_kwargs = {
+        "window": bl_context.window,
+        "screen": bl_context.screen,
+        "area": bl_context.area,
+        "region": bl_context.region,
+        "scene": bl_context.scene,
+        "workspace": bl_context.workspace,
+    }
+
+    # FIXME: Investigate the need for bl_context here and make sure to remove it.
+    for k, v in default_kwargs.items():
+        if k not in d:
+            d[k] = v
+
+    return d
 
 
 def area_header_text_set(text=None, area=None):
