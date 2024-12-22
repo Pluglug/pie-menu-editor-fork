@@ -4,7 +4,7 @@ id = "PieMenuEditor"
 version = "1.18.8"
 name = "Pie Menu Editor"
 tagline = "Shape your Blender workflow with customizable pies, menus, macros, modals, and more"
-maintainer = "Pluglug, Razed, Roaoao"
+maintainer = "Razed, Roaoao"
 type = "add-on"
 
 website = "https://github.com/Pluglug/pie-menu-editor-fork"
