@@ -797,9 +797,13 @@ class PME_OT_popup_area(bpy.types.Operator):
                     bpy.ops.screen.region_flip()
 
         if 'HIDE' in self.header:
-            visible and bpy.ops.screen.header(d)
+            if visible:
+                with context.temp_override(**d):
+                    bpy.ops.screen.header()
         else:
-            not visible and bpy.ops.screen.header(d)
+            if not visible:
+                with context.temp_override(**d):
+                    bpy.ops.screen.header()
 
     def execute(self, context):
         return {'FINISHED'}
@@ -849,7 +853,7 @@ class PME_OT_popup_area(bpy.types.Operator):
         else:
             header_on_top = rh.y > area.y
 
-        self.update_header(header_on_top, header_visible, header_dict)
+        self.update_header(context, header_on_top, header_visible, header_dict)
 
         window = context.window
         windows = [w for w in context.window_manager.windows]
@@ -909,7 +913,7 @@ class PME_OT_popup_area(bpy.types.Operator):
                 new_window.screen.user_clear()
 
         if new_screen_flag:
-            self.update_header(header_on_top, header_visible, header_dict)
+            self.update_header(context, header_on_top, header_visible, header_dict)
 
         if area_type:
             if is_28():

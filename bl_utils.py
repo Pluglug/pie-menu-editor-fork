@@ -807,6 +807,7 @@ def area_header_text_set(text=None, area=None):
         area.header_text_set()
 
 
+# FIXME: Width and Height are not actually applied.
 def popup_area(area, width=320, height=400, x=None, y=None):
     r = c_utils.area_rect(area)
 
