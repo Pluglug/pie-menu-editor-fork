@@ -731,18 +731,19 @@ class WM_OT_pmi_edit_auto(bpy.types.Operator):
         return {'FINISHED'}
 
     def invoke(self, context, event):
-        # TODO(B4.0): Replace dictionary override with context.temp_override
-        ctx = find_context('INFO')
-        area_type = not ctx and context.area.type
-        args = []
-        if ctx:
-            args.append(ctx)
-        else:
+        info_area = SU.find_area("INFO")
+        if not info_area:
+            old_type = context.area.type
             context.area.type = 'INFO'
+        
+        override_args = SU.get_override_args(area="INFO")
 
         bpy.ops.wm.pme_none()
-        bpy.ops.info.select_all(*args, action='SELECT')
-        bpy.ops.info.report_copy(*args)
+
+        with bpy.context.temp_override(**override_args):
+            bpy.ops.info.select_all(action='SELECT')
+            bpy.ops.info.report_copy()
+
         text = context.window_manager.clipboard
 
         idx2 = len(text)
@@ -762,14 +763,15 @@ class WM_OT_pmi_edit_auto(bpy.types.Operator):
                 text = line
                 break
 
-        bpy.ops.info.select_all(*args, action='DESELECT')
+        with bpy.context.temp_override(**override_args):
+            bpy.ops.info.select_all(action='DESELECT')
 
         text = text.strip("\n")
 
         _edit_pmi(self, text, event)
 
-        if area_type:
-            context.area.type = area_type
+        if not info_area:
+            context.area.type = old_type
 
         return {'CANCELLED'}
 

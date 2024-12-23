@@ -662,16 +662,13 @@ class PME_OT_timeout(bpy.types.Operator):
 
             if self.timer.time_duration >= self.delay:
                 self.cancelled = True
-                if False:  # TODO(B4.0): Replace dictionary override with context.temp_override
-                    pass
-                # if self.area != 'CURRENT':
-                #     bpy.ops.pme.timeout(
-                #         SU.override_context(self.area),
-                #         'INVOKE_DEFAULT', cmd=self.cmd, delay=self.delay)
-                else:
-                    pme.context.exec_operator = self
-                    pme.context.exe(self.cmd)
-                    pme.context.exec_operator = None
+                # if self.area != 'CURRENT':  # Refactor_TODO: Check why they no longer use Area.
+                #     with context.temp_override(area=self.area):
+                #         bpy.ops.pme.timeout('INVOKE_DEFAULT', cmd=self.cmd, delay=self.delay)
+                # else:
+                pme.context.exec_operator = self
+                pme.context.exe(self.cmd)
+                pme.context.exec_operator = None
         return {'PASS_THROUGH'}
 
     def execute(self, context):

@@ -5,7 +5,7 @@ from typing import Union
 from . import c_utils as CTU
 from . import pme
 from .addon import uprefs
-from .bl_utils import ctx_dict
+# from .bl_utils import ctx_dict
 
 
 def redraw_screen(area=None):
@@ -13,8 +13,8 @@ def redraw_screen(area=None):
     # if not area:
     #     return
 
-    # bpy.ops.screen.screen_full_area(override_context(area))  # TODO(B4.0): Replace dictionary override with context.temp_override
-    # bpy.ops.screen.screen_full_area(override_context(area))
+    # with bpy.context.temp_override(area=area):
+    #     bpy.ops.screen.screen_full_area()
 
     view = uprefs().view
     s = view.ui_scale
@@ -22,12 +22,9 @@ def redraw_screen(area=None):
     view.ui_scale = s
 
 
-def toggle_header(context, area):
-    try:
-        bpy.ops.screen.header(context)
-    except:
-        area.spaces.active.show_region_header = \
-            not area.spaces.active.show_region_header
+def toggle_header(area):
+    area.spaces.active.show_region_header = \
+        not area.spaces.active.show_region_header
 
 
 def move_header(area=None, top=None, visible=None, auto=None):
@@ -54,33 +51,43 @@ def move_header(area=None, top=None, visible=None, auto=None):
     else:
         is_top = rh.y > area.y
 
-    d = ctx_dict(area=area, region=rh)  # TODO(B4.0): Replace dictionary override with context.temp_override
+    kwargs = get_override_args(area=area, region=rh)
     if auto:
         if top:
             if is_top:
-                toggle_header(d, area)
+                with bpy.context.temp_override(**kwargs):
+                    toggle_header(area)
             else:
-                bpy.ops.screen.region_flip(d)
-                not is_visible and toggle_header(d, area)
+                with bpy.context.temp_override(**kwargs):
+                    bpy.ops.screen.region_flip()
+                    not is_visible and toggle_header(area)
         else:
             if is_top:
-                bpy.ops.screen.region_flip(d)
-                not is_visible and toggle_header(d, area)
+                with bpy.context.temp_override(**kwargs):
+                    bpy.ops.screen.region_flip()
+                    not is_visible and toggle_header(area)
             else:
-                toggle_header(d, area)
+                with bpy.context.temp_override(**kwargs):
+                    toggle_header(area)
     else:
-        top is not None and top != is_top and bpy.ops.screen.region_flip(d)
-        if visible is not None and visible != is_visible:
-            toggle_header(d, area)
+        if top is not None and top != is_top:
+            with bpy.context.temp_override(**kwargs):
+                bpy.ops.screen.region_flip()
 
+        if visible is not None and visible != is_visible:
+            with bpy.context.temp_override(**kwargs):
+                toggle_header(area)
     return True
 
 
 def find_area(
-    area_or_type: Union[str, bpy.types.Area] = bpy.context.area,
+    area_or_type: Union[str, bpy.types.Area],
     screen_or_name: Union[str, bpy.types.Screen, None] = None,
 ) -> Union[bpy.types.Area, None]:
     """Find and return an Area object."""
+    if area_or_type is None:
+        area_or_type = bpy.context.area
+
     if isinstance(area_or_type, bpy.types.Area):
         return area_or_type
 
@@ -101,11 +108,14 @@ def find_area(
 
 
 def find_region(
-    region_or_type: Union[str, bpy.types.Region] = bpy.context.region,
+    region_or_type: Union[str, bpy.types.Region],
     area_or_type: Union[str, bpy.types.Area] = None,
     screen_or_name: Union[str, bpy.types.Screen, None] = None,
 ) -> Union[bpy.types.Region, None]:
     """Find and return a Region object within the specified Area."""
+    if region_or_type is None:
+        region_or_type = bpy.context.region.type
+
     area = find_area(area_or_type, screen_or_name)
     if not area:
         return None
@@ -118,6 +128,34 @@ def find_region(
             return r
 
     return None
+
+
+def get_override_args(
+    area: Union[str, bpy.types.Area] = None,
+    region: Union[str, bpy.types.Region] = "WINDOW",
+    screen: Union[str, bpy.types.Screen] = None,
+    window: bpy.types.Window = None,
+    **kwargs,
+):
+    """Get the override context arguments"""
+    window = window or bpy.context.window
+    screen = screen or bpy.context.screen
+
+    area = find_area(area, screen)
+    region = find_region(region, area)
+
+    override_args = {
+        "area": area,
+        "region": region,
+        "screen": screen,
+        "window": window,
+        "blend_data": bpy.context.blend_data,
+    }
+
+    override_args.update(kwargs)
+    override_args = {k: v for k, v in override_args.items() if v is not None}
+
+    return override_args
 
 
 def focus_area(area, center=False, cmd=None):
@@ -147,10 +185,11 @@ def focus_area(area, center=False, cmd=None):
         bpy.context.window.cursor_warp(x, y)
 
     if cmd:
-        bpy.ops.pme.timeout(override_context(area), cmd=cmd)  # TODO(B4.0): Replace dictionary override with context.temp_override
+        with bpy.context.temp_override(area=area):
+            bpy.ops.pme.timeout(cmd=cmd)
 
 
-# TODO(B4.0): Replace dictionary override with context.temp_override
+# TODO: Remove this function
 def override_context(
         area, screen=None, window=None, region='WINDOW', **kwargs):
     # This is no longer necessary
@@ -166,34 +205,6 @@ def override_context(
         stacklevel=2
     )
     return get_override_args(area, region, screen, window, **kwargs)
-
-
-def get_override_args(
-    area: Union[str, bpy.types.Area] = None,
-    region: Union[str, bpy.types.Region] = "WINDOW",
-    screen: Union[str, bpy.types.Screen] = None,
-    window: bpy.types.Window = None,
-    **kwargs,
-):
-    """Get the override context arguments"""
-    window = window or bpy.context.window
-    screen = screen or bpy.context.screen
-
-    area = find_area(area, screen)
-    region = find_region(region, area)
-
-    override_args = {
-        "area": area,
-        "region": region,
-        "screen": screen,
-        "window": window,
-        "blend_data": bpy.context.blend_data,
-    }
-
-    override_args.update(kwargs)
-    override_args = {k: v for k, v in override_args.items() if v is not None}
-
-    return override_args
 
 
 def toggle_sidebar(area=None, tools=True, value=None):
