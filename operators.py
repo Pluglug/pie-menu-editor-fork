@@ -220,6 +220,67 @@ class PME_OT_exec(bpy.types.Operator):
         return self.execute(context)
 
 
+DBG_OVERRIDE = True
+class PME_OT_exec_override(bpy.types.Operator):
+    bl_idname = "pme.exec_override"
+    bl_label = ""
+    bl_description = "Execute python code with context override"
+    bl_options = {'INTERNAL'}
+
+    cmd: bpy.props.StringProperty(
+        name="Python Code", description="Python Code",
+        maxlen=MAX_STR_LEN, options={'SKIP_SAVE', 'HIDDEN'})
+    area_type: bpy.props.StringProperty(
+        name="Area Type",
+        default='CURRENT', maxlen=MAX_STR_LEN, options={'SKIP_SAVE', 'HIDDEN'})
+    region_type: bpy.props.StringProperty(
+        name="Region Type",
+        default='WINDOW', maxlen=MAX_STR_LEN, options={'SKIP_SAVE', 'HIDDEN'})
+    kwargs: bpy.props.StringProperty(
+        name="Extra Keywords", description=r"d = {key: value, key: value, ...}",
+        default=r"d = {}", maxlen=MAX_STR_LEN, options={'SKIP_SAVE', 'HIDDEN'})
+
+    def execute(self, context):
+        DBG_OVERRIDE and logh(f"Executing: {self.cmd}")
+        extra_kwargs = self.parse_kwargs()
+
+        if DBG_OVERRIDE:
+            pairs = [f"  {k}: {v}" for k, v in extra_kwargs.items()]
+            logi("Extra kwargs:\n" + "\n".join(pairs))
+            print()
+
+        cov = SU.create_context_override(
+            area=self.area_type if self.area_type != 'CURRENT' else None,
+            region=self.region_type,
+            **extra_kwargs)
+
+        DBG_OVERRIDE and logi(f"Context override args:\n{cov}")
+
+        override_args = cov.validate(context, extra_priority=True)
+
+        if DBG_OVERRIDE:
+            pairs = [f"  {k}: {v}" for k, v in override_args.items()]
+            logi("Context override args(validated):\n" + "\n".join(pairs))
+
+        exec_globals = pme.context.gen_globals()
+        pme.context.exec_operator = self
+        try:
+            with context.temp_override(**override_args):
+                pme.context.exe(self.cmd, exec_globals)
+                return exec_globals.get("return_value", {'FINISHED'})
+        finally:
+            pme.context.exec_operator = None
+
+    def invoke(self, context, event):
+        pme.context.event = event
+        return self.execute(context)
+
+    def parse_kwargs(self):
+        eval_globals = pme.context.gen_globals()
+        pme.context.exe(self.kwargs, eval_globals)
+        return eval_globals.get("d", {})
+
+
 class PME_OT_panel_hide(bpy.types.Operator):
     bl_idname = "pme.panel_hide"
     bl_label = "Hide Panel"
