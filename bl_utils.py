@@ -778,19 +778,19 @@ def ctx_dict(
     d = get_override_args(area=area, region=region, screen=screen,
                 window=window, scene=scene, workspace=workspace)
 
-    default_kwargs = {
-        "window": bl_context.window,
-        "screen": bl_context.screen,
-        "area": bl_context.area,
-        "region": bl_context.region,
-        "scene": bl_context.scene,
-        "workspace": bl_context.workspace,
-    }
+    # default_kwargs = {
+    #     "window": bl_context.window,
+    #     "screen": bl_context.screen,
+    #     "area": bl_context.area,
+    #     "region": bl_context.region,
+    #     "scene": bl_context.scene,
+    #     "workspace": bl_context.workspace,
+    # }
 
-    # MIGRATION_TODO:  Investigate the need for bl_context here and make sure to remove it.
-    for k, v in default_kwargs.items():
-        if k not in d:
-            d[k] = v
+    # # MIGRATION_TODO:  Investigate the need for bl_context here and make sure to remove it.
+    # for k, v in default_kwargs.items():
+    #     if k not in d:
+    #         d[k] = v
 
     return d
 
