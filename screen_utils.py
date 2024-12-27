@@ -165,96 +165,78 @@ def find_region(
     return None
 
 
-def resolve_window(
+def find_window(
     value: Optional[Union[str, bpy.types.Window]],
     context: bpy.types.Context,
 ) -> Optional[bpy.types.Window]:
     """Resolve string or Window object into a Window object, fallback to context.window if none."""
     if isinstance(value, bpy.types.Window):
-        logi(f"resolve_window: {value}")
+        logi(f"find_window: {value}")
         return value
     # if isinstance(value, str):
     #     if w := context.window_manager.windows.get(value, None):
     #         return w
     #     return None
-    logi(f"window fallback: {context.window}")
+    # logi(f"window fallback: {context.window}")
     # return context.window  # fallback
     return None
 
 
-def resolve_screen(
+def find_screen(
     value: Optional[Union[str, bpy.types.Screen]],
     context: bpy.types.Context
 ) -> Optional[bpy.types.Screen]:
     """Resolve string or Screen object into a Screen object, fallback to context.screen if none."""
     if isinstance(value, bpy.types.Screen):
-        logi(f"resolve_screen: {value}")
+        logi(f"find_screen: {value}")
         return value
     # if isinstance(value, str):
     #     return bpy.data.screens.get(value)
-    logi(f"screen fallback: {context.screen}")
+    # logi(f"screen fallback: {context.screen}")
     # return context.screen  # fallback
     return None
 
 
-@dataclass
 class ContextOverride:
-    """
-    Container for context override parameters.
-    Allows specifying string or object references for Window/Screen/Area/Region,
-    plus any additional overrides in 'extra'.
-    """
-    window: Optional[Union[str, bpy.types.Window]] = None
-    screen: Optional[Union[str, bpy.types.Screen]] = None
-    area: Optional[Union[str, bpy.types.Area]] = None
-    region: Optional[Union[str, bpy.types.Region]] = None
-    blend_data: Optional[bpy.types.BlendData] = None
-    extra: Dict[str, Any] = field(default_factory=dict)
+    def __init__(
+        self,
+        *,
+        window: Union[str, bpy.types.Window, None] = None,
+        screen: Union[str, bpy.types.Screen, None] = None,
+        area: Union[str, bpy.types.Area, None] = None,
+        region: Union[str, bpy.types.Region, None] = None,
+        **kwargs: Any,
+    ):
+        self.window = window
+        self.screen = screen
+        self.area = area
+        self.region = region
+        self.kwargs = kwargs
 
     def validate(
         self,
         context: bpy.types.Context,
         *,
-        extra_priority: bool = False,
+        # extra_priority: bool = False,
         delete_none: bool = True
     ) -> Dict[str, Any]:
-        """
-        Validate and resolve all fields into actual Blender objects.
-        If 'extra_priority' is True, 'extra' keys override base fields.
-        Otherwise, base fields override 'extra'.
 
-        :param context: Must be an instance of bpy.types.Context, else TypeError
-        :param extra_priority: If True, the base fields will override keys in 'extra'
-                            (so 'extra' is applied first, then base).
-        :param delete_none: If True, remove None entries from final dict.
-        :param strict: If True, raise ValueError or TypeError if invalid references found
-                       (e.g. invalid window). If False, just fallback or ignore.
-        :return: A dict suitable for `with context.temp_override(**...)`.
-        """
         # Resolve all fields
-        w = resolve_window(self.window, context)
-        sc = resolve_screen(self.screen, context)
+        w = find_window(self.window, context)
+        sc = find_screen(self.screen, context)
         a = find_area(self.area, sc)
         r = find_region(self.region, self.area, sc)
-        bd = self.blend_data  # or context.blend_data
+        # bd = self.blend_data  # or context.blend_data
 
         base_dict = {
             "window": w,
             "screen": sc,
             "area": a,
             "region": r,
-            "blend_data": bd,
+            # "blend_data": bd,
         }
 
-        # TODO: Extra does not check for windows, areas, etc.
-        if extra_priority:
-            primary_dict = self.extra
-            secondary_dict = base_dict
-        else:
-            primary_dict = base_dict
-            secondary_dict = self.extra
-
-        context_params = {**secondary_dict, **primary_dict}
+        context_params = {**base_dict, **self.kwargs}
 
         if delete_none:
             context_params = {k: v for k, v in context_params.items() if v is not None}
@@ -264,34 +246,12 @@ class ContextOverride:
     def __str__(self):
         return (
             f"ContextOverride(\n"
-            f"window={self.window},\n"
-            f"screen={self.screen},\n"
-            f"area={self.area},\n"
-            f"region={self.region},\n"
-            f"blend_data={self.blend_data},\n"
-            f"extra={self.extra})\n"
+            f"  window={self.window},\n"
+            f"  screen={self.screen},\n"
+            f"  area={self.area},\n"
+            f"  region={self.region},\n"
+            f"  kwargs={self.kwargs})\n"
         )
-
-
-def create_context_override(
-    area: Union[str, bpy.types.Area, None] = None,
-    region: Union[str, bpy.types.Region, None] = None,  # "WINDOW",
-    # screen: Union[str, bpy.types.Screen, None] = None,  # comment out for Test
-    # window: Union[str, bpy.types.Window, None] = None,  # comment out for Test
-    # override_kwargs_str: str = "",
-    **kwargs,
-) -> ContextOverride:
-    # extra_kwargs = parse_extra_keywords(override_kwargs_str)
-    extra_kwargs = {}
-    extra_kwargs.update(kwargs)
-
-    return ContextOverride(
-        # window=window,
-        # screen=screen,
-        area=area,
-        region=region,
-        extra=extra_kwargs,
-    )
 
 
 def get_override_args(
@@ -299,20 +259,18 @@ def get_override_args(
     region: Union[str, bpy.types.Region] = "WINDOW",
     screen: Union[str, bpy.types.Screen] = None,
     window: Union[str, bpy.types.Window] = None,
-    # override_kwargs_str: str = "",
-    extra_priority: bool = False,
     delete_none: bool = True,
     **kwargs,
 ) -> dict:
-    cov = create_context_override(
+    """Get a dictionary of context override arguments."""
+    override = ContextOverride(
         area=area,
         region=region,
         screen=screen,
         window=window,
-        # override_kwargs_str=override_kwargs_str,
         **kwargs,
     )
-    return cov.validate(bpy.context, extra_priority=extra_priority, delete_none=delete_none)
+    return override.validate(bpy.context, delete_none=delete_none)
 
 
 def focus_area(area, center=False, cmd=None):
