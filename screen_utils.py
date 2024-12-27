@@ -146,13 +146,12 @@ def find_region(
             # return bpy.context.region  # fallback
             return None
 
-        # Resolve area first
+        if isinstance(region_or_type, bpy.types.Region):
+            return region_or_type
+
         area = find_area(area_or_type, screen_or_name)
         if not area:
             return None
-
-        if isinstance(region_or_type, bpy.types.Region):
-            return region_or_type
 
         for r in area.regions:
             if r.type == region_or_type:

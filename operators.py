@@ -249,8 +249,12 @@ class PME_OT_exec_override(bpy.types.Operator):
         temp_override_args = self.parse_kwargs()
 
         temp_override_args.setdefault("area",
-            self.area_type if self.area_type == 'CURRENT' else None)
+            self.area_type if self.area_type != 'CURRENT' else None)
         temp_override_args.setdefault("region", self.region_type)
+
+        if DBG_OVERRIDE:
+            pairs = [f"  {k}: {v}" for k, v in temp_override_args.items()]
+            logi("Context override args(defaults):\n" + "\n".join(pairs))
 
         override_args = SU.ContextOverride(**temp_override_args)\
                             .validate(context, delete_none=True)
