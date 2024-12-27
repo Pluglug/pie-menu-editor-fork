@@ -404,11 +404,12 @@ class PME_OT_window_auto_close(bpy.types.Operator):
                         bpy.ops.screen.new()
 
                     bpy.ops.pme.timeout(
-                        cmd="p = %d; "
-                        "w = [w for w in C.window_manager.windows "
-                        "if w.as_pointer() == p][0]; "
-                        "bpy.ops.wm.window_close(dict(window=w)); "
-                        % w.as_pointer())  # TODO(B4.0): Replace dictionary override with context.temp_override
+                        cmd="bpy.ops.pme.exec_override("
+                            "cmd='bpy.ops.wm.window_close()', "
+                            "kwargs='p={}; "
+                            "w=[w for w in C.window_manager.windows "
+                            "if w.as_pointer() == p][0]; "
+                            "d=dict(window=w)')".format(w.as_pointer()))
 
                 # elif w.screen.name.startswith(PME_SCREEN):
                 #     used_pme_screens.add(w.screen.name)
