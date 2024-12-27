@@ -1204,6 +1204,11 @@ class PME_OT_pmi_cmd_generate(bpy.types.Operator):
         if pr.mode == 'PMI' and data.mode in CC.MODAL_CMD_MODES:
             op_idname, _, pos_args = operator_utils.find_operator(data.cmd)
 
+            parsed_ctx, parsed_undo = operator_utils.parse_pos_args(pos_args)
+
+            C_exec = data.cmd_ctx or parsed_ctx
+            C_undo = data.cmd_undo if (data.cmd_undo is not None) else parsed_undo
+
             args = []
             for k in data.kmi.properties.keys():
                 v = getattr(data.kmi.properties, k)
@@ -1212,26 +1217,18 @@ class PME_OT_pmi_cmd_generate(bpy.types.Operator):
                     continue
                 args.append("%s=%s" % (k, repr(value)))
 
-            if len(pos_args) > 3:
-                pos_args.clear()
+            pos_args_new = []
 
-            pos_args = [pos_args[0]] \
-                if pos_args and isinstance(eval(pos_args[0]), dict) \
-                else []
-            if data.cmd_ctx == 'INVOKE_DEFAULT':
-                if not data.cmd_undo:
-                    pos_args.append(repr(data.cmd_undo))
+            if C_exec == 'INVOKE_DEFAULT':
+                if not C_undo:
+                    pos_args_new.append(repr(C_undo))
             else:
-                pos_args.append(repr(data.cmd_ctx))
-                if data.cmd_undo:
-                    pos_args.append(repr(data.cmd_undo))
+                pos_args_new.append(repr(C_exec))
+                if C_undo:
+                    pos_args_new.append(repr(C_undo))
 
-            if pos_args and args:
-                pos_args.append("")
-
-            # TODO(B4.0): Replace dictionary override with context.temp_override
-            cmd = "bpy.ops.%s(%s%s)" % (
-                op_idname, ", ".join(pos_args), ", ".join(args))
+            call_args = ", ".join(pos_args_new + args)
+            cmd = f"bpy.ops.{op_idname}({call_args})"
 
             if DBG_CMD_EDITOR:
                 data.cmd = cmd
