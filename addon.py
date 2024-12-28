@@ -40,8 +40,8 @@ def check_context():
 
 
 def print_exc(text=None):
-    # if not prefs().debug_mode:
-    #     return
+    if not prefs().show_error_trace:
+        return
 
     if text is not None:
         print()

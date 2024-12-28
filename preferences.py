@@ -2306,11 +2306,22 @@ class PMEPreferences(bpy.types.AddonPreferences):
         bpy.app.debug_wm = value
 
     debug_mode: bpy.props.BoolProperty(
-        name="Debug Mode", description="Debug Mode\nShow error messages",
-        get=get_debug_mode, set=set_debug_mode)
-
-    # show_errors: bpy.props.BoolProperty(
-    #     description="Show error messages")
+        name="Debug Mode",
+        description=(
+            "Enables extended debug information (via bpy.app.debug_wm),\n"
+            "including operator logs for building custom PMEs."
+        ),
+        get=get_debug_mode,
+        set=set_debug_mode
+    )
+    show_error_trace: bpy.props.BoolProperty(
+        name="Show Error Trace",
+        description=(
+            "Displays error traces for custom items and more.\n"
+            "View them in the System Console to quickly identify and fix issues."
+        ),
+        default=True
+    )
 
     def update_tree_mode(self, context):
         if self.tree_mode:
@@ -3103,6 +3114,7 @@ class PMEPreferences(bpy.types.AddonPreferences):
             self._draw_hprop(subcol, pr, "cache_scripts")
             self._draw_hprop(subcol, pr, "save_tree")
             self._draw_hprop(subcol, pr, "auto_backup")
+            self._draw_hprop(subcol, pr, "show_error_trace")
             subcol.separator()
             self._draw_hprop(subcol, pr, "list_size")
             self._draw_hprop(subcol, pr, "num_list_rows")
@@ -3253,7 +3265,7 @@ class PMEPreferences(bpy.types.AddonPreferences):
 
         sub = row.row(align=True)
         sub.prop(pr, "interactive_panels", text="", icon=ic('WINDOW'))
-        # sub.prop(pr, "show_errors", text="", icon=ic('CONSOLE'))
+        # sub.prop(pr, "show_error_trace", text="", icon=ic('CONSOLE'))
         sub.prop(pr, "debug_mode", text="", icon=ic('SCRIPT'))
 
         # row.separator()
