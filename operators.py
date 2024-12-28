@@ -68,7 +68,7 @@ class WM_OT_pm_select(bpy.types.Operator):
     def _draw(self, menu, context):
         lh.lt(menu.layout, 'INVOKE_DEFAULT')
 
-        lh.menu("PME_MT_pm_new", "New", 'ZOOMIN')
+        lh.menu("PME_MT_pm_new", "New", 'ADD')
         lh.operator(
             PME_OT_pm_search_and_select.bl_idname, None, 'VIEWZOOM',
             mode=self.mode)
@@ -90,9 +90,9 @@ class WM_OT_pm_select(bpy.types.Operator):
                 icon = pm.ed.icon
 
             else:
-                icon = 'SPACE3'
+                icon = 'HANDLETYPE_FREE_VEC'
                 if pm == apm:
-                    icon = 'SPACE2'
+                    icon = 'KEYTYPE_KEYFRAME_VEC'
 
             lh.operator(
                 WM_OT_pm_select.bl_idname, k, icon,
@@ -328,7 +328,7 @@ class PME_OT_panel_hide(bpy.types.Operator):
 
         lh.operator(
             PME_OT_panel_hide.bl_idname,
-            "New Hidden Panel Group", 'ZOOMIN',
+            "New Hidden Panel Group", 'ADD',
             group=pr.unique_pm_name(pr.ed('HPANEL').default_name),
             panel=self.panel)
 
@@ -2914,7 +2914,7 @@ class PME_OT_pmidata_specials_call(bpy.types.Operator):
 
         lh.sep()
 
-        lh.menu("PME_MT_screen_set", "Set Workspace", icon=ic('SPLITSCREEN'))
+        lh.menu("PME_MT_screen_set", "Set Workspace", icon=ic('MOUSE_MMB'))
         lh.menu("PME_MT_brush_set", "Set Brush", icon=ic('BRUSH_DATA'))
 
         if pm and pm.mode in {'PMENU', 'DIALOG'}:

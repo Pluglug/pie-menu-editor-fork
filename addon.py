@@ -55,6 +55,8 @@ def is_28():
 
 
 def ic(icon):
+    # Legacy_TODO: Remove or Enhance
+    # Support for 2.79 and 2.8+
     if not icon:
         return icon
 
@@ -76,6 +78,7 @@ def ic(icon):
     if icon in bl28_icons and bl28_icons[icon] in ICON_ENUM_ITEMS:
         return bl28_icons[icon]
 
+    print("Icon not found:", icon)
     return 'BLENDER'
 
 

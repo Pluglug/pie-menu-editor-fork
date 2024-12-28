@@ -59,10 +59,10 @@ class PME_OT_toolbar_menu(bpy.types.Operator):
         dir_name = def_name + " " + dir_name
 
         lh.operator(
-            self.bl_idname, "Create Toolbar (Current Screen)", 'ZOOMIN',
+            self.bl_idname, "Create Toolbar (Current Screen)", 'ADD',
             name=dir_scr_name)
         lh.operator(
-            self.bl_idname, "Create Toolbar (All Screens)", 'ZOOMIN',
+            self.bl_idname, "Create Toolbar (All Screens)", 'ADD',
             name=dir_name)
 
     def execute(self, context):
@@ -261,7 +261,7 @@ class PME_OT_panel_menu(bpy.types.Operator):
             if pm.mode in {'PMENU', 'RMENU', 'DIALOG'}:
                 lh.operator(
                     PME_OT_pm_edit.bl_idname, "Add as Menu to '%s'" % pm.name,
-                    'ZOOMIN',
+                    'ADD',
                     auto=False,
                     name=label, mode='CUSTOM',
                     text="L.menu(menu='%s', text=slot, icon=icon, "
@@ -311,7 +311,7 @@ class PME_OT_panel_menu(bpy.types.Operator):
                 lh.operator(
                     PME_OT_pm_edit.bl_idname,
                     "Add as Button to '%s'" % pm.name,
-                    'ZOOMIN',
+                    'ADD',
                     auto=False,
                     name=label, mode='COMMAND',
                     text=(
@@ -323,7 +323,7 @@ class PME_OT_panel_menu(bpy.types.Operator):
                     lh.operator(
                         PME_OT_pm_edit.bl_idname,
                         "Add as Popover to '%s'" % pm.name,
-                        'ZOOMIN',
+                        'ADD',
                         auto=False,
                         name=label, mode='CUSTOM',
                         text=(
@@ -336,19 +336,19 @@ class PME_OT_panel_menu(bpy.types.Operator):
                 lh.operator(
                     PME_OT_panel_add.bl_idname,
                     "Add as Panel to '%s'" % pm.name,
-                    'ZOOMIN',
+                    'ADD',
                     panel=self.panel, mode='BLENDER')
 
             elif pm.mode == 'DIALOG':
                 lh.operator(
                     PME_OT_panel_add.bl_idname,
-                    "Add as Panel to '%s'" % pm.name, 'ZOOMIN',
+                    "Add as Panel to '%s'" % pm.name, 'ADD',
                     panel=self.panel, mode='DIALOG')
 
             elif pm.mode == 'PMENU':
                 lh.operator(
                     PME_OT_pm_edit.bl_idname,
-                    "Add as Panel to '%s'" % pm.name, 'ZOOMIN',
+                    "Add as Panel to '%s'" % pm.name, 'ADD',
                     auto=False,
                     name=label, mode='CUSTOM',
                     text="panel('%s', area='%s')" % (
@@ -778,7 +778,7 @@ class Editor(EditorBase):
         lh.sep(check=True)
 
         lh.operator(
-            PME_OT_panel_add.bl_idname, "Add Panel", 'ZOOMIN',
+            PME_OT_panel_add.bl_idname, "Add Panel", 'ADD',
             index=idx)
 
         if len(pm.pmis) > 1:

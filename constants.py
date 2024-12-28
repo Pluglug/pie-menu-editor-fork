@@ -250,7 +250,7 @@ def area_type_enum_items(current=True, none=False):
         ei.add_item('CURRENT', "Current", 'BLENDER')
 
     if none:
-        ei.add_item('NONE', "None", 'SPACE3')
+        ei.add_item('NONE', "None", 'HANDLETYPE_FREE_VEC')
 
     ei.add_item('VIEW_3D', "3D View", 'VIEW3D')
     ei.add_item('TIMELINE', "Timeline", 'TIME')
@@ -268,10 +268,10 @@ def area_type_enum_items(current=True, none=False):
     ei.add_item('GeometryNodeTree', "Geometry Node Editor", 'NODETREE')
     ei.add_item('TEXT_EDITOR', "Text Editor", 'TEXT')
     ei.add_item('PROPERTIES', "Properties", 'PROPERTIES')
-    ei.add_item('OUTLINER', "Outliner", 'OOPS')
+    ei.add_item('OUTLINER', "Outliner", 'OUTLINER')
     ei.add_item(UPREFS, "User Preferences", 'PREFERENCES')
     ei.add_item('INFO', "Info", 'INFO')
-    ei.add_item('FILE_BROWSER', "File Browser", 'FILESEL')
+    ei.add_item('FILE_BROWSER', "File Browser", 'FILEBROWSER')
     ei.add_item('ASSETS', "Asset Browser", 'ASSET_MANAGER')
     ei.add_item('SPREADSHEET', "Spreadsheet", 'SPREADSHEET')
     ei.add_item('CONSOLE', "Python Console", 'CONSOLE')

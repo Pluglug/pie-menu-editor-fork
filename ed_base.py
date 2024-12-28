@@ -202,7 +202,7 @@ class PME_OT_tags(bpy.types.Operator):
             layout.separator()
 
         operator(
-            layout, PME_OT_tags.bl_idname, "Assign New Tag", 'ZOOMIN',
+            layout, PME_OT_tags.bl_idname, "Assign New Tag", 'ADD',
             action='ADD', group=self.group)
 
         if self.action != 'MENU':
@@ -216,7 +216,7 @@ class PME_OT_tags(bpy.types.Operator):
             'OUTLINER_DATA_FONT',
             action='RENAME')
         operator(
-            layout, PME_OT_tags.bl_idname, "Remove Tag", 'ZOOMOUT',
+            layout, PME_OT_tags.bl_idname, "Remove Tag", 'REMOVE',
             action='REMOVE')
 
     def draw(self, context):
@@ -290,7 +290,7 @@ class PME_OT_tags(bpy.types.Operator):
         elif self.action == 'REMOVE':
             if self.idx == -1:
                 context.window_manager.popup_menu(
-                    self.draw_menu, title="Remove Tag", icon='ZOOMOUT')
+                    self.draw_menu, title="Remove Tag", icon='REMOVE')
             else:
                 for pm in pr.pie_menus:
                     pm.remove_tag(tag.name)
@@ -891,7 +891,7 @@ class PME_OT_pm_edit(bpy.types.Operator):
             if pmi.mode == 'EMPTY':
                 if pmi.text == "column":
                     lh.operator(
-                        self.op_bl_idname, "Add Item", 'ZOOMIN',
+                        self.op_bl_idname, "Add Item", 'ADD',
                         pm_item=idx,
                         mode=self.mode, text=self.text, name=self.name,
                         add=True, new_script=False)
@@ -918,7 +918,7 @@ class PME_OT_pm_edit(bpy.types.Operator):
                 add=False, new_script=False)
 
         lh.operator(
-            self.op_bl_idname, "Add Item", 'ZOOMIN',
+            self.op_bl_idname, "Add Item", 'ADD',
             pm_item=-1, mode=self.mode, text=self.text, name=self.name,
             add=True, new_script=False)
 
@@ -959,7 +959,7 @@ class PME_OT_pm_edit(bpy.types.Operator):
         draw_pme_layout(pm, col, draw_pmi)
 
         operator(
-            column, self.op_bl_idname, "Add New Row", 'ZOOMIN',
+            column, self.op_bl_idname, "Add New Row", 'ADD',
             pm_item=-1, mode=self.mode, name=self.name,
             add=True, new_script=False).text = self.text
 
@@ -976,7 +976,7 @@ class PME_OT_pm_edit(bpy.types.Operator):
                 add=False, new_script=False)
 
         lh.operator(
-            self.op_bl_idname, "New Command", 'ZOOMIN',
+            self.op_bl_idname, "New Command", 'ADD',
             pm_item=-1, mode=self.mode, text=self.text, name=self.name,
             add=True, new_script=False)
 
@@ -2206,13 +2206,13 @@ class EditorBase:
     def draw_keymap(self, layout, data):
         row = layout.row(align=True)
         if ',' in data.km_name:
-            row.prop(data, "km_name", text="", icon=ic('SPLITSCREEN'))
+            row.prop(data, "km_name", text="", icon=ic('MOUSE_MMB'))
         else:
             row.prop_search(
                 data, "km_name",
                 bpy.context.window_manager.keyconfigs.user, "keymaps",
-                text="", icon=ic('SPLITSCREEN'))
-        row.operator(PME_OT_keymap_add.bl_idname, text="", icon=ic('ZOOMIN'))
+                text="", icon=ic('MOUSE_MMB'))
+        row.operator(PME_OT_keymap_add.bl_idname, text="", icon=ic('ADD'))
 
     def draw_hotkey(self, layout, data):
         row = layout.row(align=True)
@@ -2329,7 +2329,7 @@ class EditorBase:
 
         if not self.fixed_num_items:
             lh.operator(
-                PME_OT_pmi_add.bl_idname, "Add Slot", 'ZOOMIN',
+                PME_OT_pmi_add.bl_idname, "Add Slot", 'ADD',
                 idx=idx)
 
         if self.copy_paste_slot:
@@ -2406,7 +2406,7 @@ class EditorBase:
         lh.sep()
 
         lh.operator(
-            self.op.op_bl_idname, "New Command", 'ZOOMIN',
+            self.op.op_bl_idname, "New Command", 'ADD',
             mode=self.op.mode, text=self.op.text, name=self.op.name,
             pm_item=-1, add=True, new_script=False)
 

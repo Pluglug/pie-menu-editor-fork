@@ -769,7 +769,7 @@ class WM_OT_pm_sort(bpy.types.Operator):
             mode='HOTKEY')
 
         lh.operator(
-            WM_OT_pm_sort.bl_idname, "Keymap Name", 'SPLITSCREEN',
+            WM_OT_pm_sort.bl_idname, "Keymap Name", 'MOUSE_MMB',
             mode='KEYMAP')
 
         lh.operator(
@@ -2214,7 +2214,7 @@ class PMEPreferences(bpy.types.AddonPreferences):
         name="Group by", description="Group items by",
         items=(
             ('NONE', "None", "", ic('CHECKBOX_DEHLT'), 0),
-            ('KEYMAP', "Keymap", "", ic('SPLITSCREEN'), 1),
+            ('KEYMAP', "Keymap", "", ic('MOUSE_MMB'), 1),
             ('TYPE', "Type", "", ic('PROP_CON'), 2),
             ('TAG', "Tag", "", ic('SOLO_OFF'), 3),
             ('KEY', "Key", "", ic('FILE_FONT'), 4),
@@ -2995,12 +2995,12 @@ class PMEPreferences(bpy.types.AddonPreferences):
                 lh.sep()
 
             lh.operator(
-                PME_OT_pm_add.bl_idname, "", 'ZOOMIN',
+                PME_OT_pm_add.bl_idname, "", 'ADD',
                 mode="")
 
             if pm:
-                lh.operator(WM_OT_pm_duplicate.bl_idname, "", 'GHOST')
-                lh.operator(PME_OT_pm_remove.bl_idname, "", 'ZOOMOUT')
+                lh.operator(WM_OT_pm_duplicate.bl_idname, "", 'DUPLICATE')
+                lh.operator(PME_OT_pm_remove.bl_idname, "", 'REMOVE')
 
             lh.sep()
 
@@ -3256,7 +3256,7 @@ class PMEPreferences(bpy.types.AddonPreferences):
             sub.prop(pr, "show_names", text="", icon=ic('SYNTAX_OFF'))
             sub.prop(pr, "show_hotkeys", text="", icon=ic('FILE_FONT'))
             sub.prop(
-                pr, "show_keymap_names", text="", icon=ic('SPLITSCREEN'))
+                pr, "show_keymap_names", text="", icon=ic('MOUSE_MMB'))
             sub.prop(pr, "show_tags", text="", icon=ic_fb(False))
             if pr.tree_mode:
                 sub.prop(pr, "group_by", text="", icon_only=True)
@@ -3509,12 +3509,12 @@ class PME_OT_context_menu(bpy.types.Operator):
             if self.prop or self.operator:
                 operator(
                     layout, PME_OT_context_menu.bl_idname,
-                    "Add to " + pm.name, icon=ic('ZOOMIN'),
+                    "Add to " + pm.name, icon=ic('ADD'),
                     prop=self.prop, operator=self.operator, name=self.name)
             else:
                 row = layout.row()
                 row.enabled = False
-                row.label(text="Can't Add This Widget", icon=ic('ZOOMIN'))
+                row.label(text="Can't Add This Widget", icon=ic('ADD'))
             layout.separator()
 
         operator(
