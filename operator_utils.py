@@ -7,6 +7,7 @@ from tokenize import (
 )
 from .addon import print_exc
 from . import pme
+from .constants import OP_CTX_ITEMS
 
 
 class _XUntokenizer(Untokenizer):
@@ -264,22 +265,38 @@ def add_default_args(text):
     return _untokenize(stm)
 
 
-def parse_pos_args(pos_args):
-    ctx = None
-    exec_ctx = 'INVOKE_DEFAULT'
-    undo = True
+def _op_ctx_whitelist() -> set[str]:
+    """Returns a set of valid context mode strings."""
+    return {item[0] for item in OP_CTX_ITEMS}
 
-    if pos_args:
-        for a in pos_args:
-            a = eval(a)
-            if isinstance(a, str):
-                exec_ctx = a
-            elif isinstance(a, dict):
-                ctx = a
-            elif isinstance(a, bool):
-                undo = a
 
-    return ctx, exec_ctx, undo
+def parse_pos_args(pos_args: list[str]) -> tuple[str, bool]:
+    """Parses operator positional args into (C_exec, C_undo) tuple."""
+    valid_modes = _op_ctx_whitelist()
+
+    C_exec = 'INVOKE_DEFAULT'
+    C_undo = True
+    count = 0
+
+    for arg in pos_args:
+        arg = arg.strip()
+
+        if arg.startswith("{"):
+            continue
+
+        if arg in ("True", "False"):
+            C_undo = (arg == "True")
+            count += 1
+        else:
+            trimmed = arg.strip('"\'')
+            if trimmed in valid_modes:
+                C_exec = trimmed
+                count += 1
+
+        if count >= 2:
+            break
+
+    return C_exec, C_undo
 
 
 def find_operator(text):

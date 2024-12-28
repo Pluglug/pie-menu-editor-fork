@@ -383,6 +383,9 @@ class PME_OT_window_auto_close(bpy.types.Operator):
     bl_options = {'INTERNAL'}
 
     def execute(self, context):
+        # Refactor_TODO: Revisit roaoao's original code and consider refactoring it.
+        #                If you do ctx_override, use temp_override
+
         # if context.window.screen.name.startswith(PME_SCREEN) or \
         #         context.window.screen.name.startswith(PME_TEMP_SCREEN):
         #     bpy.ops.wm.window_close(dict(window=context.window))
@@ -397,13 +400,16 @@ class PME_OT_window_auto_close(bpy.types.Operator):
             # used_pme_screens = set()
             for w in wm.windows:
                 if w.screen.name.startswith(PME_TEMP_SCREEN):
-                    bpy.ops.screen.new(dict(window=w))
+                    with context.temp_override(window=w):
+                        bpy.ops.screen.new()
+
                     bpy.ops.pme.timeout(
-                        cmd="p = %d; "
-                        "w = [w for w in C.window_manager.windows "
-                        "if w.as_pointer() == p][0]; "
-                        "bpy.ops.wm.window_close(dict(window=w)); "
-                        % w.as_pointer())
+                        cmd="bpy.ops.pme.exec_override("
+                            "cmd='bpy.ops.wm.window_close()', "
+                            "kwargs='p={}; "
+                            "w=[w for w in C.window_manager.windows "
+                            "if w.as_pointer() == p][0]; "
+                            "d=dict(window=w)')".format(w.as_pointer()))
 
                 # elif w.screen.name.startswith(PME_SCREEN):
                 #     used_pme_screens.add(w.screen.name)
@@ -471,7 +477,9 @@ class PME_OT_area_move(bpy.types.Operator):
             self.report({'WARNING'}, "Main area not found")
             return {'CANCELLED'}
 
-        bpy.ops.view2d.scroll_up(SU.override_context(a))
+        with context.temp_override(area=a):
+            bpy.ops.view2d.scroll_up()
+
         return {'FINISHED'}
 
         mx, my = event.mouse_x, event.mouse_y
@@ -617,10 +625,11 @@ class PME_OT_sidearea_toggle(bpy.types.Operator):
         if state[1] > 1:
             SU.toggle_sidebar(area, False, True)
 
-    def close_area(self, main, area):
+    def close_area(self, context, main, area):
         CTU.swap_spaces(area, main, self.area)
         try:
-            bpy.ops.screen.area_close(dict(area=area))
+            with context.temp_override(area=area):
+                bpy.ops.screen.area_close()
             return
         except:
             pass
@@ -698,12 +707,12 @@ class PME_OT_sidearea_toggle(bpy.types.Operator):
 
         elif l and self.side == 'LEFT' and self.action in ('TOGGLE', 'HIDE'):
             self.save_sidebars(l)
-            self.close_area(a, l)
+            self.close_area(context, a, l)
             SU.redraw_screen()
 
         elif r and self.side == 'RIGHT' and self.action in ('TOGGLE', 'HIDE'):
             self.save_sidebars(r)
-            self.close_area(a, r)
+            self.close_area(context, a, r)
             SU.redraw_screen()
 
         elif (not l and self.side == 'LEFT' or
@@ -727,11 +736,11 @@ class PME_OT_sidearea_toggle(bpy.types.Operator):
                 mouse["mouse_x"] = a.x + 1
                 mouse["mouse_y"] = a.y + 1
 
-            bpy.ops.screen.area_split(
-                SU.override_context(a),
-                direction='VERTICAL',
-                factor=factor,
-                **mouse)
+            with context.temp_override(area=a):
+                bpy.ops.screen.area_split(
+                    direction='VERTICAL',
+                    factor=factor,
+                    **mouse)
 
             new_area = context.screen.areas[-1]
             new_area.ui_type = self.area
@@ -775,21 +784,27 @@ class PME_OT_popup_area(bpy.types.Operator):
         description="Execute python code on window open",
         maxlen=MAX_STR_LEN, options={'SKIP_SAVE'})
 
-    def update_header(self, on_top, visible, d):
+    def update_header(self, context, on_top, visible, d):
         if self.header == 'DEFAULT':
             return
 
         if 'TOP' in self.header:
-            # not on_top and bpy.ops.screen.header_flip(d)
-            not on_top and bpy.ops.screen.region_flip(d)
+            if not on_top:
+                with context.temp_override(**d):
+                    bpy.ops.screen.region_flip()
         else:
-            # on_top and bpy.ops.screen.header_flip(d)
-            on_top and bpy.ops.screen.region_flip(d)
+            if on_top:
+                with context.temp_override(**d):
+                    bpy.ops.screen.region_flip()
 
         if 'HIDE' in self.header:
-            visible and bpy.ops.screen.header(d)
+            if visible:
+                with context.temp_override(**d):
+                    bpy.ops.screen.header()
         else:
-            not visible and bpy.ops.screen.header(d)
+            if not visible:
+                with context.temp_override(**d):
+                    bpy.ops.screen.header()
 
     def execute(self, context):
         return {'FINISHED'}
@@ -839,7 +854,7 @@ class PME_OT_popup_area(bpy.types.Operator):
         else:
             header_on_top = rh.y > area.y
 
-        self.update_header(header_on_top, header_visible, header_dict)
+        self.update_header(context, header_on_top, header_visible, header_dict)
 
         window = context.window
         windows = [w for w in context.window_manager.windows]
@@ -879,26 +894,27 @@ class PME_OT_popup_area(bpy.types.Operator):
 
         if new_window:
             if self.cmd:
-                getattr(bpy.ops.pme, "timeout")(
-                    ctx_dict(window=new_window),
-                    'INVOKE_DEFAULT',
-                    cmd=self.cmd)
+                pme_timeout = getattr(bpy.ops.pme, "timeout")
+                with context.temp_override(**ctx_dict(window=new_window)):  # MIGRATION_TODO: Delete ctx_dict
+                    pme_timeout('INVOKE_DEFAULT', cmd=self.cmd)
 
             new_screen_name = new_window.screen.name
+            
+            # Refactor_TODO: Double-check roaoao's original code and see if we need to reinstate it properly.
             # if screen_name in bpy.data.screens:
-            if False:
-                bpy.ops.screen.delete(
-                    dict(
-                        window=new_window,
-                        screen=bpy.data.screens[new_screen_name]))
-                bpy.ops.pme.screen_set(
-                    dict(window=new_window), name=screen_name)
+            if False:  
+                with context.temp_override(**ctx_dict(window=new_window, screen=bpy.data.screens[new_screen_name])):  # MIGRATION_TODO: Delete ctx_dict
+                    bpy.ops.screen.delete()
+
+                with context.temp_override(**ctx_dict(window=new_window)):  # MIGRATION_TODO: Delete ctx_dict
+                    bpy.ops.pme.screen_set(name=screen_name)
+
             else:
                 new_window.screen.name = screen_name
                 new_window.screen.user_clear()
 
         if new_screen_flag:
-            self.update_header(header_on_top, header_visible, header_dict)
+            self.update_header(context, header_on_top, header_visible, header_dict)
 
         if area_type:
             if is_28():

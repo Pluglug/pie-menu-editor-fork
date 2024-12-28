@@ -24,14 +24,14 @@
           "Header", 
           "COMMAND", 
           "TRIA_DOWN", 
-          "r = C.area.regions[0]; sd = C.space_data; on_top = r.y > C.area.y; bpy.ops.screen.region_flip(dict(region=r)) if on_top else None; sd.show_region_header = on_top or not sd.show_region_header", 
+          "r = C.area.regions[0]; sd = C.space_data; on_top = r.y > C.area.y; O.pme.exec_override(cmd='O.screen.region_flip()', kwargs='d=dict(region=C.area.regions[0])') if on_top else None; sd.show_region_header = on_top or not sd.show_region_header",
           0
         ], 
         [
           "Header", 
           "COMMAND", 
           "TRIA_UP", 
-          "r = C.area.regions[0]; sd = C.space_data; on_top = r.y > C.area.y; bpy.ops.screen.region_flip(dict(region=r)) if not on_top else None; sd.show_region_header = not on_top or not sd.show_region_header", 
+          "r = C.area.regions[0]; sd = C.space_data; on_top = r.y > C.area.y; O.pme.exec_override(cmd='O.screen.region_flip()', kwargs='d=dict(region=C.area.regions[0])') if not on_top else None; sd.show_region_header = not on_top or not sd.show_region_header",
           0
         ], 
         [

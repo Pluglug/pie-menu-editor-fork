@@ -191,8 +191,8 @@ def load_pre_handler(_):
 
 
 @persistent
-def load_post_handler(_):
-    DBG_INIT and logh("Load Post (%s)" % bpy.data.filepath)
+def load_post_handler(filepath):
+    DBG_INIT and logh("Load Post (%s)" % filepath)
 
     global tmp_data
     if tmp_data is None:
@@ -206,9 +206,9 @@ def load_post_handler(_):
     tmp_data = None
 
     if pr.missing_kms:
-        bpy.ops.pme.wait_keymaps(
-            dict(window=bpy.context.window_manager.windows[0]),
-            'INVOKE_DEFAULT')
+        logw(f"Missing Keymaps: {pr.missing_kms}")
+        with bpy.context.temp_override(window=bpy.context.window_manager.windows[0]):
+            bpy.ops.pme.wait_keymaps('INVOKE_DEFAULT')
     else:
         temp_prefs().init_tags()
         pr.tree.update()
@@ -255,10 +255,9 @@ def on_context():
             m.register()
 
     if pr.missing_kms:
-        DBG_INIT and logi("%d Missing Keymaps" % len(pr.missing_kms))
-        bpy.ops.pme.wait_keymaps(
-            dict(window=bpy.context.window_manager.windows[0]),
-            'INVOKE_DEFAULT')
+        logw(f"Missing Keymaps: {pr.missing_kms}")
+        with bpy.context.temp_override(window=bpy.context.window_manager.windows[0]):
+            bpy.ops.pme.wait_keymaps('INVOKE_DEFAULT')
 
     else:
         compatibility_fixes.fix()
