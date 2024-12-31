@@ -796,15 +796,29 @@ def ctx_dict(
 
 
 def area_header_text_set(text=None, area=None):
-    if not area:
+    if area is None:
         area = bpy.context.area
 
-    if text:
-        area.header_text_set(text=text)
-    elif is_28():
-        area.header_text_set(text=None)
+    if area is None:
+        # Note: bpy.context.area becomes None during modal execution if `screen.screen_full_area` is called.
+        areas = _find_areas_with_header_text_support(bpy.context)
+        if not areas:
+            logw("area_header_text_set", "No valid areas with 'header_text_set' available in current context. Exiting function.")
+            return
     else:
-        area.header_text_set()
+        areas = [area]
+
+    for area in areas:
+        if text:
+            area.header_text_set(text=text)
+        elif is_28():
+            area.header_text_set(text=None)
+        else:
+            area.header_text_set()
+
+
+def _find_areas_with_header_text_support(context):
+    return [area for area in context.screen.areas if hasattr(area, 'header_text_set')]
 
 
 # FIXME: Width and Height are not actually applied.
