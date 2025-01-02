@@ -3106,11 +3106,13 @@ class PMEPreferences(bpy.types.AddonPreferences):
             self._draw_hprop(subcol, pr, "show_sidepanel_prefs")
             self._draw_hprop(
                 subcol, pr, "expand_item_menu",
-                "https://en.blender.org/uploads/b/b7/"
-                "Pme1.14.0_expand_item_menu.gif")
+                # "https://en.blender.org/uploads/b/b7/"
+                # "Pme1.14.0_expand_item_menu.gif"  # DOC_TODO: Create Content
+                )
             self._draw_hprop(
                 subcol, pr, "use_cmd_editor",
-                "https://en.blender.org/uploads/f/f4/Pme_item_edit.png")
+                # "https://en.blender.org/uploads/f/f4/Pme_item_edit.png"  # DOC_TODO: Create Content
+                )
             self._draw_hprop(subcol, pr, "cache_scripts")
             self._draw_hprop(subcol, pr, "save_tree")
             self._draw_hprop(subcol, pr, "auto_backup")
@@ -3206,8 +3208,9 @@ class PMEPreferences(bpy.types.AddonPreferences):
 
             self._draw_hlabel(
                 col, "Default Mode:",
-                "https://en.blender.org/index.php/User:Raa/Addons/"
-                "Pie_Menu_Editor/Editors/Popup_Dialog#Mode")
+                # "https://en.blender.org/index.php/User:Raa/Addons/"
+                # "Pie_Menu_Editor/Editors/Popup_Dialog#Mode"  # DOC_TODO: Create Content
+                )
             sub = col.row(align=True)
             sub.prop(pr, "default_popup_mode", expand=True)
 

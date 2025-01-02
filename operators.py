@@ -2546,8 +2546,7 @@ class PME_OT_docs(bpy.types.Operator):
     def execute(self, context):
         if self.id:
             self.url = (
-                "https://en.blender.org/index.php/User:Raa/"
-                "Addons/Pie_Menu_Editor"
+                "https://pluglug.github.io/pme-docs/"
             ) + self.id
         bpy.ops.wm.url_open(url=self.url)
         return {'FINISHED'}

@@ -5,8 +5,9 @@ bl_info = {
     "blender": (2, 80, 0),
     "warning": "",
     "tracker_url": "http://blenderartists.org/forum/showthread.php?392910",
-    "wiki_url": (
-        "https://en.blender.org/index.php/User:Raa/Addons/Pie_Menu_Editor"),
+    # "wiki_url": (
+    #     "https://archive.blender.org/wiki/2015/index.php/User:Raa/Addons/Pie_Menu_Editor/"),
+    "doc_url": "https://pluglug.github.io/pme-docs",
     "category": "User Interface"
 }
 
