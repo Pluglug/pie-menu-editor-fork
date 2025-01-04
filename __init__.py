@@ -1,8 +1,8 @@
 bl_info = {
     "name": "Pie Menu Editor",
-    "author": "roaoao",
-    "version": (1, 18, 7),
-    "blender": (2, 80, 0),
+    "author": "roaoao, pluglug",
+    "version": (1, 18, 8),
+    "blender": (3, 2, 0),
     "warning": "",
     "tracker_url": "http://blenderartists.org/forum/showthread.php?392910",
     # "wiki_url": (
