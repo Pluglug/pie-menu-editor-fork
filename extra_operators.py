@@ -562,18 +562,20 @@ class PME_OT_sidearea_toggle(bpy.types.Operator):
 
     def get_side_areas(self, area):
         l, r, b, t = None, None, None, None
+        # XXX: In fact, it is also affected by view.ui_scale.
+        line_width = {'AUTO': 1, 'THIN': 1, 'THICK': 3}[uprefs().view.ui_line_width]
         for a in bpy.context.screen.areas:
             if a.height == area.height and a.y == area.y and \
                     a.ui_type not in self.ia:
-                if not l and a.x + a.width + 1 == area.x:
+                if not l and a.x + a.width + line_width == area.x:
                     l = a
-                elif not r and area.x + area.width + 1 == a.x:
+                elif not r and area.x + area.width + line_width == a.x:
                     r = a
 
             if a.width == area.width and a.x == area.x:
-                if not b and a.y + a.height + 1 == area.y:
+                if not b and a.y + a.height + line_width == area.y:
                     b = a
-                elif not t and area.y + area.height + 1 == a.y:
+                elif not t and area.y + area.height + line_width == a.y:
                     t = a
 
         if b or t:
