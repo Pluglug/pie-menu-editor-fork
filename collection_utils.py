@@ -106,7 +106,7 @@ class MoveItemOperator:
         return None
 
     def get_icon(self, item, idx):
-        return 'SPACE2' if idx == self.old_idx else 'SPACE3'
+        return 'KEYTYPE_KEYFRAME_VEC' if idx == self.old_idx else 'HANDLETYPE_FREE_VEC'
 
     def get_title(self):
         return "Move Item"

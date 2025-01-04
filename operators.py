@@ -68,7 +68,7 @@ class WM_OT_pm_select(bpy.types.Operator):
     def _draw(self, menu, context):
         lh.lt(menu.layout, 'INVOKE_DEFAULT')
 
-        lh.menu("PME_MT_pm_new", "New", 'ZOOMIN')
+        lh.menu("PME_MT_pm_new", "New", 'ADD')
         lh.operator(
             PME_OT_pm_search_and_select.bl_idname, None, 'VIEWZOOM',
             mode=self.mode)
@@ -90,9 +90,9 @@ class WM_OT_pm_select(bpy.types.Operator):
                 icon = pm.ed.icon
 
             else:
-                icon = 'SPACE3'
+                icon = 'HANDLETYPE_FREE_VEC'
                 if pm == apm:
-                    icon = 'SPACE2'
+                    icon = 'KEYTYPE_KEYFRAME_VEC'
 
             lh.operator(
                 WM_OT_pm_select.bl_idname, k, icon,
@@ -220,6 +220,81 @@ class PME_OT_exec(bpy.types.Operator):
         return self.execute(context)
 
 
+DBG_OVERRIDE = False  # TODO: Move to debug_utils
+class PME_OT_exec_override(bpy.types.Operator):
+    bl_idname = "pme.exec_override"
+    bl_label = ""
+    bl_description = "Execute python code with context override"
+    bl_options = {'INTERNAL'}
+
+    cmd: bpy.props.StringProperty(
+        name="Python Code", description="Python Code",
+        maxlen=MAX_STR_LEN, options={'SKIP_SAVE', 'HIDDEN'})
+    area_type: bpy.props.StringProperty(
+        name="Area Type",
+        default='CURRENT', maxlen=MAX_STR_LEN, options={'SKIP_SAVE', 'HIDDEN'})
+    region_type: bpy.props.StringProperty(
+        name="Region Type",
+        default='WINDOW', maxlen=MAX_STR_LEN, options={'SKIP_SAVE', 'HIDDEN'})
+    kwargs: bpy.props.StringProperty(
+        name="Extra Keywords",
+        description=(
+            "Python code that sets 'd' variable to override dict.\n"
+            "Example: w=C.window; d = {'area': w.screen.areas[0]}"
+        ),
+        default="d = {}", maxlen=MAX_STR_LEN, options={'SKIP_SAVE', 'HIDDEN'})
+
+    def execute(self, context):
+        DBG_OVERRIDE and logh(f"Executing: {self.cmd}")
+        temp_override_args = self.parse_kwargs()
+
+        temp_override_args.setdefault("area",
+            self.area_type if self.area_type != 'CURRENT' else None)
+        temp_override_args.setdefault("region", self.region_type)
+
+        if DBG_OVERRIDE:
+            pairs = [f"  {k}: {v}" for k, v in temp_override_args.items()]
+            logi("Context override args(defaults):\n" + "\n".join(pairs))
+
+        override_args = SU.ContextOverride(**temp_override_args)\
+                            .validate(context, delete_none=True)
+
+        if DBG_OVERRIDE:
+            pairs = [f"  {k}: {v}" for k, v in override_args.items()]
+            logi("Context override args(validated):\n" + "\n".join(pairs))
+
+        exec_globals = pme.context.gen_globals()
+        pme.context.exec_operator = self
+        try:
+            with context.temp_override(**override_args):
+                pme.context.exe(self.cmd, exec_globals)
+                return exec_globals.get("return_value", {'FINISHED'})
+        finally:
+            pme.context.exec_operator = None
+
+    def invoke(self, context, event):
+        pme.context.event = event
+        return self.execute(context)
+
+    def parse_kwargs(self):
+        """Execute kwargs code and get 'd' dict"""
+        if not self.kwargs.strip():
+            return {}
+
+        try:
+            code = compile(self.kwargs, "<override>", "exec")
+        except SyntaxError as e:
+            offset = e.offset if e.offset is not None else 0
+            pointer = " " * offset + "^"
+            self.report({'ERROR'},
+                f"Syntax error in override:\n{e.text}\n{pointer}\n{str(e)}")
+            return {}
+
+        eval_globals = pme.context.gen_globals()
+        pme.context.exe(code, eval_globals)
+        return eval_globals.get("d", {})
+
+
 class PME_OT_panel_hide(bpy.types.Operator):
     bl_idname = "pme.panel_hide"
     bl_label = "Hide Panel"
@@ -253,7 +328,7 @@ class PME_OT_panel_hide(bpy.types.Operator):
 
         lh.operator(
             PME_OT_panel_hide.bl_idname,
-            "New Hidden Panel Group", 'ZOOMIN',
+            "New Hidden Panel Group", 'ADD',
             group=pr.unique_pm_name(pr.ed('HPANEL').default_name),
             panel=self.panel)
 
@@ -662,16 +737,13 @@ class PME_OT_timeout(bpy.types.Operator):
 
             if self.timer.time_duration >= self.delay:
                 self.cancelled = True
-                if False:
-                    pass
-                # if self.area != 'CURRENT':
-                #     bpy.ops.pme.timeout(
-                #         SU.override_context(self.area),
-                #         'INVOKE_DEFAULT', cmd=self.cmd, delay=self.delay)
-                else:
-                    pme.context.exec_operator = self
-                    pme.context.exe(self.cmd)
-                    pme.context.exec_operator = None
+                # if self.area != 'CURRENT':  # Refactor_TODO: Check why they no longer use Area.
+                #     with context.temp_override(area=self.area):
+                #         bpy.ops.pme.timeout('INVOKE_DEFAULT', cmd=self.cmd, delay=self.delay)
+                # else:
+                pme.context.exec_operator = self
+                pme.context.exe(self.cmd)
+                pme.context.exec_operator = None
         return {'PASS_THROUGH'}
 
     def execute(self, context):
@@ -2474,8 +2546,7 @@ class PME_OT_docs(bpy.types.Operator):
     def execute(self, context):
         if self.id:
             self.url = (
-                "https://en.blender.org/index.php/User:Raa/"
-                "Addons/Pie_Menu_Editor"
+                "https://pluglug.github.io/pme-docs/"
             ) + self.id
         bpy.ops.wm.url_open(url=self.url)
         return {'FINISHED'}
@@ -2842,7 +2913,7 @@ class PME_OT_pmidata_specials_call(bpy.types.Operator):
 
         lh.sep()
 
-        lh.menu("PME_MT_screen_set", "Set Workspace", icon=ic('SPLITSCREEN'))
+        lh.menu("PME_MT_screen_set", "Set Workspace", icon=ic('MOUSE_MMB'))
         lh.menu("PME_MT_brush_set", "Set Brush", icon=ic('BRUSH_DATA'))
 
         if pm and pm.mode in {'PMENU', 'DIALOG'}:

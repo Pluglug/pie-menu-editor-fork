@@ -7,6 +7,7 @@ from tokenize import (
 )
 from .addon import print_exc
 from . import pme
+from .constants import OP_CTX_ITEMS
 
 
 class _XUntokenizer(Untokenizer):
@@ -264,8 +265,8 @@ def add_default_args(text):
     return _untokenize(stm)
 
 
-def parse_pos_args(pos_args):
-    ctx = None
+def legacy_parse_pos_args(pos_args):
+    # ctx = None
     exec_ctx = 'INVOKE_DEFAULT'
     undo = True
 
@@ -275,11 +276,75 @@ def parse_pos_args(pos_args):
             if isinstance(a, str):
                 exec_ctx = a
             elif isinstance(a, dict):
-                ctx = a
+                # ctx = a
+                pass
             elif isinstance(a, bool):
                 undo = a
+    return exec_ctx, undo
 
-    return ctx, exec_ctx, undo
+
+def _op_ctx_whitelist() -> set[str]:
+    """Returns a set of valid context mode strings."""
+    return {item[0] for item in OP_CTX_ITEMS}
+
+
+def _parse_pos_args(pos_args: list[str]) -> tuple[str, bool]:
+    """Parses operator positional args into (C_exec, C_undo) tuple."""
+    C_exec = 'INVOKE_DEFAULT'
+    C_undo = True
+    count = 0
+
+    if pos_args is None:
+        return C_exec, C_undo
+
+    valid_modes = _op_ctx_whitelist()
+
+    for arg in pos_args:
+        arg = arg.strip()
+
+        if arg.startswith("{"):
+            continue
+
+        if arg in ("True", "False"):
+            C_undo = (arg == "True")
+            count += 1
+        else:
+            trimmed = arg.strip('"\'')
+            if trimmed in valid_modes:
+                C_exec = trimmed
+                count += 1
+
+        if count >= 2:
+            break
+
+    return C_exec, C_undo
+
+
+def parse_pos_args(pos_args: list[str]) -> tuple[str, bool]:  # Issue#25
+    # TODO: If no errors are reported, it will be removed in the next release.
+    DBG = False
+    if not DBG:
+        return _parse_pos_args(pos_args)
+
+    lg_exec, lg_undo = legacy_parse_pos_args(pos_args)
+    C_exec, C_undo = _parse_pos_args(pos_args)
+
+    print("""
+    parse_pos_args:
+      Legacy:
+        C_exec: {0} (type: {1})
+        C_undo: {2} (type: {3})
+      Current:
+        C_exec: {4} (type: {5})
+        C_undo: {6} (type: {7})
+    """.format(
+        lg_exec, type(lg_exec),
+        lg_undo, type(lg_undo),
+        C_exec, type(C_exec),
+        C_undo, type(C_undo)
+    ))
+
+    return C_exec, C_undo
 
 
 def find_operator(text):

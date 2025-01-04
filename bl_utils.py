@@ -2,10 +2,11 @@ import bpy
 import _bpy
 import re
 from .addon import print_exc, ic, uprefs, is_28
-from .debug_utils import *
+from .screen_utils import get_override_args
 from . import constants as CC
 from . import pme
 from . import c_utils
+from .debug_utils import *
 
 cdll = None
 
@@ -759,52 +760,68 @@ def get_space_data(area_type):
     return ret
 
 
-def get_context_data(area_type):
-    ret = dict()
-    ret["space_data"] = get_space_data(area_type)
-    return ret
+# def get_context_data(area_type):  # B4.0: Replace dictionary override with context.temp_override
+#     ret = dict()
+#     ret["space_data"] = get_space_data(area_type)
+#     return ret
 
 
+# MIGRATION_TODO: Replace dictionary override with context.temp_override
 def ctx_dict(
         window=None, screen=None, area=None, region=None, scene=None,
         workspace=None):
-    if window:
-        screen = screen or window.screen
-        workspace = workspace or window.workspace
-        area = area or screen.areas[0]
-        if region is None:
-            for r in area.regions:
-                if r.type == 'WINDOW':
-                    region = r
-                    break
-            else:
-                region = area.regions[0]
+    import warnings
+    warnings.warn(
+        "ctx_dict() is deprecated, use get_override_args() instead",
+        DeprecationWarning, stacklevel=2)
 
-        if bpy.app.version < (2, 80, 0):
-            scene = scene or screen.scene
+    d = get_override_args(area=area, region=region, screen=screen,
+                window=window, scene=scene, workspace=workspace)
 
-    return dict(
-        window=window or bl_context.window,
-        workspace=workspace or bl_context.workspace,
-        screen=screen or bl_context.screen,
-        area=area or bl_context.area,
-        region=region or bl_context.region,
-        scene=scene or bl_context.scene,
-    )
+    # default_kwargs = {
+    #     "window": bl_context.window,
+    #     "screen": bl_context.screen,
+    #     "area": bl_context.area,
+    #     "region": bl_context.region,
+    #     "scene": bl_context.scene,
+    #     "workspace": bl_context.workspace,
+    # }
+
+    # # MIGRATION_TODO:  Investigate the need for bl_context here and make sure to remove it.
+    # for k, v in default_kwargs.items():
+    #     if k not in d:
+    #         d[k] = v
+
+    return d
 
 
 def area_header_text_set(text=None, area=None):
-    if not area:
+    if area is None:
         area = bpy.context.area
 
-    if text:
-        area.header_text_set(text=text)
-    elif is_28():
-        area.header_text_set(text=None)
+    if area is None:
+        # Note: bpy.context.area becomes None during modal execution if `screen.screen_full_area` is called.
+        areas = _find_areas_with_header_text_support(bpy.context)
+        if not areas:
+            logw("area_header_text_set", "No valid areas with 'header_text_set' available in current context. Exiting function.")
+            return
     else:
-        area.header_text_set()
+        areas = [area]
+
+    for area in areas:
+        if text:
+            area.header_text_set(text=text)
+        elif is_28():
+            area.header_text_set(text=None)
+        else:
+            area.header_text_set()
 
 
+def _find_areas_with_header_text_support(context):
+    return [area for area in context.screen.areas if hasattr(area, 'header_text_set')]
+
+
+# FIXME: Width and Height are not actually applied.
 def popup_area(area, width=320, height=400, x=None, y=None):
     r = c_utils.area_rect(area)
 
@@ -829,7 +846,8 @@ def popup_area(area, width=320, height=400, x=None, y=None):
     upr.view.ui_scale = 1
     upr.view.ui_line_width = 'THIN'
 
-    bpy.ops.screen.area_dupli(ctx_dict(area=area), 'INVOKE_DEFAULT')
+    with C.temp_override(**ctx_dict(area=area)):  # MIGRATION_TODO: Delete ctx_dict
+        bpy.ops.screen.area_dupli('INVOKE_DEFAULT')
 
     upr.view.ui_scale = ui_scale
     upr.view.ui_line_width = ui_line_width
@@ -859,4 +877,4 @@ def register():
     pme.context.add_global("message_box", message_box)
     pme.context.add_global("input_box", input_box)
     pme.context.add_global("close_popups", close_popups)
-    pme.context.add_global("ctx", get_context_data)
+    # pme.context.add_global("ctx", get_context_data)
