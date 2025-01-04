@@ -1,10 +1,11 @@
 bl_info = {
-    "name": "Pie Menu Editor",
+    "name": "Pie Menu Editor (Dev)",
     "author": "roaoao, pluglug",
     "version": (1, 18, 8),
     "blender": (3, 2, 0),
+    "description": "1.18.8.1: PME with experimental Click + Click Drag modes",
     "warning": "",
-    "tracker_url": "http://blenderartists.org/forum/showthread.php?392910",
+    "tracker_url": "https://github.com/Pluglug/pie-menu-editor-fork/pull/29",
     # "wiki_url": (
     #     "https://archive.blender.org/wiki/2015/index.php/User:Raa/Addons/Pie_Menu_Editor/"),
     "doc_url": "https://pluglug.github.io/pme-docs",
