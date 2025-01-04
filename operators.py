@@ -2060,7 +2060,9 @@ class WM_OT_pme_user_pie_menu_call(bpy.types.Operator):
     def _parse_open_mode(self, pm):
         if pm.open_mode == 'HOLD':
             self.pm_hold = pm
-        elif pm.open_mode == 'PRESS':
+        # elif pm.open_mode == 'PRESS':
+        #     self.pm_press = pm
+        elif pm.open_mode in {'PRESS', 'CLICK', 'CLICK_DRAG'}:  # XXX: Not verified
             self.pm_press = pm
         elif pm.open_mode == 'CHORDS':
             self.pm_chord = pm

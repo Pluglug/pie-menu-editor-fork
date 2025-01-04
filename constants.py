@@ -214,6 +214,10 @@ OPEN_MODE_ITEMS = (
         ph.get_icon("pTweak"), 3),
     ('CHORDS', "Key Chords", "Click sequence of 2 keys",
         ph.get_icon("pChord"), 4),
+    ('CLICK', "Click (TEST)", "Click the key", 
+        ph.get_icon("pPress"), 5),
+    ('CLICK_DRAG', "Click Drag (TEST)", "Click and drag the key", 
+        ph.get_icon("pTweak"), 6),
 )
 
 

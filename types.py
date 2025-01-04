@@ -347,9 +347,15 @@ class PMItem(bpy.types.PropertyGroup):
                     kmi.oskey = self.oskey
 
                 kmi.key_modifier = self.key_mod
-                kmi.value = \
-                    'DOUBLE_CLICK' if self.open_mode == 'DOUBLE_CLICK' \
-                    else 'PRESS'
+                # kmi.value = \
+                #     'DOUBLE_CLICK' if self.open_mode == 'DOUBLE_CLICK' \
+                #     else 'PRESS'
+
+                kmi.value = {
+                    "DOUBLE_CLICK": "DOUBLE_CLICK",
+                    "CLICK": "CLICK",
+                    "CLICK_DRAG": "CLICK_DRAG"
+                }.get(self.open_mode, "PRESS")
 
                 if self.key == 'NONE' or not self.enabled:
                     if pr.kh.available():
@@ -712,9 +718,15 @@ class PMItem(bpy.types.PropertyGroup):
                     kmi.properties.invoke_mode = 'HOTKEY'
                     kmi.properties.keymap = km_name
 
-                    kmi.value = \
-                        'DOUBLE_CLICK' if self.open_mode == 'DOUBLE_CLICK' \
-                        else 'PRESS'
+                    # kmi.value = \
+                    #     'DOUBLE_CLICK' if self.open_mode == 'DOUBLE_CLICK' \
+                    #     else 'PRESS'  # Comment out for testing
+
+                    kmi.value = {
+                        "DOUBLE_CLICK": "DOUBLE_CLICK",
+                        "CLICK": "CLICK",
+                        "CLICK_DRAG": "CLICK_DRAG"
+                    }.get(self.open_mode, "PRESS")  # Change
 
                     if self.kmis_map[self.name]:
                         self.kmis_map[self.name][km_name] = kmi
