@@ -16,9 +16,9 @@ class PME_OT_hpanel_menu(bpy.types.Operator):
         pr = prefs()
         lh.lt(menu.layout, 'INVOKE_DEFAULT')
         lh.operator(
-            PME_OT_panel_hide.bl_idname, None, 'ZOOMIN',
+            PME_OT_panel_hide.bl_idname, None, 'ADD',
             group=pr.selected_pm.name)
-        lh.operator(PME_OT_panel_hide_by.bl_idname, None, 'ZOOMIN')
+        lh.operator(PME_OT_panel_hide_by.bl_idname, None, 'ADD')
         lh.sep()
 
         lh.prop(pr, "interactive_panels")
@@ -106,11 +106,11 @@ class Editor(EditorBase):
             pm, "pmis", tpr, "hidden_panels_idx", rows=10)
 
         lh.column(row)
-        lh.operator(PME_OT_hpanel_menu.bl_idname, "", 'ZOOMIN')
+        lh.operator(PME_OT_hpanel_menu.bl_idname, "", 'ADD')
 
         if len(pm.pmis):
             lh.operator(
-                PME_OT_hpanel_remove.bl_idname, "", 'ZOOMOUT',
+                PME_OT_hpanel_remove.bl_idname, "", 'REMOVE',
                 idx=tpr.hidden_panels_idx)
             lh.operator(
                 PME_OT_hpanel_remove.bl_idname, "", 'X', idx=-1)

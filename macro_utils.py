@@ -122,7 +122,7 @@ def add_macro(pm):
                 sub_op_idname, _, pos_args = operator_utils.find_operator(
                     pmi.text)
 
-                _, sub_op_exec_ctx, _ = operator_utils.parse_pos_args(pos_args)
+                sub_op_exec_ctx, _ = operator_utils.parse_pos_args(pos_args)
 
                 if sub_op_idname and sub_op_exec_ctx.startswith('INVOKE'):
                     sub_tp = eval("bpy.ops." + sub_op_idname).idname()
@@ -201,7 +201,7 @@ def _fill_props(props, pm, idx=1):
             sub_op_idname, args, pos_args = operator_utils.find_operator(
                 pmi.text)
 
-            _, sub_op_exec_ctx, _ = operator_utils.parse_pos_args(pos_args)
+            sub_op_exec_ctx, _ = operator_utils.parse_pos_args(pos_args)
 
             if sub_op_idname and sub_op_exec_ctx.startswith('INVOKE'):
                 args = ",".join(args)

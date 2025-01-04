@@ -1123,7 +1123,7 @@ class Editor(EditorBase):
                 if pmi.mode == 'PROP':
                     self.draw_enum_item(pm, pmi, i)
 
-            lh.operator(PME_OT_pmi_add.bl_idname, "Add Slot", 'ZOOMIN')
+            lh.operator(PME_OT_pmi_add.bl_idname, "Add Slot", 'ADD')
 
         lh.box(layout)
         col = lh.column()

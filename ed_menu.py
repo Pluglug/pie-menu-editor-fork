@@ -68,7 +68,7 @@ class WM_OT_rmi_move(bpy.types.Operator):
         for idx, pmi in enumerate(pm.pmis):
             name = pmi.name
             # icon = pmi.parse_icon()
-            icon = 'SPACE2' if idx == self.pm_item else 'SPACE3'
+            icon = 'KEYTYPE_KEYFRAME_VEC' if idx == self.pm_item else 'HANDLETYPE_FREE_VEC'
 
             if pmi.mode == 'EMPTY':
                 if pmi.text == "column":
@@ -131,29 +131,29 @@ class WM_OT_rm_col_specials_call(bpy.types.Operator):
         lh.lt(menu.layout, operator_context='INVOKE_DEFAULT')
 
         lh.operator(
-            WM_OT_rmi_add.bl_idname, "Add Column", 'ZOOMIN',
+            WM_OT_rmi_add.bl_idname, "Add Column", 'ADD',
             index=self.cur_col.a,
             mode='COLUMN')
 
         lh.sep(check=True)
 
         lh.operator(
-            WM_OT_rmi_add.bl_idname, "Add Slot", 'ZOOMIN',
+            WM_OT_rmi_add.bl_idname, "Add Slot", 'ADD',
             index=self.cur_col.b,
             mode='ITEM')
 
         lh.operator(
-            WM_OT_rmi_add.bl_idname, "Add Label", 'ZOOMIN',
+            WM_OT_rmi_add.bl_idname, "Add Label", 'ADD',
             index=self.cur_col.b,
             mode='LABEL')
 
         lh.operator(
-            WM_OT_rmi_add.bl_idname, "Add Separator", 'ZOOMIN',
+            WM_OT_rmi_add.bl_idname, "Add Separator", 'ADD',
             index=self.cur_col.b,
             mode='SEPARATOR')
 
         lh.operator(
-            WM_OT_rmi_add.bl_idname, "Add Spacer", 'ZOOMIN',
+            WM_OT_rmi_add.bl_idname, "Add Spacer", 'ADD',
             index=self.cur_col.b,
             mode='SPACER')
 
@@ -232,7 +232,7 @@ class WM_OT_rm_col_move(bpy.types.Operator):
         lh.lt(menu.layout)
 
         for idx, col in enumerate(WM_OT_rm_col_move.cols):
-            icon = 'SPACE2' if self.col_idx == col[1] else 'SPACE3'
+            icon = 'KEYTYPE_KEYFRAME_VEC' if self.col_idx == col[1] else 'HANDLETYPE_FREE_VEC'
             lh.operator(
                 WM_OT_rm_col_move.bl_idname, "Column %d" % (idx + 1), icon,
                 move_idx=idx,
@@ -465,22 +465,22 @@ class WM_OT_rmi_specials_call(bpy.types.Operator):
         lh.sep(check=True)
 
         lh.operator(
-            WM_OT_rmi_add.bl_idname, "Add Slot", 'ZOOMIN',
+            WM_OT_rmi_add.bl_idname, "Add Slot", 'ADD',
             index=self.pm_item,
             mode='ITEM')
 
         lh.operator(
-            WM_OT_rmi_add.bl_idname, "Add Label", 'ZOOMIN',
+            WM_OT_rmi_add.bl_idname, "Add Label", 'ADD',
             index=self.pm_item,
             mode='LABEL')
 
         lh.operator(
-            WM_OT_rmi_add.bl_idname, "Add Separator", 'ZOOMIN',
+            WM_OT_rmi_add.bl_idname, "Add Separator", 'ADD',
             index=self.pm_item,
             mode='SEPARATOR')
 
         lh.operator(
-            WM_OT_rmi_add.bl_idname, "Add Spacer", 'ZOOMIN',
+            WM_OT_rmi_add.bl_idname, "Add Spacer", 'ADD',
             index=self.pm_item,
             mode='SPACER')
 
@@ -687,7 +687,7 @@ class Editor(EditorBase):
         row.scale_y = max_scale_y + 1
 
         lh.operator(
-            WM_OT_rmi_add.bl_idname, "", 'ZOOMIN',
+            WM_OT_rmi_add.bl_idname, "", 'ADD',
             index=-1,
             mode='COLUMN')
 

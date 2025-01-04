@@ -552,7 +552,7 @@ class PME_OT_pdr_move(bpy.types.Operator, MoveItemOperator):
         prev_p = None
         for i, pmi in enumerate(pm.pmis):
             if pmi.mode == 'EMPTY' and pmi.text.startswith("row"):
-                icon = 'SPACE2' if self.old_idx == i else 'SPACE3'
+                icon = 'KEYTYPE_KEYFRAME_VEC' if self.old_idx == i else 'HANDLETYPE_FREE_VEC'
                 new_idx = i
 
                 p = lh.operator(
@@ -571,14 +571,14 @@ class PME_OT_pdr_move(bpy.types.Operator, MoveItemOperator):
 
         # idx = 0
         # for idx, row in enumerate(PME_OT_pdr_move.rows):
-        #     icon = 'SPACE2' if self.row_idx == row[0] else 'SPACE3'
+        #     icon = 'KEYTYPE_KEYFRAME_VEC' if self.row_idx == row[0] else 'HANDLETYPE_FREE_VEC'
         #     lh.operator(
         #         PME_OT_pdr_move.bl_idname, "Row %d" % (idx + 1), icon,
         #         move_idx=idx,
         #         row_idx=self.row_idx)
 
         # lh.operator(
-        #     PME_OT_pdr_move.bl_idname, ". . .", 'SPACE3',
+        #     PME_OT_pdr_move.bl_idname, ". . .", 'HANDLETYPE_FREE_VEC',
         #     move_idx=idx + 1,
         #     row_idx=self.row_idx)
 
@@ -835,8 +835,8 @@ class PME_MT_pdr_alignment(bpy.types.Menu):
         for item in pme.props.get("align").items:
             lh.operator(
                 PME_OT_pdr_prop_set.bl_idname, item[1],
-                'SPACE2' if pp.parse(
-                    row.text).align == item[0] else 'SPACE3',
+                'KEYTYPE_KEYFRAME_VEC' if pp.parse(
+                    row.text).align == item[0] else 'HANDLETYPE_FREE_VEC',
                 mode='ROW',
                 prop="align",
                 value=item[0])
@@ -856,7 +856,7 @@ class PME_MT_pdr_alignment(bpy.types.Menu):
         # for item in pme.props.get("align").items:
         #     lh.operator(
         #         PME_OT_pdr_prop_set.bl_idname, item[1],
-        #         'SPACE3',
+        #         'HANDLETYPE_FREE_VEC',
         #         mode='ALIGN_ROWS',
         #         prop="align",
         #         value=item[0])
@@ -868,7 +868,7 @@ class PME_MT_pdr_alignment(bpy.types.Menu):
         # for item in pme.props.get("align").items:
         #     lh.operator(
         #         PME_OT_pdr_prop_set.bl_idname, item[1],
-        #         'SPACE3',
+        #         'HANDLETYPE_FREE_VEC',
         #         mode='ALL_ROWS',
         #         prop="align",
         #         value=item[0])
@@ -887,13 +887,13 @@ class PME_MT_pdr_size(bpy.types.Menu):
 
         lh.save()
         lh.column()
-        lh.label("Row", icon='ZOOMOUT')
+        lh.label("Row", icon='REMOVE')
         lh.sep()
         for item in pme.props.get("size").items:
             lh.operator(
                 PME_OT_pdr_prop_set.bl_idname, item[1],
-                'SPACE2' if pp.parse(
-                    row.text).size == item[0] else 'SPACE3',
+                'KEYTYPE_KEYFRAME_VEC' if pp.parse(
+                    row.text).size == item[0] else 'HANDLETYPE_FREE_VEC',
                 mode='ROW',
                 prop="size",
                 value=item[0])
@@ -906,7 +906,7 @@ class PME_MT_pdr_size(bpy.types.Menu):
         for item in pme.props.get("size").items:
             lh.operator(
                 PME_OT_pdr_prop_set.bl_idname, item[1],
-                'SPACE3',
+                'HANDLETYPE_FREE_VEC',
                 mode='ALIGN_ROWS',
                 prop="size",
                 value=item[0])
@@ -918,7 +918,7 @@ class PME_MT_pdr_size(bpy.types.Menu):
         for item in pme.props.get("size").items:
             lh.operator(
                 PME_OT_pdr_prop_set.bl_idname, item[1],
-                'SPACE3',
+                'HANDLETYPE_FREE_VEC',
                 mode='ALL_ROWS',
                 prop="size",
                 value=item[0])
@@ -936,7 +936,7 @@ class PME_MT_pdr_spacer(bpy.types.Menu):
 
         lh.save()
         lh.column()
-        lh.label("Row", icon='ZOOMOUT')
+        lh.label("Row", icon='REMOVE')
         lh.sep()
 
         for item in pme.props.get("vspacer").items:
@@ -945,8 +945,8 @@ class PME_MT_pdr_spacer(bpy.types.Menu):
                 continue
             lh.operator(
                 PME_OT_pdr_prop_set.bl_idname, item[1],
-                'SPACE2' if pme.props.parse(
-                    row.text).vspacer == item[0] else 'SPACE3',
+                'KEYTYPE_KEYFRAME_VEC' if pme.props.parse(
+                    row.text).vspacer == item[0] else 'HANDLETYPE_FREE_VEC',
                 mode='ROW',
                 prop="vspacer",
                 value=item[0])
@@ -958,7 +958,7 @@ class PME_MT_pdr_spacer(bpy.types.Menu):
         for item in pme.props.get("vspacer").items:
             lh.operator(
                 PME_OT_pdr_prop_set.bl_idname, item[1],
-                'SPACE3',
+                'HANDLETYPE_FREE_VEC',
                 mode='ALL_ROWS',
                 prop="vspacer",
                 value=item[0])
@@ -975,11 +975,11 @@ class PME_MT_pdr_spacer(bpy.types.Menu):
 #         lh.lt(self.layout)
 
 #         for item in pme.props.get("hsep").items:
-#             icon = 'SPACE3'
+#             icon = 'HANDLETYPE_FREE_VEC'
 #             if prev_pmi.mode == 'EMPTY' and \
 #                     pp.parse(prev_pmi.text).hsep == item[0] or \
 #                     prev_pmi.mode != 'EMPTY' and item[0] == 'NONE':
-#                 icon = 'SPACE2'
+#                 icon = 'KEYTYPE_KEYFRAME_VEC'
 
 #             lh.operator(
 #                 PME_OT_pdr_prop_set.bl_idname, item[1], icon,
@@ -1460,13 +1460,13 @@ class PME_OT_pdr_menu(bpy.types.Operator):
         lh.sep(check=True)
 
         lh.operator(
-            PME_OT_pdi_add.bl_idname, "Add Row Above", 'ZOOMIN',
+            PME_OT_pdi_add.bl_idname, "Add Row Above", 'ADD',
             row_idx=self.row_idx,
             idx=self.row_idx,
             mode='ROW')
 
         lh.operator(
-            PME_OT_pdi_add.bl_idname, "Add Row Below", 'ZOOMIN',
+            PME_OT_pdi_add.bl_idname, "Add Row Below", 'ADD',
             row_idx=self.row_idx,
             idx=self.row_last_idx,
             mode='ROW')

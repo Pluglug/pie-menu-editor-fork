@@ -202,7 +202,7 @@ class PME_OT_tags(bpy.types.Operator):
             layout.separator()
 
         operator(
-            layout, PME_OT_tags.bl_idname, "Assign New Tag", 'ZOOMIN',
+            layout, PME_OT_tags.bl_idname, "Assign New Tag", 'ADD',
             action='ADD', group=self.group)
 
         if self.action != 'MENU':
@@ -216,7 +216,7 @@ class PME_OT_tags(bpy.types.Operator):
             'OUTLINER_DATA_FONT',
             action='RENAME')
         operator(
-            layout, PME_OT_tags.bl_idname, "Remove Tag", 'ZOOMOUT',
+            layout, PME_OT_tags.bl_idname, "Remove Tag", 'REMOVE',
             action='REMOVE')
 
     def draw(self, context):
@@ -290,7 +290,7 @@ class PME_OT_tags(bpy.types.Operator):
         elif self.action == 'REMOVE':
             if self.idx == -1:
                 context.window_manager.popup_menu(
-                    self.draw_menu, title="Remove Tag", icon='ZOOMOUT')
+                    self.draw_menu, title="Remove Tag", icon='REMOVE')
             else:
                 for pm in pr.pie_menus:
                     pm.remove_tag(tag.name)
@@ -731,17 +731,19 @@ class WM_OT_pmi_edit_auto(bpy.types.Operator):
         return {'FINISHED'}
 
     def invoke(self, context, event):
-        ctx = find_context('INFO')
-        area_type = not ctx and context.area.type
-        args = []
-        if ctx:
-            args.append(ctx)
-        else:
+        info_area = SU.find_area("INFO")
+        if not info_area:
+            old_type = context.area.type
             context.area.type = 'INFO'
+        
+        override_args = SU.get_override_args(area="INFO")
 
         bpy.ops.wm.pme_none()
-        bpy.ops.info.select_all(*args, action='SELECT')
-        bpy.ops.info.report_copy(*args)
+
+        with bpy.context.temp_override(**override_args):
+            bpy.ops.info.select_all(action='SELECT')
+            bpy.ops.info.report_copy()
+
         text = context.window_manager.clipboard
 
         idx2 = len(text)
@@ -761,14 +763,15 @@ class WM_OT_pmi_edit_auto(bpy.types.Operator):
                 text = line
                 break
 
-        bpy.ops.info.select_all(*args, action='DESELECT')
+        with bpy.context.temp_override(**override_args):
+            bpy.ops.info.select_all(action='DESELECT')
 
         text = text.strip("\n")
 
         _edit_pmi(self, text, event)
 
-        if area_type:
-            context.area.type = area_type
+        if not info_area:
+            context.area.type = old_type
 
         return {'CANCELLED'}
 
@@ -888,7 +891,7 @@ class PME_OT_pm_edit(bpy.types.Operator):
             if pmi.mode == 'EMPTY':
                 if pmi.text == "column":
                     lh.operator(
-                        self.op_bl_idname, "Add Item", 'ZOOMIN',
+                        self.op_bl_idname, "Add Item", 'ADD',
                         pm_item=idx,
                         mode=self.mode, text=self.text, name=self.name,
                         add=True, new_script=False)
@@ -915,7 +918,7 @@ class PME_OT_pm_edit(bpy.types.Operator):
                 add=False, new_script=False)
 
         lh.operator(
-            self.op_bl_idname, "Add Item", 'ZOOMIN',
+            self.op_bl_idname, "Add Item", 'ADD',
             pm_item=-1, mode=self.mode, text=self.text, name=self.name,
             add=True, new_script=False)
 
@@ -956,7 +959,7 @@ class PME_OT_pm_edit(bpy.types.Operator):
         draw_pme_layout(pm, col, draw_pmi)
 
         operator(
-            column, self.op_bl_idname, "Add New Row", 'ZOOMIN',
+            column, self.op_bl_idname, "Add New Row", 'ADD',
             pm_item=-1, mode=self.mode, name=self.name,
             add=True, new_script=False).text = self.text
 
@@ -973,7 +976,7 @@ class PME_OT_pm_edit(bpy.types.Operator):
                 add=False, new_script=False)
 
         lh.operator(
-            self.op_bl_idname, "New Command", 'ZOOMIN',
+            self.op_bl_idname, "New Command", 'ADD',
             pm_item=-1, mode=self.mode, text=self.text, name=self.name,
             add=True, new_script=False)
 
@@ -1201,6 +1204,11 @@ class PME_OT_pmi_cmd_generate(bpy.types.Operator):
         if pr.mode == 'PMI' and data.mode in CC.MODAL_CMD_MODES:
             op_idname, _, pos_args = operator_utils.find_operator(data.cmd)
 
+            parsed_ctx, parsed_undo = operator_utils.parse_pos_args(pos_args)
+
+            C_exec = data.cmd_ctx or parsed_ctx
+            C_undo = data.cmd_undo if (data.cmd_undo is not None) else parsed_undo
+
             args = []
             for k in data.kmi.properties.keys():
                 v = getattr(data.kmi.properties, k)
@@ -1209,25 +1217,18 @@ class PME_OT_pmi_cmd_generate(bpy.types.Operator):
                     continue
                 args.append("%s=%s" % (k, repr(value)))
 
-            if len(pos_args) > 3:
-                pos_args.clear()
+            pos_args_new = []
 
-            pos_args = [pos_args[0]] \
-                if pos_args and isinstance(eval(pos_args[0]), dict) \
-                else []
-            if data.cmd_ctx == 'INVOKE_DEFAULT':
-                if not data.cmd_undo:
-                    pos_args.append(repr(data.cmd_undo))
+            if C_exec == 'INVOKE_DEFAULT':
+                if not C_undo:
+                    pos_args_new.append(repr(C_undo))
             else:
-                pos_args.append(repr(data.cmd_ctx))
-                if data.cmd_undo:
-                    pos_args.append(repr(data.cmd_undo))
+                pos_args_new.append(repr(C_exec))
+                if C_undo:
+                    pos_args_new.append(repr(C_undo))
 
-            if pos_args and args:
-                pos_args.append("")
-
-            cmd = "bpy.ops.%s(%s%s)" % (
-                op_idname, ", ".join(pos_args), ", ".join(args))
+            call_args = ", ".join(pos_args_new + args)
+            cmd = f"bpy.ops.{op_idname}({call_args})"
 
             if DBG_CMD_EDITOR:
                 data.cmd = cmd
@@ -2205,13 +2206,13 @@ class EditorBase:
     def draw_keymap(self, layout, data):
         row = layout.row(align=True)
         if ',' in data.km_name:
-            row.prop(data, "km_name", text="", icon=ic('SPLITSCREEN'))
+            row.prop(data, "km_name", text="", icon=ic('MOUSE_MMB'))
         else:
             row.prop_search(
                 data, "km_name",
                 bpy.context.window_manager.keyconfigs.user, "keymaps",
-                text="", icon=ic('SPLITSCREEN'))
-        row.operator(PME_OT_keymap_add.bl_idname, text="", icon=ic('ZOOMIN'))
+                text="", icon=ic('MOUSE_MMB'))
+        row.operator(PME_OT_keymap_add.bl_idname, text="", icon=ic('ADD'))
 
     def draw_hotkey(self, layout, data):
         row = layout.row(align=True)
@@ -2328,7 +2329,7 @@ class EditorBase:
 
         if not self.fixed_num_items:
             lh.operator(
-                PME_OT_pmi_add.bl_idname, "Add Slot", 'ZOOMIN',
+                PME_OT_pmi_add.bl_idname, "Add Slot", 'ADD',
                 idx=idx)
 
         if self.copy_paste_slot:
@@ -2405,7 +2406,7 @@ class EditorBase:
         lh.sep()
 
         lh.operator(
-            self.op.op_bl_idname, "New Command", 'ZOOMIN',
+            self.op.op_bl_idname, "New Command", 'ADD',
             mode=self.op.mode, text=self.op.text, name=self.op.name,
             pm_item=-1, add=True, new_script=False)
 

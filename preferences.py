@@ -769,7 +769,7 @@ class WM_OT_pm_sort(bpy.types.Operator):
             mode='HOTKEY')
 
         lh.operator(
-            WM_OT_pm_sort.bl_idname, "Keymap Name", 'SPLITSCREEN',
+            WM_OT_pm_sort.bl_idname, "Keymap Name", 'MOUSE_MMB',
             mode='KEYMAP')
 
         lh.operator(
@@ -2214,7 +2214,7 @@ class PMEPreferences(bpy.types.AddonPreferences):
         name="Group by", description="Group items by",
         items=(
             ('NONE', "None", "", ic('CHECKBOX_DEHLT'), 0),
-            ('KEYMAP', "Keymap", "", ic('SPLITSCREEN'), 1),
+            ('KEYMAP', "Keymap", "", ic('MOUSE_MMB'), 1),
             ('TYPE', "Type", "", ic('PROP_CON'), 2),
             ('TAG', "Tag", "", ic('SOLO_OFF'), 3),
             ('KEY', "Key", "", ic('FILE_FONT'), 4),
@@ -2306,11 +2306,22 @@ class PMEPreferences(bpy.types.AddonPreferences):
         bpy.app.debug_wm = value
 
     debug_mode: bpy.props.BoolProperty(
-        name="Debug Mode", description="Debug Mode\nShow error messages",
-        get=get_debug_mode, set=set_debug_mode)
-
-    # show_errors: bpy.props.BoolProperty(
-    #     description="Show error messages")
+        name="Debug Mode",
+        description=(
+            "Enables extended debug information (via bpy.app.debug_wm),\n"
+            "including operator logs for building custom PMEs."
+        ),
+        get=get_debug_mode,
+        set=set_debug_mode
+    )
+    show_error_trace: bpy.props.BoolProperty(
+        name="Show Error Trace",
+        description=(
+            "Displays error traces for custom items and more.\n"
+            "View them in the System Console to quickly identify and fix issues."
+        ),
+        default=True
+    )
 
     def update_tree_mode(self, context):
         if self.tree_mode:
@@ -2984,12 +2995,12 @@ class PMEPreferences(bpy.types.AddonPreferences):
                 lh.sep()
 
             lh.operator(
-                PME_OT_pm_add.bl_idname, "", 'ZOOMIN',
+                PME_OT_pm_add.bl_idname, "", 'ADD',
                 mode="")
 
             if pm:
-                lh.operator(WM_OT_pm_duplicate.bl_idname, "", 'GHOST')
-                lh.operator(PME_OT_pm_remove.bl_idname, "", 'ZOOMOUT')
+                lh.operator(WM_OT_pm_duplicate.bl_idname, "", 'DUPLICATE')
+                lh.operator(PME_OT_pm_remove.bl_idname, "", 'REMOVE')
 
             lh.sep()
 
@@ -3095,14 +3106,17 @@ class PMEPreferences(bpy.types.AddonPreferences):
             self._draw_hprop(subcol, pr, "show_sidepanel_prefs")
             self._draw_hprop(
                 subcol, pr, "expand_item_menu",
-                "https://en.blender.org/uploads/b/b7/"
-                "Pme1.14.0_expand_item_menu.gif")
+                # "https://en.blender.org/uploads/b/b7/"
+                # "Pme1.14.0_expand_item_menu.gif"  # DOC_TODO: Create Content
+                )
             self._draw_hprop(
                 subcol, pr, "use_cmd_editor",
-                "https://en.blender.org/uploads/f/f4/Pme_item_edit.png")
+                # "https://en.blender.org/uploads/f/f4/Pme_item_edit.png"  # DOC_TODO: Create Content
+                )
             self._draw_hprop(subcol, pr, "cache_scripts")
             self._draw_hprop(subcol, pr, "save_tree")
             self._draw_hprop(subcol, pr, "auto_backup")
+            self._draw_hprop(subcol, pr, "show_error_trace")
             subcol.separator()
             self._draw_hprop(subcol, pr, "list_size")
             self._draw_hprop(subcol, pr, "num_list_rows")
@@ -3194,8 +3208,9 @@ class PMEPreferences(bpy.types.AddonPreferences):
 
             self._draw_hlabel(
                 col, "Default Mode:",
-                "https://en.blender.org/index.php/User:Raa/Addons/"
-                "Pie_Menu_Editor/Editors/Popup_Dialog#Mode")
+                # "https://en.blender.org/index.php/User:Raa/Addons/"
+                # "Pie_Menu_Editor/Editors/Popup_Dialog#Mode"  # DOC_TODO: Create Content
+                )
             sub = col.row(align=True)
             sub.prop(pr, "default_popup_mode", expand=True)
 
@@ -3244,7 +3259,7 @@ class PMEPreferences(bpy.types.AddonPreferences):
             sub.prop(pr, "show_names", text="", icon=ic('SYNTAX_OFF'))
             sub.prop(pr, "show_hotkeys", text="", icon=ic('FILE_FONT'))
             sub.prop(
-                pr, "show_keymap_names", text="", icon=ic('SPLITSCREEN'))
+                pr, "show_keymap_names", text="", icon=ic('MOUSE_MMB'))
             sub.prop(pr, "show_tags", text="", icon=ic_fb(False))
             if pr.tree_mode:
                 sub.prop(pr, "group_by", text="", icon_only=True)
@@ -3253,7 +3268,7 @@ class PMEPreferences(bpy.types.AddonPreferences):
 
         sub = row.row(align=True)
         sub.prop(pr, "interactive_panels", text="", icon=ic('WINDOW'))
-        # sub.prop(pr, "show_errors", text="", icon=ic('CONSOLE'))
+        # sub.prop(pr, "show_error_trace", text="", icon=ic('CONSOLE'))
         sub.prop(pr, "debug_mode", text="", icon=ic('SCRIPT'))
 
         # row.separator()
@@ -3497,12 +3512,12 @@ class PME_OT_context_menu(bpy.types.Operator):
             if self.prop or self.operator:
                 operator(
                     layout, PME_OT_context_menu.bl_idname,
-                    "Add to " + pm.name, icon=ic('ZOOMIN'),
+                    "Add to " + pm.name, icon=ic('ADD'),
                     prop=self.prop, operator=self.operator, name=self.name)
             else:
                 row = layout.row()
                 row.enabled = False
-                row.label(text="Can't Add This Widget", icon=ic('ZOOMIN'))
+                row.label(text="Can't Add This Widget", icon=ic('ADD'))
             layout.separator()
 
         operator(
