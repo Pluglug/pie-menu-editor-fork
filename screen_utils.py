@@ -279,10 +279,10 @@ def focus_area(area, center=False, cmd=None):
 def override_context(
     area, screen=None, window=None, region='WINDOW', enter=True, **kwargs):
     context = bpy.context
-    window = find_window(window, context)
-    screen = find_screen(screen, context)
-    area = find_area(area, screen)
-    region = find_region(region, area, screen)
+    window = find_window(window, context) or context.window
+    screen = find_screen(screen, context) or context.screen
+    area = find_area(area, screen) or context.area
+    region = find_region(region, area, screen) or area.regions[-1]
 
     if all(v is None for v in (window, screen, area, region)):
         oc = context.temp_override()
