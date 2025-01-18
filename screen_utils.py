@@ -79,55 +79,25 @@ def move_header(area=None, top=None, visible=None, auto=None):
     return True
 
 
-# def parse_extra_keywords(kwargs_str: str) -> dict:
-#     """
-#     Parse a comma-separated string like:
-#       "window=Window, screen=Screen.001, workspace=MyWorkspace"
-#     into a dict:
-#       { "window": "Window", "screen": "Screen.001", "workspace": "MyWorkspace" }
-#     """
-#     if not kwargs_str.strip():
-#         return {}
-#     kwargs = {}
-#     for kv in kwargs_str.split(","):
-#         kv = kv.strip()
-#         if "=" not in kv:
-#             continue
-#         k, v = kv.split("=", 1)
-#         kwargs[k.strip()] = v.strip()
-#     return kwargs
-
-
 def find_area(
     area_or_type: Union[str, bpy.types.Area, None],
     screen_or_name: Union[str, bpy.types.Screen, None] = None
+    # reverse: bool = False  # ref PME_OT_area_move.invoke()
 ) -> Optional[bpy.types.Area]:
     """Find and return an Area object, or None if not found."""
-    try:
-        if area_or_type is None:
-            # return bpy.context.area  # fallback
-            return None
+    if area_or_type is None:
+        return None
 
-        if isinstance(area_or_type, bpy.types.Area):
-            return area_or_type
+    if isinstance(area_or_type, bpy.types.Area):
+        return area_or_type
 
-        # Find screen
-        screen = None
-        if isinstance(screen_or_name, bpy.types.Screen):
-            screen = screen_or_name
-        elif isinstance(screen_or_name, str):
-            screen = bpy.data.screens.get(screen_or_name)
-        else:
-            screen = bpy.context.screen
+    screen = find_screen(screen_or_name, bpy.context)
+    if screen is None:
+        screen = bpy.context.screen
 
-        if screen:
-            for a in screen.areas:
-                if a.type == area_or_type:
-                    return a
-
-    except ReferenceError:
-        # print_exc("find_area: invalid reference")
-        pass
+    for a in screen.areas:
+        if a.type == area_or_type:
+            return a
 
     return None
 
@@ -138,58 +108,64 @@ def find_region(
     screen_or_name: Union[str, bpy.types.Screen, None] = None
 ) -> Optional[bpy.types.Region]:
     """Find and return a Region object within the specified Area, or None if not found."""
-    try:
-        if region_or_type is None:
-            # return bpy.context.region  # fallback
-            return None
+    if region_or_type is None:
+        return None
 
-        if isinstance(region_or_type, bpy.types.Region):
-            return region_or_type
+    if isinstance(region_or_type, bpy.types.Region):
+        return region_or_type
 
-        area = find_area(area_or_type, screen_or_name)
-        if not area:
-            return None
+    area = find_area(area_or_type, screen_or_name)
+    if area is None:
+        area = bpy.context.area
 
-        for r in area.regions:
-            if r.type == region_or_type:
-                return r
-
-    except ReferenceError:
-        # print_exc("find_region: invalid reference")
-        pass
+    for r in area.regions:
+        if r.type == region_or_type:
+            return r
 
     return None
 
 
 def find_window(
-    value: Optional[Union[str, bpy.types.Window]],
+    window_identifier: Optional[Union[str, int, bpy.types.Window, None]],
     context: bpy.types.Context,
 ) -> Optional[bpy.types.Window]:
-    """Resolve string or Window object into a Window object, fallback to context.window if none."""
-    if isinstance(value, bpy.types.Window):
-        logi(f"find_window: {value}")
-        return value
-    # if isinstance(value, str):
-    #     if w := context.window_manager.windows.get(value, None):
-    #         return w
-    #     return None
-    # logi(f"window fallback: {context.window}")
-    # return context.window  # fallback
+    """Find and return a Window object, or None if not found."""
+    if window_identifier is None:
+        return None
+
+    if isinstance(window_identifier, bpy.types.Window):
+        return window_identifier
+
+    if isinstance(window_identifier, (str, int)) \
+        and str(window_identifier).isdigit():
+        index = int(window_identifier)
+    else:
+        index = None
+
+    wm = context.window_manager
+    if index is not None:
+        if index < 0:
+            index = len(wm.windows) + index
+        index = max(0, min(index, len(wm.windows) - 1))
+        return wm.windows[index]
+
     return None
 
 
 def find_screen(
-    value: Optional[Union[str, bpy.types.Screen]],
+    screen_identifier: Union[str, bpy.types.Screen, None],
     context: bpy.types.Context
 ) -> Optional[bpy.types.Screen]:
-    """Resolve string or Screen object into a Screen object, fallback to context.screen if none."""
-    if isinstance(value, bpy.types.Screen):
-        logi(f"find_screen: {value}")
-        return value
-    # if isinstance(value, str):
-    #     return bpy.data.screens.get(value)
-    # logi(f"screen fallback: {context.screen}")
-    # return context.screen  # fallback
+    """Find and return a Screen object, or None if not found."""
+    if screen_identifier is None:
+        return None
+
+    if isinstance(screen_identifier, bpy.types.Screen):
+        return screen_identifier
+
+    if isinstance(screen_identifier, str):
+        return bpy.data.screens.get(screen_identifier, None)
+
     return None
 
 
