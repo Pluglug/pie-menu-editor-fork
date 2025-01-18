@@ -404,12 +404,11 @@ class PME_OT_window_auto_close(bpy.types.Operator):
                         bpy.ops.screen.new()
 
                     bpy.ops.pme.timeout(
-                        cmd="bpy.ops.pme.exec_override("
-                            "cmd='bpy.ops.wm.window_close()', "
-                            "kwargs='p={}; "
-                            "w=[w for w in C.window_manager.windows "
+                        cmd=f"p = {w.as_pointer()}; "
+                            "w = [w for w in C.window_manager.windows "
                             "if w.as_pointer() == p][0]; "
-                            "d=dict(window=w)')".format(w.as_pointer()))
+                            "oc = C.temp_override(window=w); oc.__enter__(); "
+                            "bpy.ops.wm.window_close(); oc.__exit__()")
 
                 # elif w.screen.name.startswith(PME_SCREEN):
                 #     used_pme_screens.add(w.screen.name)
@@ -480,7 +479,9 @@ class PME_OT_area_move(bpy.types.Operator):
         with context.temp_override(area=a):
             bpy.ops.view2d.scroll_up()
 
-        return {'FINISHED'}
+        # return {'FINISHED'} # Refactor_TODO: Revisit roaoao's original code and consider refactoring it.
+        if not self.move_cursor:
+            return {'FINISHED'}
 
         mx, my = event.mouse_x, event.mouse_y
         x, y = mx, my

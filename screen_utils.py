@@ -10,33 +10,29 @@ from .addon import uprefs
 from .debug_utils import logi
 
 
-def redraw_screen(area=None):
-    # area = area or bpy.context.area or bpy.context.screen.areas[0]
-    # if not area:
-    #     return
-
-    # with bpy.context.temp_override(area=area):
-    #     bpy.ops.screen.screen_full_area()
-
+def redraw_screen():
     view = uprefs().view
     s = view.ui_scale
     view.ui_scale = 0.5
     view.ui_scale = s
 
 
-def toggle_header(area):
-    area.spaces.active.show_region_header = \
-        not area.spaces.active.show_region_header
+def toggle_header(area=None):
+    if area is None:
+        return
+
+    area.spaces.active.show_region_header ^= True
 
 
 def move_header(area=None, top=None, visible=None, auto=None):
-    if top is None and visible is None and auto is None:
+    if all(v is None for v in (top, visible, auto)):
         return True
 
     if auto is not None and top is None:
         return True
 
-    area = area or bpy.context.area
+    C = bpy.context
+    area = area or C.area
     if not area:
         return True
 
@@ -48,37 +44,38 @@ def move_header(area=None, top=None, visible=None, auto=None):
             rw = r
 
     is_visible = rh.height > 1
-    if is_visible:
-        is_top = rw.y == area.y
-    else:
-        is_top = rh.y > area.y
+    is_top = rh.y > area.y
+
+    # TODO: Check why it was reversed above
+    # is_top = (rw.y == area.y) if is_visible else (rh.y > area.y)
 
     kwargs = get_override_args(area=area, region=rh)
     if auto:
         if top:
             if is_top:
-                with bpy.context.temp_override(**kwargs):
+                with C.temp_override(**kwargs):
                     toggle_header(area)
             else:
-                with bpy.context.temp_override(**kwargs):
+                with C.temp_override(**kwargs):
                     bpy.ops.screen.region_flip()
-                    not is_visible and toggle_header(area)
+
+                not is_visible and toggle_header(area)
         else:
             if is_top:
-                with bpy.context.temp_override(**kwargs):
+                with C.temp_override(**kwargs):
                     bpy.ops.screen.region_flip()
-                    not is_visible and toggle_header(area)
+
+                not is_visible and toggle_header(area)
             else:
-                with bpy.context.temp_override(**kwargs):
-                    toggle_header(area)
+                toggle_header(area)
     else:
         if top is not None and top != is_top:
-            with bpy.context.temp_override(**kwargs):
+            with C.temp_override(**kwargs):
                 bpy.ops.screen.region_flip()
 
         if visible is not None and visible != is_visible:
-            with bpy.context.temp_override(**kwargs):
-                toggle_header(area)
+            toggle_header(area)
+
     return True
 
 
@@ -303,22 +300,29 @@ def focus_area(area, center=False, cmd=None):
             bpy.ops.pme.timeout(cmd=cmd)
 
 
-# TODO: Remove this function
 def override_context(
-        area, screen=None, window=None, region='WINDOW', **kwargs):
-    # This is no longer necessary
-    # but is documented in the old user docs so keeping it for now
+    area, screen=None, window=None, region='WINDOW', enter=True, **kwargs):
+    context = bpy.context
+    window = find_window(window, context)
+    screen = find_screen(screen, context)
+    area = find_area(area, screen)
+    region = find_region(region, area, screen)
 
-    import traceback
-    import warnings
-    caller = traceback.extract_stack(None, 2)[0]
-    warnings.warn(
-        f"Deprecated: 'override_context' is deprecated, use 'get_override_args' instead. "
-        f"Called from {caller.name} at {caller.line}",
-        DeprecationWarning,
-        stacklevel=2
+    if all(v is None for v in (window, screen, area, region)):
+        oc = context.temp_override()
+        enter and oc.__enter__()
+        return oc
+
+    oc = context.temp_override(
+        window=window,
+        screen=screen,
+        area=area,
+        region=region,
+        blend_data=context.blend_data,
+        **kwargs
     )
-    return get_override_args(area, region, screen, window, **kwargs)
+    enter and oc.__enter__()
+    return oc
 
 
 def toggle_sidebar(area=None, tools=True, value=None):
