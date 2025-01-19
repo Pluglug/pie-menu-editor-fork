@@ -796,8 +796,6 @@ def panel(
     #     PLayout.idx_map[item_id] = set()
     # PLayout.indices = PLayout.idx_map[item_id]
 
-    setattr(p, "is_popover", not header)
-
     if header:
         # item_id = pme.context.item_id()
         row = layout.row(align=True)

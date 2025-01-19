@@ -404,11 +404,12 @@ class PME_OT_window_auto_close(bpy.types.Operator):
                         bpy.ops.screen.new()
 
                     bpy.ops.pme.timeout(
-                        cmd=f"p = {w.as_pointer()}; "
-                            "w = [w for w in C.window_manager.windows "
+                        cmd="bpy.ops.pme.exec_override("
+                            "cmd='bpy.ops.wm.window_close()', "
+                            "kwargs='p={}; "
+                            "w=[w for w in C.window_manager.windows "
                             "if w.as_pointer() == p][0]; "
-                            "oc = C.temp_override(window=w); oc.__enter__(); "
-                            "bpy.ops.wm.window_close(); oc.__exit__()")
+                            "d=dict(window=w)')".format(w.as_pointer()))
 
                 # elif w.screen.name.startswith(PME_SCREEN):
                 #     used_pme_screens.add(w.screen.name)
@@ -465,52 +466,44 @@ class PME_OT_area_move(bpy.types.Operator):
         name="Move Cursor", description="Move cursor",
         options={'SKIP_SAVE'})
 
-    def get_target_area(self, context):
-        if self.area == 'CURRENT':
-            return context.area
-
-        for area in reversed(context.screen.areas):
-            if area.ui_type == self.area:
-                return area
-
-        return None
-
-    def calculate_cursor_positions(self, area, event):
-        mx, my = event.mouse_x, event.mouse_y
-        x, y = mx, my
-
-        if self.edge == 'TOP':
-            y = area.y + area.height
-            my += self.delta * self.move_cursor
-        elif self.edge == 'BOTTOM':
-            y = area.y
-            my += self.delta * self.move_cursor
-        elif self.edge == 'RIGHT':
-            x = area.x + area.width
-            mx += self.delta * self.move_cursor
-        elif self.edge == 'LEFT':
-            x = area.x
-            mx += self.delta * self.move_cursor
-
-        return x, y, mx, my
-
     def execute(self, context):
         return {'FINISHED'}
 
     def invoke(self, context, event):
-        area = self.get_target_area(context)
-        if not area:
-            self.report({'WARNING'}, "Target area not found")
+        for a in reversed(context.screen.areas):
+            if a.type == self.area:
+                break
+        else:
+            self.report({'WARNING'}, "Main area not found")
             return {'CANCELLED'}
 
-        x, y, mx, my = self.calculate_cursor_positions(area, event)
+        with context.temp_override(area=a):
+            bpy.ops.view2d.scroll_up()
+
+        return {'FINISHED'}
+
+        mx, my = event.mouse_x, event.mouse_y
+        x, y = mx, my
+        if self.edge == 'TOP':
+            y = a.y + a.height
+            my += self.delta * self.move_cursor
+        elif self.edge == 'BOTTOM':
+            y = a.y
+            my += self.delta * self.move_cursor
+        elif self.edge == 'RIGHT':
+            x = a.x + a.width
+            mx += self.delta * self.move_cursor
+        elif self.edge == 'LEFT':
+            x = a.x
+            mx += self.delta * self.move_cursor
+
         bpy.context.window.cursor_warp(x, y)
 
         bpy.ops.pme.timeout(
             delay=0.0001,
             cmd=(
-                "bpy.ops.screen.area_move(x=%d, y=%d, delta=%d);"
                 "bpy.context.window.cursor_warp(%d, %d);"
+                "bpy.ops.screen.area_move(x=%d, y=%d, delta=%d);"
             ) % (x, y, self.delta, mx, my)
         )
         return {'FINISHED'}
