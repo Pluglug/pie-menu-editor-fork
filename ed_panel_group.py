@@ -52,19 +52,18 @@ class PME_OT_toolbar_menu(bpy.types.Operator):
     def draw_toolbar_menu(self, menu, context):
         lh.lt(menu.layout)
 
-        base_name = "Toolbar"
-        screen_name = context.screen.name
-        combined_name = f"{base_name} {screen_name}"
-        position_name = PME_PT_toolbar.determine_panel_position(context)
-        combined_pos_name = f"{combined_name} {position_name}"
-        final_position_name = f"{base_name} {position_name}"
+        def_name = "Toolbar"
+        scr_name = def_name + " " + context.screen.name
+        dir_name = PME_PT_toolbar.get_dir_name()
+        dir_scr_name = scr_name + " " + dir_name
+        dir_name = def_name + " " + dir_name
 
         lh.operator(
             self.bl_idname, "Create Toolbar (Current Screen)", 'ADD',
-            name=combined_pos_name)
+            name=dir_scr_name)
         lh.operator(
             self.bl_idname, "Create Toolbar (All Screens)", 'ADD',
-            name=final_position_name)
+            name=dir_name)
 
     def execute(self, context):
         if not self.name:
@@ -89,72 +88,74 @@ class PME_PT_toolbar(bpy.types.Panel):
     bl_options = {'HIDE_HEADER'}
 
     @staticmethod
-    def determine_panel_position(context):
-        area = context.area
-        center_x = context.window.width // 2
-        center_y = context.window.height // 2
-
+    def get_dir_name():
+        C = bpy.context
+        area = C.area
+        mid_x = C.window.width >> 1
+        mid_y = C.window.height >> 1
         if area.width > area.height:
-            return "Bottom" if area.y < center_y else "Top"
+            if area.y < mid_y:
+                return "Bottom"
+            else:
+                return "Top"
         else:
-            return "Left" if area.x < center_x else "Right"
-
-    @staticmethod
-    def is_area_vertical(context):
-        return context.area.width <= context.area.height
-
-    @staticmethod
-    def needs_vertical_layout(panel_position):
-        return panel_position in {"Left", "Right"}
-
-    @classmethod
-    def poll(cls, context):
-        preferences = prefs()
-        area = context.area
-        is_narrow_width = (area.width <= preferences.toolbar_width)
-        is_narrow_height = (area.height <= preferences.toolbar_height)
-        return (is_narrow_width or is_narrow_height)
+            if area.x < mid_x:
+                return "Left"
+            else:
+                return "Right"
 
     def draw(self, context):
         lh.lt(self.layout)
+        if not is_28():
+            self.layout.scale_y = 0.001
 
         c_layout = c_utils.c_layout(self.layout)
+        c_style = c_utils.c_style(c_layout)
 
-        # Set top and bottom margins
-        top_bottom_margin = round(4 * uprefs().view.ui_scale)
-        c_layout.y += top_bottom_margin
+        if is_28():
+            margin = round(4 * uprefs().view.ui_scale)
+            c_layout.y += margin
+        else:
+            margin = round(3 * uprefs().view.ui_scale)
+            c_layout.y += c_style.panelspace - margin
 
-        # Adjust width and position if the area is vertical
-        if self.is_area_vertical(context):
-            c_layout.w += 2 * top_bottom_margin
-            c_layout.x -= top_bottom_margin
+        if context.area.width <= context.area.height:
+            if is_28():
+                c_layout.w += 2 * margin
+                c_layout.x -= margin
+            else:
+                c_layout.w += 2 * c_style.panelspace - 2 * margin
+                c_layout.x -= c_style.panelspace - margin
 
-        # Create names
-        base_name = "Toolbar"
-        screen_name = context.screen.name
-        combined_base = f"{base_name} {screen_name}"
-        panel_position = self.determine_panel_position(context)
-        final_position_name = f"{base_name} {panel_position}"
-        combined_position_name = f"{combined_base} {panel_position}"
+        def_name = "Toolbar"
+        scr_name = def_name + " " + context.screen.name
+        dir_name = PME_PT_toolbar.get_dir_name()
 
-        menu_exists = (
-            draw_menu(combined_position_name)
-            or draw_menu(final_position_name)
-            or draw_menu(combined_base)
-            or draw_menu(base_name)
-        )
+        vertical = True
+        if dir_name in {"Top", "Bottom"}:
+            vertical = False
 
-        if not menu_exists:
-            is_vertical_panel = self.needs_vertical_layout(panel_position)
+        dir_scr_name = scr_name + " " + dir_name
+        dir_name = def_name + " " + dir_name
 
+        has_menu = draw_menu(dir_scr_name) or draw_menu(dir_name) or draw_menu(
+            scr_name) or draw_menu(def_name)
+
+        if not has_menu:
             lh.row()
             lh.layout.alignment = 'CENTER'
-            scale_factor = 1.5 if is_vertical_panel else 1
-            lh.layout.scale_x = lh.layout.scale_y = scale_factor
+            lh.layout.scale_x = lh.layout.scale_y = 1.5 if vertical else 1
+            lh.operator(
+                PME_OT_toolbar_menu.bl_idname,
+                "" if vertical else "Pie Menu Editor", 'COLOR')
 
-            operator_label = "" if is_vertical_panel else "Pie Menu Editor"
+    @classmethod
+    def poll(cls, context):
+        pr = prefs()
+        ret = context.area.width <= pr.toolbar_width or \
+            context.area.height <= pr.toolbar_height
 
-            lh.operator(PME_OT_toolbar_menu.bl_idname, operator_label, icon_id='COLOR')
+        return ret
 
 
 def draw_pme_panel(self, context):

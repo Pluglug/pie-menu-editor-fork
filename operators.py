@@ -220,6 +220,81 @@ class PME_OT_exec(bpy.types.Operator):
         return self.execute(context)
 
 
+DBG_OVERRIDE = False  # TODO: Move to debug_utils
+class PME_OT_exec_override(bpy.types.Operator):
+    bl_idname = "pme.exec_override"
+    bl_label = ""
+    bl_description = "Execute python code with context override"
+    bl_options = {'INTERNAL'}
+
+    cmd: bpy.props.StringProperty(
+        name="Python Code", description="Python Code",
+        maxlen=MAX_STR_LEN, options={'SKIP_SAVE', 'HIDDEN'})
+    area_type: bpy.props.StringProperty(
+        name="Area Type",
+        default='CURRENT', maxlen=MAX_STR_LEN, options={'SKIP_SAVE', 'HIDDEN'})
+    region_type: bpy.props.StringProperty(
+        name="Region Type",
+        default='WINDOW', maxlen=MAX_STR_LEN, options={'SKIP_SAVE', 'HIDDEN'})
+    kwargs: bpy.props.StringProperty(
+        name="Extra Keywords",
+        description=(
+            "Python code that sets 'd' variable to override dict.\n"
+            "Example: w=C.window; d = {'area': w.screen.areas[0]}"
+        ),
+        default="d = {}", maxlen=MAX_STR_LEN, options={'SKIP_SAVE', 'HIDDEN'})
+
+    def execute(self, context):
+        DBG_OVERRIDE and logh(f"Executing: {self.cmd}")
+        temp_override_args = self.parse_kwargs()
+
+        temp_override_args.setdefault("area",
+            self.area_type if self.area_type != 'CURRENT' else None)
+        temp_override_args.setdefault("region", self.region_type)
+
+        if DBG_OVERRIDE:
+            pairs = [f"  {k}: {v}" for k, v in temp_override_args.items()]
+            logi("Context override args(defaults):\n" + "\n".join(pairs))
+
+        override_args = SU.ContextOverride(**temp_override_args)\
+                            .validate(context, delete_none=True)
+
+        if DBG_OVERRIDE:
+            pairs = [f"  {k}: {v}" for k, v in override_args.items()]
+            logi("Context override args(validated):\n" + "\n".join(pairs))
+
+        exec_globals = pme.context.gen_globals()
+        pme.context.exec_operator = self
+        try:
+            with context.temp_override(**override_args):
+                pme.context.exe(self.cmd, exec_globals)
+                return exec_globals.get("return_value", {'FINISHED'})
+        finally:
+            pme.context.exec_operator = None
+
+    def invoke(self, context, event):
+        pme.context.event = event
+        return self.execute(context)
+
+    def parse_kwargs(self):
+        """Execute kwargs code and get 'd' dict"""
+        if not self.kwargs.strip():
+            return {}
+
+        try:
+            code = compile(self.kwargs, "<override>", "exec")
+        except SyntaxError as e:
+            offset = e.offset if e.offset is not None else 0
+            pointer = " " * offset + "^"
+            self.report({'ERROR'},
+                f"Syntax error in override:\n{e.text}\n{pointer}\n{str(e)}")
+            return {}
+
+        eval_globals = pme.context.gen_globals()
+        pme.context.exe(code, eval_globals)
+        return eval_globals.get("d", {})
+
+
 class PME_OT_panel_hide(bpy.types.Operator):
     bl_idname = "pme.panel_hide"
     bl_label = "Hide Panel"
