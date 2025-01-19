@@ -10,33 +10,29 @@ from .addon import uprefs
 from .debug_utils import logi
 
 
-def redraw_screen(area=None):
-    # area = area or bpy.context.area or bpy.context.screen.areas[0]
-    # if not area:
-    #     return
-
-    # with bpy.context.temp_override(area=area):
-    #     bpy.ops.screen.screen_full_area()
-
+def redraw_screen():
     view = uprefs().view
     s = view.ui_scale
     view.ui_scale = 0.5
     view.ui_scale = s
 
 
-def toggle_header(area):
-    area.spaces.active.show_region_header = \
-        not area.spaces.active.show_region_header
+def toggle_header(area=None):
+    if area is None:
+        return
+
+    area.spaces.active.show_region_header ^= True
 
 
 def move_header(area=None, top=None, visible=None, auto=None):
-    if top is None and visible is None and auto is None:
+    if all(v is None for v in (top, visible, auto)):
         return True
 
     if auto is not None and top is None:
         return True
 
-    area = area or bpy.context.area
+    C = bpy.context
+    area = area or C.area
     if not area:
         return True
 
@@ -48,89 +44,60 @@ def move_header(area=None, top=None, visible=None, auto=None):
             rw = r
 
     is_visible = rh.height > 1
-    if is_visible:
-        is_top = rw.y == area.y
-    else:
-        is_top = rh.y > area.y
+    is_top = rh.y > area.y
+
+    # TODO: Check why it was reversed above
+    # is_top = (rw.y == area.y) if is_visible else (rh.y > area.y)
 
     kwargs = get_override_args(area=area, region=rh)
     if auto:
         if top:
             if is_top:
-                with bpy.context.temp_override(**kwargs):
+                with C.temp_override(**kwargs):
                     toggle_header(area)
             else:
-                with bpy.context.temp_override(**kwargs):
+                with C.temp_override(**kwargs):
                     bpy.ops.screen.region_flip()
-                    not is_visible and toggle_header(area)
+
+                not is_visible and toggle_header(area)
         else:
             if is_top:
-                with bpy.context.temp_override(**kwargs):
+                with C.temp_override(**kwargs):
                     bpy.ops.screen.region_flip()
-                    not is_visible and toggle_header(area)
+
+                not is_visible and toggle_header(area)
             else:
-                with bpy.context.temp_override(**kwargs):
-                    toggle_header(area)
+                toggle_header(area)
     else:
         if top is not None and top != is_top:
-            with bpy.context.temp_override(**kwargs):
+            with C.temp_override(**kwargs):
                 bpy.ops.screen.region_flip()
 
         if visible is not None and visible != is_visible:
-            with bpy.context.temp_override(**kwargs):
-                toggle_header(area)
+            toggle_header(area)
+
     return True
-
-
-# def parse_extra_keywords(kwargs_str: str) -> dict:
-#     """
-#     Parse a comma-separated string like:
-#       "window=Window, screen=Screen.001, workspace=MyWorkspace"
-#     into a dict:
-#       { "window": "Window", "screen": "Screen.001", "workspace": "MyWorkspace" }
-#     """
-#     if not kwargs_str.strip():
-#         return {}
-#     kwargs = {}
-#     for kv in kwargs_str.split(","):
-#         kv = kv.strip()
-#         if "=" not in kv:
-#             continue
-#         k, v = kv.split("=", 1)
-#         kwargs[k.strip()] = v.strip()
-#     return kwargs
 
 
 def find_area(
     area_or_type: Union[str, bpy.types.Area, None],
     screen_or_name: Union[str, bpy.types.Screen, None] = None
+    # reverse: bool = False  # ref PME_OT_area_move.invoke()
 ) -> Optional[bpy.types.Area]:
     """Find and return an Area object, or None if not found."""
-    try:
-        if area_or_type is None:
-            # return bpy.context.area  # fallback
-            return None
+    if area_or_type is None:
+        return None
 
-        if isinstance(area_or_type, bpy.types.Area):
-            return area_or_type
+    if isinstance(area_or_type, bpy.types.Area):
+        return area_or_type
 
-        # Find screen
-        screen = None
-        if isinstance(screen_or_name, bpy.types.Screen):
-            screen = screen_or_name
-        elif isinstance(screen_or_name, str):
-            screen = bpy.data.screens.get(screen_or_name)
-        else:
-            screen = bpy.context.screen
+    screen = find_screen(screen_or_name, bpy.context)
+    if screen is None:
+        screen = bpy.context.screen
 
-        if screen:
-            for a in screen.areas:
-                if a.type == area_or_type:
-                    return a
-
-    except ReferenceError:
-        # print_exc("find_area: invalid reference")
-        pass
+    for a in screen.areas:
+        if a.type == area_or_type:
+            return a
 
     return None
 
@@ -141,58 +108,64 @@ def find_region(
     screen_or_name: Union[str, bpy.types.Screen, None] = None
 ) -> Optional[bpy.types.Region]:
     """Find and return a Region object within the specified Area, or None if not found."""
-    try:
-        if region_or_type is None:
-            # return bpy.context.region  # fallback
-            return None
+    if region_or_type is None:
+        return None
 
-        if isinstance(region_or_type, bpy.types.Region):
-            return region_or_type
+    if isinstance(region_or_type, bpy.types.Region):
+        return region_or_type
 
-        area = find_area(area_or_type, screen_or_name)
-        if not area:
-            return None
+    area = find_area(area_or_type, screen_or_name)
+    if area is None:
+        area = bpy.context.area
 
-        for r in area.regions:
-            if r.type == region_or_type:
-                return r
-
-    except ReferenceError:
-        # print_exc("find_region: invalid reference")
-        pass
+    for r in area.regions:
+        if r.type == region_or_type:
+            return r
 
     return None
 
 
 def find_window(
-    value: Optional[Union[str, bpy.types.Window]],
+    window_identifier: Optional[Union[str, int, bpy.types.Window, None]],
     context: bpy.types.Context,
 ) -> Optional[bpy.types.Window]:
-    """Resolve string or Window object into a Window object, fallback to context.window if none."""
-    if isinstance(value, bpy.types.Window):
-        logi(f"find_window: {value}")
-        return value
-    # if isinstance(value, str):
-    #     if w := context.window_manager.windows.get(value, None):
-    #         return w
-    #     return None
-    # logi(f"window fallback: {context.window}")
-    # return context.window  # fallback
+    """Find and return a Window object, or None if not found."""
+    if window_identifier is None:
+        return None
+
+    if isinstance(window_identifier, bpy.types.Window):
+        return window_identifier
+
+    if isinstance(window_identifier, (str, int)) \
+        and str(window_identifier).isdigit():
+        index = int(window_identifier)
+    else:
+        index = None
+
+    wm = context.window_manager
+    if index is not None:
+        if index < 0:
+            index = len(wm.windows) + index
+        index = max(0, min(index, len(wm.windows) - 1))
+        return wm.windows[index]
+
     return None
 
 
 def find_screen(
-    value: Optional[Union[str, bpy.types.Screen]],
+    screen_identifier: Union[str, bpy.types.Screen, None],
     context: bpy.types.Context
 ) -> Optional[bpy.types.Screen]:
-    """Resolve string or Screen object into a Screen object, fallback to context.screen if none."""
-    if isinstance(value, bpy.types.Screen):
-        logi(f"find_screen: {value}")
-        return value
-    # if isinstance(value, str):
-    #     return bpy.data.screens.get(value)
-    # logi(f"screen fallback: {context.screen}")
-    # return context.screen  # fallback
+    """Find and return a Screen object, or None if not found."""
+    if screen_identifier is None:
+        return None
+
+    if isinstance(screen_identifier, bpy.types.Screen):
+        return screen_identifier
+
+    if isinstance(screen_identifier, str):
+        return bpy.data.screens.get(screen_identifier, None)
+
     return None
 
 
@@ -303,22 +276,29 @@ def focus_area(area, center=False, cmd=None):
             bpy.ops.pme.timeout(cmd=cmd)
 
 
-# TODO: Remove this function
 def override_context(
-        area, screen=None, window=None, region='WINDOW', **kwargs):
-    # This is no longer necessary
-    # but is documented in the old user docs so keeping it for now
+    area, screen=None, window=None, region='WINDOW', enter=True, **kwargs):
+    context = bpy.context
+    window = find_window(window, context) or context.window
+    screen = find_screen(screen, context) or context.screen
+    area = find_area(area, screen) or context.area
+    region = find_region(region, area, screen) or area.regions[-1]
 
-    import traceback
-    import warnings
-    caller = traceback.extract_stack(None, 2)[0]
-    warnings.warn(
-        f"Deprecated: 'override_context' is deprecated, use 'get_override_args' instead. "
-        f"Called from {caller.name} at {caller.line}",
-        DeprecationWarning,
-        stacklevel=2
+    if all(v is None for v in (window, screen, area, region)):
+        oc = context.temp_override()
+        enter and oc.__enter__()
+        return oc
+
+    oc = context.temp_override(
+        window=window,
+        screen=screen,
+        area=area,
+        region=region,
+        blend_data=context.blend_data,
+        **kwargs
     )
-    return get_override_args(area, region, screen, window, **kwargs)
+    enter and oc.__enter__()
+    return oc
 
 
 def toggle_sidebar(area=None, tools=True, value=None):
