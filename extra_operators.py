@@ -823,31 +823,17 @@ class PME_OT_popup_area(bpy.types.Operator):
             if not context.area:
                 return {'CANCELLED'}
 
-            self.area = context.area.ui_type if is_28() else context.area.type
+            self.area = context.area.ui_type
 
-        area_name = ""
-        for item in CC.area_type_enum_items():
-            if item[0] == self.area:
-                area_name = item[1]
-                break
-
+        # Setup Screen Name
+        area_name = next((item[1] for item in CC.area_type_enum_items() if item[0] == self.area), "")
         screen_name = PME_TEMP_SCREEN if self.auto_close else PME_SCREEN
         screen_name += area_name
 
         area_type = None
-        new_screen_flag = False
-        # if screen_name in bpy.data.screens:
-        if False:
-            area = bpy.data.screens[screen_name].areas[0]
-        else:
-            new_screen_flag = True
-            area = context.screen.areas[0]
-            if is_28():
-                area_type = area.ui_type
-                area.ui_type = self.area
-            else:
-                area_type = area.type
-                area.type = self.area
+        area = context.screen.areas[0]
+        area_type = area.ui_type
+        area.ui_type = self.area
 
         rh, rw = None, None
         for r in area.regions:
@@ -904,32 +890,18 @@ class PME_OT_popup_area(bpy.types.Operator):
         if new_window:
             if self.cmd:
                 pme_timeout = getattr(bpy.ops.pme, "timeout")
-                with context.temp_override(**ctx_dict(window=new_window)):  # MIGRATION_TODO: Delete ctx_dict
+                with context.temp_override(**ctx_dict(window=new_window)):
                     pme_timeout('INVOKE_DEFAULT', cmd=self.cmd)
 
             new_screen_name = new_window.screen.name
-            
-            # Refactor_TODO: Double-check roaoao's original code and see if we need to reinstate it properly.
-            # if screen_name in bpy.data.screens:
-            if False:  
-                with context.temp_override(**ctx_dict(window=new_window, screen=bpy.data.screens[new_screen_name])):  # MIGRATION_TODO: Delete ctx_dict
-                    bpy.ops.screen.delete()
 
-                with context.temp_override(**ctx_dict(window=new_window)):  # MIGRATION_TODO: Delete ctx_dict
-                    bpy.ops.pme.screen_set(name=screen_name)
+            new_window.screen.name = screen_name
+            new_window.screen.user_clear()
 
-            else:
-                new_window.screen.name = screen_name
-                new_window.screen.user_clear()
-
-        if new_screen_flag:
-            self.update_header(context, header_on_top, header_visible, header_dict)
+        self.update_header(context, header_on_top, header_visible, header_dict)
 
         if area_type:
-            if is_28():
-                area.ui_type = area_type
-            else:
-                area.type = area_type
+            area.ui_type = area_type
 
         prefs().enable_window_kmis()
 
