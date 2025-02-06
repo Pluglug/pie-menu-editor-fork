@@ -1018,8 +1018,15 @@ class PME_OT_popup_window(bpy.types.Operator):
         new_window = self._create_popup_window(context)  #, area)
 
         if new_window:
+            if self.screen_name in bpy.data.screens:
+                new_window.screen = bpy.data.screens[self.screen_name]
+            else:
+                new_window.screen.name = self.screen_name
+                new_window.screen.user_clear()
+
             a = new_window.screen.areas[0]
             a.ui_type = self.area
+
             self._apply_editor_settings(context, new_window)
             self._apply_transform_and_style(new_window, window_info)
 
