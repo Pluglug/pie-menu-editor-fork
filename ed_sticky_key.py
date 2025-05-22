@@ -1,7 +1,7 @@
 import bpy
 from . import pme
 from .ed_base import EditorBase
-from .addon import prefs
+from .addon import get_prefs
 from .ui import tag_redraw
 from .operator_utils import find_statement
 
@@ -27,7 +27,7 @@ class PME_OT_sticky_key_edit(bpy.types.Operator):
 
     def execute(self, context):
         cl = self.__class__
-        pr = prefs()
+        pr =get_prefs()
         pm = pr.selected_pm
         pm.pmis[1].mode = 'COMMAND'
         pm.pmis[1].text = cl.pmi_prop + " = value"

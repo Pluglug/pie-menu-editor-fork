@@ -5,7 +5,7 @@ import marshal
 import py_compile
 from traceback import format_exc
 from errno import ENOENT
-from .addon import ADDON_PATH, prefs, print_exc
+from .addon import ADDON_PATH, get_prefs, print_exc
 from . import pme
 from .layout_helper import lh, draw_pme_layout, CLayout
 from .operators import WM_OT_pme_user_pie_menu_call
@@ -15,7 +15,7 @@ class WM_MT_pme:
     bl_label = ""
 
     def draw(self, context):
-        pr = prefs()
+        pr =get_prefs()
         pm = pr.pie_menus[self.bl_label]
 
         row = self.layout.row()
@@ -154,7 +154,7 @@ def execute_script(path, **kwargs):
     exec_globals["kwargs"] = kwargs
     exec_globals["__file__"] = path
 
-    pr = prefs()
+    pr =get_prefs()
     if pr.cache_scripts:
         name = os.path.basename(path)
         name, _, _ = name.rpartition(".")
@@ -200,7 +200,7 @@ def execute_script(path, **kwargs):
 
 
 def draw_menu(name, frame=False, dx=0, dy=0, layout=None):
-    pr = prefs()
+    pr =get_prefs()
     if name in pr.pie_menus:
         lh.save()
         if layout:
@@ -248,7 +248,7 @@ def draw_menu(name, frame=False, dx=0, dy=0, layout=None):
 
 
 def open_menu(name, slot=None, **kwargs):
-    pr = prefs()
+    pr =get_prefs()
     if name in pr.pie_menus:
         invoke_mode = 'RELEASE'
         if pme.context.pm and pme.context.pm.mode == 'SCRIPT':
@@ -282,7 +282,7 @@ def open_menu(name, slot=None, **kwargs):
 
 
 def toggle_menu(name, value=None):
-    pr = prefs()
+    pr =get_prefs()
     if name in pr.pie_menus:
         pm = pr.pie_menus[name]
         if value is None:

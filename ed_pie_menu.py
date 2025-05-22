@@ -1,7 +1,7 @@
 from .ed_base import EditorBase
 from .constants import ARROW_ICONS
 from . import pme
-from .addon import ic, prefs
+from .addon import ic, get_prefs
 from .layout_helper import lh
 
 
@@ -39,19 +39,19 @@ class Editor(EditorBase):
         row.prop(pm, "pm_radius", text="Radius")
         if pm.pm_radius != -1:
             row.operator("pme.exec", text="", icon=ic('X')).cmd = \
-                "prefs().selected_pm.pm_radius = -1"
+                "get_prefs().selected_pm.pm_radius = -1"
         if pm.pm_flick:
             row = col.row(align=True)
             row.prop(pm, "pm_threshold", text="Threshold")
             if pm.pm_threshold != -1:
                 row.operator("pme.exec", text="", icon=ic('X')).cmd = \
-                    "prefs().selected_pm.pm_threshold = -1"
+                    "get_prefs().selected_pm.pm_threshold = -1"
 
             row = col.row(align=True)
             row.prop(pm, "pm_confirm", text="Confirm Threshold")
             if pm.pm_confirm != -1:
                 row.operator("pme.exec", text="", icon=ic('X')).cmd = \
-                    "prefs().selected_pm.pm_confirm = -1"
+                    "get_prefs().selected_pm.pm_confirm = -1"
         layout.prop(pm, "pm_flick")
 
         # if pm.pm_radius != -1:
@@ -59,7 +59,7 @@ class Editor(EditorBase):
         #         text="Custom radius disables pie menu animation", icon='INFO')
 
     def draw_items(self, layout, pm):
-        pr = prefs()
+        pr =get_prefs()
         column = layout.column(align=True)
 
         for idx, pmi in enumerate(pm.pmis):

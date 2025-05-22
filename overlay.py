@@ -2,7 +2,7 @@ import bpy
 import blf
 import bgl
 from time import time
-from .addon import ADDON_ID, prefs, uprefs, ic, is_28
+from .addon import ADDON_ID, get_prefs, get_uprefs, ic, is_28
 from .utils import multiton
 from .layout_helper import split
 from . import pme
@@ -217,7 +217,7 @@ class TablePainter(Painter):
         self.update(data)
 
     def update(self, data=None):
-        pr = prefs().overlay
+        pr = get_prefs().overlay
         self.col_size = pr.size * 1
 
         if data is not None:
@@ -330,7 +330,7 @@ class Overlay:
 
     @staticmethod
     def draw(self):
-        pr = prefs().overlay
+        pr = get_prefs().overlay
 
         if pr.shadow:
             a = 1
@@ -501,7 +501,7 @@ class PME_OT_overlay(bpy.types.Operator):
         if context.area.type not in space_groups:
             return {'CANCELLED'}
 
-        pr = uprefs().addons[ADDON_ID].preferences
+        pr = get_uprefs().addons[ADDON_ID].preferences
 
         # if not pr.overlay.overlay:
         # if not hasattr(bgl, "glColor4f"):
@@ -543,7 +543,7 @@ def overlay(text, **kwargs):
 
 
 def register():
-    opr = prefs().overlay
+    opr = get_prefs().overlay
     Text.default_style.update(list(opr.color), opr.size)
     Text.secondary_style.update(list(opr.color2), opr.size)
     # TablePainter.col_styles[0].update(

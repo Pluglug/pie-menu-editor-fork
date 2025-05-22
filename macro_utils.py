@@ -2,7 +2,7 @@ import bpy
 import re
 from . import operator_utils
 from .debug_utils import *
-from .addon import prefs, print_exc
+from .addon import get_prefs, print_exc
 from .bl_utils import uname
 
 
@@ -94,7 +94,7 @@ def add_macro(pm):
     if pm.name in _macros:
         return
 
-    pr = prefs()
+    pr =get_prefs()
     tp_name, tp_bl_idname = _gen_tp_id(pm.name)
 
     DBG_MACRO and logh("Add Macro: %s (%s)" % (pm.name, tp_name))
@@ -190,7 +190,7 @@ def update_macro(pm):
 
 
 def _fill_props(props, pm, idx=1):
-    pr = prefs()
+    pr =get_prefs()
 
     sticky_idx, modal_idx = 0, 0
     for pmi in pm.pmis:

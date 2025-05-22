@@ -4,7 +4,7 @@ from .ed_base import (
     EditorBase, PME_OT_pmi_copy, PME_OT_pmi_paste, WM_OT_pmi_data_edit,
     WM_OT_pmi_icon_select, WM_OT_pmi_icon_tag_toggle, PME_OT_pmi_toggle,
     extend_panel, unextend_panel)
-from .addon import prefs, ic, ic_cb, ic_eye
+from .addon import get_prefs, ic, ic_cb, ic_eye
 from . import constants as CC
 from .layout_helper import lh, draw_pme_layout, Row
 from .ui import tag_redraw, shorten_str
@@ -124,7 +124,7 @@ class PME_OT_pdi_add(bpy.types.Operator):
     row_idx: bpy.props.IntProperty(options={'SKIP_SAVE'})
 
     def execute(self, context):
-        pr = prefs()
+        pr =get_prefs()
         pm = pr.selected_pm
 
         if self.mode == 'BUTTON':
@@ -161,7 +161,7 @@ class PME_OT_pdi_move(bpy.types.Operator):
     idx: bpy.props.IntProperty()
 
     def _draw(self, menu, context):
-        pm = prefs().selected_pm
+        pm =get_prefs().selected_pm
 
         layout = menu.layout.menu_pie()
         layout.separator()
@@ -190,7 +190,7 @@ class PME_OT_pdi_move(bpy.types.Operator):
         draw_pme_layout(pm, column, draw_pmi)
 
     def execute(self, context):
-        pm = prefs().selected_pm
+        pm =get_prefs().selected_pm
 
         if self.idx != self.pm_item:
             pm.pmis.move(self.pm_item, self.idx)
@@ -224,7 +224,7 @@ class PME_OT_pdi_remove(ConfirmBoxHandler, bpy.types.Operator):
         if not value:
             return
 
-        pr = prefs()
+        pr =get_prefs()
         pm = pr.selected_pm
         pmi = pm.pmis[self.pm_item]
 
@@ -264,7 +264,7 @@ class PME_OT_pdr_fixed_col_set(bpy.types.Operator):
     value: bpy.props.BoolProperty()
 
     def execute(self, context):
-        pm = prefs().selected_pm
+        pm =get_prefs().selected_pm
         pmi = pm.pmis[self.row_idx]
         pmi.text = pme.props.encode(pmi.text, "fixed_col", self.value)
 
@@ -283,7 +283,7 @@ class PME_OT_pdr_fixed_but_set(bpy.types.Operator):
     value: bpy.props.BoolProperty()
 
     def execute(self, context):
-        pm = prefs().selected_pm
+        pm =get_prefs().selected_pm
         pmi = pm.pmis[self.row_idx]
         pmi.text = pme.props.encode(pmi.text, "fixed_but", self.value)
 
@@ -303,7 +303,7 @@ class PME_OT_pdr_prop_set(bpy.types.Operator):
     toggle: bpy.props.BoolProperty(options={'SKIP_SAVE'})
 
     def execute(self, context):
-        pr = prefs()
+        pr =get_prefs()
         pp = pme.props
         pm = pr.selected_pm
 
@@ -453,7 +453,7 @@ class PME_OT_pdr_copy(bpy.types.Operator):
     row_last_idx: bpy.props.IntProperty()
 
     def execute(self, context):
-        pr = prefs()
+        pr =get_prefs()
         pm = pr.selected_pm
 
         if not pr.pdr_clipboard:
@@ -478,7 +478,7 @@ class PME_OT_pdr_paste(bpy.types.Operator):
     row_last_idx: bpy.props.IntProperty()
 
     def execute(self, context):
-        pr = prefs()
+        pr =get_prefs()
         pm = pr.selected_pm
 
         last_idx = len(pm.pmis)
@@ -501,7 +501,7 @@ class PME_OT_pdr_paste(bpy.types.Operator):
 
     @classmethod
     def poll(cls, context):
-        return prefs().pdr_clipboard is not None
+        returnget_prefs().pdr_clipboard is not None
 
 
 class PME_OT_pdr_move(bpy.types.Operator, MoveItemOperator):
@@ -510,14 +510,14 @@ class PME_OT_pdr_move(bpy.types.Operator, MoveItemOperator):
     bl_description = "Move the row"
 
     def get_collection(self):
-        return prefs().selected_pm.pmis
+        returnget_prefs().selected_pm.pmis
 
     def finish(self):
         tag_redraw()
 
     # def draw_menu(self, menu, context):
     #     layout = menu.layout
-    #     pr = prefs()
+    #     pr =get_prefs()
 
     #     prev_p = None
     #     for i, tab in enumerate(pr.tabs):
@@ -541,7 +541,7 @@ class PME_OT_pdr_move(bpy.types.Operator, MoveItemOperator):
     # rows = []
 
     def draw_menu(self, menu, context):
-        pr = prefs()
+        pr =get_prefs()
         pm = pr.selected_pm
         lh.lt(menu.layout)
 
@@ -583,7 +583,7 @@ class PME_OT_pdr_move(bpy.types.Operator, MoveItemOperator):
         #     row_idx=self.row_idx)
 
     # def execute(self, context):
-    #     pm = prefs().selected_pm
+    #     pm =get_prefs().selected_pm
 
     #     if self.move_idx == -1:
     #         rows = []
@@ -644,7 +644,7 @@ class PME_OT_pdr_remove(ConfirmBoxHandler, bpy.types.Operator):
         if not value:
             return
 
-        pm = prefs().selected_pm
+        pm =get_prefs().selected_pm
 
         if self.mode == 'JOIN':
             pm.pmis.remove(self.row_idx)
@@ -683,7 +683,7 @@ class PME_OT_pdi_alignment(bpy.types.Operator):
     value: bpy.props.StringProperty()
 
     def execute(self, context):
-        pr = prefs()
+        pr =get_prefs()
         pm = pr.selected_pm
         pp = pme.props
         self.idx
@@ -820,7 +820,7 @@ class PME_MT_pdr_alignment(bpy.types.Menu):
 
     def draw(self, context):
         pp = pme.props
-        pm = prefs().selected_pm
+        pm =get_prefs().selected_pm
         row = pm.pmis[cur_row.a]
         lh.lt(self.layout)
         col = lh.column()
@@ -878,7 +878,7 @@ class PME_MT_pdr_size(bpy.types.Menu):
     bl_label = "Row Size"
 
     def draw(self, context):
-        pr = prefs()
+        pr =get_prefs()
         pp = pme.props
         pm = pr.selected_pm
         row = pm.pmis[cur_row.a]
@@ -928,7 +928,7 @@ class PME_MT_pdr_spacer(bpy.types.Menu):
     bl_label = "Row Spacer"
 
     def draw(self, context):
-        pr = prefs()
+        pr =get_prefs()
         pm = pr.selected_pm
         row = pm.pmis[cur_row.a]
         lh.lt(self.layout)
@@ -968,7 +968,7 @@ class PME_MT_pdr_spacer(bpy.types.Menu):
 #     bl_label = "Spacer"
 
 #     def draw(self, context):
-#         pr = prefs()
+#         pr =get_prefs()
 #         pp = pme.props
 #         pm = pr.selected_pm
 #         prev_pmi = pm.pmis[current_pdi - 1]
@@ -998,7 +998,7 @@ class PME_OT_pdi_subrow_set(bpy.types.Operator):
     value: bpy.props.StringProperty()
 
     def execute(self, context):
-        pm = prefs().selected_pm
+        pm =get_prefs().selected_pm
 
         def set_subrow_value(idx, new_idx):
             pp = pme.props
@@ -1072,7 +1072,7 @@ class PME_OT_pdi_menu(bpy.types.Operator):
     idx: bpy.props.IntProperty()
 
     def _draw(self, menu, context):
-        pr = prefs()
+        pr =get_prefs()
         pm = pr.selected_pm
         pmi = pm.pmis[current_pdi]
 
@@ -1290,7 +1290,7 @@ class PME_OT_pdi_menu(bpy.types.Operator):
         return {'FINISHED'}
 
     def invoke(self, context, event):
-        pr = prefs()
+        pr =get_prefs()
         pp = pme.props
         pm = pr.selected_pm
 
@@ -1424,7 +1424,7 @@ class PME_OT_pdr_menu(bpy.types.Operator):
     row_idx: bpy.props.IntProperty()
 
     def _draw(self, menu, context):
-        pr = prefs()
+        pr =get_prefs()
         pm = pr.selected_pm
 
         lh.lt(menu.layout, operator_context='INVOKE_DEFAULT')
@@ -1514,7 +1514,7 @@ class PME_OT_pdr_menu(bpy.types.Operator):
         return {'FINISHED'}
 
     def invoke(self, context, event):
-        pm = prefs().selected_pm
+        pm =get_prefs().selected_pm
 
         # cur_row = Row()
         # prev_row = Row()
@@ -1607,7 +1607,7 @@ class Editor(EditorBase):
         self.default_pmi_data = "pd?pd_panel=1"
 
     def update_default_pmi_data(self):
-        pr = prefs()
+        pr =get_prefs()
         if pr is None:
             return
         self.default_pmi_data = "pd?pd_panel=%d" % enum_item_idx(
@@ -1640,7 +1640,7 @@ class Editor(EditorBase):
         super().on_pm_rename(pm, name)
         extend_panel(pm)
 
-        for v in prefs().pie_menus:
+        for v inget_prefs().pie_menus:
             if v.mode == 'PANEL':
                 update_flag = False
                 for pmi in v.pmis:
@@ -1669,13 +1669,13 @@ class Editor(EditorBase):
             default_width = pme.props.get("pd_width").default
             if pm.pd_width != default_width:
                 row.operator("pme.exec", text="", icon=ic('X')).cmd = \
-                    "prefs().selected_pm.pd_width = %d" % default_width
+                    "get_prefs().selected_pm.pd_width = %d" % default_width
 
         if pm.pd_panel == 'POPUP':
             col.prop(pm, "pd_title")
 
     def draw_items(self, layout, pm):
-        pr = prefs()
+        pr =get_prefs()
 
         col = layout.column(align=True)
         row = col.row(align=True)

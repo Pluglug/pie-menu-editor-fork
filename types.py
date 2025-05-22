@@ -5,7 +5,7 @@ from . import ui_utils as UU
 from . import panel_utils as PAU
 from . import macro_utils as MAU
 from . import utils as U
-from .addon import prefs, temp_prefs, ic_fb
+from .addon import get_prefs, temp_prefs, ic_fb
 from . import keymap_helper as KH
 from . import pme
 from .ui import tag_redraw
@@ -53,7 +53,7 @@ class Tag(bpy.types.PropertyGroup):
 
     @staticmethod
     def filter():
-        pr = prefs()
+        pr =get_prefs()
         tpr = temp_prefs()
         if not tpr.tags or not pr.tag_filter:
             Tag.filtered_pms = None
@@ -137,7 +137,7 @@ class PMIItem(bpy.types.PropertyGroup):
         if self.name == value:
             return
 
-        pm = prefs().selected_pm
+        pm =get_prefs().selected_pm
         pm.ed.on_pmi_rename(pm, self, self.name, value)
 
     label: bpy.props.StringProperty(
@@ -298,7 +298,7 @@ class PMItem(bpy.types.PropertyGroup):
             self["km_name"] = value
             self.register_hotkey()
 
-        prefs().update_tree()
+       get_prefs().update_tree()
 
     km_name: bpy.props.StringProperty(
         default="Window", description="Keymap names",
@@ -308,7 +308,7 @@ class PMItem(bpy.types.PropertyGroup):
         return self.name
 
     def set_pm_name(self, value):
-        pr = prefs()
+        pr =get_prefs()
 
         value = value.replace(CC.F_EXPAND, "")
 
@@ -331,7 +331,7 @@ class PMItem(bpy.types.PropertyGroup):
         if not self.ed.has_hotkey:
             return
 
-        pr = prefs()
+        pr =get_prefs()
         kmis = self.kmis_map[self.name]
 
         if kmis:
@@ -371,7 +371,7 @@ class PMItem(bpy.types.PropertyGroup):
         self["key"] = value
         self.update_keymap_item(bpy.context)
 
-        pr = prefs()
+        pr =get_prefs()
         if pr.group_by == 'KEY':
             pr.tree.update()
 
@@ -410,7 +410,7 @@ class PMItem(bpy.types.PropertyGroup):
         return self["key_mod"] if "key_mod" in self else 0
 
     def set_pm_key_mod(self, value):
-        pr = prefs()
+        pr =get_prefs()
         prev_value = self.key_mod
         self["key_mod"] = value
         value = self.key_mod
@@ -641,7 +641,7 @@ class PMItem(bpy.types.PropertyGroup):
         set=lambda s, v: s.set_data("block_ui", v))
 
     def mo_lock_update(self, context):
-        for pm in prefs().pie_menus:
+        for pm inget_prefs().pie_menus:
             if pm.mode == 'MACRO':
                 for pmi in pm.pmis:
                     menu_name, *_ = U.extract_str_flags(
@@ -677,10 +677,10 @@ class PMItem(bpy.types.PropertyGroup):
 
     @property
     def is_new(self):
-        return self.name not in prefs().old_pms
+        return self.name not inget_prefs().old_pms
 
     def register_hotkey(self, km_names=None):
-        pr = prefs()
+        pr =get_prefs()
         if self.name not in self.kmis_map:
             self.kmis_map[self.name] = None
 
@@ -725,7 +725,7 @@ class PMItem(bpy.types.PropertyGroup):
                         KH.add_mouse_button(self.key_mod, pr.kh, km_name)
 
     def unregister_hotkey(self):
-        pr = prefs()
+        pr =get_prefs()
         if pr.kh.available() and self.name in self.kmis_map and \
                 self.kmis_map[self.name]:
             for k, v in self.kmis_map[self.name].items():
@@ -804,7 +804,7 @@ class PMItem(bpy.types.PropertyGroup):
 
     @property
     def ed(self):
-        return prefs().ed(self.mode)
+        returnget_prefs().ed(self.mode)
 
     def __str__(self):
         return "[%s][%s][%s] %s" % (

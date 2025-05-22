@@ -4,7 +4,7 @@ from .ed_base import (
     PME_OT_pmi_remove, WM_OT_pmi_icon_select, PME_OT_pmi_toggle,
     extend_panel, unextend_panel)
 from .bl_utils import PME_OT_input_box
-from .addon import prefs, ic_eye
+from .addon import get_prefs, ic_eye
 from .layout_helper import lh, Col
 from .ui import tag_redraw, shorten_str
 from .constants import SPACER_SCALE_Y, SEPARATOR_SCALE_Y
@@ -21,7 +21,7 @@ class WM_OT_rmi_add(bpy.types.Operator):
     index: bpy.props.IntProperty()
 
     def execute(self, context):
-        pm = prefs().selected_pm
+        pm =get_prefs().selected_pm
         pmi = pm.pmis.add()
 
         if self.mode == 'ITEM':
@@ -60,7 +60,7 @@ class WM_OT_rmi_move(bpy.types.Operator):
     idx: bpy.props.IntProperty()
 
     def _draw(self, menu, context):
-        pm = prefs().selected_pm
+        pm =get_prefs().selected_pm
 
         row = menu.layout.row()
         lh.column(row)
@@ -98,7 +98,7 @@ class WM_OT_rmi_move(bpy.types.Operator):
             idx=idx + 1)
 
     def execute(self, context):
-        pm = prefs().selected_pm
+        pm =get_prefs().selected_pm
 
         if self.idx == -1:
             bpy.context.window_manager.popup_menu(self._draw)
@@ -125,7 +125,7 @@ class WM_OT_rm_col_specials_call(bpy.types.Operator):
     col_idx: bpy.props.IntProperty()
 
     def _draw(self, menu, context):
-        pr = prefs()
+        pr =get_prefs()
         pm = pr.selected_pm
 
         lh.lt(menu.layout, operator_context='INVOKE_DEFAULT')
@@ -208,7 +208,7 @@ class WM_OT_rm_col_specials_call(bpy.types.Operator):
             col_last_idx=self.cur_col.b)
 
     def execute(self, context):
-        pm = prefs().selected_pm
+        pm =get_prefs().selected_pm
 
         self.cur_col.find_ab(pm, self.col_idx)
 
@@ -239,7 +239,7 @@ class WM_OT_rm_col_move(bpy.types.Operator):
                 col_idx=self.col_idx)
 
     def execute(self, context):
-        pm = prefs().selected_pm
+        pm =get_prefs().selected_pm
 
         if self.move_idx == -1:
             cols = []
@@ -332,7 +332,7 @@ class WM_OT_rm_col_remove(bpy.types.Operator):
             ask=False)
 
     def execute(self, context):
-        pm = prefs().selected_pm
+        pm =get_prefs().selected_pm
 
         if self.mode == 'JOIN':
             pm.pmis.remove(self.col_last_idx)
@@ -368,7 +368,7 @@ class WM_OT_rm_col_copy(bpy.types.Operator):
     last_idx: bpy.props.IntProperty()
 
     def execute(self, context):
-        pr = prefs()
+        pr =get_prefs()
         pm = pr.selected_pm
 
         pr.rmc_clipboard.clear()
@@ -393,7 +393,7 @@ class WM_OT_rm_col_paste(bpy.types.Operator):
     left: bpy.props.BoolProperty()
 
     def execute(self, context):
-        pr = prefs()
+        pr =get_prefs()
         pm = pr.selected_pm
 
         idx = self.idx if self.left else self.last_idx
@@ -434,7 +434,7 @@ class WM_OT_rm_col_paste(bpy.types.Operator):
 
     @classmethod
     def poll(cls, context):
-        return prefs().rmc_clipboard is not None
+        returnget_prefs().rmc_clipboard is not None
 
 
 class WM_OT_rmi_specials_call(bpy.types.Operator):
@@ -446,7 +446,7 @@ class WM_OT_rmi_specials_call(bpy.types.Operator):
     pm_item: bpy.props.IntProperty()
 
     def _draw(self, menu, context):
-        pr = prefs()
+        pr =get_prefs()
         pm = pr.selected_pm
         pmi = pm.pmis[self.pm_item]
 
@@ -636,7 +636,7 @@ class Editor(EditorBase):
                 lh.operator(
                     PME_OT_input_box.bl_idname, "",
                     'FONT_DATA',
-                    prop="prefs().selected_pm.pmis[%d].name" % idx)
+                    prop="get_prefs().selected_pm.pmis[%d].name" % idx)
             else:
                 lh.operator(
                     WM_OT_pmi_data_edit.bl_idname, "",

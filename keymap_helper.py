@@ -1,6 +1,6 @@
 import bpy
 from . import constants as CC
-from .addon import uprefs, print_exc, is_28
+from .addon import get_uprefs, print_exc, is_28
 from .property_utils import DynamicPG, to_py_value
 from .debug_utils import *
 from . import c_utils as CTU
@@ -416,7 +416,7 @@ _km_lists = {
 
 def is_default_select_key():
     context = bpy.context
-    upr = uprefs()
+    upr = get_uprefs()
     if hasattr(upr.inputs, "select_mouse"):
         ret = upr.inputs.select_mouse == 'RIGHT'
     else:

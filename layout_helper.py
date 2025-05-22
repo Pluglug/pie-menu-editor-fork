@@ -1,7 +1,7 @@
 import bpy
 from . import pme
 from . import c_utils as CTU
-from .addon import prefs, print_exc, ic, is_28
+from .addon import get_prefs, print_exc, ic, is_28
 from .constants import SCALE_X, SPACER_SCALE_Y, F_CUSTOM_ICON
 from .bl_utils import bp, PME_OT_message_box
 from .utils import format_exception
@@ -589,7 +589,7 @@ def draw_pme_layout(pm, column, draw_pmi, rows=None, icon_btn_scale_x=-1):
     CLayout.save()
 
     global num_btns, num_spacers, max_btns, max_spacers, al_l, al_r
-    pr = prefs()
+    pr =get_prefs()
     pp = pme.props
 
     if icon_btn_scale_x == -1:

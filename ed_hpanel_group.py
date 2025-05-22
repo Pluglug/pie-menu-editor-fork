@@ -1,6 +1,6 @@
 import bpy
 from .ed_base import EditorBase
-from .addon import prefs, temp_prefs, SAFE_MODE
+from .addon import get_prefs, temp_prefs, SAFE_MODE
 from .layout_helper import lh
 from . import panel_utils as PAU
 from .ui import tag_redraw
@@ -13,7 +13,7 @@ class PME_OT_hpanel_menu(bpy.types.Operator):
     bl_description = "Hide panels"
 
     def _draw(self, menu, context):
-        pr = prefs()
+        pr =get_prefs()
         lh.lt(menu.layout, 'INVOKE_DEFAULT')
         lh.operator(
             PME_OT_panel_hide.bl_idname, None, 'ADD',
@@ -38,7 +38,7 @@ class PME_OT_hpanel_remove(bpy.types.Operator):
     idx: bpy.props.IntProperty()
 
     def execute(self, context):
-        pm = prefs().selected_pm
+        pm =get_prefs().selected_pm
 
         if self.idx == -1:
             PAU.unhide_panels([pmi.text for pmi in pm.pmis])
@@ -118,7 +118,7 @@ class Editor(EditorBase):
         lh.sep()
 
         lh.layout.prop(
-            prefs(), "panel_info_visibility", text="", expand=True)
+           get_prefs(), "panel_info_visibility", text="", expand=True)
 
 
 def register():

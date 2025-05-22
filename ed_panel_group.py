@@ -2,7 +2,7 @@ import bpy
 from . import constants as CC
 from .collection_utils import MoveItemOperator
 from .ed_base import EditorBase, PME_OT_pm_edit, PME_OT_pm_add
-from .addon import prefs, uprefs, ic, ic_cb, is_28
+from .addon import get_prefs, get_uprefs, ic, ic_cb, is_28
 from .layout_helper import lh, operator, draw_pme_layout
 from .ui import utitle, tag_redraw
 from .ui_utils import draw_menu
@@ -32,7 +32,7 @@ class PME_OT_panel_sub_toggle(bpy.types.Operator):
         if self.idx == 0:
             return {'FINISHED'}
 
-        pr = prefs()
+        pr =get_prefs()
         pm = pr.selected_pm
         pmi = pm.pmis[self.idx]
         pmi.icon = CC.PANEL_FOLDER if pmi.icon else CC.PANEL_FILE
@@ -71,7 +71,7 @@ class PME_OT_toolbar_menu(bpy.types.Operator):
             context.window_manager.popup_menu(
                 self.draw_toolbar_menu, title="Pie Menu Editor")
         else:
-            pr = prefs()
+            pr =get_prefs()
             pr.add_pm('DIALOG', self.name)
             pr.update_tree()
             tag_redraw()
@@ -109,7 +109,7 @@ class PME_PT_toolbar(bpy.types.Panel):
 
     @classmethod
     def poll(cls, context):
-        preferences = prefs()
+        preferences = get_prefs()
         area = context.area
         is_narrow_width = (area.width <= preferences.toolbar_width)
         is_narrow_height = (area.height <= preferences.toolbar_height)
@@ -121,7 +121,7 @@ class PME_PT_toolbar(bpy.types.Panel):
         c_layout = c_utils.c_layout(self.layout)
 
         # Set top and bottom margins
-        top_bottom_margin = round(4 * uprefs().view.ui_scale)
+        top_bottom_margin = round(4 * get_uprefs().view.ui_scale)
         c_layout.y += top_bottom_margin
 
         # Adjust width and position if the area is vertical
@@ -158,7 +158,7 @@ class PME_PT_toolbar(bpy.types.Panel):
 
 
 def draw_pme_panel(self, context):
-    pr = prefs()
+    pr =get_prefs()
     if self.pme_data in pr.pie_menus:
         pm = pr.pie_menus[self.pme_data]
         if issubclass(self.__class__, bpy.types.Header):
@@ -186,7 +186,7 @@ def draw_pme_panel(self, context):
 
 
 def poll_pme_panel(cls, context):
-    pr = prefs()
+    pr =get_prefs()
     if cls.pm_name not in pr.pie_menus:
         return True
 
@@ -204,7 +204,7 @@ class PME_OT_panel_menu(bpy.types.Operator):
     is_right_region: bpy.props.BoolProperty()
 
     def extend_ui_operator(self, label, icon, mode, pm_name):
-        pr = prefs()
+        pr =get_prefs()
         if pm_name in pr.pie_menus:
             lh.operator(
                 WM_OT_pm_select.bl_idname,
@@ -218,7 +218,7 @@ class PME_OT_panel_menu(bpy.types.Operator):
     def draw_header_menu(self, menu, context):
         lh.lt(menu.layout, operator_context='INVOKE_DEFAULT')
 
-        pr = prefs()
+        pr =get_prefs()
         pm = pr.selected_pm
 
         right_suffix = CC.F_RIGHT if self.is_right_region else ""
@@ -250,7 +250,7 @@ class PME_OT_panel_menu(bpy.types.Operator):
     def draw_menu_menu(self, menu, context):
         lh.lt(menu.layout, operator_context='INVOKE_DEFAULT')
 
-        pr = prefs()
+        pr =get_prefs()
         pm = pr.selected_pm
 
         if pm:
@@ -293,7 +293,7 @@ class PME_OT_panel_menu(bpy.types.Operator):
     def draw_panel_menu(self, menu, context):
         lh.lt(menu.layout, operator_context='INVOKE_DEFAULT')
 
-        pr = prefs()
+        pr =get_prefs()
         pm = pr.selected_pm
 
         lh.operator(
@@ -474,7 +474,7 @@ class PME_OT_interactive_panels_toggle(bpy.types.Operator):
             is_right_region=context.region.alignment == 'RIGHT')
 
     def execute(self, context):
-        pr = prefs()
+        pr =get_prefs()
         if self.action == 'ENABLE' or self.action == 'TOGGLE' and \
                 not pr.interactive_panels:
             pr.interactive_panels = True
@@ -525,7 +525,7 @@ class PME_OT_panel_add(bpy.types.Operator):
                     _add_item(tp_name, tp)
 
             elif self.mode == 'PME':
-                for pm in prefs().pie_menus:
+                for pm inget_prefs().pie_menus:
                     if pm.mode == 'DIALOG':
                         enum_items.append((pm.name, pm.name, ""))
 
@@ -539,7 +539,7 @@ class PME_OT_panel_add(bpy.types.Operator):
     panel: bpy.props.StringProperty(options={'SKIP_SAVE'})
 
     def execute(self, context):
-        pr = prefs()
+        pr =get_prefs()
         if not self.panel:
             self.panel = self.item
 
@@ -588,7 +588,7 @@ class PME_OT_panel_add(bpy.types.Operator):
         return {'FINISHED'}
 
     def _draw(self, menu, context):
-        pr = prefs()
+        pr =get_prefs()
         lh.lt(menu.layout, 'INVOKE_DEFAULT')
         lh.operator(
             self.__class__.bl_idname, "Popup Dialog", pr.ed('DIALOG').icon,
@@ -599,7 +599,7 @@ class PME_OT_panel_add(bpy.types.Operator):
 
         lh.sep()
 
-        lh.prop(prefs(), "interactive_panels")
+        lh.prop(get_prefs(), "interactive_panels")
 
     def invoke(self, context, event):
         if not self.mode:
@@ -619,10 +619,10 @@ class PME_OT_panel_item_move(MoveItemOperator, bpy.types.Operator):
         return 'FILE' if item.icon == CC.PANEL_FILE else 'FILE_FOLDER'
 
     def get_collection(self):
-        return prefs().selected_pm.pmis
+        returnget_prefs().selected_pm.pmis
 
     def finish(self):
-        pr = prefs()
+        pr =get_prefs()
         pm = pr.selected_pm
         if self.new_idx == 0:
             pm.pmis[0].icon = CC.PANEL_FOLDER
@@ -640,7 +640,7 @@ class PME_OT_panel_item_remove(bpy.types.Operator):
     idx: bpy.props.IntProperty(options={'SKIP_SAVE'})
 
     def execute(self, context):
-        pr = prefs()
+        pr =get_prefs()
         pm = pr.selected_pm
 
         PAU.remove_panel(pm.name, self.idx)
@@ -713,7 +713,7 @@ class Editor(EditorBase):
             row = layout.row(align=True)
             row.prop(data, "panel_context", text="")
 
-            ic_items = prefs().rna_type.properties[
+            ic_items =get_prefs().rna_type.properties[
                 "panel_info_visibility"].enum_items
             row.prop(
                 data, "panel_category", text="",
@@ -727,7 +727,7 @@ class Editor(EditorBase):
         layout.prop(pm, "panel_wicons")
 
     def draw_items(self, layout, pm):
-        pr = prefs()
+        pr =get_prefs()
         col = layout.column(align=True)
 
         for idx, pmi in enumerate(pm.pmis):
@@ -743,7 +743,7 @@ class Editor(EditorBase):
                 "pme.panel_sub_toggle", "",
                 'FILE' if pmi.icon == CC.PANEL_FILE else 'FILE_FOLDER',
                 idx=idx)
-            icon = pr.ed('DIALOG').icon if pmi.text in prefs().pie_menus \
+            icon = pr.ed('DIALOG').icon if pmi.text inget_prefs().pie_menus \
                 else 'BLENDER'
             lh.prop(pmi, "label", "", icon)
 
@@ -758,7 +758,7 @@ class Editor(EditorBase):
         lh.operator(PME_OT_panel_add.bl_idname, "Add Panel")
 
     def draw_pmi_menu(self, context, idx):
-        pr = prefs()
+        pr =get_prefs()
         pm = pr.selected_pm
         pmi = pm.pmis[idx]
 

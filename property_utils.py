@@ -3,7 +3,7 @@ from types import BuiltinFunctionType
 from mathutils import Euler
 from math import pi as PI
 
-from .addon import prefs, temp_prefs, print_exc
+from .addon import get_prefs, temp_prefs, print_exc
 from . import operator_utils
 
 bpy.context.window_manager["pme_temp"] = dict()
@@ -57,7 +57,7 @@ class PropertyData:
         if exec_locals is None:
             exec_locals = dict()
 
-        pr = prefs()
+        pr =get_prefs()
         self.clear()
         self.path = path
         self.data_path, self.identifier = split_prop_path(path)

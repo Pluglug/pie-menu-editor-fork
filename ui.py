@@ -5,7 +5,7 @@ from .debug_utils import *
 from . import operator_utils
 from . import pme
 from .bl_utils import bp, ctx_dict
-from .addon import uprefs, ic
+from .addon import get_uprefs, ic
 
 uilayout_getattribute = bpy.types.UILayout.__getattribute__
 draw_addons_default = None
@@ -110,7 +110,7 @@ def draw_addons_maximized(self, context):
         row.scale_y = 1.5
         row.operator(PME_OT_userpref_restore.bl_idname, text="Restore")
 
-    prefs = uprefs().addons[PME_OT_userpref_show.mod].preferences
+    prefs = get_uprefs().addons[PME_OT_userpref_show.mod].preferences
 
     draw = getattr(prefs, "draw", None)
     prefs_class = type(prefs)
@@ -147,7 +147,7 @@ class PME_OT_userpref_show(bpy.types.Operator):
             bpy.types.USERPREF_PT_addons.draw = draw_addons_default
 
         if self.tab:
-            uprefs().active_section = self.tab
+            get_uprefs().active_section = self.tab
 
         tag_redraw()
         return {'FINISHED'}

@@ -1,7 +1,7 @@
 import bpy
 import _bpy
 import re
-from .addon import print_exc, ic, uprefs, is_28
+from .addon import print_exc, ic, get_uprefs, is_28
 from .screen_utils import get_override_args
 from . import constants as CC
 from . import pme
@@ -436,7 +436,7 @@ class PopupOperator:
         bl_context.reset(context)
 
         popup_padding = round(
-            2 * CC.POPUP_PADDING * uprefs().view.ui_scale +
+            2 * CC.POPUP_PADDING * get_uprefs().view.ui_scale +
             CC.WINDOW_MARGIN)
         if self.width > context.window.width - popup_padding:
             self.width = context.window.width - popup_padding
@@ -452,7 +452,7 @@ class PopupOperator:
             context.window.cursor_warp(mx, my)
 
         else:
-            offset = round(30 * uprefs().view.ui_scale)
+            offset = round(30 * get_uprefs().view.ui_scale)
             w2 = self.width >> 1
             mid_x = context.window.width >> 1
             min_x = w2 + CC.POPUP_PADDING + offset
@@ -840,7 +840,7 @@ def popup_area(area, width=320, height=400, x=None, y=None):
     r.xmax = r.xmin + width
     r.ymax = r.ymin + height
 
-    upr = uprefs()
+    upr = get_uprefs()
     ui_scale = upr.view.ui_scale
     ui_line_width = upr.view.ui_line_width
     upr.view.ui_scale = 1

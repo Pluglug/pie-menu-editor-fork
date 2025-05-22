@@ -5,7 +5,7 @@ from .ed_base import (
     WM_OT_pmi_data_edit
 )
 from .debug_utils import *
-from .addon import prefs, temp_prefs
+from .addon import get_prefs, temp_prefs
 from .layout_helper import lh
 from .ui import tag_redraw, shorten_str
 from .bl_utils import uname
@@ -47,11 +47,11 @@ del SUBTYPE_NUMBER_ARRAY_ITEMS
 del SUBTYPE_NUMBER_ITEMS
 
 def size_get(self):
-    return prefs().selected_pm.get_data("vector")
+    returnget_prefs().selected_pm.get_data("vector")
 
 
 def size_set(self, value):
-    pr = prefs()
+    pr =get_prefs()
     pm = pr.selected_pm
     pm.set_data("vector", value)
     pmi_remove(pm, "subtype")
@@ -68,36 +68,36 @@ def size_set(self, value):
 
 
 def hor_exp_get(self):
-    return prefs().selected_pm.get_data("hor_exp")
+    returnget_prefs().selected_pm.get_data("hor_exp")
 
 
 def hor_exp_set(self, value):
-    prefs().selected_pm.set_data("hor_exp", value)
+   get_prefs().selected_pm.set_data("hor_exp", value)
     tag_redraw()
 
 
 def save_get(self):
-    return not prefs().selected_pm.get_data("save")
+    return notget_prefs().selected_pm.get_data("save")
 
 
 def save_set(self, value):
-    prefs().selected_pm.set_data("save", not value)
+   get_prefs().selected_pm.set_data("save", not value)
 
 
 def exp_get(self):
-    return prefs().selected_pm.get_data("exp")
+    returnget_prefs().selected_pm.get_data("exp")
 
 
 def exp_set(self, value):
-    prefs().selected_pm.set_data("exp", value)
+   get_prefs().selected_pm.set_data("exp", value)
 
 
 def multiselect_get(self):
-    return prefs().selected_pm.get_data("mulsel")
+    returnget_prefs().selected_pm.get_data("mulsel")
 
 
 def multiselect_set(self, value):
-    pm = prefs().selected_pm
+    pm =get_prefs().selected_pm
     pm.set_data("mulsel", value)
     pmi_remove(pm, "default")
 
@@ -125,11 +125,11 @@ def ed_text_set(self, value):
 
 def ed_type_get(self):
     return self.bl_rna.properties["ed_type"].enum_items.find(
-        prefs().selected_pm.poll_cmd)
+       get_prefs().selected_pm.poll_cmd)
 
 
 def ed_type_set(self, value):
-    pm = prefs().selected_pm
+    pm =get_prefs().selected_pm
     items = self.bl_rna.properties["ed_type"].enum_items
     v = items.find(pm.poll_cmd)
     if v == value:
@@ -148,7 +148,7 @@ def ed_type_set(self, value):
 
 
 def props(name=None, value=None):
-    pr = prefs()
+    pr =get_prefs()
     if name is None:
         return pr.props
 
@@ -166,7 +166,7 @@ def gen_get(prop_name, mode):
         return PROP_GETTERS[key]
 
     def _get(self):
-        pm = prefs().pie_menus[prop_name]
+        pm =get_prefs().pie_menus[prop_name]
         pmi = pm.pmis[mode]
         pme.context.pm = pm
         exec_globals = pme.context.gen_globals()
@@ -187,7 +187,7 @@ def gen_set(prop_name, mode):
         return PROP_SETTERS[key]
 
     def _set(self, value):
-        pm = prefs().pie_menus[prop_name]
+        pm =get_prefs().pie_menus[prop_name]
         pmi = pm.pmis[mode]
         pme.context.pm = pm
         exec_globals = pme.context.gen_globals()
@@ -207,7 +207,7 @@ def gen_update(prop_name, mode):
         return PROP_UPDATES[key]
 
     def _update(self, context):
-        pm = prefs().pie_menus[prop_name]
+        pm =get_prefs().pie_menus[prop_name]
         pmi = pm.pmis[mode]
         pme.context.pm = pm
         exec_globals = pme.context.gen_globals()
@@ -264,7 +264,7 @@ def gen_arg_getter(name, ptype, default):
         return ARG_GETTERS[key]
 
     def getter(self):
-        pm = prefs().selected_pm
+        pm =get_prefs().selected_pm
         pmi = pm.pmis.get(name, None)
         value = eval(pmi.text) if pmi else default
 
@@ -292,7 +292,7 @@ def gen_arg_setter(name, ptype, update_dynamic_props=False):
 
     def setter(self, value):
         DBG_PROP and logh("Set: '%s' = %s" % (name, repr(value)))
-        pm = prefs().selected_pm
+        pm =get_prefs().selected_pm
         prop = self.bl_rna.properties["ed_" + name]
         if prop.__class__.__name__ == "EnumProperty":
             if pm.get_data("mulsel"):
@@ -388,7 +388,7 @@ def register_user_property(pm):
     if not pm.enabled:
         return
 
-    pr = prefs()
+    pr =get_prefs()
 
     size = pm.get_data("vector")
     bpy_prop = prop_by_type(pm.poll_cmd, size > 1)
@@ -433,7 +433,7 @@ def register_user_property(pm):
 
 
 def unregister_user_property(pm):
-    pr = prefs()
+    pr =get_prefs()
     if pm.name in pr.props:
         del pr.props[pm.name]
 
@@ -475,7 +475,7 @@ def clear_arg_pmis(pm):
 
 
 def update_user_property(self=None, context=None):
-    pm = prefs().selected_pm
+    pm =get_prefs().selected_pm
     ep = temp_prefs().ed_props
     value = ep.ed_default
     if isinstance(value, bpy.types.bpy_prop_array):
@@ -528,7 +528,7 @@ class PME_OT_prop_class_set(bpy.types.Operator):
 
     def execute(self, context):
         PME_OT_prop_class_set.enum_items = None
-        pm = prefs().selected_pm
+        pm =get_prefs().selected_pm
         pmi = pm.pmis.get('CLASS', None)
         if pmi and pmi.text == self.item:
             return {'CANCELLED'}
@@ -553,7 +553,7 @@ class PME_OT_prop_class_set(bpy.types.Operator):
         if self.add:
             context.window_manager.invoke_search_popup(self)
         else:
-            pm = prefs().selected_pm
+            pm =get_prefs().selected_pm
             unregister_user_property(pm)
             pmi_remove(pm, 'CLASS')
 
@@ -581,7 +581,7 @@ class PME_OT_prop_script_set(bpy.types.Operator):
         options={'SKIP_SAVE'})
 
     def execute(self, context):
-        pr = prefs()
+        pr =get_prefs()
         pm = pr.selected_pm
         if self.add:
             pmi = pm.pmis.add()
@@ -625,20 +625,20 @@ class PME_OT_prop_pmi_move(MoveItemOperator, bpy.types.Operator):
         return pmi.mode == 'PROP'
 
     def get_collection(self):
-        return prefs().selected_pm.pmis
+        returnget_prefs().selected_pm.pmis
 
     def get_icon(self, pmi, idx):
-        pm = prefs().selected_pm
+        pm =get_prefs().selected_pm
         return pm.ed.get_pmi_icon(pm, pmi, idx)
 
     def get_title(self):
-        pm = prefs().selected_pm
+        pm =get_prefs().selected_pm
         pmi = pm.pmis[self.old_idx]
         return "Move " + shorten_str(pmi.name) \
             if pmi.name.strip() else "Move Slot"
 
     def finish(self):
-        pm = prefs().selected_pm
+        pm =get_prefs().selected_pm
         pm.ed.on_pmi_move(pm)
 
         tag_redraw()
@@ -887,7 +887,7 @@ class Editor(EditorBase):
 
         register_user_property(pm)
 
-        pr = prefs()
+        pr =get_prefs()
         if not pm.get_data("save") and pm.name in pr.props:
             del pr.props[pm.name]
 
@@ -1050,7 +1050,7 @@ class Editor(EditorBase):
         lh.restore()
 
     def draw_items(self, layout, pm):
-        self.pr = pr = prefs()
+        self.pr = pr =get_prefs()
         self.tpr = tpr = temp_prefs()
         self.ep = tpr.ed_props
         pm = pr.selected_pm
