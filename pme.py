@@ -1,5 +1,5 @@
 import bpy
-from .addon import prefs, temp_prefs, print_exc
+from .addon import get_prefs, temp_prefs, print_exc
 
 
 class UserData:
@@ -93,7 +93,7 @@ class PMEContext:
             icon=self.icon,
             icon_value=self.icon_value,
             PME=temp_prefs(),
-            PREFS=prefs(),
+            PREFS=get_prefs(),
             **kwargs
         )
 

@@ -3,7 +3,7 @@ import re
 from inspect import isclass
 from itertools import chain
 from types import MethodType
-from .addon import prefs, uprefs, print_exc, ic, is_28
+from .addon import get_prefs, get_uprefs, print_exc, ic, is_28
 from . import constants as CC
 from . import c_utils as CTU
 from bl_ui import space_userpref
@@ -104,7 +104,7 @@ def get_hidden_panels():
 
 def bar_panel_poll(poll=None):
     def func(cls, context):
-        pr = prefs()
+        pr =get_prefs()
         return context.area.width > pr.toolbar_width and \
             context.area.height > pr.toolbar_height and (
                 not poll or poll(context))
@@ -252,7 +252,7 @@ def panel_context_items(self, context):
             contexts.add(tp.bl_context)
 
         idx = 1
-        ic_items = prefs().rna_type.properties[
+        ic_items =get_prefs().rna_type.properties[
             "panel_info_visibility"].enum_items
 
         for ctx in sorted(contexts):
@@ -423,7 +423,7 @@ class PLayout:
         bpy.types.UILayout.__getattribute__ = PLayout.getattribute
         PLayout.real_operator = layout.operator
         PLayout.idx = 0
-        PLayout.interactive_panels = prefs().interactive_panels
+        PLayout.interactive_panels =get_prefs().interactive_panels
 
     @staticmethod
     def restore():
@@ -763,7 +763,7 @@ def panel(
         panel.active = False
 
     try:
-        if "tabs_interface" in uprefs().addons:
+        if "tabs_interface" in get_uprefs().addons:
             import tabs_interface
             tabs_interface.USE_DEFAULT_POLL = True
 
@@ -771,7 +771,7 @@ def panel(
             restore_data()
             return True
 
-        if "tabs_interface" in uprefs().addons:
+        if "tabs_interface" in get_uprefs().addons:
             tabs_interface.USE_DEFAULT_POLL = False
 
     except:
@@ -836,7 +836,7 @@ def panel(
         p.layout = layout if root else layout.column()
         try:
             if hasattr(p, "draw"):
-                # if prefs().interactive_panels:
+                # ifget_prefs().interactive_panels:
                 #     sub = p.layout.row(align=True)
                 #     sub.operator(
                 #         PME_OT_panel_reset.bl_idname,

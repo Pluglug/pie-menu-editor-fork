@@ -161,7 +161,7 @@ if not bpy.app.background:
 
         importlib.import_module("pie_menu_editor." + mod)
 
-    from .addon import prefs, temp_prefs
+    from .addon import get_prefs, temp_prefs
     from . import property_utils
     from . import pme
     from . import compatibility_fixes
@@ -183,7 +183,7 @@ def load_pre_handler(_):
     DBG_INIT and logh("Load Pre (%s)" % bpy.data.filepath)
 
     global tmp_data
-    tmp_data = property_utils.to_dict(prefs())
+    tmp_data = property_utils.to_dict(get_prefs())
 
     global tmp_filepath
     tmp_filepath = bpy.data.filepath
@@ -200,7 +200,7 @@ def load_post_handler(filepath):
         DBG_INIT and logw("Skip")
         return
 
-    pr = prefs()
+    pr =get_prefs()
     if not bpy.data.filepath:
         property_utils.from_dict(pr, tmp_data)
 
@@ -242,7 +242,7 @@ def on_context():
 
     register_module()
 
-    pr = prefs()
+    pr =get_prefs()
     global re_enable_data
     if re_enable_data is not None:
         if len(pr.pie_menus) == 0 and re_enable_data:
@@ -267,7 +267,7 @@ def on_context():
 def init_keymaps():
     DBG_INIT and logi("Waiting Keymaps")
 
-    pr = prefs()
+    pr =get_prefs()
     if not bpy.context.window_manager.keyconfigs.user:
         return
 
@@ -288,7 +288,7 @@ def on_timer():
     init_keymaps()
 
     global timer
-    pr = prefs()
+    pr =get_prefs()
     if not pr.missing_kms or timer.elapsed_time > 10:
         timer.cancel()
         timer = None
@@ -361,7 +361,7 @@ class PME_OT_wait_keymaps(bpy.types.Operator):
         if event.type == 'TIMER':
             init_keymaps()
 
-            pr = prefs()
+            pr =get_prefs()
             if not pr.missing_kms or self.timer.time_duration > 5:
                 self.remove_timer()
                 self.instances.remove(self)
@@ -462,7 +462,7 @@ def unregister():
         return
 
     global re_enable_data
-    re_enable_data = property_utils.to_dict(prefs())
+    re_enable_data = property_utils.to_dict(get_prefs())
 
     for mod in reversed(MODULES):
         m = sys.modules["%s.%s" % (__name__, mod)]

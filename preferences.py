@@ -7,7 +7,7 @@ from types import MethodType
 from bpy_extras.io_utils import ExportHelper, ImportHelper
 from .addon import (
     ADDON_ID, ADDON_PATH, SCRIPT_PATH, SAFE_MODE,
-    prefs, uprefs, temp_prefs,
+    get_prefs, get_uprefs, temp_prefs,
     print_exc, ic, ic_fb, ic_cb, ic_eye, is_28)
 from . import constants as CC
 from . import operators as OPS
@@ -58,7 +58,7 @@ export_filepath = os.path.join(ADDON_PATH, "examples", "my_pie_menus.json")
 
 
 def update_pmi_data(self, context, reset_prop_data=True):
-    pr = prefs()
+    pr =get_prefs()
     pm = pr.selected_pm
     pmi_data = pr.pmi_data
     pmi_data.check_pmi_errors(context)
@@ -203,7 +203,7 @@ class WM_OT_pm_import(bpy.types.Operator, ImportHelper):
             self.report({'WARNING'}, CC.W_JSON)
             return
 
-        pr = prefs()
+        pr =get_prefs()
 
         menus = None
         if isinstance(data, list):
@@ -386,7 +386,7 @@ class WM_OT_pm_import(bpy.types.Operator, ImportHelper):
 
     def execute(self, context):
         global import_filepath
-        pr = prefs()
+        pr =get_prefs()
         pr.tree.lock()
 
         select_pm_flag = len(pr.pie_menus) == 0
@@ -489,7 +489,7 @@ class WM_OT_pm_export(bpy.types.Operator, ExportHelper):
         if not self.filepath.endswith(".json"):
             self.filepath += ".json"
 
-        data = prefs().get_export_data(
+        data =get_prefs().get_export_data(
             export_tags=self.export_tags, mode=self.mode, tag=self.tag)
         data = json.dumps(data, indent=2, separators=(", ", ": "))
         try:
@@ -524,7 +524,7 @@ class PME_OT_backup(bpy.types.Operator):
     bl_description = "Backup PME menus"
 
     def invoke(self, context, event):
-        prefs().backup_menus(operator=self)
+       get_prefs().backup_menus(operator=self)
         return {'FINISHED'}
 
 
@@ -535,7 +535,7 @@ class WM_OT_pm_duplicate(bpy.types.Operator):
     bl_options = {'INTERNAL'}
 
     def execute(self, context):
-        pr = prefs()
+        pr =get_prefs()
         if len(pr.pie_menus) == 0:
             return {'FINISHED'}
 
@@ -574,7 +574,7 @@ class PME_OT_pm_remove(ConfirmBoxHandler, bpy.types.Operator):
         if not value:
             return
 
-        pr = prefs()
+        pr =get_prefs()
         if self.mode == 'ACTIVE':
             pr.remove_pm()
         elif self.mode == 'ALL':
@@ -612,13 +612,13 @@ class PME_OT_pm_enable_all(bpy.types.Operator):
     enable: bpy.props.BoolProperty(options={'SKIP_SAVE'})
 
     def execute(self, context):
-        for pm in prefs().pie_menus:
+        for pm inget_prefs().pie_menus:
             pm.enabled = self.enable
         return {'FINISHED'}
 
     @classmethod
     def poll(cls, context):
-        return prefs().pie_menus
+        returnget_prefs().pie_menus
 
 
 class PME_OT_pm_enable_by_tag(bpy.types.Operator):
@@ -637,7 +637,7 @@ class PME_OT_pm_enable_by_tag(bpy.types.Operator):
                 "Enable by Tag" if self.enable else "Disable by Tag",
                 enable=self.enable)
         else:
-            for pm in prefs().pie_menus:
+            for pm inget_prefs().pie_menus:
                 if pm.has_tag(self.tag):
                     pm.enabled = self.enable
             tag_redraw()
@@ -646,7 +646,7 @@ class PME_OT_pm_enable_by_tag(bpy.types.Operator):
 
     @classmethod
     def poll(cls, context):
-        return prefs().pie_menus
+        returnget_prefs().pie_menus
 
 
 class PME_OT_pm_remove_by_tag(bpy.types.Operator):
@@ -661,9 +661,9 @@ class PME_OT_pm_remove_by_tag(bpy.types.Operator):
         if not self.tag:
             Tag.popup_menu(self.bl_idname, "Remove by Tag")
         else:
-            pr = prefs()
+            pr =get_prefs()
             pm_names = []
-            for pm in prefs().pie_menus:
+            for pm inget_prefs().pie_menus:
                 if pm.has_tag(self.tag):
                     pm_names.append(pm.name)
 
@@ -677,7 +677,7 @@ class PME_OT_pm_remove_by_tag(bpy.types.Operator):
 
     @classmethod
     def poll(cls, context):
-        return prefs().pie_menus
+        returnget_prefs().pie_menus
 
 
 class WM_OT_pm_move(bpy.types.Operator):
@@ -689,7 +689,7 @@ class WM_OT_pm_move(bpy.types.Operator):
     direction: bpy.props.IntProperty()
 
     def execute(self, context):
-        pr = prefs()
+        pr =get_prefs()
         tpr = temp_prefs()
         if pr.tree_mode:
             link = tpr.links[tpr.links_idx]
@@ -786,7 +786,7 @@ class WM_OT_pm_sort(bpy.types.Operator):
                 self._draw, title=WM_OT_pm_sort.bl_description)
             return {'FINISHED'}
 
-        pr = prefs()
+        pr =get_prefs()
         if len(pr.pie_menus) == 0:
             return {'FINISHED'}
 
@@ -841,7 +841,7 @@ class PME_OT_pmi_name_apply(bpy.types.Operator):
     idx: bpy.props.IntProperty()
 
     def execute(self, context):
-        data = prefs().pmi_data
+        data =get_prefs().pmi_data
         data.name = data.sname
         return {'FINISHED'}
 
@@ -853,7 +853,7 @@ class PME_OT_pmi_name_apply(bpy.types.Operator):
 #     bl_options = {'INTERNAL'}
 
 #     def execute(self, context):
-#         prefs().icon_filter = ""
+#        get_prefs().icon_filter = ""
 #         return {'FINISHED'}
 
 
@@ -878,7 +878,7 @@ class PMEData(bpy.types.PropertyGroup):
         return self["links_idx"] if "links_idx" in self else 0
 
     def set_links_idx(self, value):
-        pr = prefs()
+        pr =get_prefs()
         tpr = temp_prefs()
 
         if value < 0 or value >= len(tpr.links):
@@ -890,7 +890,7 @@ class PMEData(bpy.types.PropertyGroup):
             pr.active_pie_menu_idx = pr.pie_menus.find(link.pm_name)
 
     def update_modal_item_hk(self, context):
-        pmi_data = prefs().pmi_data
+        pmi_data =get_prefs().pmi_data
         encode_modal_data(pmi_data)
         pmi_data.check_pmi_errors(context)
 
@@ -992,7 +992,7 @@ class PMEData(bpy.types.PropertyGroup):
     )
 
     def init_tags(self):
-        pr = prefs()
+        pr =get_prefs()
         tpr = temp_prefs()
         self.tags.clear()
         for pm in pr.pie_menus:
@@ -1008,7 +1008,7 @@ class PMEData(bpy.types.PropertyGroup):
         Tag.filter()
 
     def update_pie_menus(self):
-        pr = prefs()
+        pr =get_prefs()
         spm = pr.selected_pm
         supported_sub_menus = spm.ed.supported_sub_menus
         pms = set()
@@ -1031,7 +1031,7 @@ class WM_UL_panel_list(bpy.types.UIList):
             self, context, layout, data, item,
             icon, active_data, active_propname, index):
         tp = hidden_panel(item.text)
-        pr = prefs()
+        pr =get_prefs()
         v = pr.panel_info_visibility
         ic_items = pr.rna_type.properties["panel_info_visibility"].enum_items
 
@@ -1053,7 +1053,7 @@ class WM_UL_panel_list(bpy.types.UIList):
 class WM_UL_pm_list(bpy.types.UIList):
 
     def _draw_filter(self, context, layout):
-        pr = prefs()
+        pr =get_prefs()
 
         col = layout.column(align=True)
         col.prop(self, "filter_name", text="", icon=ic('VIEWZOOM'))
@@ -1072,7 +1072,7 @@ class WM_UL_pm_list(bpy.types.UIList):
     def draw_item(
             self, context, layout, data, item,
             icon, active_data, active_propname, index):
-        pr = prefs()
+        pr =get_prefs()
         pm = item
 
         layout = layout.row(align=True)
@@ -1147,7 +1147,7 @@ class WM_UL_pm_list(bpy.types.UIList):
             lh.label(hk)
 
     def filter_items(self, context, data, propname):
-        pr = prefs()
+        pr =get_prefs()
         pie_menus = getattr(data, propname)
         helper_funcs = bpy.types.UI_UL_list
 
@@ -1183,7 +1183,7 @@ class PME_UL_pm_tree(bpy.types.UIList):
 
     @staticmethod
     def save_state():
-        pr = prefs()
+        pr =get_prefs()
         if not pr.tree_mode or not pr.save_tree:
             return
 
@@ -1202,7 +1202,7 @@ class PME_UL_pm_tree(bpy.types.UIList):
 
     @staticmethod
     def load_state():
-        pr = prefs()
+        pr =get_prefs()
         if not pr.tree_mode or not pr.save_tree:
             return
 
@@ -1267,7 +1267,7 @@ class PME_UL_pm_tree(bpy.types.UIList):
         if PME_UL_pm_tree.locked:
             return
 
-        pr = prefs()
+        pr =get_prefs()
 
         if not pr.tree_mode:
             return
@@ -1531,7 +1531,7 @@ class PME_UL_pm_tree(bpy.types.UIList):
     def draw_item(
             self, context, layout, data, item,
             icon, active_data, active_propname, index):
-        pr = prefs()
+        pr =get_prefs()
         layout = layout.row(align=True)
         lh.lt(layout)
 
@@ -1639,7 +1639,7 @@ class PME_UL_pm_tree(bpy.types.UIList):
                 all=True)
 
     def _draw_filter(self, context, layout):
-        pr = prefs()
+        pr =get_prefs()
 
         col = layout.column(align=True)
         # col.prop(self, "filter_name", text="", icon='VIEWZOOM')
@@ -1656,7 +1656,7 @@ class PME_UL_pm_tree(bpy.types.UIList):
     # draw_filter = draw_filter28 if is_28() else draw_filter27
 
     def filter_items(self, context, data, propname):
-        pr = prefs()
+        pr =get_prefs()
 
         links = getattr(data, propname)
         filtered = [self.bitflag_filter_item] * len(links)
@@ -1855,7 +1855,7 @@ class PMIData(bpy.types.PropertyGroup):
 
     @property
     def kmi(self):
-        pr = prefs()
+        pr =get_prefs()
         if not PMIData._kmi:
             pr.kh.keymap()
             PMIData._kmi = pr.kh.operator(EOPS.PME_OT_none)
@@ -1864,13 +1864,13 @@ class PMIData(bpy.types.PropertyGroup):
         return PMIData._kmi
 
     def check_pmi_errors(self, context):
-        pr = prefs()
+        pr =get_prefs()
         pm = pr.selected_pm
         pm.ed.on_pmi_check(pm, self)
 
     def mode_update(self, context):
         tpr = temp_prefs()
-        if prefs().selected_pm.mode == 'MODAL':
+        ifget_prefs().selected_pm.mode == 'MODAL':
             if self.mode == 'COMMAND' and \
                     tpr.modal_item_prop_mode != 'KEY':
                 tpr["modal_item_prop_mode"] = 0
@@ -1973,7 +1973,7 @@ class PieMenuPrefs:
         self.num_saves += 1
         DBG_PM and logi("SAVE PM Prefs", self.num_saves, self.lock)
         if not self.lock:
-            v = uprefs().view
+            v = get_uprefs().view
             self.confirm = v.pie_menu_confirm
             self.threshold = v.pie_menu_threshold
             self.lock = True
@@ -1982,7 +1982,7 @@ class PieMenuPrefs:
         self.num_saves -= 1
         DBG_PM and logi("RESTORE", self.num_saves)
         if self.lock and self.num_saves == 0:
-            v = uprefs().view
+            v = get_uprefs().view
             v.pie_menu_confirm = self.confirm
             v.pie_menu_threshold = self.threshold
             self.lock = False
@@ -2002,14 +2002,14 @@ class PieMenuRadius:
         if self.radius != -1:
             return
 
-        v = uprefs().view
+        v = get_uprefs().view
         self.animation_timeout = v.pie_animation_timeout
         self.radius = v.pie_menu_radius
 
     def restore(self):
         self.num_saves -= 1
         if self.num_saves == 0:
-            v = uprefs().view
+            v = get_uprefs().view
             v.pie_menu_radius = self.radius
             v.pie_animation_timeout = self.animation_timeout
             self.radius = -1
@@ -2447,7 +2447,7 @@ class PMEPreferences(bpy.types.AddonPreferences):
 
     def add_pm(self, mode='PMENU', name=None, duplicate=False):
         link = None
-        pr = prefs()
+        pr =get_prefs()
         tpr = temp_prefs()
 
         if "active_pie_menu_idx" not in self:
@@ -2570,7 +2570,7 @@ class PMEPreferences(bpy.types.AddonPreferences):
         return d
 
     def _draw_pm_item(self, context, layout):
-        pr = prefs()
+        pr =get_prefs()
         tpr = temp_prefs()
         pm = pr.selected_pm
 
@@ -2683,7 +2683,7 @@ class PMEPreferences(bpy.types.AddonPreferences):
                         "pme.exec",
                         "Make Popup Wider",
                         cmd=(
-                            "d = prefs().pmi_data; "
+                            "d =get_prefs().pmi_data; "
                             "d.mode = 'CUSTOM'; "
                             "d.custom = '"
                             "col = L.%s(); "
@@ -2810,7 +2810,7 @@ class PMEPreferences(bpy.types.AddonPreferences):
                 lh.label(info, icon='QUESTION')
 
     def _draw_icons(self, context, layout):
-        pr = prefs()
+        pr =get_prefs()
         tpr = temp_prefs()
         pm = pr.selected_pm
         pmi = pm.pmis[pme.context.edit_item_idx]
@@ -2920,7 +2920,7 @@ class PMEPreferences(bpy.types.AddonPreferences):
         layout.prop(pr, "num_icons_per_row", slider=True)
 
     def _draw_tab_editor(self, context, layout):
-        pr = prefs()
+        pr =get_prefs()
         tpr = temp_prefs()
         pm = None
         link = None
@@ -3088,7 +3088,7 @@ class PMEPreferences(bpy.types.AddonPreferences):
                 url=url)
 
     def _draw_tab_settings(self, context, layout):
-        pr = prefs()
+        pr =get_prefs()
         tpr = temp_prefs()
 
         col = layout.column(align=True)
@@ -3138,7 +3138,7 @@ class PMEPreferences(bpy.types.AddonPreferences):
             self._draw_hlabel(col, "Hotkey Modes:")
             subcol = col.column(align=True)
             subcol.prop(
-                uprefs().inputs,
+                get_uprefs().inputs,
                 "drag_threshold" if is_28() else "tweak_threshold",
                 text="Tweak Mode Threshold")
             subcol.prop(pr, "hold_time")
@@ -3170,7 +3170,7 @@ class PMEPreferences(bpy.types.AddonPreferences):
             subcol = col.column(align=True)
             subcol.prop(pr, "pie_extra_slot_gap_size")
 
-            view = uprefs().view
+            view = get_uprefs().view
             subcol = col.column(align=True)
             subcol.prop(view, "pie_animation_timeout")
             subcol.prop(view, "pie_initial_timeout")
@@ -3185,7 +3185,7 @@ class PMEPreferences(bpy.types.AddonPreferences):
 
             col = row.column()
 
-            view = uprefs().view
+            view = get_uprefs().view
             col.prop(view, "use_mouse_over_open")
 
             subcol = col.column(align=True)
@@ -3246,7 +3246,7 @@ class PMEPreferences(bpy.types.AddonPreferences):
             subrow.prop(self, "mouse_threshold_enum")
 
     def _draw_preferences(self, context, layout):
-        pr = prefs()
+        pr =get_prefs()
         row = layout.row()
 
         sub = row.row(align=True)
@@ -3293,7 +3293,7 @@ class PMEPreferences(bpy.types.AddonPreferences):
         self.draw_prefs(context, self.layout)
 
     def init_menus(self):
-        pr = prefs()
+        pr =get_prefs()
         DBG and logh("Init Menus")
 
         if len(self.pie_menus) == 0:
@@ -3480,10 +3480,10 @@ class PME_PT_preferences(bpy.types.Panel):
 
     @classmethod
     def poll(cls, context):
-        return prefs().show_sidepanel_prefs
+        returnget_prefs().show_sidepanel_prefs
 
     def draw(self, context):
-        prefs().draw_prefs(context, self.layout)
+       get_prefs().draw_prefs(context, self.layout)
 
 
 class PME_MT_button_context:
@@ -3506,7 +3506,7 @@ class PME_OT_context_menu(bpy.types.Operator):
     def draw_menu(self, menu, context):
         layout = menu.layout
         layout.operator_context = 'INVOKE_DEFAULT'
-        pr = prefs()
+        pr =get_prefs()
         pm = pr.selected_pm
         if pm:
             if self.prop or self.operator:
@@ -3616,7 +3616,7 @@ def register():
 
     add_rmb_menu()
 
-    pr = prefs()
+    pr =get_prefs()
     pr.tree.lock()
     pr.init_menus()
     if pr.auto_backup:
@@ -3627,8 +3627,11 @@ def register():
     tpr = temp_prefs()
     tpr.init_tags()
 
+    # TODO: 'prefs' will be migrated to 'get_prefs' in the future.
+    # Kept for now to support user setup and external scripts.
     pme.context.add_global("_prefs", prefs)
     pme.context.add_global("prefs", prefs)
+    pme.context.add_global("get_prefs", get_prefs)
     pme.context.add_global("temp_prefs", temp_prefs)
     pme.context.add_global("pme", pme)
     pme.context.add_global("os", os)
@@ -3697,7 +3700,7 @@ def register():
 
 
 def unregister():
-    pr = prefs()
+    pr =get_prefs()
     pr.kh.unregister()
     pr.window_kmis.clear()
 

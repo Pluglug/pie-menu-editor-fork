@@ -1,7 +1,7 @@
 import bpy
 import addon_utils
 from bpy.app.handlers import persistent
-from .addon import ADDON_ID, prefs, uprefs, is_28
+from .addon import ADDON_ID, get_prefs, get_uprefs, is_28
 from .bl_utils import PopupOperator, popup_area, ctx_dict, area_header_text_set
 from .panel_utils import panel, panel_label, bl_panel_enum_items
 from .constants import (
@@ -188,7 +188,7 @@ class PME_OT_popup_user_preferences(PopupOperator, bpy.types.Operator):
     def draw(self, context):
         PopupOperator.draw(self, context)
 
-        upr = uprefs()
+        upr = get_uprefs()
         col = self.layout.column(align=True)
         col.row(align=True).prop(
             upr, "active_section", expand=True)
@@ -215,7 +215,7 @@ class PME_OT_popup_user_preferences(PopupOperator, bpy.types.Operator):
     def invoke(self, context, event):
         if self.tab != 'CURRENT':
             try:
-                uprefs().active_section = self.tab
+                get_uprefs().active_section = self.tab
             except:
                 pass
 
@@ -252,7 +252,7 @@ class PME_OT_popup_addon_preferences(PopupOperator, bpy.types.Operator):
         PopupOperator.draw(self, context, title)
 
         addon_prefs = None
-        for addon in uprefs().addons:
+        for addon in get_uprefs().addons:
             if addon.module == self.addon:
                 addon_prefs = addon.preferences
                 break
@@ -432,7 +432,7 @@ class PME_OT_window_auto_close(bpy.types.Operator):
             #             dict(window=w, screen=s),
             #             'INVOKE_DEFAULT', name=s.name)
 
-            prefs().enable_window_kmis(False)
+           get_prefs().enable_window_kmis(False)
 
         return {'PASS_THROUGH'}
 
@@ -563,7 +563,7 @@ class PME_OT_sidearea_toggle(bpy.types.Operator):
     def get_side_areas(self, area):
         l, r, b, t = None, None, None, None
         # XXX: In fact, it is also affected by view.ui_scale.
-        line_width = {'AUTO': 1, 'THIN': 1, 'THICK': 3}[uprefs().view.ui_line_width]
+        line_width = {'AUTO': 1, 'THIN': 1, 'THICK': 3}[get_uprefs().view.ui_line_width]
         for a in bpy.context.screen.areas:
             if a.height == area.height and a.y == area.y and \
                     a.ui_type not in self.ia:
@@ -864,10 +864,10 @@ class PME_OT_popup_area(bpy.types.Operator):
         if self.width == -1:
             if self.area == 'PROPERTIES':
                 self.width = round(
-                    350 * uprefs().view.ui_scale)
+                    350 * get_uprefs().view.ui_scale)
             elif self.area == 'OUTLINER':
                 self.width = round(
-                    400 * uprefs().view.ui_scale)
+                    400 * get_uprefs().view.ui_scale)
             else:
                 self.width = round(window.width * 0.8)
 
@@ -924,7 +924,7 @@ class PME_OT_popup_area(bpy.types.Operator):
             else:
                 area.type = area_type
 
-        prefs().enable_window_kmis()
+       get_prefs().enable_window_kmis()
 
         return {'FINISHED'}
 

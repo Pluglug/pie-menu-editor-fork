@@ -5,7 +5,7 @@ from typing import Any, Dict, Optional, Union
 
 from . import c_utils as CTU
 from . import pme
-from .addon import uprefs
+from .addon import get_uprefs
 # from .bl_utils import ctx_dict
 from .debug_utils import logi
 
@@ -18,7 +18,7 @@ def redraw_screen(area=None):
     # with bpy.context.temp_override(area=area):
     #     bpy.ops.screen.screen_full_area()
 
-    view = uprefs().view
+    view = get_uprefs().view
     s = view.ui_scale
     view.ui_scale = 0.5
     view.ui_scale = s

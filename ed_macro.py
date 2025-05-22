@@ -1,6 +1,6 @@
 import bpy
 from . import pme
-from .addon import prefs
+from .addon import get_prefs
 from .constants import MAX_STR_LEN
 from .bl_utils import uname
 from .ed_base import EditorBase
@@ -109,7 +109,7 @@ class Editor(EditorBase):
         MAU.update_macro(pm)
 
     def get_pmi_icon(self, pm, pmi, idx):
-        pr = prefs()
+        pr =get_prefs()
         icon = self.icon
         if pmi.icon:
             icon = pmi.icon
