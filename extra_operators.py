@@ -1160,7 +1160,7 @@ class PME_OT_popup_window(bpy.types.Operator):
         if self.width != -1:
             return max(min(self.width, window.width), WINDOW_MIN_WIDTH)
 
-        ui_scale = uprefs().view.ui_scale
+        ui_scale = get_uprefs().view.ui_scale
         if self.area == 'PROPERTIES':
             width = round(350 * ui_scale)
         elif self.area == 'OUTLINER':
@@ -1190,7 +1190,7 @@ class PME_OT_popup_window(bpy.types.Operator):
                 self.invoke_area["x"] + self.loc[0],
                 self.invoke_area["y"] + self.loc[1]
             ))
-        
+
         # Default to current mouse position if method not implemented
         return Vector(self.loc) + self.invoke_mouse
 
@@ -1262,7 +1262,7 @@ class PME_OT_popup_window(bpy.types.Operator):
         if self.original_area_type:
             area.ui_type = self.original_area_type
 
-        prefs().enable_window_kmis()
+        get_prefs(context).enable_window_kmis()
 
 
 class PME_OT_clipboard_copy(bpy.types.Operator):
