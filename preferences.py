@@ -524,7 +524,7 @@ class PME_OT_backup(bpy.types.Operator):
     bl_description = "Backup PME menus"
 
     def invoke(self, context, event):
-       get_prefs().backup_menus(operator=self)
+        get_prefs().backup_menus(operator=self)
         return {'FINISHED'}
 
 
@@ -612,13 +612,13 @@ class PME_OT_pm_enable_all(bpy.types.Operator):
     enable: bpy.props.BoolProperty(options={'SKIP_SAVE'})
 
     def execute(self, context):
-        for pm inget_prefs().pie_menus:
+        for pm in get_prefs().pie_menus:
             pm.enabled = self.enable
         return {'FINISHED'}
 
     @classmethod
     def poll(cls, context):
-        returnget_prefs().pie_menus
+        return get_prefs().pie_menus
 
 
 class PME_OT_pm_enable_by_tag(bpy.types.Operator):
@@ -637,7 +637,7 @@ class PME_OT_pm_enable_by_tag(bpy.types.Operator):
                 "Enable by Tag" if self.enable else "Disable by Tag",
                 enable=self.enable)
         else:
-            for pm inget_prefs().pie_menus:
+            for pm in get_prefs().pie_menus:
                 if pm.has_tag(self.tag):
                     pm.enabled = self.enable
             tag_redraw()
@@ -646,7 +646,7 @@ class PME_OT_pm_enable_by_tag(bpy.types.Operator):
 
     @classmethod
     def poll(cls, context):
-        returnget_prefs().pie_menus
+        return get_prefs().pie_menus
 
 
 class PME_OT_pm_remove_by_tag(bpy.types.Operator):
@@ -663,7 +663,7 @@ class PME_OT_pm_remove_by_tag(bpy.types.Operator):
         else:
             pr =get_prefs()
             pm_names = []
-            for pm inget_prefs().pie_menus:
+            for pm in get_prefs().pie_menus:
                 if pm.has_tag(self.tag):
                     pm_names.append(pm.name)
 
@@ -677,7 +677,7 @@ class PME_OT_pm_remove_by_tag(bpy.types.Operator):
 
     @classmethod
     def poll(cls, context):
-        returnget_prefs().pie_menus
+        return get_prefs().pie_menus
 
 
 class WM_OT_pm_move(bpy.types.Operator):
@@ -1870,7 +1870,7 @@ class PMIData(bpy.types.PropertyGroup):
 
     def mode_update(self, context):
         tpr = temp_prefs()
-        ifget_prefs().selected_pm.mode == 'MODAL':
+        if get_prefs().selected_pm.mode == 'MODAL':
             if self.mode == 'COMMAND' and \
                     tpr.modal_item_prop_mode != 'KEY':
                 tpr["modal_item_prop_mode"] = 0
@@ -3480,7 +3480,7 @@ class PME_PT_preferences(bpy.types.Panel):
 
     @classmethod
     def poll(cls, context):
-        returnget_prefs().show_sidepanel_prefs
+        return get_prefs().show_sidepanel_prefs
 
     def draw(self, context):
        get_prefs().draw_prefs(context, self.layout)

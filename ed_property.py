@@ -47,7 +47,7 @@ del SUBTYPE_NUMBER_ARRAY_ITEMS
 del SUBTYPE_NUMBER_ITEMS
 
 def size_get(self):
-    returnget_prefs().selected_pm.get_data("vector")
+    return get_prefs().selected_pm.get_data("vector")
 
 
 def size_set(self, value):
@@ -68,11 +68,11 @@ def size_set(self, value):
 
 
 def hor_exp_get(self):
-    returnget_prefs().selected_pm.get_data("hor_exp")
+    return get_prefs().selected_pm.get_data("hor_exp")
 
 
 def hor_exp_set(self, value):
-   get_prefs().selected_pm.set_data("hor_exp", value)
+    get_prefs().selected_pm.set_data("hor_exp", value)
     tag_redraw()
 
 
@@ -85,7 +85,7 @@ def save_set(self, value):
 
 
 def exp_get(self):
-    returnget_prefs().selected_pm.get_data("exp")
+    return get_prefs().selected_pm.get_data("exp")
 
 
 def exp_set(self, value):
@@ -93,7 +93,7 @@ def exp_set(self, value):
 
 
 def multiselect_get(self):
-    returnget_prefs().selected_pm.get_data("mulsel")
+    return get_prefs().selected_pm.get_data("mulsel")
 
 
 def multiselect_set(self, value):
@@ -625,7 +625,7 @@ class PME_OT_prop_pmi_move(MoveItemOperator, bpy.types.Operator):
         return pmi.mode == 'PROP'
 
     def get_collection(self):
-        returnget_prefs().selected_pm.pmis
+        return get_prefs().selected_pm.pmis
 
     def get_icon(self, pmi, idx):
         pm =get_prefs().selected_pm

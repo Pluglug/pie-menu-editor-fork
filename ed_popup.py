@@ -501,7 +501,7 @@ class PME_OT_pdr_paste(bpy.types.Operator):
 
     @classmethod
     def poll(cls, context):
-        returnget_prefs().pdr_clipboard is not None
+        return get_prefs().pdr_clipboard is not None
 
 
 class PME_OT_pdr_move(bpy.types.Operator, MoveItemOperator):
@@ -510,7 +510,7 @@ class PME_OT_pdr_move(bpy.types.Operator, MoveItemOperator):
     bl_description = "Move the row"
 
     def get_collection(self):
-        returnget_prefs().selected_pm.pmis
+        return get_prefs().selected_pm.pmis
 
     def finish(self):
         tag_redraw()
@@ -1640,7 +1640,7 @@ class Editor(EditorBase):
         super().on_pm_rename(pm, name)
         extend_panel(pm)
 
-        for v inget_prefs().pie_menus:
+        for v in get_prefs().pie_menus:
             if v.mode == 'PANEL':
                 update_flag = False
                 for pmi in v.pmis:

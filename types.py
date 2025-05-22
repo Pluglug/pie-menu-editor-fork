@@ -298,7 +298,7 @@ class PMItem(bpy.types.PropertyGroup):
             self["km_name"] = value
             self.register_hotkey()
 
-       get_prefs().update_tree()
+        get_prefs().update_tree()
 
     km_name: bpy.props.StringProperty(
         default="Window", description="Keymap names",
@@ -641,7 +641,7 @@ class PMItem(bpy.types.PropertyGroup):
         set=lambda s, v: s.set_data("block_ui", v))
 
     def mo_lock_update(self, context):
-        for pm inget_prefs().pie_menus:
+        for pm in get_prefs().pie_menus:
             if pm.mode == 'MACRO':
                 for pmi in pm.pmis:
                     menu_name, *_ = U.extract_str_flags(
@@ -677,7 +677,7 @@ class PMItem(bpy.types.PropertyGroup):
 
     @property
     def is_new(self):
-        return self.name not inget_prefs().old_pms
+        return self.name not in get_prefs().old_pms
 
     def register_hotkey(self, km_names=None):
         pr =get_prefs()
@@ -804,7 +804,7 @@ class PMItem(bpy.types.PropertyGroup):
 
     @property
     def ed(self):
-        returnget_prefs().ed(self.mode)
+        return get_prefs().ed(self.mode)
 
     def __str__(self):
         return "[%s][%s][%s] %s" % (

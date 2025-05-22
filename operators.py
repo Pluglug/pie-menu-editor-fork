@@ -1326,7 +1326,7 @@ class PME_OT_restore_pie_radius(bpy.types.Operator):
             if self.timer and self.timer.time_duration > 0:
                 context.window_manager.event_timer_remove(self.timer)
                 self.timer = None
-               get_prefs().pie_menu_radius.restore()
+                get_prefs().pie_menu_radius.restore()
                 return {'FINISHED'}
 
         return {'PASS_THROUGH'}
@@ -1990,7 +1990,7 @@ class WM_OT_pme_user_pie_menu_call(bpy.types.Operator):
         elif pm.open_mode == 'CHORDS':
             self.pm_chord = pm
             self.chord_pms = []
-            for v inget_prefs().pie_menus:
+            for v in get_prefs().pie_menus:
                 if v.chord and \
                         keymap_helper.compare_km_names(
                             self.keymap, v.km_name) and \

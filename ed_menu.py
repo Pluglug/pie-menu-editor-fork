@@ -434,7 +434,7 @@ class WM_OT_rm_col_paste(bpy.types.Operator):
 
     @classmethod
     def poll(cls, context):
-        returnget_prefs().rmc_clipboard is not None
+        return get_prefs().rmc_clipboard is not None
 
 
 class WM_OT_rmi_specials_call(bpy.types.Operator):

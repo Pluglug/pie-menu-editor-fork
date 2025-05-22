@@ -838,7 +838,7 @@ def panel(
         p.layout = layout if root else layout.column()
         try:
             if hasattr(p, "draw"):
-                # ifget_prefs().interactive_panels:
+                # if get_prefs().interactive_panels:
                 #     sub = p.layout.row(align=True)
                 #     sub.operator(
                 #         PME_OT_panel_reset.bl_idname,
