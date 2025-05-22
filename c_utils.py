@@ -505,10 +505,6 @@ class HeadModalHandler:
     key: bpy.props.StringProperty(
         default="ESC", options={'SKIP_SAVE'})
 
-    def __init__(self):
-        self.move_flag = False
-        self.finished = False
-
     def finish(self):
         pass
 
@@ -534,6 +530,9 @@ class HeadModalHandler:
         return {'PASS_THROUGH'}
 
     def execute(self, context):
+        self.move_flag = False
+        self.finished = False
+
         self.timer = context.window_manager.event_timer_add(
             0.001, window=context.window)
         context.window_manager.modal_handler_add(self)
