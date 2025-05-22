@@ -293,6 +293,10 @@ class LayoutHelper:
             expand=False, slider=False, toggle=-1, icon_only=False,
             event=False, full_event=False, emboss=True, index=-1,
             enabled=True, active=True, alert=False):
+
+        if data is None:
+            raise AttributeError(f"Property Data is None: {prop}")
+
         if not prop.startswith("[") and not hasattr(data, prop):
             # pass
             # return
