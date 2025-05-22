@@ -526,7 +526,7 @@ class PME_OT_panel_add(bpy.types.Operator):
                     _add_item(tp_name, tp)
 
             elif self.mode == 'PME':
-                for pm inget_prefs().pie_menus:
+                for pm in get_prefs().pie_menus:
                     if pm.mode == 'DIALOG':
                         enum_items.append((pm.name, pm.name, ""))
 
@@ -620,7 +620,7 @@ class PME_OT_panel_item_move(MoveItemOperator, bpy.types.Operator):
         return 'FILE' if item.icon == CC.PANEL_FILE else 'FILE_FOLDER'
 
     def get_collection(self):
-        returnget_prefs().selected_pm.pmis
+        return get_prefs().selected_pm.pmis
 
     def finish(self):
         pr =get_prefs()
@@ -744,7 +744,7 @@ class Editor(EditorBase):
                 "pme.panel_sub_toggle", "",
                 'FILE' if pmi.icon == CC.PANEL_FILE else 'FILE_FOLDER',
                 idx=idx)
-            icon = pr.ed('DIALOG').icon if pmi.text inget_prefs().pie_menus \
+            icon = pr.ed('DIALOG').icon if pmi.text in get_prefs().pie_menus \
                 else 'BLENDER'
             lh.prop(pmi, "label", "", icon)
 

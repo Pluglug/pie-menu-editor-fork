@@ -515,7 +515,7 @@ class WM_OT_pmi_type_select(bpy.types.Operator):
 
             tag_redraw()
 
-       get_prefs().update_tree()
+        get_prefs().update_tree()
 
         return {'CANCELLED'}
 
@@ -1110,7 +1110,7 @@ class PME_OT_pmi_add(AddItemOperator, bpy.types.Operator):
     bl_description = "Add a slot"
 
     def get_collection(self):
-        returnget_prefs().selected_pm.pmis
+        return get_prefs().selected_pm.pmis
 
     def finish(self, item):
         pm =get_prefs().selected_pm
@@ -1123,7 +1123,7 @@ class PME_OT_pmi_move(MoveItemOperator, bpy.types.Operator):
     bl_idname = "pme.pmi_move"
 
     def get_collection(self):
-        returnget_prefs().selected_pm.pmis
+        return get_prefs().selected_pm.pmis
 
     def get_icon(self, pmi, idx):
         pm =get_prefs().selected_pm
@@ -1146,7 +1146,7 @@ class PME_OT_pmi_remove(RemoveItemOperator, bpy.types.Operator):
     bl_idname = "pme.pmi_remove"
 
     def get_collection(self):
-        returnget_prefs().selected_pm.pmis
+        return get_prefs().selected_pm.pmis
 
     def finish(self):
         pr =get_prefs()
@@ -1886,7 +1886,7 @@ class PME_OT_pmi_toggle(bpy.types.Operator):
 
 class EditorBase:
     def __init__(self):
-       get_prefs().editors[self.id] = self
+        get_prefs().editors[self.id] = self
 
         for id, name, icon in CC.ED_DATA:
             if id == self.id:

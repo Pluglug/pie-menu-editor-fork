@@ -432,7 +432,7 @@ class PME_OT_window_auto_close(bpy.types.Operator):
             #             dict(window=w, screen=s),
             #             'INVOKE_DEFAULT', name=s.name)
 
-           get_prefs().enable_window_kmis(False)
+            get_prefs().enable_window_kmis(False)
 
         return {'PASS_THROUGH'}
 
@@ -924,7 +924,7 @@ class PME_OT_popup_area(bpy.types.Operator):
             else:
                 area.type = area_type
 
-       get_prefs().enable_window_kmis()
+        get_prefs().enable_window_kmis()
 
         return {'FINISHED'}
 
