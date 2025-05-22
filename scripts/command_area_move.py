@@ -36,7 +36,8 @@ def move_area(area, edge='TOP', delta=300, move_cursor=False):
         cmd=(
             "bpy.ops.screen.area_move(x=%d, y=%d, delta=%d);"
             "bpy.context.window.cursor_warp(%d, %d)"
-        ) % (x, y, delta, mx, my)
+        )
+        % (x, y, delta, mx, my),
     )
 
 

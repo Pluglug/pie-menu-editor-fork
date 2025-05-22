@@ -6,6 +6,7 @@ from typing import Any, Dict, Optional, Union
 from . import c_utils as CTU
 from . import pme
 from .addon import get_uprefs
+
 # from .bl_utils import ctx_dict
 from .debug_utils import logi
 
@@ -25,8 +26,7 @@ def redraw_screen(area=None):
 
 
 def toggle_header(area):
-    area.spaces.active.show_region_header = \
-        not area.spaces.active.show_region_header
+    area.spaces.active.show_region_header = not area.spaces.active.show_region_header
 
 
 def move_header(area=None, top=None, visible=None, auto=None):
@@ -103,7 +103,7 @@ def move_header(area=None, top=None, visible=None, auto=None):
 
 def find_area(
     area_or_type: Union[str, bpy.types.Area, None],
-    screen_or_name: Union[str, bpy.types.Screen, None] = None
+    screen_or_name: Union[str, bpy.types.Screen, None] = None,
 ) -> Optional[bpy.types.Area]:
     """Find and return an Area object, or None if not found."""
     try:
@@ -138,7 +138,7 @@ def find_area(
 def find_region(
     region_or_type: Union[str, bpy.types.Region, None],
     area_or_type: Union[str, bpy.types.Area, None] = None,
-    screen_or_name: Union[str, bpy.types.Screen, None] = None
+    screen_or_name: Union[str, bpy.types.Screen, None] = None,
 ) -> Optional[bpy.types.Region]:
     """Find and return a Region object within the specified Area, or None if not found."""
     try:
@@ -182,8 +182,7 @@ def find_window(
 
 
 def find_screen(
-    value: Optional[Union[str, bpy.types.Screen]],
-    context: bpy.types.Context
+    value: Optional[Union[str, bpy.types.Screen]], context: bpy.types.Context
 ) -> Optional[bpy.types.Screen]:
     """Resolve string or Screen object into a Screen object, fallback to context.screen if none."""
     if isinstance(value, bpy.types.Screen):
@@ -217,7 +216,7 @@ class ContextOverride:
         context: bpy.types.Context,
         *,
         # extra_priority: bool = False,
-        delete_none: bool = True
+        delete_none: bool = True,
     ) -> Dict[str, Any]:
 
         # Resolve all fields
@@ -304,19 +303,19 @@ def focus_area(area, center=False, cmd=None):
 
 
 # TODO: Remove this function
-def override_context(
-        area, screen=None, window=None, region='WINDOW', **kwargs):
+def override_context(area, screen=None, window=None, region='WINDOW', **kwargs):
     # This is no longer necessary
     # but is documented in the old user docs so keeping it for now
 
     import traceback
     import warnings
+
     caller = traceback.extract_stack(None, 2)[0]
     warnings.warn(
         f"Deprecated: 'override_context' is deprecated, use 'get_override_args' instead. "
         f"Called from {caller.name} at {caller.line}",
         DeprecationWarning,
-        stacklevel=2
+        stacklevel=2,
     )
     return get_override_args(area, region, screen, window, **kwargs)
 

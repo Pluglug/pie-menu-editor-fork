@@ -5,15 +5,29 @@ from .addon import get_prefs, temp_prefs, ic_rb, ic_cb, ic_eye, ic_fb, ic
 from .constants import MAX_STR_LEN, EMODE_ITEMS
 from .debug_utils import *
 from .bl_utils import (
-    find_context, re_operator, re_prop, re_prop_path, bp,
-    message_box, uname, ConfirmBoxHandler, PME_OT_message_box
+    find_context,
+    re_operator,
+    re_prop,
+    re_prop_path,
+    bp,
+    message_box,
+    uname,
+    ConfirmBoxHandler,
+    PME_OT_message_box,
 )
 from .collection_utils import (
-    sort_collection, AddItemOperator, MoveItemOperator, RemoveItemOperator,
+    sort_collection,
+    AddItemOperator,
+    MoveItemOperator,
+    RemoveItemOperator,
 )
 from .ui import (
-    tag_redraw, shorten_str, gen_prop_name, gen_op_name, find_enum_args,
-    utitle
+    tag_redraw,
+    shorten_str,
+    gen_prop_name,
+    gen_op_name,
+    find_enum_args,
+    utitle,
 )
 from . import utils as U
 from . import screen_utils as SU
@@ -43,14 +57,14 @@ EXTENDED_PANELS = {}
 def gen_header_draw(pm_name):
     def _draw(self, context):
         is_right_region = context.region.alignment == 'RIGHT'
-        _, is_right_pm, _ = U.extract_str_flags_b(
-            pm_name, CC.F_RIGHT, CC.F_PRE)
-        if is_right_region and is_right_pm or \
-                not is_right_region and not is_right_pm:
+        _, is_right_pm, _ = U.extract_str_flags_b(pm_name, CC.F_RIGHT, CC.F_PRE)
+        if is_right_region and is_right_pm or not is_right_region and not is_right_pm:
             draw_pme_layout(
-               get_prefs().pie_menus[pm_name], self.layout.column(align=True),
+                get_prefs().pie_menus[pm_name],
+                self.layout.column(align=True),
                 WM_OT_pme_user_pie_menu_call._draw_item,
-                icon_btn_scale_x=1)
+                icon_btn_scale_x=1,
+            )
 
     return _draw
 
@@ -58,7 +72,8 @@ def gen_header_draw(pm_name):
 def gen_menu_draw(pm_name):
     def _draw(self, context):
         WM_OT_pme_user_pie_menu_call.draw_rm(
-           get_prefs().pie_menus[pm_name], self.layout)
+            get_prefs().pie_menus[pm_name], self.layout
+        )
 
     return _draw
 
@@ -66,8 +81,10 @@ def gen_menu_draw(pm_name):
 def gen_panel_draw(pm_name):
     def _draw(self, context):
         draw_pme_layout(
-           get_prefs().pie_menus[pm_name], self.layout.column(align=True),
-            WM_OT_pme_user_pie_menu_call._draw_item)
+            get_prefs().pie_menus[pm_name],
+            self.layout.column(align=True),
+            WM_OT_pme_user_pie_menu_call._draw_item,
+        )
 
     return _draw
 
@@ -78,14 +95,15 @@ def extend_panel(pm):
 
     tp_name, right, pre = U.extract_str_flags_b(pm.name, CC.F_RIGHT, CC.F_PRE)
 
-    if tp_name.startswith("PME_PT") or \
-            tp_name.startswith("PME_MT") or \
-            tp_name.startswith("PME_HT"):
+    if (
+        tp_name.startswith("PME_PT")
+        or tp_name.startswith("PME_MT")
+        or tp_name.startswith("PME_HT")
+    ):
         return
 
     tp = getattr(bpy.types, tp_name, None)
-    if tp and issubclass(
-            tp, (bpy.types.Panel, bpy.types.Menu, bpy.types.Header)):
+    if tp and issubclass(tp, (bpy.types.Panel, bpy.types.Menu, bpy.types.Header)):
         if '_HT_' in pm.name:
             EXTENDED_PANELS[pm.name] = gen_header_draw(pm.name)
         elif '_MT_' in pm.name:
@@ -120,32 +138,43 @@ class PME_OT_tags_filter(bpy.types.Operator):
     tag: bpy.props.StringProperty(options={'SKIP_SAVE'})
 
     def draw_menu(self, menu, context):
-        pr =get_prefs()
+        pr = get_prefs()
         tpr = temp_prefs()
         layout = menu.layout
         operator(
-            layout, self.bl_idname, "Disable",
+            layout,
+            self.bl_idname,
+            "Disable",
             icon=ic_rb(not pr.tag_filter),
-            tag="", ask=False)
+            tag="",
+            ask=False,
+        )
         layout.separator()
 
         for t in tpr.tags:
             operator(
-                layout, self.bl_idname, t.name,
+                layout,
+                self.bl_idname,
+                t.name,
                 icon=ic_rb(t.name == pr.tag_filter),
-                tag=t.name, ask=False)
+                tag=t.name,
+                ask=False,
+            )
 
         operator(
-            layout, self.bl_idname, CC.UNTAGGED,
+            layout,
+            self.bl_idname,
+            CC.UNTAGGED,
             icon=ic_rb(pr.tag_filter == CC.UNTAGGED),
-            tag=CC.UNTAGGED, ask=False)
+            tag=CC.UNTAGGED,
+            ask=False,
+        )
 
     def execute(self, context):
         if self.ask:
-            context.window_manager.popup_menu(
-                self.draw_menu, title=self.bl_label)
+            context.window_manager.popup_menu(self.draw_menu, title=self.bl_label)
         else:
-            pr =get_prefs()
+            pr = get_prefs()
             pr.tag_filter = self.tag
             Tag.filter()
             pr.update_tree()
@@ -171,12 +200,13 @@ class PME_OT_tags(bpy.types.Operator):
             ('REMOVE', "Remove", ""),
             ('RENAME', "Rename", ""),
         ),
-        options={'SKIP_SAVE'})
+        options={'SKIP_SAVE'},
+    )
     tag: bpy.props.StringProperty(maxlen=50, options={'SKIP_SAVE'})
     group: bpy.props.BoolProperty(options={'SKIP_SAVE'})
 
     def draw_menu(self, menu, context):
-        pr =get_prefs()
+        pr = get_prefs()
         tpr = temp_prefs()
         pm = pr.selected_pm
         layout = menu.layout
@@ -192,8 +222,14 @@ class PME_OT_tags(bpy.types.Operator):
                 action = self.action
                 icon = 'NONE'
             operator(
-                layout, PME_OT_tags.bl_idname, tag.name, icon,
-                idx=i, action=action, group=self.group)
+                layout,
+                PME_OT_tags.bl_idname,
+                tag.name,
+                icon,
+                idx=i,
+                action=action,
+                group=self.group,
+            )
 
         if self.action not in {'MENU', 'TAG'}:
             return
@@ -202,8 +238,13 @@ class PME_OT_tags(bpy.types.Operator):
             layout.separator()
 
         operator(
-            layout, PME_OT_tags.bl_idname, "Assign New Tag", 'ADD',
-            action='ADD', group=self.group)
+            layout,
+            PME_OT_tags.bl_idname,
+            "Assign New Tag",
+            'ADD',
+            action='ADD',
+            group=self.group,
+        )
 
         if self.action != 'MENU':
             return
@@ -212,18 +253,19 @@ class PME_OT_tags(bpy.types.Operator):
             return
 
         operator(
-            layout, PME_OT_tags.bl_idname, "Rename Tag",
+            layout,
+            PME_OT_tags.bl_idname,
+            "Rename Tag",
             'OUTLINER_DATA_FONT',
-            action='RENAME')
-        operator(
-            layout, PME_OT_tags.bl_idname, "Remove Tag", 'REMOVE',
-            action='REMOVE')
+            action='RENAME',
+        )
+        operator(layout, PME_OT_tags.bl_idname, "Remove Tag", 'REMOVE', action='REMOVE')
 
     def draw(self, context):
         self.layout.prop(self, "tag", text="", icon=ic('SOLO_OFF'))
 
     def execute(self, context):
-        pr =get_prefs()
+        pr = get_prefs()
         tpr = temp_prefs()
         pm = pr.selected_pm
 
@@ -262,7 +304,7 @@ class PME_OT_tags(bpy.types.Operator):
         return {'FINISHED'}
 
     def invoke(self, context, event):
-        pr =get_prefs()
+        pr = get_prefs()
         tpr = temp_prefs()
         pm = pr.selected_pm
 
@@ -272,7 +314,8 @@ class PME_OT_tags(bpy.types.Operator):
 
         if self.action == 'MENU':
             context.window_manager.popup_menu(
-                self.draw_menu, title=pm.name, icon=pm.ed.icon)
+                self.draw_menu, title=pm.name, icon=pm.ed.icon
+            )
 
         elif self.action == 'ADD':
             self.tag = "Tag"
@@ -281,8 +324,8 @@ class PME_OT_tags(bpy.types.Operator):
         elif self.action == 'RENAME':
             if self.idx == -1:
                 context.window_manager.popup_menu(
-                    self.draw_menu, title="Rename Tag",
-                    icon='OUTLINER_DATA_FONT')
+                    self.draw_menu, title="Rename Tag", icon='OUTLINER_DATA_FONT'
+                )
             else:
                 self.tag = tag.name
                 return context.window_manager.invoke_props_dialog(self)
@@ -290,7 +333,8 @@ class PME_OT_tags(bpy.types.Operator):
         elif self.action == 'REMOVE':
             if self.idx == -1:
                 context.window_manager.popup_menu(
-                    self.draw_menu, title="Remove Tag", icon='REMOVE')
+                    self.draw_menu, title="Remove Tag", icon='REMOVE'
+                )
             else:
                 for pm in pr.pie_menus:
                     pm.remove_tag(tag.name)
@@ -299,8 +343,8 @@ class PME_OT_tags(bpy.types.Operator):
         elif self.action == 'TAG':
             if tag is None:
                 context.window_manager.popup_menu(
-                    self.draw_menu, title="Tag Enabled Menus",
-                    icon='SOLO_ON')
+                    self.draw_menu, title="Tag Enabled Menus", icon='SOLO_ON'
+                )
             else:
                 if self.group:
                     for v in pr.pie_menus:
@@ -312,8 +356,8 @@ class PME_OT_tags(bpy.types.Operator):
         elif self.action == 'UNTAG':
             if tag is None:
                 context.window_manager.popup_menu(
-                    self.draw_menu, title="Untag Enabled Menus",
-                    icon='SOLO_OFF')
+                    self.draw_menu, title="Untag Enabled Menus", icon='SOLO_OFF'
+                )
             else:
                 if self.group:
                     for v in pr.pie_menus:
@@ -339,21 +383,25 @@ class WM_OT_pmi_type_select(bpy.types.Operator):
     mode: bpy.props.StringProperty()
 
     def _draw(self, menu, context):
-        pm =get_prefs().selected_pm
+        pm = get_prefs().selected_pm
         lh.lt(menu.layout)
 
         lh.operator(
-            WM_OT_pmi_type_select.bl_idname, "Command",
+            WM_OT_pmi_type_select.bl_idname,
+            "Command",
             pm_item=self.pm_item,
             text=self.text,
-            mode='COMMAND')
+            mode='COMMAND',
+        )
 
         if self.mode == 'PROP_ASK':
             lh.operator(
-                WM_OT_pmi_type_select.bl_idname, "Property",
+                WM_OT_pmi_type_select.bl_idname,
+                "Property",
                 pm_item=self.pm_item,
                 text=self.text,
-                mode='PROP')
+                mode='PROP',
+            )
 
             mo = re_prop.search(self.text)
             prop_path = mo.group(1) + mo.group(2)
@@ -367,24 +415,28 @@ class WM_OT_pmi_type_select(bpy.types.Operator):
 
             if prop and prop.type == 'ENUM':
                 lh.operator(
-                    WM_OT_pmi_type_select.bl_idname, "Custom (Menu)",
+                    WM_OT_pmi_type_select.bl_idname,
+                    "Custom (Menu)",
                     pm_item=self.pm_item,
                     text=self.text,
-                    mode='PROP_ENUM_MENU')
+                    mode='PROP_ENUM_MENU',
+                )
 
                 lh.operator(
                     WM_OT_pmi_type_select.bl_idname,
                     "Custom (Expand Horizontally)",
                     pm_item=self.pm_item,
                     text=self.text,
-                    mode='PROP_ENUM_EXPAND_H')
+                    mode='PROP_ENUM_EXPAND_H',
+                )
 
                 lh.operator(
                     WM_OT_pmi_type_select.bl_idname,
                     "Custom (Expand Vertically)",
                     pm_item=self.pm_item,
                     text=self.text,
-                    mode='PROP_ENUM_EXPAND_V')
+                    mode='PROP_ENUM_EXPAND_V',
+                )
 
                 # if pm.mode != 'PMENU':
                 #     lh.operator(
@@ -395,24 +447,27 @@ class WM_OT_pmi_type_select(bpy.types.Operator):
 
         if self.mode == 'ENUM_ASK':
             lh.operator(
-                WM_OT_pmi_type_select.bl_idname, "Custom (Menu)",
+                WM_OT_pmi_type_select.bl_idname,
+                "Custom (Menu)",
                 pm_item=self.pm_item,
                 text=self.text,
-                mode='ENUM_MENU')
+                mode='ENUM_MENU',
+            )
 
             if pm.mode != 'PMENU':
                 lh.operator(
-                    WM_OT_pmi_type_select.bl_idname, "Custom (List)",
+                    WM_OT_pmi_type_select.bl_idname,
+                    "Custom (List)",
                     pm_item=self.pm_item,
                     text=self.text,
-                    mode='ENUM')
+                    mode='ENUM',
+                )
 
     def execute(self, context):
         if 'ASK' in self.mode:
-            bpy.context.window_manager.popup_menu(
-                self._draw, title="Select Type")
+            bpy.context.window_manager.popup_menu(self._draw, title="Select Type")
         else:
-            pm =get_prefs().selected_pm
+            pm = get_prefs().selected_pm
             pmi = pm.pmis[self.pm_item]
 
             if self.mode == 'COMMAND':
@@ -443,8 +498,7 @@ class WM_OT_pmi_type_select(bpy.types.Operator):
                         prop = type(
                             eval(obj, pme.context.globals)
                         ).bl_rna.properties[prop_name]
-                        if prop.type != 'BOOLEAN' or len(
-                                prop.default_array) > 1:
+                        if prop.type != 'BOOLEAN' or len(prop.default_array) > 1:
                             text = "slot"
                             if prop.type == 'ENUM':
                                 text = "''"
@@ -452,8 +506,8 @@ class WM_OT_pmi_type_select(bpy.types.Operator):
                             pmi.text = (
                                 "L.column().prop("
                                 "%s, '%s', text=%s, icon=icon, "
-                                "icon_value=icon_value)") % (
-                                obj, prop_name, text)
+                                "icon_value=icon_value)"
+                            ) % (obj, prop_name, text)
                     except:
                         pass
 
@@ -474,9 +528,10 @@ class WM_OT_pmi_type_select(bpy.types.Operator):
                 mo = re_prop.search(self.text)
                 prop_path = mo.group(1) + mo.group(2)
                 obj_path, _, prop_name = prop_path.rpartition(".")
-                pmi.text = (
-                    "L.prop_menu_enum(%s, '%s', text=text, icon=icon)"
-                ) % (obj_path, prop_name)
+                pmi.text = ("L.prop_menu_enum(%s, '%s', text=text, icon=icon)") % (
+                    obj_path,
+                    prop_name,
+                )
                 pmi.name, icon = gen_prop_name(mo, True)
                 if icon:
                     pmi.icon = icon
@@ -487,9 +542,11 @@ class WM_OT_pmi_type_select(bpy.types.Operator):
                 prop_path = mo.group(1) + mo.group(2)
                 obj_path, _, prop_name = prop_path.rpartition(".")
                 lt = "row" if self.mode == 'PROP_ENUM_EXPAND_H' else "column"
-                pmi.text = (
-                    "L.%s(align=True).prop(%s, '%s', expand=True)"
-                ) % (lt, obj_path, prop_name)
+                pmi.text = ("L.%s(align=True).prop(%s, '%s', expand=True)") % (
+                    lt,
+                    obj_path,
+                    prop_name,
+                )
                 pmi.name, icon = gen_prop_name(mo, True)
                 if icon:
                     pmi.icon = icon
@@ -498,9 +555,10 @@ class WM_OT_pmi_type_select(bpy.types.Operator):
                 pmi.mode = 'CUSTOM'
                 mo = re_operator.search(self.text)
                 enum_args = find_enum_args(mo)
-                pmi.text = \
-                    "L.operator_enum(\"%s\", \"%s\")" % (
-                        mo.group(1), enum_args[0])
+                pmi.text = "L.operator_enum(\"%s\", \"%s\")" % (
+                    mo.group(1),
+                    enum_args[0],
+                )
                 pmi.name = gen_op_name(mo)
 
             elif self.mode == 'ENUM_MENU':
@@ -508,8 +566,7 @@ class WM_OT_pmi_type_select(bpy.types.Operator):
                 mo = re_operator.search(self.text)
                 enum_args = find_enum_args(mo)
                 pmi.text = (
-                    "L.operator_menu_enum(\"%s\", \"%s\", "
-                    "text=text, icon=icon)"
+                    "L.operator_menu_enum(\"%s\", \"%s\", " "text=text, icon=icon)"
                 ) % (mo.group(1), enum_args[0])
                 pmi.name = gen_op_name(mo)
 
@@ -521,7 +578,7 @@ class WM_OT_pmi_type_select(bpy.types.Operator):
 
 
 def _edit_pmi(operator, text, event):
-    pr =get_prefs()
+    pr = get_prefs()
     pm = pr.selected_pm
     pmi = None
 
@@ -588,11 +645,10 @@ def _edit_pmi(operator, text, event):
             mo = re_operator.search(lines[0])
             if mo:
                 parsed = True
-                if 'CUSTOM' in pm.ed.supported_slot_modes and find_enum_args(
-                        mo):
+                if 'CUSTOM' in pm.ed.supported_slot_modes and find_enum_args(mo):
                     bpy.ops.wm.pmi_type_select(
-                        pm_item=operator.pm_item,
-                        text=lines[0], mode="ENUM_ASK")
+                        pm_item=operator.pm_item, text=lines[0], mode="ENUM_ASK"
+                    )
                     return
 
                 else:
@@ -606,8 +662,8 @@ def _edit_pmi(operator, text, event):
                 parsed = True
                 if 'PROP' in pm.ed.supported_slot_modes and mo.group(4):
                     bpy.ops.wm.pmi_type_select(
-                        pm_item=operator.pm_item,
-                        text=lines[0], mode="PROP_ASK")
+                        pm_item=operator.pm_item, text=lines[0], mode="PROP_ASK"
+                    )
                     return
                 else:
                     pmi.name, icon = gen_prop_name(mo)
@@ -735,7 +791,7 @@ class WM_OT_pmi_edit_auto(bpy.types.Operator):
         if not info_area:
             old_type = context.area.type
             context.area.type = 'INFO'
-        
+
         override_args = SU.get_override_args(area="INFO")
 
         bpy.ops.wm.pme_none()
@@ -755,8 +811,8 @@ class WM_OT_pmi_edit_auto(bpy.types.Operator):
                 break
 
             idx1 = text.rfind("\n", 0, idx2 - 1)
-            line = text[idx1 + 1:idx2]
-            op = line[0:line.find("(")]
+            line = text[idx1 + 1 : idx2]
+            op = line[0 : line.find("(")]
             if line.startswith("Debug mode"):
                 continue
             if op not in self.ignored_operators:
@@ -784,11 +840,15 @@ class PME_MT_select_menu(bpy.types.Menu):
         layout.operator_context = 'INVOKE_DEFAULT'
 
         operator(
-            layout, WM_OT_pm_select.bl_idname, None, 'COLLAPSEMENU',
-            pm_name="", use_mode_icons=False)
+            layout,
+            WM_OT_pm_select.bl_idname,
+            None,
+            'COLLAPSEMENU',
+            pm_name="",
+            use_mode_icons=False,
+        )
 
-        operator(
-            layout, PME_OT_pm_search_and_select.bl_idname, None, 'VIEWZOOM')
+        operator(layout, PME_OT_pm_search_and_select.bl_idname, None, 'VIEWZOOM')
 
 
 class PME_MT_pm_new(bpy.types.Menu):
@@ -819,9 +879,10 @@ class PME_OT_pm_add(bpy.types.Operator):
     def execute(self, context):
         if not self.mode:
             context.window_manager.popup_menu(
-                self._draw, title=PME_OT_pm_add.bl_description)
+                self._draw, title=PME_OT_pm_add.bl_description
+            )
         else:
-            pr =get_prefs()
+            pr = get_prefs()
             pr.add_pm(self.mode, self.name or None)
             pr.update_tree()
             tag_redraw()
@@ -841,7 +902,7 @@ class PME_OT_pm_edit(bpy.types.Operator):
     name: bpy.props.StringProperty(options={'SKIP_SAVE'})
 
     def _draw_pm(self, menu, context):
-        pm =get_prefs().selected_pm
+        pm = get_prefs().selected_pm
 
         lh.lt(menu.layout, operator_context='INVOKE_DEFAULT')
 
@@ -851,9 +912,16 @@ class PME_OT_pm_edit(bpy.types.Operator):
                 text = ". . ."
 
             lh.operator(
-                self.op_bl_idname, text, CC.ARROW_ICONS[idx], pm_item=idx,
-                mode=self.mode, text=self.text, name=self.name,
-                add=False, new_script=False)
+                self.op_bl_idname,
+                text,
+                CC.ARROW_ICONS[idx],
+                pm_item=idx,
+                mode=self.mode,
+                text=self.text,
+                name=self.name,
+                add=False,
+                new_script=False,
+            )
 
         lh.sep()
 
@@ -861,13 +929,17 @@ class PME_OT_pm_edit(bpy.types.Operator):
         #     self.op_bl_idname, "New Stack Key", 'MOD_SKIN',
         #     pm_item=-1, add=False, new_script=True)
         lh.operator(
-            WM_OT_pm_select.bl_idname, None, 'COLLAPSEMENU',
-            pm_name="", use_mode_icons=False)
+            WM_OT_pm_select.bl_idname,
+            None,
+            'COLLAPSEMENU',
+            pm_name="",
+            use_mode_icons=False,
+        )
 
         lh.operator(PME_OT_pm_search_and_select.bl_idname, None, 'VIEWZOOM')
 
     def _draw_rm(self, menu, context):
-        pm =get_prefs().selected_pm
+        pm = get_prefs().selected_pm
 
         lh.lt(menu.layout, operator_context='INVOKE_DEFAULT')
         row = lh.row()
@@ -877,8 +949,12 @@ class PME_OT_pm_edit(bpy.types.Operator):
         #     self.op_bl_idname, "New Stack Key", 'MOD_SKIN',
         #     pm_item=-1, add=False, new_script=True)
         lh.operator(
-            WM_OT_pm_select.bl_idname, None, 'COLLAPSEMENU',
-            pm_name="", use_mode_icons=False)
+            WM_OT_pm_select.bl_idname,
+            None,
+            'COLLAPSEMENU',
+            pm_name="",
+            use_mode_icons=False,
+        )
         lh.operator(PME_OT_pm_search_and_select.bl_idname, None, 'VIEWZOOM')
         lh.sep()
 
@@ -891,10 +967,16 @@ class PME_OT_pm_edit(bpy.types.Operator):
             if pmi.mode == 'EMPTY':
                 if pmi.text == "column":
                     lh.operator(
-                        self.op_bl_idname, "Add Item", 'ADD',
+                        self.op_bl_idname,
+                        "Add Item",
+                        'ADD',
                         pm_item=idx,
-                        mode=self.mode, text=self.text, name=self.name,
-                        add=True, new_script=False)
+                        mode=self.mode,
+                        text=self.text,
+                        name=self.name,
+                        add=True,
+                        new_script=False,
+                    )
                     lh.column(row)
                     lh.label(" ")
                     lh.label(" ")
@@ -913,21 +995,35 @@ class PME_OT_pm_edit(bpy.types.Operator):
                 continue
 
             lh.operator(
-                self.op_bl_idname, name, icon, pm_item=idx,
-                mode=self.mode, text=self.text, name=self.name,
-                add=False, new_script=False)
+                self.op_bl_idname,
+                name,
+                icon,
+                pm_item=idx,
+                mode=self.mode,
+                text=self.text,
+                name=self.name,
+                add=False,
+                new_script=False,
+            )
 
         lh.operator(
-            self.op_bl_idname, "Add Item", 'ADD',
-            pm_item=-1, mode=self.mode, text=self.text, name=self.name,
-            add=True, new_script=False)
+            self.op_bl_idname,
+            "Add Item",
+            'ADD',
+            pm_item=-1,
+            mode=self.mode,
+            text=self.text,
+            name=self.name,
+            add=True,
+            new_script=False,
+        )
 
     def _draw_debug(self, menu, context):
         lh.lt(menu.layout)
         lh.operator(PME_OT_debug_mode_toggle.bl_idname, "Enable Debug Mode")
 
     def _draw_pd(self, menu, context):
-        pr =get_prefs()
+        pr = get_prefs()
         pm = pr.selected_pm
 
         layout = menu.layout.menu_pie()
@@ -939,10 +1035,14 @@ class PME_OT_pm_edit(bpy.types.Operator):
         sub = row.row(align=True)
         sub.alignment = 'LEFT'
         operator(
-            sub, PME_OT_message_box.bl_idname, emboss=False,
-            title="Hotkeys", icon=ic('INFO'),
+            sub,
+            PME_OT_message_box.bl_idname,
+            emboss=False,
+            title="Hotkeys",
+            icon=ic('INFO'),
             message="Ctrl+LMB - Add Button to the Right\n"
-            "Ctrl+Shift+LMB - Add Button to the Left")
+            "Ctrl+Shift+LMB - Add Button to the Left",
+        )
         sub.menu("PME_MT_select_menu", text="", icon=ic('COLLAPSEMENU'))
 
         col = column.box().column(align=True)
@@ -952,33 +1052,61 @@ class PME_OT_pm_edit(bpy.types.Operator):
             text, icon, _, icon_only, hidden, _ = pmi.parse_edit()
 
             lh.operator(
-                self.op_bl_idname, text, icon,
-                pm_item=idx, mode=self.mode, text=self.text, name=self.name,
-                add=False, new_script=False)
+                self.op_bl_idname,
+                text,
+                icon,
+                pm_item=idx,
+                mode=self.mode,
+                text=self.text,
+                name=self.name,
+                add=False,
+                new_script=False,
+            )
 
         draw_pme_layout(pm, col, draw_pmi)
 
         operator(
-            column, self.op_bl_idname, "Add New Row", 'ADD',
-            pm_item=-1, mode=self.mode, name=self.name,
-            add=True, new_script=False).text = self.text
+            column,
+            self.op_bl_idname,
+            "Add New Row",
+            'ADD',
+            pm_item=-1,
+            mode=self.mode,
+            name=self.name,
+            add=True,
+            new_script=False,
+        ).text = self.text
 
     def _draw_script(self, menu, context):
-        pm =get_prefs().selected_pm
+        pm = get_prefs().selected_pm
 
         lh.lt(menu.layout, operator_context='INVOKE_DEFAULT')
 
         for idx, pmi in enumerate(pm.pmis):
             text, *_ = pmi.parse()
             lh.operator(
-                self.op_bl_idname, text, 'MOD_SKIN', pm_item=idx,
-                mode=self.mode, text=self.text, name=self.name,
-                add=False, new_script=False)
+                self.op_bl_idname,
+                text,
+                'MOD_SKIN',
+                pm_item=idx,
+                mode=self.mode,
+                text=self.text,
+                name=self.name,
+                add=False,
+                new_script=False,
+            )
 
         lh.operator(
-            self.op_bl_idname, "New Command", 'ADD',
-            pm_item=-1, mode=self.mode, text=self.text, name=self.name,
-            add=True, new_script=False)
+            self.op_bl_idname,
+            "New Command",
+            'ADD',
+            pm_item=-1,
+            mode=self.mode,
+            text=self.text,
+            name=self.name,
+            add=True,
+            new_script=False,
+        )
 
         lh.sep()
 
@@ -986,23 +1114,33 @@ class PME_OT_pm_edit(bpy.types.Operator):
         #     self.op_bl_idname, "New Stack Key", 'MOD_SKIN',
         #     pm_item=-1, add=False, new_script=True)
         lh.operator(
-            WM_OT_pm_select.bl_idname, None, 'COLLAPSEMENU',
-            pm_name="", use_mode_icons=False)
+            WM_OT_pm_select.bl_idname,
+            None,
+            'COLLAPSEMENU',
+            pm_name="",
+            use_mode_icons=False,
+        )
 
         lh.operator(PME_OT_pm_search_and_select.bl_idname, None, 'VIEWZOOM')
 
     def _draw_sticky(self, menu, context):
-        pm =get_prefs().selected_pm
+        pm = get_prefs().selected_pm
 
         lh.lt(menu.layout, operator_context='INVOKE_DEFAULT')
 
         for idx, pmi in enumerate(pm.pmis):
             text, *_ = pmi.parse()
             lh.operator(
-                self.op_bl_idname, text,
+                self.op_bl_idname,
+                text,
                 'MESH_CIRCLE' if idx == 0 else 'MESH_UVSPHERE',
-                pm_item=idx, mode=self.mode, text=self.text, name=self.name,
-                add=False, new_script=False)
+                pm_item=idx,
+                mode=self.mode,
+                text=self.text,
+                name=self.name,
+                add=False,
+                new_script=False,
+            )
 
         lh.sep()
 
@@ -1010,8 +1148,12 @@ class PME_OT_pm_edit(bpy.types.Operator):
         #     self.op_bl_idname, "New Stack Key", 'MOD_SKIN',
         #     pm_item=-1, add=False, new_script=True)
         lh.operator(
-            WM_OT_pm_select.bl_idname, None, 'COLLAPSEMENU',
-            pm_name="", use_mode_icons=False)
+            WM_OT_pm_select.bl_idname,
+            None,
+            'COLLAPSEMENU',
+            pm_name="",
+            use_mode_icons=False,
+        )
 
         lh.operator(PME_OT_pm_search_and_select.bl_idname, None, 'VIEWZOOM')
 
@@ -1022,8 +1164,12 @@ class PME_OT_pm_edit(bpy.types.Operator):
         #     self.op_bl_idname, "New Stack Key", 'MOD_SKIN',
         #     pm_item=-1, add=False, new_script=True)
         lh.operator(
-            WM_OT_pm_select.bl_idname, None, 'COLLAPSEMENU',
-            pm_name="", use_mode_icons=False)
+            WM_OT_pm_select.bl_idname,
+            None,
+            'COLLAPSEMENU',
+            pm_name="",
+            use_mode_icons=False,
+        )
 
         lh.operator(PME_OT_pm_search_and_select.bl_idname, None, 'VIEWZOOM')
 
@@ -1034,7 +1180,7 @@ class PME_OT_pm_edit(bpy.types.Operator):
         if context.area and context.area.type == 'INFO':
             self.auto = False
 
-        pr =get_prefs()
+        pr = get_prefs()
         if len(pr.pie_menus) == 0:
             bpy.ops.wm.pm_select(pm_name="")
             return {'CANCELLED'}
@@ -1047,38 +1193,31 @@ class PME_OT_pm_edit(bpy.types.Operator):
             self.op_bl_idname = WM_OT_pmi_edit_auto.bl_idname
 
         if not self.text and not bpy.app.debug_wm:
-            bpy.context.window_manager.popup_menu(
-                self._draw_debug, title="Debug Mode")
+            bpy.context.window_manager.popup_menu(self._draw_debug, title="Debug Mode")
 
         elif pm.mode == 'DIALOG':
             popup_dialog_pie(event, self._draw_pd)
 
         elif pm.mode == 'PMENU':
-            bpy.context.window_manager.popup_menu(
-                self._draw_pm,
-                title=pm.name)
+            bpy.context.window_manager.popup_menu(self._draw_pm, title=pm.name)
 
         elif pm.mode == 'RMENU':
             bpy.context.window_manager.popup_menu(self._draw_rm)
 
         elif pm.mode == 'SCRIPT':
-            bpy.context.window_manager.popup_menu(
-                self._draw_script, title=pm.name)
+            bpy.context.window_manager.popup_menu(self._draw_script, title=pm.name)
 
         elif pm.mode == 'STICKY':
-            bpy.context.window_manager.popup_menu(
-                self._draw_sticky, title=pm.name)
+            bpy.context.window_manager.popup_menu(self._draw_sticky, title=pm.name)
 
         elif pm.mode == 'MACRO':
-            bpy.context.window_manager.popup_menu(
-                self._draw_script, title=pm.name)
+            bpy.context.window_manager.popup_menu(self._draw_script, title=pm.name)
 
         elif pm.mode == 'MODAL':
             pm.ed.popup_edit_menu(pm, self)
 
         elif pm.mode == 'PANEL' or pm.mode == 'HPANEL':
-            bpy.context.window_manager.popup_menu(
-                self._draw_panel, title=pm.name)
+            bpy.context.window_manager.popup_menu(self._draw_panel, title=pm.name)
 
         return {'FINISHED'}
 
@@ -1113,7 +1252,7 @@ class PME_OT_pmi_add(AddItemOperator, bpy.types.Operator):
         return get_prefs().selected_pm.pmis
 
     def finish(self, item):
-        pm =get_prefs().selected_pm
+        pm = get_prefs().selected_pm
         pm.ed.on_pmi_add(pm, item)
 
         tag_redraw()
@@ -1126,17 +1265,16 @@ class PME_OT_pmi_move(MoveItemOperator, bpy.types.Operator):
         return get_prefs().selected_pm.pmis
 
     def get_icon(self, pmi, idx):
-        pm =get_prefs().selected_pm
+        pm = get_prefs().selected_pm
         return pm.ed.get_pmi_icon(pm, pmi, idx)
 
     def get_title(self):
-        pm =get_prefs().selected_pm
+        pm = get_prefs().selected_pm
         pmi = pm.pmis[self.old_idx]
-        return "Move " + shorten_str(pmi.name) \
-            if pmi.name.strip() else "Move Slot"
+        return "Move " + shorten_str(pmi.name) if pmi.name.strip() else "Move Slot"
 
     def finish(self):
-        pm =get_prefs().selected_pm
+        pm = get_prefs().selected_pm
         pm.ed.on_pmi_move(pm)
 
         tag_redraw()
@@ -1149,7 +1287,7 @@ class PME_OT_pmi_remove(RemoveItemOperator, bpy.types.Operator):
         return get_prefs().selected_pm.pmis
 
     def finish(self):
-        pr =get_prefs()
+        pr = get_prefs()
         pm = pr.selected_pm
         pm.ed.on_pmi_remove(pm)
 
@@ -1169,7 +1307,7 @@ class PME_OT_pmi_clear(ConfirmBoxHandler, bpy.types.Operator):
         if not value:
             return
 
-        pr =get_prefs()
+        pr = get_prefs()
         pm = pr.selected_pm
         pmi = pm.pmis[self.idx]
 
@@ -1193,7 +1331,7 @@ class PME_OT_pmi_cmd_generate(bpy.types.Operator):
     clear: bpy.props.BoolProperty(options={'SKIP_SAVE'})
 
     def execute(self, context):
-        pr =get_prefs()
+        pr = get_prefs()
         data = pr.pmi_data
 
         if self.clear:
@@ -1241,11 +1379,7 @@ class PME_OT_pmi_cmd_generate(bpy.types.Operator):
 class WM_OT_pmi_data_edit(bpy.types.Operator):
     bl_idname = "wm.pmi_data_edit"
     bl_label = "Edit Slot"
-    bl_description = (
-        "Edit the slot\n"
-        "Enter - OK\n"
-        "Esc - Cancel"
-    )
+    bl_description = "Edit the slot\n" "Enter - OK\n" "Esc - Cancel"
     bl_options = {'INTERNAL'}
 
     idx: bpy.props.IntProperty()
@@ -1253,12 +1387,11 @@ class WM_OT_pmi_data_edit(bpy.types.Operator):
     hotkey: bpy.props.BoolProperty(options={'SKIP_SAVE'})
 
     def execute(self, context):
-        pr =get_prefs()
+        pr = get_prefs()
         tpr = temp_prefs()
 
         if self.hotkey:
-            if pr.mode != 'PMI' or \
-                    self.ok and pr.pmi_data.has_errors():
+            if pr.mode != 'PMI' or self.ok and pr.pmi_data.has_errors():
                 return {'PASS_THROUGH'}
 
         pm = pr.selected_pm
@@ -1286,10 +1419,14 @@ class WM_OT_pmi_data_edit(bpy.types.Operator):
                 elif data_mode == 'MENU':
                     pmi.text = data.menu
 
-                    sub_pm = pmi.text and pmi.text in pr.pie_menus and \
-                        pr.pie_menus[pmi.text]
-                    if sub_pm and sub_pm.mode in {'DIALOG', 'RMENU'} and \
-                            data.expand_menu:
+                    sub_pm = (
+                        pmi.text and pmi.text in pr.pie_menus and pr.pie_menus[pmi.text]
+                    )
+                    if (
+                        sub_pm
+                        and sub_pm.mode in {'DIALOG', 'RMENU'}
+                        and data.expand_menu
+                    ):
 
                         if sub_pm.mode == 'RMENU':
                             get_pme_menu_class(pmi.text)
@@ -1301,8 +1438,13 @@ class WM_OT_pmi_data_edit(bpy.types.Operator):
 
                 elif data_mode == 'HOTKEY':
                     pmi.text = keymap_helper.to_hotkey(
-                        data.key, data.ctrl, data.shift, data.alt,
-                        data.oskey, data.key_mod)
+                        data.key,
+                        data.ctrl,
+                        data.shift,
+                        data.alt,
+                        data.oskey,
+                        data.key_mod,
+                    )
 
                 elif data_mode == 'CUSTOM':
                     pmi.text = data.custom
@@ -1341,8 +1483,10 @@ class WM_OT_pmi_data_edit(bpy.types.Operator):
 
     def invoke(self, context, event):
         if self.hotkey and (
-                not context.area or context.area.type != CC.UPREFS or
-               get_prefs().mode != 'PMI'):
+            not context.area
+            or context.area.type != CC.UPREFS
+            or get_prefs().mode != 'PMI'
+        ):
             return {'PASS_THROUGH'}
 
         return self.execute(context)
@@ -1358,7 +1502,7 @@ class WM_OT_pmi_icon_tag_toggle(bpy.types.Operator):
     tag: bpy.props.StringProperty()
 
     def execute(self, context):
-        pr =get_prefs()
+        pr = get_prefs()
         pm = pr.selected_pm
         pmi = pr.pmi_data if self.idx < 0 else pm.pmis[self.idx]
 
@@ -1390,10 +1534,7 @@ class WM_OT_pmi_icon_tag_toggle(bpy.types.Operator):
 class WM_OT_pmi_icon_select(bpy.types.Operator):
     bl_idname = "wm.pmi_icon_select"
     bl_label = "Select Icon"
-    bl_description = (
-        "Select an icon\n"
-        "Esc - Cancel"
-    )
+    bl_description = "Select an icon\n" "Esc - Cancel"
     bl_options = {'INTERNAL'}
 
     idx: bpy.props.IntProperty()
@@ -1401,7 +1542,7 @@ class WM_OT_pmi_icon_select(bpy.types.Operator):
     hotkey: bpy.props.BoolProperty(options={'SKIP_SAVE'})
 
     def execute(self, context):
-        pr =get_prefs()
+        pr = get_prefs()
 
         if self.hotkey and pr.mode != 'ICONS':
             return {'PASS_THROUGH'}
@@ -1451,8 +1592,10 @@ class WM_OT_pmi_icon_select(bpy.types.Operator):
 
     def invoke(self, context, event):
         if self.hotkey and (
-                not context.area or context.area.type != CC.UPREFS or
-               get_prefs().mode != 'ICONS'):
+            not context.area
+            or context.area.type != CC.UPREFS
+            or get_prefs().mode != 'ICONS'
+        ):
             return {'PASS_THROUGH'}
 
         return self.execute(context)
@@ -1467,23 +1610,29 @@ class PME_MT_header_menu_set(bpy.types.Menu):
 
         for id, name, _, icon, _ in CC.SPACE_ITEMS:
             lh.operator(
-                "pme.exec", name, icon,
+                "pme.exec",
+                name,
+                icon,
                 cmd=(
                     "d =get_prefs().pmi_data; "
                     "d.mode = 'CUSTOM'; "
                     "d.custom = 'header_menu([\"{0}\"])'; "
                     "d.sname = '{1}'"
-                ).format(id, name, icon))
+                ).format(id, name, icon),
+            )
 
         lh.sep()
         lh.operator(
-            "pme.exec", "Current", 'BLANK1',
+            "pme.exec",
+            "Current",
+            'BLANK1',
             cmd=(
                 "d =get_prefs().pmi_data; "
                 "d.mode = 'CUSTOM'; "
                 "d.custom = 'header_menu([\"CURRENT\"])'; "
                 "d.sname = 'Current Area'"
-            ))
+            ),
+        )
 
         lh.restore()
 
@@ -1506,7 +1655,6 @@ class PME_MT_screen_set(bpy.types.Menu):
             "Rendering": 'RENDER_ANIMATION',
             "Compositing": 'NODETREE',
             "Scripting": 'TEXT',
-
             "3D View Full": 'FULLSCREEN',
             "Default": 'VIEW3D',
             "Game Logic": 'AUTO',
@@ -1515,20 +1663,26 @@ class PME_MT_screen_set(bpy.types.Menu):
         }
 
         for name in sorted(bpy.data.workspaces.keys()):
-            if name == "temp" or name.startswith(CC.PME_TEMP_SCREEN) or \
-                    name.startswith(CC.PME_SCREEN):
+            if (
+                name == "temp"
+                or name.startswith(CC.PME_TEMP_SCREEN)
+                or name.startswith(CC.PME_SCREEN)
+            ):
                 continue
             icon = icons.get(name, 'LAYER_USED')
 
             lh.operator(
-                "pme.exec", name, icon,
+                "pme.exec",
+                name,
+                icon,
                 cmd=(
                     "d =get_prefs().pmi_data; "
                     "d.mode = 'COMMAND'; "
                     "d.cmd = 'bpy.ops.pme.screen_set(name=\"{0}\")'; "
                     "d.sname = '{0}'; "
                     "d.icon = '{1}'"
-                ).format(name, icon))
+                ).format(name, icon),
+            )
 
         lh.restore()
 
@@ -1599,22 +1753,19 @@ class PME_MT_poll_mesh(bpy.types.Menu):
         layout = self.layout
 
         layout.operator(
-            PME_OT_exec.bl_idname, text="Vertex Select Mode",
-            icon=ic('VERTEXSEL')
+            PME_OT_exec.bl_idname, text="Vertex Select Mode", icon=ic('VERTEXSEL')
         ).cmd = (
             "get_prefs().selected_pm.poll_cmd = "
             "'return C.scene.tool_settings.mesh_select_mode[0]'"
         )
         layout.operator(
-            PME_OT_exec.bl_idname, text="Edge Select Mode",
-            icon=ic('EDGESEL')
+            PME_OT_exec.bl_idname, text="Edge Select Mode", icon=ic('EDGESEL')
         ).cmd = (
             "get_prefs().selected_pm.poll_cmd = "
             "'return C.scene.tool_settings.mesh_select_mode[1]'"
         )
         layout.operator(
-            PME_OT_exec.bl_idname, text="Face Select Mode",
-            icon=ic('FACESEL')
+            PME_OT_exec.bl_idname, text="Face Select Mode", icon=ic('FACESEL')
         ).cmd = (
             "get_prefs().selected_pm.poll_cmd = "
             "'return C.scene.tool_settings.mesh_select_mode[2]'"
@@ -1629,11 +1780,11 @@ class PME_MT_poll_object(bpy.types.Menu):
 
         icon = ic('NODE_SEL')
         for item in sorted(
-                bpy.types.Object.bl_rna.properties["type"].enum_items,
-                key=lambda item: item.name):
+            bpy.types.Object.bl_rna.properties["type"].enum_items,
+            key=lambda item: item.name,
+        ):
             layout.operator(
-                PME_OT_exec.bl_idname, text=item.name + " Object",
-                icon=icon
+                PME_OT_exec.bl_idname, text=item.name + " Object", icon=icon
             ).cmd = (
                 "get_prefs().selected_pm.poll_cmd = "
                 "\"return C.active_object and "
@@ -1648,13 +1799,8 @@ class PME_MT_poll_workspace(bpy.types.Menu):
         layout = self.layout
 
         icon = ic('WORKSPACE')
-        for item in sorted(
-                bpy.data.workspaces,
-                key=lambda item: item.name):
-            layout.operator(
-                PME_OT_exec.bl_idname, text=item.name,
-                icon=icon
-            ).cmd = (
+        for item in sorted(bpy.data.workspaces, key=lambda item: item.name):
+            layout.operator(PME_OT_exec.bl_idname, text=item.name, icon=icon).cmd = (
                 "get_prefs().selected_pm.poll_cmd = "
                 "\"return C.workspace.name == '%s'\""
             ) % item.name
@@ -1672,7 +1818,8 @@ class PME_OT_poll_specials_call(bpy.types.Operator):
 
         layout.operator(
             PME_OT_script_open.bl_idname,
-            text="External Script", icon=ic('FILE_FOLDER'),
+            text="External Script",
+            icon=ic('FILE_FOLDER'),
         )
 
         layout.separator()
@@ -1684,9 +1831,9 @@ class PME_OT_poll_specials_call(bpy.types.Operator):
 
         layout.separator()
 
-        layout.operator(
-            PME_OT_exec.bl_idname, text="Reset", icon=ic('X')
-        ).cmd = "get_prefs().selected_pm.poll_cmd = 'return True'"
+        layout.operator(PME_OT_exec.bl_idname, text="Reset", icon=ic('X')).cmd = (
+            "get_prefs().selected_pm.poll_cmd = 'return True'"
+        )
 
     def execute(self, context):
         context.window_manager.popup_menu(self._poll_specials_call_menu)
@@ -1707,19 +1854,22 @@ class PME_OT_keymap_add(bpy.types.Operator):
         if not cl.items:
             it1 = []
             it2 = []
-            pr =get_prefs()
+            pr = get_prefs()
             pm = pr.selected_pm
 
             for km in context.window_manager.keyconfigs.user.keymaps:
                 has_hotkey = False
                 for kmi in km.keymap_items:
-                    if kmi.idname and kmi.type != 'NONE' and \
-                            kmi.type == pm.key and \
-                            kmi.ctrl == pm.ctrl and \
-                            kmi.shift == pm.shift and \
-                            kmi.alt == pm.alt and \
-                            kmi.oskey == pm.oskey and \
-                            kmi.key_modifier == pm.key_mod:
+                    if (
+                        kmi.idname
+                        and kmi.type != 'NONE'
+                        and kmi.type == pm.key
+                        and kmi.ctrl == pm.ctrl
+                        and kmi.shift == pm.shift
+                        and kmi.alt == pm.alt
+                        and kmi.oskey == pm.oskey
+                        and kmi.key_modifier == pm.key_mod
+                    ):
                         has_hotkey = True
                         break
 
@@ -1739,7 +1889,7 @@ class PME_OT_keymap_add(bpy.types.Operator):
     enumprop: bpy.props.EnumProperty(items=get_items)
 
     def execute(self, context):
-        pr =get_prefs()
+        pr = get_prefs()
         pm = pr.selected_pm
         km_names = pm.parse_keymap()
         if self.enumprop not in km_names:
@@ -1767,12 +1917,13 @@ class PME_OT_pm_open_mode_select(bpy.types.Operator):
 
     def _draw(self, menu, context):
         layout = menu.layout
-        pm =get_prefs().selected_pm
+        pm = get_prefs().selected_pm
         layout.prop(pm, "open_mode", expand=True)
 
     def execute(self, context):
         context.window_manager.popup_menu(
-            self._draw, title=PME_OT_pm_open_mode_select.bl_label)
+            self._draw, title=PME_OT_pm_open_mode_select.bl_label
+        )
         return {'FINISHED'}
 
 
@@ -1783,7 +1934,7 @@ class PME_OT_pm_hotkey_convert(bpy.types.Operator):
     bl_description = "Replace the key with ActionMouse/SelectMouse"
 
     def execute(self, context):
-        pm =get_prefs().selected_pm
+        pm = get_prefs().selected_pm
         if pm and (pm.key == 'LEFTMOUSE' or pm.key == 'RIGHTMOUSE'):
             pm.key = keymap_helper.to_blender_mouse_key(pm.key, context)
             return {'FINISHED'}
@@ -1799,7 +1950,7 @@ class PME_OT_pmi_copy(bpy.types.Operator):
     idx: bpy.props.IntProperty(default=-1, options={'SKIP_SAVE'})
 
     def execute(self, context):
-        pr =get_prefs()
+        pr = get_prefs()
         pm = pr.selected_pm
 
         pmi = pm.pmis[self.idx]
@@ -1817,7 +1968,7 @@ class PME_OT_pmi_paste(bpy.types.Operator):
     idx: bpy.props.IntProperty(default=-1, options={'SKIP_SAVE'})
 
     def execute(self, context):
-        pr =get_prefs()
+        pr = get_prefs()
         pm = pr.selected_pm
         pmi = pm.pmis[self.idx]
         cb = pr.pmi_clipboard
@@ -1832,12 +1983,14 @@ class PME_OT_pmi_paste(bpy.types.Operator):
 
     @classmethod
     def poll(cls, context):
-        pr =get_prefs()
+        pr = get_prefs()
         pm = pr.selected_pm
         cb = pr.pmi_clipboard
-        return cb.has_data() and \
-            cb.mode in pm.ed.supported_slot_modes and \
-            cb.pm_mode in pm.ed.supported_paste_modes
+        return (
+            cb.has_data()
+            and cb.mode in pm.ed.supported_slot_modes
+            and cb.pm_mode in pm.ed.supported_paste_modes
+        )
 
 
 class PME_OT_pm_toggle(bpy.types.Operator):
@@ -1853,7 +2006,8 @@ class PME_OT_pm_toggle(bpy.types.Operator):
             ('ENABLE', "Enable", ""),
             ('DISABLE', "Disable", ""),
         ),
-        options={'SKIP_SAVE'})
+        options={'SKIP_SAVE'},
+    )
 
     def execute(self, context):
         value = None
@@ -1875,7 +2029,7 @@ class PME_OT_pmi_toggle(bpy.types.Operator):
     pmi: bpy.props.IntProperty(options={'SKIP_SAVE'})
 
     def execute(self, context):
-        pr =get_prefs()
+        pr = get_prefs()
         pm = pr.pie_menus[self.pm]
         pmi = pm.pmis[self.pmi]
         pmi.enabled = not pmi.enabled
@@ -1911,17 +2065,31 @@ class EditorBase:
         self.toggleable_slots = True
 
         self.supported_slot_modes = {
-            'EMPTY', 'COMMAND', 'PROP', 'MENU', 'HOTKEY', 'CUSTOM'
+            'EMPTY',
+            'COMMAND',
+            'PROP',
+            'MENU',
+            'HOTKEY',
+            'CUSTOM',
         }
-        self.supported_open_modes = {
-            'PRESS', 'HOLD', 'DOUBLE_CLICK', 'ONE_SHOT'
-        }
+        self.supported_open_modes = {'PRESS', 'HOLD', 'DOUBLE_CLICK', 'ONE_SHOT'}
         self.supported_sub_menus = {
-            'PMENU', 'RMENU', 'DIALOG', 'SCRIPT', 'STICKY', 'MACRO', 'MODAL',
-            'PROPERTY'
+            'PMENU',
+            'RMENU',
+            'DIALOG',
+            'SCRIPT',
+            'STICKY',
+            'MACRO',
+            'MODAL',
+            'PROPERTY',
         }
         self.supported_paste_modes = {
-            'PMENU', 'RMENU', 'DIALOG', 'SCRIPT', 'STICKY', 'MACRO'
+            'PMENU',
+            'RMENU',
+            'DIALOG',
+            'SCRIPT',
+            'STICKY',
+            'MACRO',
         }
 
     def register_temp_prop(self, id, prop):
@@ -1988,10 +2156,10 @@ class EditorBase:
                         pass
                         # KH.add_mouse_button(pm.key_mod, kh, km)
                     else:
-                        KH.remove_mouse_button(pm.key_mod,get_prefs().kh, km)
+                        KH.remove_mouse_button(pm.key_mod, get_prefs().kh, km)
 
     def on_pm_rename(self, pm, name):
-        pr =get_prefs()
+        pr = get_prefs()
         tpr = temp_prefs()
 
         old_name = pm.name
@@ -2011,10 +2179,10 @@ class EditorBase:
             for pmi in v.pmis:
                 if pmi.mode == 'MENU':
                     menu_name, mouse_over, _ = U.extract_str_flags(
-                        pmi.text, CC.F_EXPAND, CC.F_EXPAND)
+                        pmi.text, CC.F_EXPAND, CC.F_EXPAND
+                    )
                     if menu_name == old_name:
-                        pmi.text = CC.F_EXPAND + name \
-                            if mouse_over else name
+                        pmi.text = CC.F_EXPAND + name if mouse_over else name
 
         if old_name in pm.kmis_map:
             if pm.kmis_map[old_name]:
@@ -2046,7 +2214,7 @@ class EditorBase:
         pr.update_tree()
 
     def on_pmi_check(self, pm, pmi_data):
-        pr =get_prefs()
+        pr = get_prefs()
 
         data = pmi_data
         data.info()
@@ -2088,7 +2256,7 @@ class EditorBase:
 
         elif pmi_mode == 'MENU':
             data.sname = data.menu
-            pr =get_prefs()
+            pr = get_prefs()
             if not data.menu or data.menu not in pr.pie_menus:
                 data.info(CC.W_PMI_MENU)
 
@@ -2134,16 +2302,29 @@ class EditorBase:
         data.prop = pmi.text if data_mode == 'PROP' else ""
         data.menu = pmi.text if data_mode == 'MENU' else ""
         data.menu, data.expand_menu, data.use_frame = U.extract_str_flags(
-            data.menu, CC.F_EXPAND, CC.F_EXPAND)
+            data.menu, CC.F_EXPAND, CC.F_EXPAND
+        )
 
-        data.key, data.ctrl, data.shift, data.alt, \
-            data.oskey, data.key_mod = \
-            'NONE', False, False, False, False, 'NONE'
+        data.key, data.ctrl, data.shift, data.alt, data.oskey, data.key_mod = (
+            'NONE',
+            False,
+            False,
+            False,
+            False,
+            'NONE',
+        )
 
         if pmi.mode == 'HOTKEY':
-            data.key, data.ctrl, data.shift, data.alt, \
-                data.oskey, data.any, data.key_mod, _ = \
-                keymap_helper.parse_hotkey(pmi.text)
+            (
+                data.key,
+                data.ctrl,
+                data.shift,
+                data.alt,
+                data.oskey,
+                data.any,
+                data.key_mod,
+                _,
+            ) = keymap_helper.parse_hotkey(pmi.text)
 
     def on_pmi_rename(self, pm, pmi, old_name, name):
         pmi.name = name
@@ -2160,45 +2341,38 @@ class EditorBase:
     def draw_extra_settings(self, layout, pm):
         row = layout.row(align=True)
         sub = row.row(align=True)
-        sub.alert = pm.name in pm.poll_methods and \
-            pm.poll_methods[pm.name] is None
+        sub.alert = pm.name in pm.poll_methods and pm.poll_methods[pm.name] is None
         sub.prop(pm, "poll_cmd", text="", icon=ic('NODE_SEL'))
         row.operator(
-            PME_OT_poll_specials_call.bl_idname, text="",
-            icon=ic('COLLAPSEMENU'))
+            PME_OT_poll_specials_call.bl_idname, text="", icon=ic('COLLAPSEMENU')
+        )
 
     def draw_pm_name(self, layout, pm):
-        pr =get_prefs()
+        pr = get_prefs()
         col = layout.column(align=True)
         row = col.row(align=True)
         row.operator_context = 'INVOKE_DEFAULT'
         row.operator(
-            PME_OT_pm_toggle.bl_idname, text="",
-            icon=ic_cb(pm.enabled)).name = pm.name
+            PME_OT_pm_toggle.bl_idname, text="", icon=ic_cb(pm.enabled)
+        ).name = pm.name
 
         if self.use_preview:
-            p = row.operator(
-                PME_OT_preview.bl_idname, text="", icon=ic('HIDE_OFF'))
+            p = row.operator(PME_OT_preview.bl_idname, text="", icon=ic('HIDE_OFF'))
             p.pie_menu_name = pm.name
 
-        p = row.operator(
-            WM_OT_pm_select.bl_idname, text="", icon=ic(self.icon))
+        p = row.operator(WM_OT_pm_select.bl_idname, text="", icon=ic(self.icon))
         p.pm_name = ""
         p.use_mode_icons = True
         row.prop(pm, "label", text="")
 
-        row.operator(
-            PME_OT_tags.bl_idname, text="",
-            icon=ic_fb(pm.tag))
+        row.operator(PME_OT_tags.bl_idname, text="", icon=ic_fb(pm.tag))
 
         if self.docs:
             p = row.operator(PME_OT_docs.bl_idname, text="", icon=ic('HELP'))
             p.id = self.docs
 
         if self.has_extra_settings:
-            row.prop(
-                pr, "show_advanced_settings", text="",
-                icon=ic('SETTINGS'))
+            row.prop(pr, "show_advanced_settings", text="", icon=ic('SETTINGS'))
 
             if pr.show_advanced_settings:
                 self.draw_extra_settings(col.box().column(), pm)
@@ -2209,9 +2383,13 @@ class EditorBase:
             row.prop(data, "km_name", text="", icon=ic('MOUSE_MMB'))
         else:
             row.prop_search(
-                data, "km_name",
-                bpy.context.window_manager.keyconfigs.user, "keymaps",
-                text="", icon=ic('MOUSE_MMB'))
+                data,
+                "km_name",
+                bpy.context.window_manager.keyconfigs.user,
+                "keymaps",
+                text="",
+                icon=ic('MOUSE_MMB'),
+            )
         row.operator(PME_OT_keymap_add.bl_idname, text="", icon=ic('ADD'))
 
     def draw_hotkey(self, layout, data):
@@ -2228,7 +2406,8 @@ class EditorBase:
         subcol = row.column(align=True)
         subcol.scale_y = 2
         subcol.operator(
-            PME_OT_pm_open_mode_select.bl_idname, text="", icon_value=item[3])
+            PME_OT_pm_open_mode_select.bl_idname, text="", icon_value=item[3]
+        )
 
         subcol = row.column(align=True)
         if data.open_mode != 'CHORDS':
@@ -2264,7 +2443,7 @@ class EditorBase:
         subcol.operator(PME_OT_pm_hotkey_remove.bl_idname, icon=ic('X'))
 
     def draw_items(self, layout, pm):
-        pr =get_prefs()
+        pr = get_prefs()
         column = layout.column(align=True)
 
         for idx, pmi in enumerate(pm.pmis):
@@ -2281,17 +2460,16 @@ class EditorBase:
         if self.editable_slots:
             lh.operator(
                 WM_OT_pmi_data_edit.bl_idname,
-                "", self.get_pmi_icon(pm, pmi, idx),
+                "",
+                self.get_pmi_icon(pm, pmi, idx),
                 idx=idx,
-                ok=False)
+                ok=False,
+            )
 
         if self.get_use_slot_icon(pm, pmi, idx):
             icon = pmi.parse_icon('FILE_HIDDEN')
 
-            lh.operator(
-                WM_OT_pmi_icon_select.bl_idname, "", icon,
-                idx=idx,
-                icon="")
+            lh.operator(WM_OT_pmi_icon_select.bl_idname, "", icon, idx=idx, icon="")
 
         lh.prop(pmi, "label", "")
 
@@ -2304,13 +2482,10 @@ class EditorBase:
             lh.skip()
         else:
             PME_OT_pmi_menu.draw_func = self.draw_pmi_menu
-            lh.operator(
-                PME_OT_pmi_menu.bl_idname,
-                "", 'COLLAPSEMENU',
-                idx=idx)
+            lh.operator(PME_OT_pmi_menu.bl_idname, "", 'COLLAPSEMENU', idx=idx)
 
     def draw_pmi_menu(self, context, idx):
-        pr =get_prefs()
+        pr = get_prefs()
         pm = pr.selected_pm
         pmi = pm.pmis[idx]
 
@@ -2322,59 +2497,62 @@ class EditorBase:
 
         if self.editable_slots:
             lh.operator(
-                WM_OT_pmi_data_edit.bl_idname,
-                "Edit Slot", 'TEXT',
-                idx=idx,
-                ok=False)
+                WM_OT_pmi_data_edit.bl_idname, "Edit Slot", 'TEXT', idx=idx, ok=False
+            )
 
         if not self.fixed_num_items:
-            lh.operator(
-                PME_OT_pmi_add.bl_idname, "Add Slot", 'ADD',
-                idx=idx)
+            lh.operator(PME_OT_pmi_add.bl_idname, "Add Slot", 'ADD', idx=idx)
 
         if self.copy_paste_slot:
             lh.sep(check=True)
 
             lh.operator(
-                PME_OT_pmi_copy.bl_idname, None, 'COPYDOWN',
+                PME_OT_pmi_copy.bl_idname,
+                None,
+                'COPYDOWN',
                 enabled=(pmi.mode != 'EMPTY'),
-                idx=idx)
+                idx=idx,
+            )
 
             if pr.pmi_clipboard.has_data():
-                lh.operator(
-                    PME_OT_pmi_paste.bl_idname, None, 'PASTEDOWN',
-                    idx=idx)
+                lh.operator(PME_OT_pmi_paste.bl_idname, None, 'PASTEDOWN', idx=idx)
 
         if self.movable_items and len(pm.pmis) > 1:
             lh.sep(check=True)
 
             lh.operator(
-                self.pmi_move_operator, "Move Slot",
+                self.pmi_move_operator,
+                "Move Slot",
                 'ARROW_LEFTRIGHT' if self.use_swap else 'FORWARD',
-                old_idx=idx, swap=self.use_swap)
+                old_idx=idx,
+                swap=self.use_swap,
+            )
 
         if self.toggleable_slots:
             lh.sep(check=True)
             lh.operator(
                 PME_OT_pmi_toggle.bl_idname,
-                "Enabled" if pmi.enabled else "Disabled", ic_eye(pmi.enabled),
-                pm=pm.name, pmi=idx)
+                "Enabled" if pmi.enabled else "Disabled",
+                ic_eye(pmi.enabled),
+                pm=pm.name,
+                pmi=idx,
+            )
 
         if self.fixed_num_items:
             if 'EMPTY' in self.supported_slot_modes:
                 lh.sep(check=True)
 
-                lh.operator(
-                    PME_OT_pmi_clear.bl_idname,
-                    "Clear", 'X',
-                    idx=idx)
+                lh.operator(PME_OT_pmi_clear.bl_idname, "Clear", 'X', idx=idx)
         elif len(pm.pmis) > 1:
             lh.sep(check=True)
 
             lh.operator(
                 PME_OT_pmi_remove.bl_idname,
-                "Remove", 'X',
-                idx=idx, confirm=lh.icon_only)
+                "Remove",
+                'X',
+                idx=idx,
+                confirm=lh.icon_only,
+            )
 
     def get_supported_slot_modes(self, pm, slot, idx):
         return self.supported_slot_modes
@@ -2391,36 +2569,52 @@ class EditorBase:
         return 'MOD_SKIN'
 
     def draw_edit_menu(self, menu, context):
-        pm =get_prefs().selected_pm
+        pm = get_prefs().selected_pm
 
         lh.lt(menu.layout, operator_context='INVOKE_DEFAULT')
 
         for idx, pmi in enumerate(pm.pmis):
             text, *_ = pmi.parse()
             lh.operator(
-                self.op.op_bl_idname, text,
-                self.get_pmi_icon(pm, pmi, idx), pm_item=idx,
-                mode=self.op.mode, text=self.op.text, name=self.op.name,
-                add=False, new_script=False)
+                self.op.op_bl_idname,
+                text,
+                self.get_pmi_icon(pm, pmi, idx),
+                pm_item=idx,
+                mode=self.op.mode,
+                text=self.op.text,
+                name=self.op.name,
+                add=False,
+                new_script=False,
+            )
 
         lh.sep()
 
         lh.operator(
-            self.op.op_bl_idname, "New Command", 'ADD',
-            mode=self.op.mode, text=self.op.text, name=self.op.name,
-            pm_item=-1, add=True, new_script=False)
+            self.op.op_bl_idname,
+            "New Command",
+            'ADD',
+            mode=self.op.mode,
+            text=self.op.text,
+            name=self.op.name,
+            pm_item=-1,
+            add=True,
+            new_script=False,
+        )
 
         # lh.operator(
         #     self.operator, "New Stack Key", 'MOD_SKIN',
         #     pm_item=-1, add=False, new_script=True)
         lh.operator(
-            WM_OT_pm_select.bl_idname, None, 'COLLAPSEMENU',
-            pm_name="", use_mode_icons=False)
+            WM_OT_pm_select.bl_idname,
+            None,
+            'COLLAPSEMENU',
+            pm_name="",
+            use_mode_icons=False,
+        )
 
     def popup_edit_menu(self, pm, operator):
         self.op = operator
-        bpy.context.window_manager.popup_menu(
-            self.draw_edit_menu, title=pm.name)
+        bpy.context.window_manager.popup_menu(self.draw_edit_menu, title=pm.name)
 
     def use_scroll(self, pm):
         return False

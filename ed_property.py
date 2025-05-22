@@ -1,8 +1,11 @@
 import bpy
 from . import pme
 from .ed_base import (
-    EditorBase, PME_OT_pmi_add, WM_OT_pmi_icon_select, PME_OT_pmi_move,
-    WM_OT_pmi_data_edit
+    EditorBase,
+    PME_OT_pmi_add,
+    WM_OT_pmi_icon_select,
+    PME_OT_pmi_move,
+    WM_OT_pmi_data_edit,
 )
 from .debug_utils import *
 from .addon import get_prefs, temp_prefs
@@ -10,9 +13,7 @@ from .layout_helper import lh
 from .ui import tag_redraw, shorten_str
 from .bl_utils import uname
 from .extra_operators import PME_OT_popup_property
-from .collection_utils import (
-    MoveItemOperator
-)
+from .collection_utils import MoveItemOperator
 from . import operator_utils
 from . import constants as CC
 
@@ -46,12 +47,13 @@ PROPERTY_SUBTYPE = {
 del SUBTYPE_NUMBER_ARRAY_ITEMS
 del SUBTYPE_NUMBER_ITEMS
 
+
 def size_get(self):
     return get_prefs().selected_pm.get_data("vector")
 
 
 def size_set(self, value):
-    pr =get_prefs()
+    pr = get_prefs()
     pm = pr.selected_pm
     pm.set_data("vector", value)
     pmi_remove(pm, "subtype")
@@ -81,7 +83,7 @@ def save_get(self):
 
 
 def save_set(self, value):
-   get_prefs().selected_pm.set_data("save", not value)
+    get_prefs().selected_pm.set_data("save", not value)
 
 
 def exp_get(self):
@@ -89,7 +91,7 @@ def exp_get(self):
 
 
 def exp_set(self, value):
-   get_prefs().selected_pm.set_data("exp", value)
+    get_prefs().selected_pm.set_data("exp", value)
 
 
 def multiselect_get(self):
@@ -97,7 +99,7 @@ def multiselect_get(self):
 
 
 def multiselect_set(self, value):
-    pm =get_prefs().selected_pm
+    pm = get_prefs().selected_pm
     pm.set_data("mulsel", value)
     pmi_remove(pm, "default")
 
@@ -125,11 +127,12 @@ def ed_text_set(self, value):
 
 def ed_type_get(self):
     return self.bl_rna.properties["ed_type"].enum_items.find(
-       get_prefs().selected_pm.poll_cmd)
+        get_prefs().selected_pm.poll_cmd
+    )
 
 
 def ed_type_set(self, value):
-    pm =get_prefs().selected_pm
+    pm = get_prefs().selected_pm
     items = self.bl_rna.properties["ed_type"].enum_items
     v = items.find(pm.poll_cmd)
     if v == value:
@@ -148,7 +151,7 @@ def ed_type_set(self, value):
 
 
 def props(name=None, value=None):
-    pr =get_prefs()
+    pr = get_prefs()
     if name is None:
         return pr.props
 
@@ -166,15 +169,14 @@ def gen_get(prop_name, mode):
         return PROP_GETTERS[key]
 
     def _get(self):
-        pm =get_prefs().pie_menus[prop_name]
+        pm = get_prefs().pie_menus[prop_name]
         pmi = pm.pmis[mode]
         pme.context.pm = pm
         exec_globals = pme.context.gen_globals()
         exec_globals.update(menu=prop_name, slot=pmi.name)
         pme.context.exe(
-            "def get(self):" + operator_utils.add_default_args(
-                pmi.text),
-            exec_globals)
+            "def get(self):" + operator_utils.add_default_args(pmi.text), exec_globals
+        )
         return exec_globals["get"](self)
 
     PROP_GETTERS[key] = _get
@@ -187,15 +189,12 @@ def gen_set(prop_name, mode):
         return PROP_SETTERS[key]
 
     def _set(self, value):
-        pm =get_prefs().pie_menus[prop_name]
+        pm = get_prefs().pie_menus[prop_name]
         pmi = pm.pmis[mode]
         pme.context.pm = pm
         exec_globals = pme.context.gen_globals()
-        exec_globals.update(
-            menu=prop_name, slot=pmi.name, value=value, self=self)
-        pme.context.exe(
-            operator_utils.add_default_args(pmi.text),
-            exec_globals)
+        exec_globals.update(menu=prop_name, slot=pmi.name, value=value, self=self)
+        pme.context.exe(operator_utils.add_default_args(pmi.text), exec_globals)
 
     PROP_SETTERS[key] = _set
     return PROP_SETTERS[key]
@@ -207,15 +206,12 @@ def gen_update(prop_name, mode):
         return PROP_UPDATES[key]
 
     def _update(self, context):
-        pm =get_prefs().pie_menus[prop_name]
+        pm = get_prefs().pie_menus[prop_name]
         pmi = pm.pmis[mode]
         pme.context.pm = pm
         exec_globals = pme.context.gen_globals()
-        exec_globals.update(
-            menu=prop_name, slot=pmi.name, self=self)
-        pme.context.exe(
-            operator_utils.add_default_args(pmi.text),
-            exec_globals)
+        exec_globals.update(menu=prop_name, slot=pmi.name, self=self)
+        pme.context.exe(operator_utils.add_default_args(pmi.text), exec_globals)
 
     PROP_UPDATES[key] = _update
     return PROP_UPDATES[key]
@@ -231,8 +227,7 @@ def gen_enum_items(enum_prop):
 
 def gen_prop_subtype_enum_items(prop_type, is_vector=False):
     items = []
-    prop_name = prop_type.capitalize() + (
-        'VectorProperty' if is_vector else 'Property')
+    prop_name = prop_type.capitalize() + ('VectorProperty' if is_vector else 'Property')
     subtypes = PROPERTY_SUBTYPE.get(prop_name, [])
 
     for subtype in reversed(subtypes):
@@ -264,7 +259,7 @@ def gen_arg_getter(name, ptype, default):
         return ARG_GETTERS[key]
 
     def getter(self):
-        pm =get_prefs().selected_pm
+        pm = get_prefs().selected_pm
         pmi = pm.pmis.get(name, None)
         value = eval(pmi.text) if pmi else default
 
@@ -292,7 +287,7 @@ def gen_arg_setter(name, ptype, update_dynamic_props=False):
 
     def setter(self, value):
         DBG_PROP and logh("Set: '%s' = %s" % (name, repr(value)))
-        pm =get_prefs().selected_pm
+        pm = get_prefs().selected_pm
         prop = self.bl_rna.properties["ed_" + name]
         if prop.__class__.__name__ == "EnumProperty":
             if pm.get_data("mulsel"):
@@ -388,13 +383,11 @@ def register_user_property(pm):
     if not pm.enabled:
         return
 
-    pr =get_prefs()
+    pr = get_prefs()
 
     size = pm.get_data("vector")
     bpy_prop = prop_by_type(pm.poll_cmd, size > 1)
-    kwargs = dict(
-        name=pm.name
-    )
+    kwargs = dict(name=pm.name)
     options = set()
     if pm.poll_cmd == 'ENUM':
         kwargs["items"] = []
@@ -414,7 +407,8 @@ def register_user_property(pm):
             id, sep, name = pmi.name.partition("|")
             name = id if not name and not sep else name
             kwargs["items"].append(
-                (id, name, name, pmi.icon, 1 << i if enum_flag else i))
+                (id, name, name, pmi.icon, 1 << i if enum_flag else i)
+            )
             i += 1
 
     if 'GET' in pm.pmis:
@@ -433,7 +427,7 @@ def register_user_property(pm):
 
 
 def unregister_user_property(pm):
-    pr =get_prefs()
+    pr = get_prefs()
     if pm.name in pr.props:
         del pr.props[pm.name]
 
@@ -475,7 +469,7 @@ def clear_arg_pmis(pm):
 
 
 def update_user_property(self=None, context=None):
-    pm =get_prefs().selected_pm
+    pm = get_prefs().selected_pm
     ep = temp_prefs().ed_props
     value = ep.ed_default
     if isinstance(value, bpy.types.bpy_prop_array):
@@ -528,7 +522,7 @@ class PME_OT_prop_class_set(bpy.types.Operator):
 
     def execute(self, context):
         PME_OT_prop_class_set.enum_items = None
-        pm =get_prefs().selected_pm
+        pm = get_prefs().selected_pm
         pmi = pm.pmis.get('CLASS', None)
         if pmi and pmi.text == self.item:
             return {'CANCELLED'}
@@ -553,7 +547,7 @@ class PME_OT_prop_class_set(bpy.types.Operator):
         if self.add:
             context.window_manager.invoke_search_popup(self)
         else:
-            pm =get_prefs().selected_pm
+            pm = get_prefs().selected_pm
             unregister_user_property(pm)
             pmi_remove(pm, 'CLASS')
 
@@ -578,10 +572,11 @@ class PME_OT_prop_script_set(bpy.types.Operator):
             ('INIT', "", ""),
             ('CLASS', "", ""),
         ),
-        options={'SKIP_SAVE'})
+        options={'SKIP_SAVE'},
+    )
 
     def execute(self, context):
-        pr =get_prefs()
+        pr = get_prefs()
         pm = pr.selected_pm
         if self.add:
             pmi = pm.pmis.add()
@@ -598,8 +593,7 @@ class PME_OT_prop_script_set(bpy.types.Operator):
                 if size > 1:
                     default_value = [default_value] * size
 
-                pmi.text = "return self.get(menu, %s)" % repr(
-                    default_value)
+                pmi.text = "return self.get(menu, %s)" % repr(default_value)
             elif self.mode == 'SET':
                 pmi.text = "self[menu] = value"
             elif self.mode == 'UPDATE':
@@ -628,17 +622,16 @@ class PME_OT_prop_pmi_move(MoveItemOperator, bpy.types.Operator):
         return get_prefs().selected_pm.pmis
 
     def get_icon(self, pmi, idx):
-        pm =get_prefs().selected_pm
+        pm = get_prefs().selected_pm
         return pm.ed.get_pmi_icon(pm, pmi, idx)
 
     def get_title(self):
-        pm =get_prefs().selected_pm
+        pm = get_prefs().selected_pm
         pmi = pm.pmis[self.old_idx]
-        return "Move " + shorten_str(pmi.name) \
-            if pmi.name.strip() else "Move Slot"
+        return "Move " + shorten_str(pmi.name) if pmi.name.strip() else "Move Slot"
 
     def finish(self):
-        pm =get_prefs().selected_pm
+        pm = get_prefs().selected_pm
         pm.ed.on_pmi_move(pm)
 
         tag_redraw()
@@ -681,8 +674,7 @@ class Editor(EditorBase):
                 path = "?"
                 v1 = pmi.text.lower() + "s"
                 v2 = pmi.text.lower() + "es"
-                v = hasattr(bpy.data, v1) and v1 or \
-                    hasattr(bpy.data, v2) and v2
+                v = hasattr(bpy.data, v1) and v1 or hasattr(bpy.data, v2) and v2
                 if v:
                     objs = getattr(bpy.data, v)
                     if objs:
@@ -694,16 +686,14 @@ class Editor(EditorBase):
         self.unregister_props()
 
         self.register_temp_prop(
-            "ed_preview_path",
-            bpy.props.StringProperty(
-                description="Preview path")
+            "ed_preview_path", bpy.props.StringProperty(description="Preview path")
         )
 
         self.register_pmi_prop(
             "ed_text",
             bpy.props.StringProperty(
-                get=ed_text_get, set=ed_text_set,
-                maxlen=CC.MAX_STR_LEN)
+                get=ed_text_get, set=ed_text_set, maxlen=CC.MAX_STR_LEN
+            ),
         )
 
         self.register_temp_prop(
@@ -720,7 +710,7 @@ class Editor(EditorBase):
                 ),
                 get=ed_type_get,
                 set=ed_type_set,
-            )
+            ),
         )
 
         self.register_temp_prop(
@@ -730,7 +720,7 @@ class Editor(EditorBase):
                 description="Restore Default Value",
                 get=save_get,
                 set=save_set,
-            )
+            ),
         )
 
         self.register_temp_prop(
@@ -740,7 +730,7 @@ class Editor(EditorBase):
                 description="Expand items",
                 get=exp_get,
                 set=exp_set,
-            )
+            ),
         )
 
         self.register_dynamic_props(pm)
@@ -757,10 +747,13 @@ class Editor(EditorBase):
             options.add('ENUM_FLAG')
 
         self.register_arg_prop(
-            pm, bpy.props.EnumProperty,
-            "default", "Default Value",
+            pm,
+            bpy.props.EnumProperty,
+            "default",
+            "Default Value",
             items=enum_items,
-            options=options)
+            options=options,
+        )
 
     def register_default_prop(self, pm):
         size = pm.get_data("vector")
@@ -783,11 +776,20 @@ class Editor(EditorBase):
                 kwargs[pmi.name] = pmi_to_value(pmi)
 
         self.register_arg_prop(
-            pm, bpy_prop, "default", "Default Value", default_value, **kwargs)
+            pm, bpy_prop, "default", "Default Value", default_value, **kwargs
+        )
 
     def register_arg_prop(
-            self, pm, bpy_prop, prop, name, default=None,
-            use_subtype=False, update_dynamic_props=False, **kwargs):
+        self,
+        pm,
+        bpy_prop,
+        prop,
+        name,
+        default=None,
+        use_subtype=False,
+        update_dynamic_props=False,
+        **kwargs
+    ):
         DBG_PROP and logi("Reg arg prop: '%s'" % name)
         if default is None:
             default = 0
@@ -806,13 +808,7 @@ class Editor(EditorBase):
         get_ = gen_arg_getter(prop, bpy_prop.__name__, default)
         set_ = gen_arg_setter(prop, bpy_prop.__name__, update_dynamic_props)
         self.register_temp_prop(
-            "ed_" + prop,
-            bpy_prop(
-                name=name,
-                get=get_,
-                set=set_,
-                **kwargs
-            )
+            "ed_" + prop, bpy_prop(name=name, get=get_, set=set_, **kwargs)
         )
 
         # store_ed_generated_funcs(prop, get_, set_)
@@ -829,8 +825,9 @@ class Editor(EditorBase):
             self.register_temp_prop(
                 "ed_multiselect",
                 bpy.props.BoolProperty(
-                    name="Multi-Select",
-                    get=multiselect_get, set=multiselect_set))
+                    name="Multi-Select", get=multiselect_get, set=multiselect_set
+                ),
+            )
 
         else:
             self.register_default_prop(pm)
@@ -839,46 +836,64 @@ class Editor(EditorBase):
             self.register_temp_prop(
                 "ed_hor_exp",
                 bpy.props.BoolProperty(
-                    name="Horizontal Layout",
-                    get=hor_exp_get, set=hor_exp_set))
+                    name="Horizontal Layout", get=hor_exp_get, set=hor_exp_set
+                ),
+            )
 
         if pm.poll_cmd in {'INT', 'FLOAT', 'BOOL'}:
             self.register_temp_prop(
                 "ed_size",
                 bpy.props.IntProperty(
-                    name="Property Size",
-                    min=1, max=32,
-                    get=size_get, set=size_set))
+                    name="Property Size", min=1, max=32, get=size_get, set=size_set
+                ),
+            )
 
         if pm.poll_cmd in {'INT', 'FLOAT'}:
             subtype = pm_to_value(pm, "subtype") or 'NONE'
             unit = pm_to_value(pm, "unit") or 'NONE'
             self.register_arg_prop(
-                pm, bpy_prop, "min", "Min Value", -2**31,
-                subtype == 'ANGLE' or unit == 'ROTATION')
+                pm,
+                bpy_prop,
+                "min",
+                "Min Value",
+                -(2**31),
+                subtype == 'ANGLE' or unit == 'ROTATION',
+            )
             self.register_arg_prop(
-                pm, bpy_prop, "max", "Max Value", 2**31 - 1,
-                subtype == 'ANGLE' or unit == 'ROTATION')
+                pm,
+                bpy_prop,
+                "max",
+                "Max Value",
+                2**31 - 1,
+                subtype == 'ANGLE' or unit == 'ROTATION',
+            )
             self.register_arg_prop(
-                pm, bpy_prop, "step", "Step",
-                1 if pm.poll_cmd == 'INT' else 3)
+                pm, bpy_prop, "step", "Step", 1 if pm.poll_cmd == 'INT' else 3
+            )
             if pm.poll_cmd == 'FLOAT':
                 self.register_arg_prop(
-                    pm, bpy.props.IntProperty,
-                    "precision", "Precision", 2, min=0, max=6)
+                    pm, bpy.props.IntProperty, "precision", "Precision", 2, min=0, max=6
+                )
                 self.register_arg_prop(
-                    pm, bpy.props.EnumProperty,
-                    "unit", "Unit",
+                    pm,
+                    bpy.props.EnumProperty,
+                    "unit",
+                    "Unit",
                     update_dynamic_props=True,
                     items=gen_enum_items(
-                        bpy.types.FloatProperty.bl_rna.properties['unit']))
+                        bpy.types.FloatProperty.bl_rna.properties['unit']
+                    ),
+                )
 
         if pm.poll_cmd in {'INT', 'FLOAT', 'STRING'}:
             self.register_arg_prop(
-                pm, bpy.props.EnumProperty,
-                "subtype", "Subtype",
+                pm,
+                bpy.props.EnumProperty,
+                "subtype",
+                "Subtype",
                 update_dynamic_props=True,
-                items=gen_prop_subtype_enum_items(pm.poll_cmd, size > 1))
+                items=gen_prop_subtype_enum_items(pm.poll_cmd, size > 1),
+            )
 
         register_user_property(pm)
 
@@ -887,7 +902,7 @@ class Editor(EditorBase):
 
         register_user_property(pm)
 
-        pr =get_prefs()
+        pr = get_prefs()
         if not pm.get_data("save") and pm.name in pr.props:
             del pr.props[pm.name]
 
@@ -896,9 +911,7 @@ class Editor(EditorBase):
             pmi = pm.pmis['INIT']
             exec_globals = pme.context.gen_globals()
             exec_globals.update(menu=pm.name, slot=pmi.name)
-            pme.context.exe(
-                operator_utils.add_default_args(pmi.text),
-                exec_globals)
+            pme.context.exe(operator_utils.add_default_args(pmi.text), exec_globals)
 
     def on_pm_add(self, pm):
         pm.poll_cmd = 'BOOL'
@@ -942,7 +955,8 @@ class Editor(EditorBase):
                 pmi.name = "%s|%s" % (pmi.name.replace(" ", "_"), pmi.name)
                 bpy.ops.pme.message_box(
                     message="Enum identifiers must not contain spaces\n"
-                    "Replaced with '%s'" % pmi.name)
+                    "Replaced with '%s'" % pmi.name
+                )
 
             self.register_default_enum_prop(pm)
             register_user_property(pm)
@@ -974,17 +988,15 @@ class Editor(EditorBase):
     def draw_cmd_pmi(self, pm, mode, label, icon):
         if mode not in pm.pmis:
             lh.operator(
-                PME_OT_prop_script_set.bl_idname, label, icon,
-                mode=mode, add=True)
+                PME_OT_prop_script_set.bl_idname, label, icon, mode=mode, add=True
+            )
 
         else:
             pmi = pm.pmis[mode]
             lh.save()
             lh.row()
             lh.prop(pmi, "ed_text", "", icon, alert=pmi.icon == 'ERROR')
-            lh.operator(
-                PME_OT_prop_script_set.bl_idname, "", 'X',
-                add=False, mode=mode)
+            lh.operator(PME_OT_prop_script_set.bl_idname, "", 'X', add=False, mode=mode)
             lh.restore()
 
     def draw_extra_settings(self, layout, pm):
@@ -997,9 +1009,9 @@ class Editor(EditorBase):
         pmi = pm.pmis.get('CLASS', None)
         lh.operator(
             PME_OT_prop_class_set.bl_idname,
-            "Store in %s Instances" % pmi.text if pmi else
-            "Store in Addon Preferences",
-            add=True)
+            "Store in %s Instances" % pmi.text if pmi else "Store in Addon Preferences",
+            add=True,
+        )
         if pmi:
             lh.operator(PME_OT_prop_class_set.bl_idname, "", 'X', add=False)
 
@@ -1031,9 +1043,7 @@ class Editor(EditorBase):
             lh.row()
 
         if prop == "ed_default":
-            lh.prop_compact(
-                self.ep, prop, "" if hide_text else None,
-                expand=expand)
+            lh.prop_compact(self.ep, prop, "" if hide_text else None, expand=expand)
 
         elif hide_text:
             lh.prop(self.ep, prop, "", expand=expand)
@@ -1050,7 +1060,7 @@ class Editor(EditorBase):
         lh.restore()
 
     def draw_items(self, layout, pm):
-        self.pr = pr =get_prefs()
+        self.pr = pr = get_prefs()
         self.tpr = tpr = temp_prefs()
         self.ep = tpr.ed_props
         pm = pr.selected_pm
@@ -1079,8 +1089,7 @@ class Editor(EditorBase):
             hor_expand = size <= 4
 
         hide_text = pm.poll_cmd != 'ENUM' or not exp
-        self.draw_prop(
-            "ed_default", hide_text, hor_expand, expand)
+        self.draw_prop("ed_default", hide_text, hor_expand, expand)
 
         if pm.poll_cmd in {'INT', 'FLOAT'}:
             lh.sep()
@@ -1133,9 +1142,13 @@ class Editor(EditorBase):
 
         lh.operator(
             PME_OT_popup_property.bl_idname,
-            self.ep.ed_preview_path, 'GREASEPENCIL', emboss=False,
-            auto_close=True, path="temp_prefs().ed_props.ed_preview_path",
-            title="Preview Path")
+            self.ep.ed_preview_path,
+            'GREASEPENCIL',
+            emboss=False,
+            auto_close=True,
+            path="temp_prefs().ed_props.ed_preview_path",
+            title="Preview Path",
+        )
         # lh.label(self.ep.ed_preview_path)
         lh.lt(col)
         lh.sep()
@@ -1150,8 +1163,7 @@ class Editor(EditorBase):
                 obj = pme.context.eval(obj_path)
 
         if obj and hasattr(obj.__class__, pm.name):
-            lh.prop_compact(
-                obj, pm.name, toggle=True, expand=exp)
+            lh.prop_compact(obj, pm.name, toggle=True, expand=exp)
 
 
 def register():

@@ -132,11 +132,13 @@ class MoveItemOperator:
             icon = self.get_icon(item, i)
 
             lh.operator(
-                self.bl_idname, name, icon,
+                self.bl_idname,
+                name,
+                icon,
                 old_idx=self.old_idx,
                 old_idx_last=self.old_idx_last,
                 new_idx=i,
-                swap=self.swap
+                swap=self.swap,
             )
 
     def finish(self):
@@ -148,8 +150,8 @@ class MoveItemOperator:
             return {'CANCELLED'}
 
         if self.old_idx_last >= 0 and (
-                self.old_idx_last >= len(collection) or
-                self.old_idx_last < self.old_idx):
+            self.old_idx_last >= len(collection) or self.old_idx_last < self.old_idx
+        ):
             return {'CANCELLED'}
 
         if self.new_idx == -1:
@@ -164,9 +166,11 @@ class MoveItemOperator:
                 collection.move(self.old_idx, self.new_idx)
 
                 if self.swap:
-                    swap_idx = self.new_idx - 1 \
-                        if self.old_idx < self.new_idx \
+                    swap_idx = (
+                        self.new_idx - 1
+                        if self.old_idx < self.new_idx
                         else self.new_idx + 1
+                    )
                     if swap_idx != self.old_idx:
                         collection.move(swap_idx, self.old_idx)
 
@@ -176,8 +180,7 @@ class MoveItemOperator:
                         collection.move(self.old_idx_last, self.new_idx)
                 else:
                     for i in range(0, self.old_idx_last - self.old_idx + 1):
-                        collection.move(
-                            self.old_idx_last - i, self.new_idx - i)
+                        collection.move(self.old_idx_last - i, self.new_idx - i)
 
             self.finish()
 

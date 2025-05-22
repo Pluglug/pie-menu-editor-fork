@@ -13,14 +13,18 @@ def encode_modal_data(pmi):
 
     elif tpr.modal_item_hk.key != 'NONE':
         data.append(
-            "" if isclose(tpr.modal_item_prop_min, tpr.prop_data.min) else
-            str(tpr.modal_item_prop_min))
+            ""
+            if isclose(tpr.modal_item_prop_min, tpr.prop_data.min)
+            else str(tpr.modal_item_prop_min)
+        )
         data.append(
-            "" if isclose(tpr.modal_item_prop_max, tpr.prop_data.max) else
-            str(tpr.modal_item_prop_max))
+            ""
+            if isclose(tpr.modal_item_prop_max, tpr.prop_data.max)
+            else str(tpr.modal_item_prop_max)
+        )
         data.append(
-            "" if not tpr.modal_item_prop_step_is_set else
-            str(tpr.modal_item_prop_step))
+            "" if not tpr.modal_item_prop_step_is_set else str(tpr.modal_item_prop_step)
+        )
         data.append(tpr.modal_item_custom)
 
     pmi.icon = ";".join(data)

@@ -30,8 +30,7 @@ WINDOW_MIN_HEIGHT = 240
 UPREFS = 'USER_PREFERENCES'
 UPREFS_CLS = "UserPreferences"
 UPREFS_ID = "user_preferences"
-if 'USER_PREFERENCES' not in bpy.types.Area.bl_rna.properties[
-        'type'].enum_items:
+if 'USER_PREFERENCES' not in bpy.types.Area.bl_rna.properties['type'].enum_items:
     UPREFS = 'PREFERENCES'
     UPREFS_CLS = "Preferences"
     UPREFS_ID = "preferences"
@@ -50,36 +49,61 @@ ED_DATA = (
 )
 
 EMODE_ITEMS = [
-    ('COMMAND', "Command",
-        "Python code that will be executed when the user clicks the button"),
-    ('PROP', "Property",
-        "Path to the object's property which will be displayed as a widget"),
-    ('MENU', "Menu",
+    (
+        'COMMAND',
+        "Command",
+        "Python code that will be executed when the user clicks the button",
+    ),
+    (
+        'PROP',
+        "Property",
+        "Path to the object's property which will be displayed as a widget",
+    ),
+    (
+        'MENU',
+        "Menu",
         "Open/execute the menu, popup or operator\n"
         "  when the user clicks the button\n"
-        "Or draw a popup dialog inside the current popup dialog or pie menu"),
-    ('HOTKEY', "Hotkey",
+        "Or draw a popup dialog inside the current popup dialog or pie menu",
+    ),
+    (
+        'HOTKEY',
+        "Hotkey",
         "Blender's hotkey that will be used "
         "to find and execute the operator assigned to it\n"
-        "  when the user clicks the button"),
-    ('CUSTOM', "Custom",
-        "Python code that will be used to draw custom layout of widgets"),
-    ('INVOKE', "On Invoke",
+        "  when the user clicks the button",
+    ),
+    (
+        'CUSTOM',
+        "Custom",
+        "Python code that will be used to draw custom layout of widgets",
+    ),
+    (
+        'INVOKE',
+        "On Invoke",
         "Python code that will be executed\n"
-        "  when the user invokes the modal operator"),
-    ('FINISH', "On Confirm",
+        "  when the user invokes the modal operator",
+    ),
+    (
+        'FINISH',
+        "On Confirm",
         "Python code that will be executed\n"
-        "  when the user confirms the modal operator"),
-    ('CANCEL', "On Cancel",
+        "  when the user confirms the modal operator",
+    ),
+    (
+        'CANCEL',
+        "On Cancel",
         "Python code that will be executed\n"
-        "  when the user cancels the modal operator"),
-    ('UPDATE', "On Update",
+        "  when the user cancels the modal operator",
+    ),
+    (
+        'UPDATE',
+        "On Update",
         "Python code that will be executed\n"
-        "  when the user interacts with the modal operator"),
+        "  when the user interacts with the modal operator",
+    ),
 ]
-MODE_ITEMS = [
-    ('EMPTY', "Empty", "Don't use the item")
-]
+MODE_ITEMS = [('EMPTY', "Empty", "Don't use the item")]
 MODE_ITEMS.extend(EMODE_ITEMS)
 
 PD_MODE_ITEMS = (
@@ -96,14 +120,10 @@ MODAL_CMD_MODES = {
     EMODE_ITEMS[8][0],
 }
 
-PM_ITEMS = tuple(
-    (id, name, "", icon, i)
-    for i, (id, name, icon) in enumerate(ED_DATA)
-)
+PM_ITEMS = tuple((id, name, "", icon, i) for i, (id, name, icon) in enumerate(ED_DATA))
 
 PM_ITEMS_M = tuple(
-    (id, name, "", icon, 1 << i)
-    for i, (id, name, icon) in enumerate(ED_DATA)
+    (id, name, "", icon, 1 << i) for i, (id, name, icon) in enumerate(ED_DATA)
 )
 
 PM_ITEMS_M_DEFAULT = set(id for id, name, icon in ED_DATA)
@@ -124,10 +144,8 @@ SETTINGS_TAB_DEFAULT = SETTINGS_TAB_ITEMS[0][0]
 OP_CTX_ITEMS = (
     ('INVOKE_DEFAULT', "Invoke (Default)", "", 'OUTLINER_OB_LAMP', 0),
     ('INVOKE_REGION_WIN', "Invoke Window Region", "", 'OUTLINER_OB_LAMP', 1),
-    ('INVOKE_REGION_CHANNELS', "Invoke Channels Region", "",
-        'OUTLINER_OB_LAMP', 2),
-    ('INVOKE_REGION_PREVIEW', "Invoke Preview Region", "",
-        'OUTLINER_OB_LAMP', 3),
+    ('INVOKE_REGION_CHANNELS', "Invoke Channels Region", "", 'OUTLINER_OB_LAMP', 2),
+    ('INVOKE_REGION_PREVIEW', "Invoke Preview Region", "", 'OUTLINER_OB_LAMP', 3),
     ('INVOKE_AREA', "Invoke Area", "", 'OUTLINER_OB_LAMP', 4),
     ('INVOKE_SCREEN', "Invoke Screen", "", 'OUTLINER_OB_LAMP', 5),
     ('EXEC_DEFAULT', "Exec", "", 'LAMP_DATA', 6),
@@ -142,8 +160,7 @@ ICON_ON = 'CHECKBOX_HLT'
 ICON_OFF = 'CHECKBOX_DEHLT'
 
 BL_ICONS = {
-    item.identifier
-    for item in bpy.types.Property.bl_rna.properties['icon'].enum_items
+    item.identifier for item in bpy.types.Property.bl_rna.properties['icon'].enum_items
 }
 
 DEFAULT_POLL = "return True"
@@ -172,8 +189,7 @@ W_PMI_ADD_BTN = "Can't add this button"
 W_PMI_LONG_CMD = "The command is too long"
 
 
-ARROW_ICONS = (
-    "@p4", "@p6", "@p2", "@p8", "@p7", "@p9", "@p1", "@p3", "@pA", "@pB")
+ARROW_ICONS = ("@p4", "@p6", "@p2", "@p8", "@p7", "@p9", "@p1", "@p3", "@pA", "@pB")
 
 SPACE_ITEMS = (
     ('VIEW_3D', "3D Viewport", "", 'VIEW3D', 0),
@@ -208,12 +224,15 @@ REGION_ITEMS = (
 OPEN_MODE_ITEMS = (
     ('PRESS', "Press", "Press the key", ph.get_icon("pPress"), 0),
     ('HOLD', "Hold", "Hold down the key", ph.get_icon("pHold"), 1),
-    ('DOUBLE_CLICK', "Double Click", "Double click the key",
-        ph.get_icon("pDouble"), 2),
-    ('TWEAK', "Click Drag", "Hold down the key and move the mouse",
-        ph.get_icon("pTweak"), 3),
-    ('CHORDS', "Key Chords", "Click sequence of 2 keys",
-        ph.get_icon("pChord"), 4),
+    ('DOUBLE_CLICK', "Double Click", "Double click the key", ph.get_icon("pDouble"), 2),
+    (
+        'TWEAK',
+        "Click Drag",
+        "Hold down the key and move the mouse",
+        ph.get_icon("pTweak"),
+        3,
+    ),
+    ('CHORDS', "Key Chords", "Click sequence of 2 keys", ph.get_icon("pChord"), 4),
 )
 
 
@@ -225,13 +244,12 @@ def header_action_enum_items():
     yield ('BOTTOM_HIDE', "Bottom Hidden", "", '', 4)
 
 
-class EnumItems():
+class EnumItems:
     def __init__(self):
         self._items = []
 
     def add_item(self, id, name, icon, desc=""):
-        self._items.append(
-            (id, name, desc, ic(icon), len(self._items)))
+        self._items.append((id, name, desc, ic(icon), len(self._items)))
 
     def retrieve_items(self):
         if self._items is None:

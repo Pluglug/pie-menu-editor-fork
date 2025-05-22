@@ -49,7 +49,7 @@ def _gen_tp_id(name):
     name = name.lower()
     pre_tp, pre_id = "PME_OT_", "pme."
     id = "macro_" + re.sub(r"[^_a-z0-9]", repl, name, flags=re.I)
-    id = uname(bpy.types, pre_tp + id, sep="_")[len(pre_tp):]
+    id = uname(bpy.types, pre_tp + id, sep="_")[len(pre_tp) :]
     return pre_tp + id, pre_id + id
 
 
@@ -94,7 +94,7 @@ def add_macro(pm):
     if pm.name in _macros:
         return
 
-    pr =get_prefs()
+    pr = get_prefs()
     tp_name, tp_bl_idname = _gen_tp_id(pm.name)
 
     DBG_MACRO and logh("Add Macro: %s (%s)" % (pm.name, tp_name))
@@ -119,8 +119,7 @@ def add_macro(pm):
 
             pmi.icon = ''
             if pmi.mode == 'COMMAND':
-                sub_op_idname, _, pos_args = operator_utils.find_operator(
-                    pmi.text)
+                sub_op_idname, _, pos_args = operator_utils.find_operator(pmi.text)
 
                 sub_op_exec_ctx, _ = operator_utils.parse_pos_args(pos_args)
 
@@ -190,7 +189,7 @@ def update_macro(pm):
 
 
 def _fill_props(props, pm, idx=1):
-    pr =get_prefs()
+    pr = get_prefs()
 
     sticky_idx, modal_idx = 0, 0
     for pmi in pm.pmis:
@@ -198,8 +197,7 @@ def _fill_props(props, pm, idx=1):
             continue
 
         if pmi.mode == 'COMMAND':
-            sub_op_idname, args, pos_args = operator_utils.find_operator(
-                pmi.text)
+            sub_op_idname, args, pos_args = operator_utils.find_operator(pmi.text)
 
             sub_op_exec_ctx, _ = operator_utils.parse_pos_args(pos_args)
 
@@ -217,8 +215,7 @@ def _fill_props(props, pm, idx=1):
         elif pmi.mode == 'MENU':
             sub_pm = pr.pie_menus[pmi.text]
             if sub_pm.mode == 'STICKY':
-                props[_gen_op(_sticky_op, sticky_idx)] = \
-                    dict(pm_name=sub_pm.name)
+                props[_gen_op(_sticky_op, sticky_idx)] = dict(pm_name=sub_pm.name)
                 sticky_idx += 1
 
             elif sub_pm.mode == 'MODAL':

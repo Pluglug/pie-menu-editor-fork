@@ -2,8 +2,19 @@ import bpy
 import re
 from itertools import islice
 from ctypes import (
-    Structure, POINTER, cast, addressof, pointer,
-    c_short, c_uint, c_int, c_float, c_bool, c_char, c_char_p, c_void_p
+    Structure,
+    POINTER,
+    cast,
+    addressof,
+    pointer,
+    c_short,
+    c_uint,
+    c_int,
+    c_float,
+    c_bool,
+    c_char,
+    c_char_p,
+    c_void_p,
 )
 from . import pme
 
@@ -43,8 +54,7 @@ def gen_fields(*args):
     bl_version = bpy.app.version
     for a in args:
         if isinstance(a, tuple):
-            if a[0] and bl_version < a[1] or \
-                    not a[0] and bl_version >= a[1]:
+            if (a[0] and bl_version < a[1]) or (not a[0] and bl_version >= a[1]):
                 continue
 
             cur_tp = a[2]
@@ -82,15 +92,13 @@ class _ListBase:
 
     def insert(self, prevlink, newlink):
         if prevlink:
-            a = prevlink if isinstance(prevlink, int) else \
-                addressof(prevlink)
+            a = prevlink if isinstance(prevlink, int) else addressof(prevlink)
             prevlink_p = cast(a, POINTER(Link)).contents
         else:
             prevlink_p = None
 
         if newlink:
-            a = newlink if isinstance(newlink, int) else \
-                addressof(newlink)
+            a = newlink if isinstance(newlink, int) else addressof(newlink)
             newlink_p = cast(a, POINTER(Link)).contents
         else:
             newlink_p = None
@@ -502,8 +510,7 @@ del gen_fields
 
 
 class HeadModalHandler:
-    key: bpy.props.StringProperty(
-        default="ESC", options={'SKIP_SAVE'})
+    key: bpy.props.StringProperty(default="ESC", options={'SKIP_SAVE'})
 
     def __init__(self):
         self.move_flag = False
@@ -535,7 +542,8 @@ class HeadModalHandler:
 
     def execute(self, context):
         self.timer = context.window_manager.event_timer_add(
-            0.001, window=context.window)
+            0.001, window=context.window
+        )
         context.window_manager.modal_handler_add(self)
         return {'RUNNING_MODAL'}
 
@@ -550,8 +558,8 @@ def c_layout(layout):
 
 def c_last_btn(clayout):
     ret = cast(
-        clayout.root.contents.block.contents.buttons.last,
-        POINTER(uiBut)).contents
+        clayout.root.contents.block.contents.buttons.last, POINTER(uiBut)
+    ).contents
     return ret
 
 
@@ -589,8 +597,7 @@ def set_area(context, area=None):
     C = c_context(context)
     if area:
         set_area.area = C.wm.area
-        C.wm.area = cast(
-            area.as_pointer(), POINTER(ScrArea))
+        C.wm.area = cast(area.as_pointer(), POINTER(ScrArea))
 
     elif hasattr(set_area, "area"):
         C.wm.area = set_area.area
@@ -600,8 +607,7 @@ def set_region(context, region=None):
     C = c_context(context)
     if region:
         set_region.region = C.wm.region
-        C.wm.region = cast(
-            region.as_pointer(), POINTER(ARegion))
+        C.wm.region = cast(region.as_pointer(), POINTER(ARegion))
 
     elif hasattr(set_region, "region"):
         C.wm.region = set_region.region

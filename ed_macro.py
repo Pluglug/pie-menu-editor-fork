@@ -15,17 +15,17 @@ class PME_OT_macro_exec_base:
 
     macro_globals = None
 
-    cmd: bpy.props.StringProperty(
-        maxlen=MAX_STR_LEN, options={'SKIP_SAVE', 'HIDDEN'})
+    cmd: bpy.props.StringProperty(maxlen=MAX_STR_LEN, options={'SKIP_SAVE', 'HIDDEN'})
 
     def execute(self, context):
-        if not pme.context.exe(
-                self.cmd, PME_OT_macro_exec_base.macro_globals):
+        if not pme.context.exe(self.cmd, PME_OT_macro_exec_base.macro_globals):
             return {'CANCELLED'}
 
-        ret = {'CANCELLED'} \
-            if PME_OT_macro_exec_base.macro_globals.get("stop", False) \
+        ret = (
+            {'CANCELLED'}
+            if PME_OT_macro_exec_base.macro_globals.get("stop", False)
             else {'FINISHED'}
+        )
         PME_OT_macro_exec_base.macro_globals.pop("stop", None)
         return ret
 
@@ -35,8 +35,7 @@ class PME_OT_macro_exec1(bpy.types.Operator):
     bl_label = "Macro Command"
     bl_options = {'INTERNAL'}
 
-    cmd: bpy.props.StringProperty(
-        maxlen=MAX_STR_LEN, options={'SKIP_SAVE', 'HIDDEN'})
+    cmd: bpy.props.StringProperty(maxlen=MAX_STR_LEN, options={'SKIP_SAVE', 'HIDDEN'})
 
     def execute(self, context):
         PME_OT_macro_exec_base.macro_globals = pme.context.gen_globals()
@@ -109,7 +108,7 @@ class Editor(EditorBase):
         MAU.update_macro(pm)
 
     def get_pmi_icon(self, pm, pmi, idx):
-        pr =get_prefs()
+        pr = get_prefs()
         icon = self.icon
         if pmi.icon:
             icon = pmi.icon
@@ -123,5 +122,8 @@ def register():
     Editor()
 
     MAU.init_macros(
-        PME_OT_macro_exec1, PME_OT_macro_exec_base,
-        PME_OT_sticky_key_base, PME_OT_modal_base)
+        PME_OT_macro_exec1,
+        PME_OT_macro_exec_base,
+        PME_OT_sticky_key_base,
+        PME_OT_modal_base,
+    )
