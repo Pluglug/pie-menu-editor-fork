@@ -535,7 +535,7 @@ class WM_OT_pm_export(bpy.types.Operator, ExportHelper):
 
         lh.sep()
 
-        lh.layout.prop(prefs(), "auto_backup")
+        lh.layout.prop(get_prefs(), "auto_backup")
 
         lh.operator(PME_OT_backup.bl_idname, "Backup Now", 'FILE_HIDDEN')
 
@@ -616,7 +616,7 @@ class WM_OT_pm_duplicate(bpy.types.Operator):
 
     @classmethod
     def poll(cls, context):
-        return len(prefs().pie_menus) > 0
+        return len(get_prefs().pie_menus) > 0
 
 
 class PME_OT_pm_remove(ConfirmBoxHandler, bpy.types.Operator):
@@ -662,7 +662,7 @@ class PME_OT_pm_remove(ConfirmBoxHandler, bpy.types.Operator):
 
     @classmethod
     def poll(cls, context):
-        return len(prefs().pie_menus) > 0
+        return len(get_prefs().pie_menus) > 0
 
     def invoke(self, context, event):
         self.box = True
@@ -805,7 +805,7 @@ class WM_OT_pm_move(bpy.types.Operator):
 
     @classmethod
     def poll(cls, context):
-        return len(prefs().pie_menus) > 1
+        return len(get_prefs().pie_menus) > 1
 
 
 class WM_OT_pm_sort(bpy.types.Operator):
@@ -894,7 +894,7 @@ class WM_OT_pm_sort(bpy.types.Operator):
 
     @classmethod
     def poll(cls, context):
-        return len(prefs().pie_menus) > 1
+        return len(get_prefs().pie_menus) > 1
 
 
 class PME_OT_pmi_name_apply(bpy.types.Operator):

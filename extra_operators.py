@@ -1005,7 +1005,7 @@ class PME_OT_popup_area(bpy.types.Operator):
             else:
                 area.type = area_type
 
-        get_prefs().enable_window_kmis()
+        get_prefs(context).enable_window_kmis()
 
         return {'FINISHED'}
 
