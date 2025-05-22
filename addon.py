@@ -16,8 +16,9 @@ ADDON_ID = os.path.basename(os.path.dirname(os.path.abspath(__file__)))
 ADDON_PATH = os.path.normpath(os.path.dirname(os.path.abspath(__file__)))
 SCRIPT_PATH = os.path.join(ADDON_PATH, "scripts/")
 SAFE_MODE = "--pme-safe-mode" in sys.argv
-ICON_ENUM_ITEMS = bpy.types.UILayout.bl_rna.functions[
-    "prop"].parameters["icon"].enum_items
+ICON_ENUM_ITEMS = (
+    bpy.types.UILayout.bl_rna.functions["prop"].parameters["icon"].enum_items
+)
 
 
 def get_uprefs(context: bpy.types.Context = bpy.context) -> bpy.types.Preferences:
@@ -60,18 +61,20 @@ def get_prefs(context: bpy.types.Context = bpy.context) -> PMEPreferences:
 
 
 def uprefs():
-    import traceback
     stack = traceback.extract_stack()
     caller = stack[-2]
-    print(f"Warning: uprefs() is deprecated. Called from {caller.filename}:{caller.lineno}")
+    print(
+        f"Warning: uprefs() is deprecated. Called from {caller.filename}:{caller.lineno}"
+    )
     return get_uprefs()
 
 
 def prefs():
-    import traceback
     stack = traceback.extract_stack()
     caller = stack[-2]
-    print(f"Warning: prefs() is deprecated. Called from {caller.filename}:{caller.lineno}")
+    print(
+        f"Warning: prefs() is deprecated. Called from {caller.filename}:{caller.lineno}"
+    )
     return get_prefs()
 
 

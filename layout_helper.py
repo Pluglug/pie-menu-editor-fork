@@ -51,8 +51,14 @@ class CLayout:
         return ret
 
     def menu(
-            menu, text=None, text_ctxt="", translate=True, icon='NONE',
-            icon_value=0, use_mouse_over_open=None):
+        menu,
+        text=None,
+        text_ctxt="",
+        translate=True,
+        icon='NONE',
+        icon_value=0,
+        use_mouse_over_open=None,
+    ):
         bpy.types.UILayout.__getattribute__ = CLayout.real_getattribute
 
         if use_mouse_over_open is True or CLayout.use_mouse_over_open is True:
@@ -70,12 +76,20 @@ class CLayout:
         if text is None:
             CLayout.layout.menu(
                 menu,
-                text_ctxt=text_ctxt, translate=translate,
-                icon=ic(icon), icon_value=icon_value)
+                text_ctxt=text_ctxt,
+                translate=translate,
+                icon=ic(icon),
+                icon_value=icon_value,
+            )
         else:
             CLayout.layout.menu(
-                menu, text=text, text_ctxt=text_ctxt,
-                translate=translate, icon=ic(icon), icon_value=icon_value)
+                menu,
+                text=text,
+                text_ctxt=text_ctxt,
+                translate=translate,
+                icon=ic(icon),
+                icon_value=icon_value,
+            )
 
         # if use_mouse_over_open is True or CLayout.use_mouse_over_open is True:
         #     UI_BTYPE_PULLDOWN = 27 << 9
@@ -112,9 +126,7 @@ class LayoutHelper:
         self.layout.label(text="", icon=ic('BLANK1'))
         self.has_sep = False
 
-    def box(
-            self, parent=None, operator_context=None,
-            enabled=True, alignment='EXPAND'):
+    def box(self, parent=None, operator_context=None, enabled=True, alignment='EXPAND'):
         if parent is None:
             parent = self.layout
         self.parent = parent
@@ -128,9 +140,7 @@ class LayoutHelper:
         self.has_sep = True
         return self.layout
 
-    def column(
-            self, parent=None, align=True, operator_context=None,
-            enabled=True):
+    def column(self, parent=None, align=True, operator_context=None, enabled=True):
         if parent is None:
             parent = self.layout
         self.parent = parent
@@ -149,8 +159,8 @@ class LayoutHelper:
         icon, icon_value = self.parse_icon(icon)
 
         self.layout.label(
-            text="" if self.icon_only else text,
-            icon=ic(icon), icon_value=icon_value)
+            text="" if self.icon_only else text, icon=ic(icon), icon_value=icon_value
+        )
         self.has_sep = False
 
     def lt(self, layout, operator_context=None):
@@ -162,8 +172,14 @@ class LayoutHelper:
         self.prev_sep_group = None
 
     def menu(
-            self, menu, text, icon='NONE', enabled=True, active=True,
-            use_mouse_over_open=False):
+        self,
+        menu,
+        text,
+        icon='NONE',
+        enabled=True,
+        active=True,
+        use_mouse_over_open=False,
+    ):
         icon, icon_value = self.parse_icon(icon)
 
         if not enabled or not active:
@@ -180,16 +196,18 @@ class LayoutHelper:
                 CLayout.save()
 
             self.layout.menu(
-                menu, text=text, icon=ic(icon), icon_value=icon_value,
-                use_mouse_over_open=True)
+                menu,
+                text=text,
+                icon=ic(icon),
+                icon_value=icon_value,
+                use_mouse_over_open=True,
+            )
 
             if not cl:
                 CLayout.restore()
 
         else:
-            self.layout.menu(
-                menu, text=text, icon=ic(icon),
-                icon_value=icon_value)
+            self.layout.menu(menu, text=text, icon=ic(icon), icon_value=icon_value)
 
         self.has_sep = False
 
@@ -202,13 +220,23 @@ class LayoutHelper:
 
         print_exc()
         self.operator(
-            PME_OT_message_box.bl_idname, txt, 'ERROR',
-            message=message, icon=ic('ERROR'))
+            PME_OT_message_box.bl_idname,
+            txt,
+            'ERROR',
+            message=message,
+            icon=ic('ERROR'),
+        )
 
     def operator(
-            self, idname, txt=None, icon_id='NONE',
-            enabled=True, active=True, emboss=True,
-            **props):
+        self,
+        idname,
+        txt=None,
+        icon_id='NONE',
+        enabled=True,
+        active=True,
+        emboss=True,
+        **props
+    ):
         icon_id, icon_value = self.parse_icon(icon_id)
 
         if not enabled or not active:
@@ -224,11 +252,12 @@ class LayoutHelper:
 
         if txt is None:
             pr = self.layout.operator(
-                idname, icon=ic(icon_id), icon_value=icon_value, emboss=emboss)
+                idname, icon=ic(icon_id), icon_value=icon_value, emboss=emboss
+            )
         else:
             pr = self.layout.operator(
-                idname, text=txt, icon=ic(icon_id), icon_value=icon_value,
-                emboss=emboss)
+                idname, text=txt, icon=ic(icon_id), icon_value=icon_value, emboss=emboss
+            )
         if props:
             for p in props.keys():
                 setattr(pr, p, props[p])
@@ -239,9 +268,7 @@ class LayoutHelper:
         self.has_sep = False
         return pr
 
-    def op(
-            self, idname, txt=None, icon='NONE',
-            enabled=True, active=True, emboss=True):
+    def op(self, idname, txt=None, icon='NONE', enabled=True, active=True, emboss=True):
         def set_props(**props):
             for k, v in props.items():
                 setattr(pr, k, v)
@@ -263,11 +290,12 @@ class LayoutHelper:
 
         if txt is None:
             pr = self.layout.operator(
-                idname, icon=ic(icon), icon_value=icon_value, emboss=emboss)
+                idname, icon=ic(icon), icon_value=icon_value, emboss=emboss
+            )
         else:
             pr = self.layout.operator(
-                idname, text=txt, icon=ic(icon), icon_value=icon_value,
-                emboss=emboss)
+                idname, text=txt, icon=ic(icon), icon_value=icon_value, emboss=emboss
+            )
 
         if not enabled or not active:
             self.restore()
@@ -289,10 +317,23 @@ class LayoutHelper:
         return icon_id, icon_value
 
     def prop(
-            self, data, prop, text=None, icon='NONE',
-            expand=False, slider=False, toggle=-1, icon_only=False,
-            event=False, full_event=False, emboss=True, index=-1,
-            enabled=True, active=True, alert=False):
+        self,
+        data,
+        prop,
+        text=None,
+        icon='NONE',
+        expand=False,
+        slider=False,
+        toggle=-1,
+        icon_only=False,
+        event=False,
+        full_event=False,
+        emboss=True,
+        index=-1,
+        enabled=True,
+        active=True,
+        alert=False,
+    ):
 
         if data is None:
             raise AttributeError(f"Property Data is None: {prop}")
@@ -301,7 +342,8 @@ class LayoutHelper:
             # pass
             # return
             raise AttributeError(
-                "Property not found: %s.%s" % (type(data).__name__, prop))
+                "Property not found: %s.%s" % (type(data).__name__, prop)
+            )
 
         icon, icon_value = self.parse_icon(icon)
 
@@ -318,16 +360,35 @@ class LayoutHelper:
 
         if text is None:
             self.layout.prop(
-                data, prop, icon=ic(icon), icon_value=icon_value,
-                expand=expand, slider=slider, toggle=toggle,
-                icon_only=icon_only, event=event, full_event=full_event,
-                emboss=emboss, index=index)
+                data,
+                prop,
+                icon=ic(icon),
+                icon_value=icon_value,
+                expand=expand,
+                slider=slider,
+                toggle=toggle,
+                icon_only=icon_only,
+                event=event,
+                full_event=full_event,
+                emboss=emboss,
+                index=index,
+            )
         else:
             self.layout.prop(
-                data, prop, text=text, icon=ic(icon), icon_value=icon_value,
-                expand=expand, slider=slider, toggle=toggle,
-                icon_only=icon_only, event=event, full_event=full_event,
-                emboss=emboss, index=index)
+                data,
+                prop,
+                text=text,
+                icon=ic(icon),
+                icon_value=icon_value,
+                expand=expand,
+                slider=slider,
+                toggle=toggle,
+                icon_only=icon_only,
+                event=event,
+                full_event=full_event,
+                emboss=emboss,
+                index=index,
+            )
 
         if not enabled or not active or alert:
             self.restore()
@@ -335,16 +396,33 @@ class LayoutHelper:
         self.has_sep = False
 
     def prop_compact(
-            self, data, prop, text=None, icon='NONE',
-            expand=False, slider=False, toggle=False, icon_only=False,
-            event=False, full_event=False, emboss=True, index=-1,
-            enabled=True, active=True, alert=False):
+        self,
+        data,
+        prop,
+        text=None,
+        icon='NONE',
+        expand=False,
+        slider=False,
+        toggle=False,
+        icon_only=False,
+        event=False,
+        full_event=False,
+        emboss=True,
+        index=-1,
+        enabled=True,
+        active=True,
+        alert=False,
+    ):
         p = data.bl_rna.properties[prop]
         tp = p.__class__.__name__
         size = getattr(p, "array_length", 0)
-        if size > 1 or \
-                tp == "StringProperty" or \
-                tp == "EnumProperty" and not p.is_enum_flag and not expand:
+        if (
+            size > 1
+            or tp == "StringProperty"
+            or tp == "EnumProperty"
+            and not p.is_enum_flag
+            and not expand
+        ):
             text = ""
         if size > 1 and (tp == "IntProperty" or tp == "FloatProperty"):
             icon = 'NONE'
@@ -382,10 +460,22 @@ class LayoutHelper:
                 for i in range(size):
                     index = i
                     self.prop(
-                        data, prop, text, icon, expand, slider,
-                        toggle, icon_only,
-                        event, full_event, emboss, index,
-                        enabled, active, alert)
+                        data,
+                        prop,
+                        text,
+                        icon,
+                        expand,
+                        slider,
+                        toggle,
+                        icon_only,
+                        event,
+                        full_event,
+                        emboss,
+                        index,
+                        enabled,
+                        active,
+                        alert,
+                    )
 
                 self.restore()
                 return
@@ -403,23 +493,55 @@ class LayoutHelper:
                 for i in range(size):
                     index = i
                     self.prop(
-                        data, prop, text, icon, expand, slider,
-                        toggle, icon_only,
-                        event, full_event, emboss, index,
-                        enabled, active, alert)
+                        data,
+                        prop,
+                        text,
+                        icon,
+                        expand,
+                        slider,
+                        toggle,
+                        icon_only,
+                        event,
+                        full_event,
+                        emboss,
+                        index,
+                        enabled,
+                        active,
+                        alert,
+                    )
                 return
 
         self.prop(
-            data, prop, text, icon, expand, slider, toggle, icon_only,
-            event, full_event, emboss, index,
-            enabled, active, alert)
+            data,
+            prop,
+            text,
+            icon,
+            expand,
+            slider,
+            toggle,
+            icon_only,
+            event,
+            full_event,
+            emboss,
+            index,
+            enabled,
+            active,
+            alert,
+        )
 
     def restore(self):
         self.layout = self.saved_layouts.pop()
 
     def row(
-            self, parent=None, align=True, operator_context=None,
-            enabled=True, active=True, alert=False, alignment='EXPAND'):
+        self,
+        parent=None,
+        align=True,
+        operator_context=None,
+        enabled=True,
+        active=True,
+        alert=False,
+        alignment='EXPAND',
+    ):
         if parent is None:
             parent = self.layout
         self.parent = parent
@@ -443,8 +565,12 @@ class LayoutHelper:
             return
         if parent is None:
             parent = self.layout
-        if group and group != self.prev_sep_group or \
-                not group and (not check or not self.has_sep):
+        if (
+            group
+            and group != self.prev_sep_group
+            or not group
+            and (not check or not self.has_sep)
+        ):
             parent.separator()
         self.has_sep = True
         self.prev_sep_group = group
@@ -483,7 +609,12 @@ class Row:
 
     def __str__(self):
         return "Row [%d, %d] |%d|%d| %d cols" % (
-            self.a, self.b, self.l, self.r, self.num_columns)
+            self.a,
+            self.b,
+            self.l,
+            self.r,
+            self.num_columns,
+        )
 
     def find_ab(self, pm, idx):
         self.a = idx
@@ -589,7 +720,7 @@ def draw_pme_layout(pm, column, draw_pmi, rows=None, icon_btn_scale_x=-1):
     CLayout.save()
 
     global num_btns, num_spacers, max_btns, max_spacers, al_l, al_r
-    pr =get_prefs()
+    pr = get_prefs()
     pp = pme.props
 
     if icon_btn_scale_x == -1:
@@ -631,8 +762,11 @@ def draw_pme_layout(pm, column, draw_pmi, rows=None, icon_btn_scale_x=-1):
 
             elif pmi.text.startswith("spacer"):
                 prop = pp.parse(pmi.text)
-                if prop.subrow == 'BEGIN' or prop.subrow == 'END' or \
-                        prop.hsep == 'COLUMN':
+                if (
+                    prop.subrow == 'BEGIN'
+                    or prop.subrow == 'END'
+                    or prop.hsep == 'COLUMN'
+                ):
                     if is_subrow and not subrow_is_expanded and al_l == -1:
                         row_prop = pp.parse(pm.pmis[row_idx].text)
                         cur_subrow.alignment = row_prop.align
@@ -640,16 +774,23 @@ def draw_pme_layout(pm, column, draw_pmi, rows=None, icon_btn_scale_x=-1):
 
             has_columns_mem = has_columns
             new_row, has_columns, is_subrow = _parse_empty_pdi(
-                pr, pm, idx, row_idx, column, row, has_columns, is_subrow)
+                pr, pm, idx, row_idx, column, row, has_columns, is_subrow
+            )
             if not new_row:
                 new_row = row
 
             if rows is not None and pmi.text.startswith("row") and row:
                 row_prop = pp.parse(pm.pmis[last_row_idx].text)
-                rows.append((
-                    last_row_idx, row_prop.value("size"),
-                    max_btns, max_spacers, has_columns_mem,
-                    row_prop.value("vspacer")))
+                rows.append(
+                    (
+                        last_row_idx,
+                        row_prop.value("size"),
+                        max_btns,
+                        max_spacers,
+                        has_columns_mem,
+                        row_prop.value("vspacer"),
+                    )
+                )
                 max_btns = 0
                 max_spacers = 0
 
@@ -729,14 +870,23 @@ def draw_pme_layout(pm, column, draw_pmi, rows=None, icon_btn_scale_x=-1):
             cur_subrow.alignment = row_prop.align
 
         size = row_prop.value("size")
-        if max_btns * size + max_spacers * SPACER_SCALE_Y < \
-                num_btns * size + num_spacers * SPACER_SCALE_Y:
+        if (
+            max_btns * size + max_spacers * SPACER_SCALE_Y
+            < num_btns * size + num_spacers * SPACER_SCALE_Y
+        ):
             max_btns = num_btns if has_columns else 1
             max_spacers = num_spacers if has_columns else 0
         if rows is not None:
-            rows.append((
-                row_idx, row_prop.value("size"), max_btns, max_spacers,
-                has_columns, row_prop.value("vspacer")))
+            rows.append(
+                (
+                    row_idx,
+                    row_prop.value("size"),
+                    max_btns,
+                    max_spacers,
+                    has_columns,
+                    row_prop.value("vspacer"),
+                )
+            )
 
     pme.context.is_first_draw = False
 
@@ -757,11 +907,8 @@ al_r = -1
 has_aligners = False
 
 
-def _parse_empty_pdi(
-        prefs, pm, idx, row_idx, layout, row, has_columns, is_subrow):
-    global cur_column, cur_subrow, \
-        num_btns, num_spacers, max_btns, max_spacers, al_split, has_aligners, \
-        al_l, al_r
+def _parse_empty_pdi(prefs, pm, idx, row_idx, layout, row, has_columns, is_subrow):
+    global cur_column, cur_subrow, num_btns, num_spacers, max_btns, max_spacers, al_split, has_aligners, al_l, al_r
     pp = pme.props
     pmi = pm.pmis[idx]
     r = pp.parse(pmi.text)
@@ -774,8 +921,10 @@ def _parse_empty_pdi(
 
         row_prop = pp.parse(pm.pmis[row_idx].text)
         size = row_prop.value("size")
-        if max_btns * size + max_spacers * SPACER_SCALE_Y < \
-                num_btns * size + num_spacers * SPACER_SCALE_Y:
+        if (
+            max_btns * size + max_spacers * SPACER_SCALE_Y
+            < num_btns * size + num_spacers * SPACER_SCALE_Y
+        ):
             max_btns = num_btns if has_columns else 1
             max_spacers = num_spacers if has_columns else 0
         num_btns = 0
@@ -806,8 +955,7 @@ def _parse_empty_pdi(
 
         if row_b == -1:
             row_b = num_pmis
-        if al_l != -1 and al_r != -1 and \
-                al_l == row_a + 1 and al_r == row_b - 1:
+        if al_l != -1 and al_r != -1 and al_l == row_a + 1 and al_r == row_b - 1:
             al_c = True
 
         if has_aligners:
@@ -820,8 +968,9 @@ def _parse_empty_pdi(
                 al_split = lh.split(layout)
             row = lh.row()
             row.alignment = 'LEFT'
-        elif has_columns and row_prop.fixed_col or \
-                not has_columns and row_prop.fixed_but:
+        elif (
+            has_columns and row_prop.fixed_col or not has_columns and row_prop.fixed_but
+        ):
             row = lh.split(layout, align=not has_columns)
         else:
             row = lh.row(layout, align=not has_columns)
@@ -905,11 +1054,16 @@ lh = LayoutHelper(ph)
 
 
 def operator(
-        layout, idname, text=None, icon='NONE',
-        emboss=True, icon_value=0, depress=None,
-        **kwargs):
-    d = dict(
-        icon=ic(icon), icon_value=icon_value, emboss=emboss)
+    layout,
+    idname,
+    text=None,
+    icon='NONE',
+    emboss=True,
+    icon_value=0,
+    depress=None,
+    **kwargs
+):
+    d = dict(icon=ic(icon), icon_value=icon_value, emboss=emboss)
 
     if text is not None:
         d["text"] = text
@@ -927,11 +1081,15 @@ def operator(
 
 def split(layout, factor=None, align=True):
     if bpy.app.version < (2, 80, 0):
-        return layout.split(align=align) if factor is None else \
-            layout.split(factor, align)
+        return (
+            layout.split(align=align) if factor is None else layout.split(factor, align)
+        )
 
-    return layout.split(align=align) if factor is None else \
-        layout.split(factor=factor, align=align)
+    return (
+        layout.split(align=align)
+        if factor is None
+        else layout.split(factor=factor, align=align)
+    )
 
 
 def register():

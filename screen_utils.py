@@ -6,6 +6,7 @@ from typing import Any, Dict, Optional, Union
 from . import c_utils as CTU
 from . import pme
 from .addon import get_uprefs
+
 # from .bl_utils import ctx_dict
 from .debug_utils import logi
 
@@ -105,7 +106,7 @@ def find_area(
 def find_region(
     region_or_type: Union[str, bpy.types.Region, None],
     area_or_type: Union[str, bpy.types.Area, None] = None,
-    screen_or_name: Union[str, bpy.types.Screen, None] = None
+    screen_or_name: Union[str, bpy.types.Screen, None] = None,
 ) -> Optional[bpy.types.Region]:
     """Find and return a Region object within the specified Area, or None if not found."""
     if region_or_type is None:
@@ -190,7 +191,7 @@ class ContextOverride:
         context: bpy.types.Context,
         *,
         # extra_priority: bool = False,
-        delete_none: bool = True
+        delete_none: bool = True,
     ) -> Dict[str, Any]:
 
         # Resolve all fields

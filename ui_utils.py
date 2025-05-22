@@ -15,7 +15,7 @@ class WM_MT_pme:
     bl_label = ""
 
     def draw(self, context):
-        pr =get_prefs()
+        pr = get_prefs()
         pm = pr.pie_menus[self.bl_label]
 
         row = self.layout.row()
@@ -45,9 +45,9 @@ def get_pme_menu_class(name):
         class_name = "PME_MT_menu_%d" % len(pme_menu_classes)
         pme_menu_classes[name] = type(
             class_name,
-            (WM_MT_pme, bpy.types.Menu), {
-                'bl_label': name,
-            })
+            (WM_MT_pme, bpy.types.Menu),
+            {'bl_label': name},
+        )
         bpy.utils.register_class(pme_menu_classes[name])
 
     return pme_menu_classes[name].__name__
@@ -154,12 +154,11 @@ def execute_script(path, **kwargs):
     exec_globals["kwargs"] = kwargs
     exec_globals["__file__"] = path
 
-    pr =get_prefs()
+    pr = get_prefs()
     if pr.cache_scripts:
         name = os.path.basename(path)
         name, _, _ = name.rpartition(".")
-        cname = name + ".cpython-%d%d.pyc" % (
-            sys.version_info[0], sys.version_info[1])
+        cname = name + ".cpython-%d%d.pyc" % (sys.version_info[0], sys.version_info[1])
         cpath = os.path.join(os.path.dirname(path), "__pycache__", cname)
 
         try:
@@ -200,7 +199,7 @@ def execute_script(path, **kwargs):
 
 
 def draw_menu(name, frame=False, dx=0, dy=0, layout=None):
-    pr =get_prefs()
+    pr = get_prefs()
     if name in pr.pie_menus:
         lh.save()
         if layout:
@@ -229,8 +228,8 @@ def draw_menu(name, frame=False, dx=0, dy=0, layout=None):
         lh.column()
 
         draw_pme_layout(
-            pr.pie_menus[name], lh.layout,
-            WM_OT_pme_user_pie_menu_call._draw_item)
+            pr.pie_menus[name], lh.layout, WM_OT_pme_user_pie_menu_call._draw_item
+        )
 
         if dx < 0:
             drow = orow.row(align=True)
@@ -248,7 +247,7 @@ def draw_menu(name, frame=False, dx=0, dy=0, layout=None):
 
 
 def open_menu(name, slot=None, **kwargs):
-    pr =get_prefs()
+    pr = get_prefs()
     if name in pr.pie_menus:
         invoke_mode = 'RELEASE'
         if pme.context.pm and pme.context.pm.mode == 'SCRIPT':
@@ -270,10 +269,12 @@ def open_menu(name, slot=None, **kwargs):
             #         break
 
         bpy.ops.wm.pme_user_pie_menu_call(
-            'INVOKE_DEFAULT', pie_menu_name=name,
+            'INVOKE_DEFAULT',
+            pie_menu_name=name,
             # invoke_mode=pme.context.last_operator.invoke_mode)
             invoke_mode=invoke_mode,
-            slot=slot)
+            slot=slot,
+        )
 
         pme.context.exec_user_locals.clear()
         return True
@@ -282,7 +283,7 @@ def open_menu(name, slot=None, **kwargs):
 
 
 def toggle_menu(name, value=None):
-    pr =get_prefs()
+    pr = get_prefs()
     if name in pr.pie_menus:
         pm = pr.pie_menus[name]
         if value is None:

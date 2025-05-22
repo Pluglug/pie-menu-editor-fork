@@ -27,13 +27,16 @@ class PME_OT_sticky_key_edit(bpy.types.Operator):
 
     def execute(self, context):
         cl = self.__class__
-        pr =get_prefs()
+        pr = get_prefs()
         pm = pr.selected_pm
         pm.pmis[1].mode = 'COMMAND'
         pm.pmis[1].text = cl.pmi_prop + " = value"
         pm.pmis[0].mode = 'COMMAND'
         pm.pmis[0].text = "value = %s; %s = %s" % (
-            cl.pmi_prop, cl.pmi_prop, cl.pmi_value)
+            cl.pmi_prop,
+            cl.pmi_prop,
+            cl.pmi_value,
+        )
 
         pr.pmi_data.info()
         pr.leave_mode()

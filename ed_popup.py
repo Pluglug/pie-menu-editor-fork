@@ -1,9 +1,16 @@
 import bpy
 import re
 from .ed_base import (
-    EditorBase, PME_OT_pmi_copy, PME_OT_pmi_paste, WM_OT_pmi_data_edit,
-    WM_OT_pmi_icon_select, WM_OT_pmi_icon_tag_toggle, PME_OT_pmi_toggle,
-    extend_panel, unextend_panel)
+    EditorBase,
+    PME_OT_pmi_copy,
+    PME_OT_pmi_paste,
+    WM_OT_pmi_data_edit,
+    WM_OT_pmi_icon_select,
+    WM_OT_pmi_icon_tag_toggle,
+    PME_OT_pmi_toggle,
+    extend_panel,
+    unextend_panel,
+)
 from .addon import get_prefs, ic, ic_cb, ic_eye
 from . import constants as CC
 from .layout_helper import lh, draw_pme_layout, Row
@@ -24,8 +31,7 @@ prev_row = Row()
 def merge_empties(pm, idx):
     pp = pme.props
     pmi = idx < len(pm.pmis) and pm.pmis[idx]
-    prev = idx - 1 < len(pm.pmis) and pm.pmis[
-        idx - 1]
+    prev = idx - 1 < len(pm.pmis) and pm.pmis[idx - 1]
     ret = False
 
     if prev and prev.mode == 'EMPTY' and pmi and pmi.mode == 'EMPTY':
@@ -58,8 +64,7 @@ def merge_empties(pm, idx):
                 if pp.parse(pmi.text).is_empty:
                     pm.pmis.remove(idx)
 
-                prev.text = pp.encode(
-                    prev.text, "subrow", 'NONE')
+                prev.text = pp.encode(prev.text, "subrow", 'NONE')
                 if pp.parse(prev.text).is_empty:
                     pm.pmis.remove(idx - 1)
                     idx -= 1
@@ -124,7 +129,7 @@ class PME_OT_pdi_add(bpy.types.Operator):
     row_idx: bpy.props.IntProperty(options={'SKIP_SAVE'})
 
     def execute(self, context):
-        pr =get_prefs()
+        pr = get_prefs()
         pm = pr.selected_pm
 
         if self.mode == 'BUTTON':
@@ -161,7 +166,7 @@ class PME_OT_pdi_move(bpy.types.Operator):
     idx: bpy.props.IntProperty()
 
     def _draw(self, menu, context):
-        pm =get_prefs().selected_pm
+        pm = get_prefs().selected_pm
 
         layout = menu.layout.menu_pie()
         layout.separator()
@@ -183,19 +188,17 @@ class PME_OT_pdi_move(bpy.types.Operator):
             #     #         text = pmi.name if pmi.name else " "
 
             lh.operator(
-                PME_OT_pdi_move.bl_idname, text, icon,
-                pm_item=self.pm_item,
-                idx=idx)
+                PME_OT_pdi_move.bl_idname, text, icon, pm_item=self.pm_item, idx=idx
+            )
 
         draw_pme_layout(pm, column, draw_pmi)
 
     def execute(self, context):
-        pm =get_prefs().selected_pm
+        pm = get_prefs().selected_pm
 
         if self.idx != self.pm_item:
             pm.pmis.move(self.pm_item, self.idx)
-            idx2 = \
-                self.idx - 1 if self.pm_item < self.idx else self.idx + 1
+            idx2 = self.idx - 1 if self.pm_item < self.idx else self.idx + 1
             if idx2 != self.pm_item:
                 pm.pmis.move(idx2, self.pm_item)
 
@@ -224,7 +227,7 @@ class PME_OT_pdi_remove(ConfirmBoxHandler, bpy.types.Operator):
         if not value:
             return
 
-        pr =get_prefs()
+        pr = get_prefs()
         pm = pr.selected_pm
         pmi = pm.pmis[self.pm_item]
 
@@ -264,7 +267,7 @@ class PME_OT_pdr_fixed_col_set(bpy.types.Operator):
     value: bpy.props.BoolProperty()
 
     def execute(self, context):
-        pm =get_prefs().selected_pm
+        pm = get_prefs().selected_pm
         pmi = pm.pmis[self.row_idx]
         pmi.text = pme.props.encode(pmi.text, "fixed_col", self.value)
 
@@ -283,7 +286,7 @@ class PME_OT_pdr_fixed_but_set(bpy.types.Operator):
     value: bpy.props.BoolProperty()
 
     def execute(self, context):
-        pm =get_prefs().selected_pm
+        pm = get_prefs().selected_pm
         pmi = pm.pmis[self.row_idx]
         pmi.text = pme.props.encode(pmi.text, "fixed_but", self.value)
 
@@ -303,15 +306,14 @@ class PME_OT_pdr_prop_set(bpy.types.Operator):
     toggle: bpy.props.BoolProperty(options={'SKIP_SAVE'})
 
     def execute(self, context):
-        pr =get_prefs()
+        pr = get_prefs()
         pp = pme.props
         pm = pr.selected_pm
 
         if self.toggle:
             if self.mode == 'PDI':
                 pmi = pm.pmis[current_pdi - 1]
-                pmi = pmi.mode == 'EMPTY' and pmi.text.startswith(
-                    "spacer") and pmi
+                pmi = pmi.mode == 'EMPTY' and pmi.text.startswith("spacer") and pmi
             else:
                 pmi = pm.pmis[cur_row.a]
 
@@ -344,8 +346,7 @@ class PME_OT_pdr_prop_set(bpy.types.Operator):
 
         if self.mode == 'ROW':
             row = pm.pmis[cur_row.a]
-            row.text = pme.props.encode(
-                row.text, self.prop, self.value)
+            row.text = pme.props.encode(row.text, self.prop, self.value)
 
         elif self.mode == 'ALIGN_ROWS':
             row_pmis = []
@@ -374,8 +375,7 @@ class PME_OT_pdr_prop_set(bpy.types.Operator):
                 i += 1
 
             for pmi in row_pmis:
-                pmi.text = pme.props.encode(
-                    pmi.text, self.prop, self.value)
+                pmi.text = pme.props.encode(pmi.text, self.prop, self.value)
 
         elif self.mode == 'ALL_ROWS':
             r = None
@@ -397,27 +397,30 @@ class PME_OT_pdr_prop_set(bpy.types.Operator):
                         if prev_row_has_columns or cur_row_has_columns:
                             value = 'NORMAL'
 
-                    pmi.text = pme.props.encode(
-                        pmi.text, self.prop, value)
+                    pmi.text = pme.props.encode(pmi.text, self.prop, value)
 
         elif self.mode == 'PDI':
             prev_pdi = pm.pmis[current_pdi - 1]
             if prev_pdi.mode == 'EMPTY' and prev_pdi.text.startswith("spacer"):
                 prop = pp.parse(prev_pdi.text)
                 remove_subrows = False
-                if prop.hsep == 'COLUMN' and \
-                        self.prop == "hsep" and self.value != 'COLUMN' and \
-                        cur_row.num_columns == 2:
+                if (
+                    prop.hsep == 'COLUMN'
+                    and self.prop == "hsep"
+                    and self.value != 'COLUMN'
+                    and cur_row.num_columns == 2
+                ):
                     remove_subrows = True
 
-                if prop.subrow == 'END' and \
-                        self.prop == "hsep" and self.value == 'COLUMN':
+                if (
+                    prop.subrow == 'END'
+                    and self.prop == "hsep"
+                    and self.value == 'COLUMN'
+                ):
                     prev_pdi.text = pp.encode(prev_pdi.text, "subrow", 'NONE')
 
-                prev_pdi.text = pp.encode(
-                    prev_pdi.text, self.prop, self.value)
-                if self.value == 'NONE' and \
-                        pp.parse(prev_pdi.text).is_empty:
+                prev_pdi.text = pp.encode(prev_pdi.text, self.prop, self.value)
+                if self.value == 'NONE' and pp.parse(prev_pdi.text).is_empty:
                     pm.pmis.remove(current_pdi - 1)
                     cur_row.b -= 1
 
@@ -426,8 +429,7 @@ class PME_OT_pdr_prop_set(bpy.types.Operator):
 
             else:
                 prev_pdi = pm.ed.add_pd_spacer(pm, current_pdi)
-                prev_pdi.text = pp.encode(
-                    prev_pdi.text, self.prop, self.value)
+                prev_pdi.text = pp.encode(prev_pdi.text, self.prop, self.value)
                 cur_row.b += 1
 
             if self.prop == "hsep" and self.value == 'COLUMN':
@@ -453,7 +455,7 @@ class PME_OT_pdr_copy(bpy.types.Operator):
     row_last_idx: bpy.props.IntProperty()
 
     def execute(self, context):
-        pr =get_prefs()
+        pr = get_prefs()
         pm = pr.selected_pm
 
         if not pr.pdr_clipboard:
@@ -478,7 +480,7 @@ class PME_OT_pdr_paste(bpy.types.Operator):
     row_last_idx: bpy.props.IntProperty()
 
     def execute(self, context):
-        pr =get_prefs()
+        pr = get_prefs()
         pm = pr.selected_pm
 
         last_idx = len(pm.pmis)
@@ -541,7 +543,7 @@ class PME_OT_pdr_move(bpy.types.Operator, MoveItemOperator):
     # rows = []
 
     def draw_menu(self, menu, context):
-        pr =get_prefs()
+        pr = get_prefs()
         pm = pr.selected_pm
         lh.lt(menu.layout)
 
@@ -552,13 +554,21 @@ class PME_OT_pdr_move(bpy.types.Operator, MoveItemOperator):
         prev_p = None
         for i, pmi in enumerate(pm.pmis):
             if pmi.mode == 'EMPTY' and pmi.text.startswith("row"):
-                icon = 'KEYTYPE_KEYFRAME_VEC' if self.old_idx == i else 'HANDLETYPE_FREE_VEC'
+                icon = (
+                    'KEYTYPE_KEYFRAME_VEC'
+                    if self.old_idx == i
+                    else 'HANDLETYPE_FREE_VEC'
+                )
                 new_idx = i
 
                 p = lh.operator(
-                    PME_OT_pdr_move.bl_idname, "Row %d" % row_idx, icon,
+                    PME_OT_pdr_move.bl_idname,
+                    "Row %d" % row_idx,
+                    icon,
                     new_idx=new_idx,
-                    old_idx=self.old_idx, old_idx_last=self.old_idx_last)
+                    old_idx=self.old_idx,
+                    old_idx_last=self.old_idx_last,
+                )
 
                 if prev_p and self.old_idx < prev_p.new_idx:
                     prev_p.new_idx = i - 1
@@ -644,7 +654,7 @@ class PME_OT_pdr_remove(ConfirmBoxHandler, bpy.types.Operator):
         if not value:
             return
 
-        pm =get_prefs().selected_pm
+        pm = get_prefs().selected_pm
 
         if self.mode == 'JOIN':
             pm.pmis.remove(self.row_idx)
@@ -657,7 +667,8 @@ class PME_OT_pdr_remove(ConfirmBoxHandler, bpy.types.Operator):
 
                     prop = pme.props.parse(pmi.text)
                     if prop.type == "spacer" and (
-                            prop.hsep == 'ALIGNER' or prop.hsep == 'COLUMN'):
+                        prop.hsep == 'ALIGNER' or prop.hsep == 'COLUMN'
+                    ):
                         pm.pmis.remove(i)
                         continue
                 i += 1
@@ -683,7 +694,7 @@ class PME_OT_pdi_alignment(bpy.types.Operator):
     value: bpy.props.StringProperty()
 
     def execute(self, context):
-        pr =get_prefs()
+        pr = get_prefs()
         pm = pr.selected_pm
         pp = pme.props
         self.idx
@@ -702,23 +713,17 @@ class PME_OT_pdi_alignment(bpy.types.Operator):
             if cur_row.l == -1:
                 cur_row.l = self.idx + 1
                 prev_pdi = pm.ed.add_pd_spacer(pm, cur_row.l)
-                prev_pdi.text = pp.encode(
-                    prev_pdi.text, "hsep", 'ALIGNER')
+                prev_pdi.text = pp.encode(prev_pdi.text, "hsep", 'ALIGNER')
 
             elif cur_row.r == -1:
                 if self.idx > cur_row.l:
-                    self.idx = move_item(
-                        pm.pmis, cur_row.l, self.idx,
-                        [self.idx])
+                    self.idx = move_item(pm.pmis, cur_row.l, self.idx, [self.idx])
                     cur_row.l = self.idx + 1
 
             else:
                 if self.idx >= cur_row.r - 1:
-                    cur_row.r = move_item(
-                        pm.pmis, cur_row.l, self.idx,
-                        [cur_row.r])
-                    remove_item(
-                        pm.pmis, cur_row.r)
+                    cur_row.r = move_item(pm.pmis, cur_row.l, self.idx, [cur_row.r])
+                    remove_item(pm.pmis, cur_row.r)
                     cur_row.r = -1
 
                 elif self.idx > cur_row.l:
@@ -729,27 +734,23 @@ class PME_OT_pdi_alignment(bpy.types.Operator):
             if cur_row.l == -1:
                 cur_row.l = self.idx
                 prev_pdi = pm.ed.add_pd_spacer(pm, cur_row.l)
-                prev_pdi.text = pp.encode(
-                    prev_pdi.text, "hsep", 'ALIGNER')
+                prev_pdi.text = pp.encode(prev_pdi.text, "hsep", 'ALIGNER')
                 cur_row.b += 1
                 cur_row.r = self.idx + 2
                 prev_pdi = pm.ed.add_pd_spacer(pm, cur_row.r)
-                prev_pdi.text = pp.encode(
-                    prev_pdi.text, "hsep", 'ALIGNER')
+                prev_pdi.text = pp.encode(prev_pdi.text, "hsep", 'ALIGNER')
 
             elif cur_row.r == -1:
                 if cur_row.l < self.idx:
                     cur_row.r = self.idx + 1
                     prev_pdi = pm.ed.add_pd_spacer(pm, cur_row.r)
-                    prev_pdi.text = pp.encode(
-                        prev_pdi.text, "hsep", 'ALIGNER')
+                    prev_pdi.text = pp.encode(prev_pdi.text, "hsep", 'ALIGNER')
 
                 else:
                     cur_row.r = cur_row.l
                     cur_row.l = self.idx
                     prev_pdi = pm.ed.add_pd_spacer(pm, cur_row.l)
-                    prev_pdi.text = pp.encode(
-                        prev_pdi.text, "hsep", 'ALIGNER')
+                    prev_pdi.text = pp.encode(prev_pdi.text, "hsep", 'ALIGNER')
 
             else:
                 if self.idx < cur_row.l:
@@ -764,22 +765,17 @@ class PME_OT_pdi_alignment(bpy.types.Operator):
             if cur_row.l == -1:
                 cur_row.l = self.idx
                 prev_pdi = pm.ed.add_pd_spacer(pm, cur_row.l)
-                prev_pdi.text = pp.encode(
-                    prev_pdi.text, "hsep", 'ALIGNER')
+                prev_pdi.text = pp.encode(prev_pdi.text, "hsep", 'ALIGNER')
 
             elif cur_row.r == -1:
                 if self.idx < cur_row.l:
-                    move_item(
-                        pm.pmis, cur_row.l, self.idx)
+                    move_item(pm.pmis, cur_row.l, self.idx)
                     cur_row.l = self.idx
 
             else:
                 if self.idx <= cur_row.l + 1:
-                    cur_row.l = move_item(
-                        pm.pmis, cur_row.r, self.idx,
-                        [cur_row.l])
-                    remove_item(
-                        pm.pmis, cur_row.l)
+                    cur_row.l = move_item(pm.pmis, cur_row.r, self.idx, [cur_row.l])
+                    remove_item(pm.pmis, cur_row.l)
                     cur_row.r = -1
 
                 elif self.idx < cur_row.r:
@@ -820,7 +816,7 @@ class PME_MT_pdr_alignment(bpy.types.Menu):
 
     def draw(self, context):
         pp = pme.props
-        pm =get_prefs().selected_pm
+        pm = get_prefs().selected_pm
         row = pm.pmis[cur_row.a]
         lh.lt(self.layout)
         col = lh.column()
@@ -834,19 +830,27 @@ class PME_MT_pdr_alignment(bpy.types.Menu):
 
         for item in pme.props.get("align").items:
             lh.operator(
-                PME_OT_pdr_prop_set.bl_idname, item[1],
-                'KEYTYPE_KEYFRAME_VEC' if pp.parse(
-                    row.text).align == item[0] else 'HANDLETYPE_FREE_VEC',
+                PME_OT_pdr_prop_set.bl_idname,
+                item[1],
+                (
+                    'KEYTYPE_KEYFRAME_VEC'
+                    if pp.parse(row.text).align == item[0]
+                    else 'HANDLETYPE_FREE_VEC'
+                ),
                 mode='ROW',
                 prop="align",
-                value=item[0])
+                value=item[0],
+            )
 
         lh.lt(self.layout)
         lh.sep()
         lh.operator(
-            PME_OT_message_box.bl_idname, "Deprecated", 'INFO',
+            PME_OT_message_box.bl_idname,
+            "Deprecated",
+            'INFO',
             title="Deprecated",
-            message="Use Button Alignment tools instead")
+            message="Use Button Alignment tools instead",
+        )
         # lh.restore()
 
         # lh.save()
@@ -878,7 +882,7 @@ class PME_MT_pdr_size(bpy.types.Menu):
     bl_label = "Row Size"
 
     def draw(self, context):
-        pr =get_prefs()
+        pr = get_prefs()
         pp = pme.props
         pm = pr.selected_pm
         row = pm.pmis[cur_row.a]
@@ -891,12 +895,17 @@ class PME_MT_pdr_size(bpy.types.Menu):
         lh.sep()
         for item in pme.props.get("size").items:
             lh.operator(
-                PME_OT_pdr_prop_set.bl_idname, item[1],
-                'KEYTYPE_KEYFRAME_VEC' if pp.parse(
-                    row.text).size == item[0] else 'HANDLETYPE_FREE_VEC',
+                PME_OT_pdr_prop_set.bl_idname,
+                item[1],
+                (
+                    'KEYTYPE_KEYFRAME_VEC'
+                    if pp.parse(row.text).size == item[0]
+                    else 'HANDLETYPE_FREE_VEC'
+                ),
                 mode='ROW',
                 prop="size",
-                value=item[0])
+                value=item[0],
+            )
         lh.restore()
 
         lh.save()
@@ -905,11 +914,13 @@ class PME_MT_pdr_size(bpy.types.Menu):
         lh.sep()
         for item in pme.props.get("size").items:
             lh.operator(
-                PME_OT_pdr_prop_set.bl_idname, item[1],
+                PME_OT_pdr_prop_set.bl_idname,
+                item[1],
                 'HANDLETYPE_FREE_VEC',
                 mode='ALIGN_ROWS',
                 prop="size",
-                value=item[0])
+                value=item[0],
+            )
         lh.restore()
 
         lh.column()
@@ -917,18 +928,20 @@ class PME_MT_pdr_size(bpy.types.Menu):
         lh.sep()
         for item in pme.props.get("size").items:
             lh.operator(
-                PME_OT_pdr_prop_set.bl_idname, item[1],
+                PME_OT_pdr_prop_set.bl_idname,
+                item[1],
                 'HANDLETYPE_FREE_VEC',
                 mode='ALL_ROWS',
                 prop="size",
-                value=item[0])
+                value=item[0],
+            )
 
 
 class PME_MT_pdr_spacer(bpy.types.Menu):
     bl_label = "Row Spacer"
 
     def draw(self, context):
-        pr =get_prefs()
+        pr = get_prefs()
         pm = pr.selected_pm
         row = pm.pmis[cur_row.a]
         lh.lt(self.layout)
@@ -941,15 +954,21 @@ class PME_MT_pdr_spacer(bpy.types.Menu):
 
         for item in pme.props.get("vspacer").items:
             if item[0] == 'NONE' and (
-                    prev_row.num_columns > 0 or cur_row.num_columns > 0):
+                prev_row.num_columns > 0 or cur_row.num_columns > 0
+            ):
                 continue
             lh.operator(
-                PME_OT_pdr_prop_set.bl_idname, item[1],
-                'KEYTYPE_KEYFRAME_VEC' if pme.props.parse(
-                    row.text).vspacer == item[0] else 'HANDLETYPE_FREE_VEC',
+                PME_OT_pdr_prop_set.bl_idname,
+                item[1],
+                (
+                    'KEYTYPE_KEYFRAME_VEC'
+                    if pme.props.parse(row.text).vspacer == item[0]
+                    else 'HANDLETYPE_FREE_VEC'
+                ),
                 mode='ROW',
                 prop="vspacer",
-                value=item[0])
+                value=item[0],
+            )
         lh.restore()
 
         lh.column()
@@ -957,11 +976,13 @@ class PME_MT_pdr_spacer(bpy.types.Menu):
         lh.sep()
         for item in pme.props.get("vspacer").items:
             lh.operator(
-                PME_OT_pdr_prop_set.bl_idname, item[1],
+                PME_OT_pdr_prop_set.bl_idname,
+                item[1],
                 'HANDLETYPE_FREE_VEC',
                 mode='ALL_ROWS',
                 prop="vspacer",
-                value=item[0])
+                value=item[0],
+            )
 
 
 # class WM_MT_pdi_separator(bpy.types.Menu):
@@ -998,7 +1019,7 @@ class PME_OT_pdi_subrow_set(bpy.types.Operator):
     value: bpy.props.StringProperty()
 
     def execute(self, context):
-        pm =get_prefs().selected_pm
+        pm = get_prefs().selected_pm
 
         def set_subrow_value(idx, new_idx):
             pp = pme.props
@@ -1015,8 +1036,7 @@ class PME_OT_pdi_subrow_set(bpy.types.Operator):
             if value == 'NONE' and prop.hsep == 'NONE':
                 pm.pmis.remove(idx)
             else:
-                pmi.text = pme.props.encode(
-                    pmi.text, "subrow", value)
+                pmi.text = pme.props.encode(pmi.text, "subrow", value)
 
         def remove_subrows(idx):
             i = idx
@@ -1072,7 +1092,7 @@ class PME_OT_pdi_menu(bpy.types.Operator):
     idx: bpy.props.IntProperty()
 
     def _draw(self, menu, context):
-        pr =get_prefs()
+        pr = get_prefs()
         pm = pr.selected_pm
         pmi = pm.pmis[current_pdi]
 
@@ -1098,96 +1118,114 @@ class PME_OT_pdi_menu(bpy.types.Operator):
         lh.sep(check=True)
 
         lh.operator(
-            WM_OT_pmi_data_edit.bl_idname,
-            "Edit Slot", 'TEXT',
-            idx=self.idx,
-            ok=False)
+            WM_OT_pmi_data_edit.bl_idname, "Edit Slot", 'TEXT', idx=self.idx, ok=False
+        )
 
         lh.operator(
             WM_OT_pmi_icon_select.bl_idname,
-            "Change Icon", 'FILE_HIDDEN',
+            "Change Icon",
+            'FILE_HIDDEN',
             idx=self.idx,
-            icon="")
+            icon="",
+        )
 
         if oicon or pmi.mode == 'PROP':
             lh.operator(
-                WM_OT_pmi_icon_tag_toggle.bl_idname, "Hide Text",
+                WM_OT_pmi_icon_tag_toggle.bl_idname,
+                "Hide Text",
                 ic_cb(CC.F_ICON_ONLY in pmi.icon),
                 idx=self.idx,
-                tag=CC.F_ICON_ONLY)
+                tag=CC.F_ICON_ONLY,
+            )
 
         lh.operator(
-            WM_OT_pmi_icon_tag_toggle.bl_idname, "Visible",
+            WM_OT_pmi_icon_tag_toggle.bl_idname,
+            "Visible",
             ic_cb(CC.F_HIDDEN not in pmi.icon),
             idx=self.idx,
-            tag=CC.F_HIDDEN)
+            tag=CC.F_HIDDEN,
+        )
 
         lh.sep(check=True)
 
         lh.operator(
-            PME_OT_pdi_add.bl_idname, "Add Slot", 'BACK',
-            idx=self.idx,
-            mode='BUTTON')
+            PME_OT_pdi_add.bl_idname, "Add Slot", 'BACK', idx=self.idx, mode='BUTTON'
+        )
 
         lh.operator(
-            PME_OT_pdi_add.bl_idname, "Add Slot", 'FORWARD',
+            PME_OT_pdi_add.bl_idname,
+            "Add Slot",
+            'FORWARD',
             idx=self.idx + 1,
-            mode='BUTTON')
+            mode='BUTTON',
+        )
 
-        if not has_cols and cur_row.num_aligners == 0 and \
-                self.idx > self.row_idx + 1:
+        if not has_cols and cur_row.num_aligners == 0 and self.idx > self.row_idx + 1:
             lh.operator(
-                PME_OT_pdi_add.bl_idname, "Split Row", 'FULLSCREEN_ENTER',
+                PME_OT_pdi_add.bl_idname,
+                "Split Row",
+                'FULLSCREEN_ENTER',
                 idx=self.idx,
-                mode='SPLIT')
+                mode='SPLIT',
+            )
 
         lh.sep(check=True)
 
-        lh.operator(
-            PME_OT_pmi_copy.bl_idname, None, 'COPYDOWN',
-            idx=self.idx)
+        lh.operator(PME_OT_pmi_copy.bl_idname, None, 'COPYDOWN', idx=self.idx)
 
         if pr.pmi_clipboard.has_data():
-            lh.operator(
-                PME_OT_pmi_paste.bl_idname, None, 'PASTEDOWN',
-                idx=self.idx)
+            lh.operator(PME_OT_pmi_paste.bl_idname, None, 'PASTEDOWN', idx=self.idx)
 
         lh.sep(check=True)
 
         lh.operator(
-            PME_OT_pdi_move.bl_idname, "Move Slot", 'ARROW_LEFTRIGHT',
+            PME_OT_pdi_move.bl_idname,
+            "Move Slot",
+            'ARROW_LEFTRIGHT',
             pm_item=self.idx,
-            idx=-1)
+            idx=-1,
+        )
 
         lh.sep(check=True)
         lh.operator(
             PME_OT_pmi_toggle.bl_idname,
-            "Enabled" if pmi.enabled else "Disabled", ic_eye(pmi.enabled),
-            pm=pm.name, pmi=current_pdi)
+            "Enabled" if pmi.enabled else "Disabled",
+            ic_eye(pmi.enabled),
+            pm=pm.name,
+            pmi=current_pdi,
+        )
 
         if num_buttons > 1:
             lh.sep(check=True)
             lh.operator(
                 PME_OT_pdi_remove.bl_idname,
-                "Remove Slot", 'X',
+                "Remove Slot",
+                'X',
                 delete=True,
                 pm_item=self.idx,
-                confirm=False)
+                confirm=False,
+            )
         elif self.row_idx > 0 or self.row_last_idx < len(pm.pmis):
             lh.sep(check=True)
             lh.operator(
                 PME_OT_pdr_remove.bl_idname,
-                "Remove Row", 'X',
+                "Remove Row",
+                'X',
                 row_idx=self.row_idx,
                 row_last_idx=self.row_last_idx,
                 mode='REMOVE',
-                confirm=False)
+                confirm=False,
+            )
 
         # if self.idx > self.row_idx + 1:
-        if cur_row.l == -1 or \
-                cur_row.r == -1 and self.idx != cur_row.l + 1 or \
-                cur_row.r != -1 and self.idx != cur_row.r + 1 and \
-                self.idx != cur_row.l + 1:
+        if (
+            cur_row.l == -1
+            or cur_row.r == -1
+            and self.idx != cur_row.l + 1
+            or cur_row.r != -1
+            and self.idx != cur_row.r + 1
+            and self.idx != cur_row.l + 1
+        ):
             lh.column(row)
             lh.label("Separator")
 
@@ -1200,13 +1238,18 @@ class PME_OT_pdi_menu(bpy.types.Operator):
                     continue
 
                 if item[0] == 'SPACER':
-                    if self.idx == self.row_idx + 1 or \
-                            self.idx == self.row_idx + 2 and \
-                            prev_pmi.text.startswith("spacer"):
+                    if (
+                        self.idx == self.row_idx + 1
+                        or self.idx == self.row_idx + 2
+                        and prev_pmi.text.startswith("spacer")
+                    ):
                         continue
 
-                if item[0] == 'COLUMN' and \
-                        self.subrow_idx != -1 and self.subrow_has_end:
+                if (
+                    item[0] == 'COLUMN'
+                    and self.subrow_idx != -1
+                    and self.subrow_has_end
+                ):
                     continue
 
                 if item[0] == 'COLUMN' and cur_row.num_aligners > 0:
@@ -1227,10 +1270,13 @@ class PME_OT_pdi_menu(bpy.types.Operator):
                         icon = 'RADIOBUT_ON'
 
                 lh.operator(
-                    PME_OT_pdr_prop_set.bl_idname, item[1], icon,
+                    PME_OT_pdr_prop_set.bl_idname,
+                    item[1],
+                    icon,
                     mode='PDI',
                     prop="hsep",
-                    value=item[0])
+                    value=item[0],
+                )
 
         if has_cols:
             lh.column(row)
@@ -1244,7 +1290,8 @@ class PME_OT_pdi_menu(bpy.types.Operator):
                 "Begin Subrow",
                 ic_cb(begin_value),
                 mode='BEGIN',
-                value='NONE' if begin_value else 'BEGIN')
+                value='NONE' if begin_value else 'BEGIN',
+            )
 
             # end_value = is_end_subrow()
             end_value = -1
@@ -1263,7 +1310,8 @@ class PME_OT_pdi_menu(bpy.types.Operator):
                     "End Subrow",
                     ic_cb(end_value),
                     mode='END',
-                    value='NONE' if end_value else 'END')
+                    value='NONE' if end_value else 'END',
+                )
 
         if cur_row.num_columns == 0:
             lh.column(row)
@@ -1272,25 +1320,37 @@ class PME_OT_pdi_menu(bpy.types.Operator):
             lh.sep()
 
             lh.operator(
-                PME_OT_pdi_alignment.bl_idname, "Left", 'BACK',
-                idx=self.idx, value='LEFT')
+                PME_OT_pdi_alignment.bl_idname,
+                "Left",
+                'BACK',
+                idx=self.idx,
+                value='LEFT',
+            )
             lh.operator(
-                PME_OT_pdi_alignment.bl_idname, "Center", 'ARROW_LEFTRIGHT',
-                idx=self.idx, value='CENTER')
+                PME_OT_pdi_alignment.bl_idname,
+                "Center",
+                'ARROW_LEFTRIGHT',
+                idx=self.idx,
+                value='CENTER',
+            )
             lh.operator(
-                PME_OT_pdi_alignment.bl_idname, "Right", 'FORWARD',
-                idx=self.idx, value='RIGHT')
+                PME_OT_pdi_alignment.bl_idname,
+                "Right",
+                'FORWARD',
+                idx=self.idx,
+                value='RIGHT',
+            )
 
             if cur_row.num_aligners > 0:
                 lh.operator(
-                    PME_OT_pdi_alignment.bl_idname, "Clear", 'X',
-                    idx=self.idx, value="")
+                    PME_OT_pdi_alignment.bl_idname, "Clear", 'X', idx=self.idx, value=""
+                )
 
     def execute(self, context):
         return {'FINISHED'}
 
     def invoke(self, context, event):
-        pr =get_prefs()
+        pr = get_prefs()
         pp = pme.props
         pm = pr.selected_pm
 
@@ -1327,8 +1387,7 @@ class PME_OT_pdi_menu(bpy.types.Operator):
             if pmi.mode == 'EMPTY':
                 if pmi.text.startswith("row"):
                     break
-                elif pmi.text.startswith("spacer") and \
-                        self.subrow_last_idx == -2:
+                elif pmi.text.startswith("spacer") and self.subrow_last_idx == -2:
                     prop = pp.parse(pmi.text)
                     if prop.subrow == 'END':
                         self.subrow_has_end = True
@@ -1360,38 +1419,39 @@ class PME_OT_pdi_menu(bpy.types.Operator):
         # Toggle Hide Text
         elif test_mods(event, ALT | SHIFT):
             bpy.ops.wm.pmi_icon_tag_toggle(
-                'INVOKE_DEFAULT', idx=self.idx, tag=CC.F_ICON_ONLY)
+                'INVOKE_DEFAULT', idx=self.idx, tag=CC.F_ICON_ONLY
+            )
 
         # Remove Button
         elif test_mods(event, CTRL | ALT):
             if self.row_last_idx - self.row_idx > 2:
-                bpy.ops.pme.pdi_remove(
-                    'INVOKE_DEFAULT', pm_item=self.idx, delete=True)
+                bpy.ops.pme.pdi_remove('INVOKE_DEFAULT', pm_item=self.idx, delete=True)
             elif self.row_idx > 0 or self.row_last_idx < len(pm.pmis):
                 bpy.ops.pme.pdr_remove(
                     'INVOKE_DEFAULT',
-                    row_idx=self.row_idx, row_last_idx=self.row_last_idx,
-                    mode='REMOVE', confirm=False)
+                    row_idx=self.row_idx,
+                    row_last_idx=self.row_last_idx,
+                    mode='REMOVE',
+                    confirm=False,
+                )
 
         # Clear Icon
         elif test_mods(event, ALT | OSKEY):
-            bpy.ops.wm.pmi_icon_select(
-                'INVOKE_DEFAULT', idx=self.idx, icon="NONE")
+            bpy.ops.wm.pmi_icon_select('INVOKE_DEFAULT', idx=self.idx, icon="NONE")
 
         # Change Icon
         elif test_mods(event, ALT):
-            bpy.ops.wm.pmi_icon_select(
-                'INVOKE_DEFAULT', idx=self.idx, icon="")
+            bpy.ops.wm.pmi_icon_select('INVOKE_DEFAULT', idx=self.idx, icon="")
 
         # Edit Button
         elif test_mods(event, SHIFT):
-            bpy.ops.wm.pmi_data_edit(
-                'INVOKE_DEFAULT', idx=self.idx, ok=False)
+            bpy.ops.wm.pmi_data_edit('INVOKE_DEFAULT', idx=self.idx, ok=False)
 
         # Toggle Separator
         elif test_mods(event, OSKEY):
             bpy.ops.pme.pdr_prop_set(
-                'INVOKE_DEFAULT', mode='PDI', prop="hsep", toggle=True)
+                'INVOKE_DEFAULT', mode='PDI', prop="hsep", toggle=True
+            )
 
         # Copy Button
         elif test_mods(event, CTRL | OSKEY):
@@ -1424,7 +1484,7 @@ class PME_OT_pdr_menu(bpy.types.Operator):
     row_idx: bpy.props.IntProperty()
 
     def _draw(self, menu, context):
-        pr =get_prefs()
+        pr = get_prefs()
         pm = pr.selected_pm
 
         lh.lt(menu.layout, operator_context='INVOKE_DEFAULT')
@@ -1432,12 +1492,10 @@ class PME_OT_pdr_menu(bpy.types.Operator):
         # lh.menu(
         #     PME_MT_pdr_alignment.__name__, "Alignment", 'ALIGN',
         #     active=False)
-        lh.menu(
-            PME_MT_pdr_size.__name__, "Size", 'UV_FACESEL')
+        lh.menu(PME_MT_pdr_size.__name__, "Size", 'UV_FACESEL')
 
         if self.row_idx > 0:
-            lh.menu(
-                PME_MT_pdr_spacer.__name__, "Spacer", 'SEQ_SEQUENCER')
+            lh.menu(PME_MT_pdr_spacer.__name__, "Spacer", 'SEQ_SEQUENCER')
 
         r = Row()
         r.find_ab(pm, self.row_idx)
@@ -1448,54 +1506,75 @@ class PME_OT_pdr_menu(bpy.types.Operator):
             "Fixed Buttons",
             ic_cb(row_prop.fixed_but),
             row_idx=self.row_idx,
-            value=False if row_prop.fixed_but else True)
+            value=False if row_prop.fixed_but else True,
+        )
         if has_columns:
             lh.operator(
                 PME_OT_pdr_fixed_col_set.bl_idname,
                 "Fixed Columns",
                 ic_cb(row_prop.fixed_col),
                 row_idx=self.row_idx,
-                value=False if row_prop.fixed_col else True)
+                value=False if row_prop.fixed_col else True,
+            )
 
         lh.sep(check=True)
 
         lh.operator(
-            PME_OT_pdi_add.bl_idname, "Add Row Above", 'ADD',
+            PME_OT_pdi_add.bl_idname,
+            "Add Row Above",
+            'ADD',
             row_idx=self.row_idx,
             idx=self.row_idx,
-            mode='ROW')
+            mode='ROW',
+        )
 
         lh.operator(
-            PME_OT_pdi_add.bl_idname, "Add Row Below", 'ADD',
+            PME_OT_pdi_add.bl_idname,
+            "Add Row Below",
+            'ADD',
             row_idx=self.row_idx,
             idx=self.row_last_idx,
-            mode='ROW')
+            mode='ROW',
+        )
 
         if self.row_last_idx < len(pm.pmis):
             lh.operator(
-                PME_OT_pdr_remove.bl_idname, "Join Row", 'FULLSCREEN_EXIT',
+                PME_OT_pdr_remove.bl_idname,
+                "Join Row",
+                'FULLSCREEN_EXIT',
                 row_idx=self.row_last_idx,
                 mode='JOIN',
-                confirm=False)
+                confirm=False,
+            )
 
         lh.sep(check=True)
 
         lh.operator(
-            PME_OT_pdr_copy.bl_idname, "Copy Row", 'COPYDOWN',
+            PME_OT_pdr_copy.bl_idname,
+            "Copy Row",
+            'COPYDOWN',
             row_idx=self.row_idx,
-            row_last_idx=self.row_last_idx)
+            row_last_idx=self.row_last_idx,
+        )
 
         if pr.pdr_clipboard:
             lh.operator(
-                PME_OT_pdr_paste.bl_idname, "Paste Row", 'PASTEDOWN',
+                PME_OT_pdr_paste.bl_idname,
+                "Paste Row",
+                'PASTEDOWN',
                 row_idx=self.row_idx,
-                row_last_idx=self.row_last_idx)
+                row_last_idx=self.row_last_idx,
+            )
 
         lh.sep(check=True)
 
         lh.operator(
-            PME_OT_pdr_move.bl_idname, "Move Row", 'FORWARD',
-            old_idx=self.row_idx, old_idx_last=self.row_last_idx - 1)
+            PME_OT_pdr_move.bl_idname,
+            "Move Row",
+            'FORWARD',
+            old_idx=self.row_idx,
+            old_idx_last=self.row_last_idx - 1,
+        )
         # lh.operator(
         #     PME_OT_pdr_move.bl_idname, "Move Row", 'ARROW_LEFTRIGHT',
         #     row_idx=self.row_idx,
@@ -1505,16 +1584,18 @@ class PME_OT_pdr_menu(bpy.types.Operator):
             lh.sep(check=True)
             lh.operator(
                 PME_OT_pdr_remove.bl_idname,
-                "Remove Row", 'X',
+                "Remove Row",
+                'X',
                 row_idx=self.row_idx,
                 row_last_idx=self.row_last_idx,
-                mode='REMOVE')
+                mode='REMOVE',
+            )
 
     def execute(self, context):
         return {'FINISHED'}
 
     def invoke(self, context, event):
-        pm =get_prefs().selected_pm
+        pm = get_prefs().selected_pm
 
         # cur_row = Row()
         # prev_row = Row()
@@ -1529,24 +1610,29 @@ class PME_OT_pdr_menu(bpy.types.Operator):
         # Add Row (Above)
         if test_mods(event, CTRL | SHIFT):
             bpy.ops.pme.pdi_add(
-                'INVOKE_DEFAULT',
-                idx=self.row_idx, row_idx=self.row_idx, mode='ROW')
+                'INVOKE_DEFAULT', idx=self.row_idx, row_idx=self.row_idx, mode='ROW'
+            )
 
         # Add Row (Below)
         elif test_mods(event, CTRL):
             bpy.ops.pme.pdi_add(
                 'INVOKE_DEFAULT',
-                idx=self.row_last_idx, row_idx=self.row_idx, mode='ROW')
+                idx=self.row_last_idx,
+                row_idx=self.row_idx,
+                mode='ROW',
+            )
 
         # Toggle Row Spacer
         elif test_mods(event, OSKEY):
             bpy.ops.pme.pdr_prop_set(
-                'INVOKE_DEFAULT', mode='ROW', prop="vspacer", toggle=True)
+                'INVOKE_DEFAULT', mode='ROW', prop="vspacer", toggle=True
+            )
 
         # Toggle Row Size
         elif test_mods(event, SHIFT):
             bpy.ops.pme.pdr_prop_set(
-                'INVOKE_DEFAULT', mode='ROW', prop="size", toggle=True)
+                'INVOKE_DEFAULT', mode='ROW', prop="size", toggle=True
+            )
 
         else:
             context.window_manager.popup_menu(self._draw, title="Row")
@@ -1554,39 +1640,59 @@ class PME_OT_pdr_menu(bpy.types.Operator):
 
 
 pme.props.EnumProperty(
-    "row", "align", 'CENTER', [
+    "row",
+    "align",
+    'CENTER',
+    [
         ('CENTER', "Center", 0),
         ('LEFT', "Left", 0),
         ('RIGHT', "Right", 0),
-    ])
+    ],
+)
 pme.props.EnumProperty(
-    "row", "size", 'NORMAL', [
+    "row",
+    "size",
+    'NORMAL',
+    [
         ('NORMAL', "Normal", 1),
         ('LARGE', "Large", 1.25),
         ('LARGER', "Larger", 1.5),
-    ])
+    ],
+)
 pme.props.EnumProperty(
-    "row", "vspacer", 'NORMAL', [
+    "row",
+    "vspacer",
+    'NORMAL',
+    [
         ('NONE', "None", 0),
         ('NORMAL', "Normal", 1),
         ('LARGE', "Large", 3),
         ('LARGER', "Larger", 5),
-    ])
+    ],
+)
 pme.props.BoolProperty("row", "fixed_col", False)
 pme.props.BoolProperty("row", "fixed_but", False)
 pme.props.EnumProperty(
-    "spacer", "hsep", 'NONE', [
+    "spacer",
+    "hsep",
+    'NONE',
+    [
         ('NONE', "None", ""),
         ('SPACER', "Spacer", ""),
         ('COLUMN', "Column", ""),
         ('ALIGNER', "Aligner", ""),
-    ])
+    ],
+)
 pme.props.EnumProperty(
-    "spacer", "subrow", 'NONE', [
+    "spacer",
+    "subrow",
+    'NONE',
+    [
         ('NONE', "None", 0),
         ('BEGIN', "Begin", 0),
         ('END', "End", 0),
-    ])
+    ],
+)
 
 pme.props.BoolProperty("pd", "pd_title", True)
 pme.props.BoolProperty("pd", "pd_box", True)
@@ -1607,11 +1713,12 @@ class Editor(EditorBase):
         self.default_pmi_data = "pd?pd_panel=1"
 
     def update_default_pmi_data(self):
-        pr =get_prefs()
+        pr = get_prefs()
         if pr is None:
             return
         self.default_pmi_data = "pd?pd_panel=%d" % enum_item_idx(
-            pr, "default_popup_mode", pr.default_popup_mode)
+            pr, "default_popup_mode", pr.default_popup_mode
+        )
 
     def init_pm(self, pm):
         super().init_pm(pm)
@@ -1668,14 +1775,15 @@ class Editor(EditorBase):
 
             default_width = pme.props.get("pd_width").default
             if pm.pd_width != default_width:
-                row.operator("pme.exec", text="", icon=ic('X')).cmd = \
+                row.operator("pme.exec", text="", icon=ic('X')).cmd = (
                     "get_prefs().selected_pm.pd_width = %d" % default_width
+                )
 
         if pm.pd_panel == 'POPUP':
             col.prop(pm, "pd_title")
 
     def draw_items(self, layout, pm):
-        pr =get_prefs()
+        pr = get_prefs()
 
         col = layout.column(align=True)
         row = col.row(align=True)
@@ -1701,10 +1809,7 @@ class Editor(EditorBase):
 
             lh.layout.active = not hidden and pmi.enabled
 
-            lh.operator(
-                PME_OT_pdi_menu.bl_idname,
-                text, icon,
-                idx=idx)
+            lh.operator(PME_OT_pdi_menu.bl_idname, text, icon, idx=idx)
 
         rows = draw_pme_layout(pm, column1, draw_pdi, [])
         DBG_LAYOUT and logi("Rows", rows)
@@ -1720,22 +1825,14 @@ class Editor(EditorBase):
                     lh.sep()
             row = lh.row(column2)
             row.scale_y = r[1] * r[2] + CC.SPACER_SCALE_Y * r[3]
-            lh.operator(
-                PME_OT_pdr_menu.bl_idname,
-                "", 'COLLAPSEMENU',
-                row_idx=r[0])
+            lh.operator(PME_OT_pdr_menu.bl_idname, "", 'COLLAPSEMENU', row_idx=r[0])
             prev_r = r
 
         lh.row(col)
-        lh.operator(
-            PME_OT_pdi_add.bl_idname, "Add Row",
-            idx=-1,
-            mode='ROW')
+        lh.operator(PME_OT_pdi_add.bl_idname, "Add Row", idx=-1, mode='ROW')
 
         if pr.pdr_clipboard:
-            lh.operator(
-                PME_OT_pdr_paste.bl_idname, "Paste Row",
-                row_idx=-1)
+            lh.operator(PME_OT_pdr_paste.bl_idname, "Paste Row", row_idx=-1)
 
     def add_pd_button(self, pm, index=-1):
         new_pmi = pm.pmis.add()
@@ -1793,14 +1890,13 @@ class Editor(EditorBase):
 
                 if not r.has_columns(pm):
                     pmi.text = pme.props.encode(
-                        pmi.text, "vspacer",
-                        prev_row_prop.vspacer)
+                        pmi.text, "vspacer", prev_row_prop.vspacer
+                    )
                     # else:
                     #     pmi.text = pme.props.encode(
                     #         pmi.text, "vspacer", 'NONE')
 
-                pmi.text = pme.props.encode(
-                    pmi.text, "size", prev_row_prop.size)
+                pmi.text = pme.props.encode(pmi.text, "size", prev_row_prop.size)
 
             else:
                 cur_row = pm.pmis[row_idx]
@@ -1823,25 +1919,23 @@ class Editor(EditorBase):
 
                 if not split:
                     if idx == row_idx:
-                        if not prev_row_has_columns and \
-                                not cur_row_has_columns:
+                        if not prev_row_has_columns and not cur_row_has_columns:
 
                             cur_row.text = pme.props.encode(
-                                cur_row.text, "vspacer", 'NONE')
+                                cur_row.text, "vspacer", 'NONE'
+                            )
                             pmi.text = pme.props.encode(
-                                pmi.text, "vspacer",
-                                'NONE' if cur_row_prop.vspacer == 'NONE' else
-                                'NORMAL')
+                                pmi.text,
+                                "vspacer",
+                                'NONE' if cur_row_prop.vspacer == 'NONE' else 'NORMAL',
+                            )
 
                     else:
-                        if not next_row_has_columns and \
-                                not cur_row_has_columns:
+                        if not next_row_has_columns and not cur_row_has_columns:
 
-                            pmi.text = pme.props.encode(
-                                pmi.text, "vspacer", 'NONE')
+                            pmi.text = pme.props.encode(pmi.text, "vspacer", 'NONE')
 
-                pmi.text = pme.props.encode(
-                    pmi.text, "size", cur_row_prop.size)
+                pmi.text = pme.props.encode(pmi.text, "size", cur_row_prop.size)
 
         last_index = len(pm.pmis) - 1
         if idx != -1 and idx != last_index:

@@ -50,7 +50,7 @@ def extract_str_flags(text, *flags):
     for i, f in enumerate(flags):
         if text.startswith(f):
             ret_flags[i] = True
-            text = text[len(f):]
+            text = text[len(f) :]
 
     return (text, *ret_flags)
 
@@ -63,7 +63,7 @@ def extract_str_flags_b(text, *flags):
     for i, f in reversed(list(enumerate(flags))):
         if text.endswith(f):
             ret_flags[i] = True
-            text = text[:-len(f)]
+            text = text[: -len(f)]
 
     return (text, *ret_flags)
 

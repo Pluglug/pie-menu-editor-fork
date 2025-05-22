@@ -41,9 +41,8 @@ class PreviewsHelper:
                 continue
 
             self.preview.load(
-                os.path.splitext(f)[0],
-                os.path.join(self.path, f),
-                'IMAGE')
+                os.path.splitext(f)[0], os.path.join(self.path, f), 'IMAGE'
+            )
 
     def unregister(self):
         if not self.preview:

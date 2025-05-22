@@ -93,8 +93,7 @@ def tag_redraw_windows(area=None, region=None):
 
     for w in wm.windows:
         for a in w.screen.areas:
-            if area is None or a.type == area or \
-                    area == CC.UPREFS and not a.type:
+            if area is None or a.type == area or area == CC.UPREFS and not a.type:
                 for r in a.regions:
                     if region is None or r.type == region:
                         r.tag_redraw()
@@ -164,15 +163,25 @@ class PME_OT_userpref_restore(bpy.types.Operator):
 
 def pme_uilayout_getattribute(self, attr):
     def pme_operator(
-            operator, text="",
-            text_ctxt="", translate=True, icon='NONE',
-            emboss=True, icon_value=0):
+        operator,
+        text="",
+        text_ctxt="",
+        translate=True,
+        icon='NONE',
+        emboss=True,
+        icon_value=0,
+    ):
         uilayout_operator = uilayout_getattribute(self, "operator")
 
         return uilayout_operator(
-            operator, text=text,
-            text_ctxt=text_ctxt, translate=translate,
-            icon=icon, emboss=emboss, icon_value=icon_value)
+            operator,
+            text=text,
+            text_ctxt=text_ctxt,
+            translate=translate,
+            icon=icon,
+            emboss=emboss,
+            icon_value=icon_value,
+        )
 
     if attr == "operator":
         return pme_operator
