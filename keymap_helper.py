@@ -226,7 +226,8 @@ _km_lists = {
             "View2D",
             "Animation",
             "Frames",
-            "Dopesheet"
+            "Dopesheet",
+            "Dopesheet Generic",
         ],
         channels=[
             "View2D",
