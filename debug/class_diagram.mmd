@@ -1,0 +1,2042 @@
+---
+config:
+  theme: mc
+  layout: elk
+---
+classDiagram
+    class BlContext {
+        +context
+        +bl_area
+        +bl_region
+        +bl_space_data
+        +mods
+        +data
+        #__init__()
+        +get_modifier_by_type(ao, tp)
+        +set_context(context)
+        +reset(context)
+        +use_area(area)
+        +restore_area()
+    }
+    class BlBpy {
+    }
+    class BlProp {
+        #__init__()
+        +get(text)
+    }
+    class PopupOperator {
+        +active
+        +check(context)
+        +cancel(context)
+        +draw(context, title)
+        +draw_post(context)
+        +execute(context)
+        +invoke(context, event)
+    }
+    class ConfirmBoxHandler {
+        +bl_label
+        +on_input(value)
+        +on_confirm(value)
+        +modal(context, event)
+        +execute(context)
+        +invoke(context, event)
+    }
+    class PME_OT_confirm_box {
+        +bl_idname
+        +bl_label
+        +bl_options
+        +func
+        +draw(context)
+        +cancel(context)
+        +execute(context)
+        +invoke(context, event)
+    }
+    class PME_OT_message_box {
+        +bl_idname
+        +bl_label
+        +bl_description
+        +bl_options
+        +draw_message_box(menu, context)
+        +execute(context)
+    }
+    class PME_OT_input_box {
+        +bl_idname
+        +bl_label
+        +bl_options
+        +bl_property
+        +func
+        +prev_value
+        +draw(context)
+        +execute(context)
+        +invoke(context, event)
+    }
+    class PME_OT_popup_close {
+        +bl_idname
+        +bl_label
+        +execute(context)
+    }
+    class EnumItems {
+        #__init__()
+        +add_item(id, name, icon, desc)
+        +retrieve_items()
+    }
+    class _ListBase {
+        <<abstract>>
+        +insert(prevlink, newlink)
+        +remove(link)
+        +find(idx)
+    }
+    class HeadModalHandler {
+        #__init__()
+        +finish()
+        +modal(context, event)
+        +execute(context)
+        +invoke(context, event)
+    }
+    class PME_OT_tags_filter {
+        +bl_idname
+        +bl_label
+        +bl_description
+        +bl_options
+        +draw_menu(menu, context)
+        +execute(context)
+    }
+    class PME_OT_tags {
+        +bl_idname
+        +bl_label
+        +bl_description
+        +bl_options
+        +bl_property
+        +draw_menu(menu, context)
+        +draw(context)
+        +execute(context)
+        +invoke(context, event)
+    }
+    class WM_OT_pmi_type_select {
+        +bl_idname
+        +bl_label
+        +bl_description
+        +bl_options
+        #_draw(menu, context)
+        +execute(context)
+    }
+    class WM_OT_pmi_edit {
+        +bl_idname
+        +bl_label
+        +bl_description
+        +bl_options
+        +execute(context)
+        +invoke(context, event)
+    }
+    class WM_OT_pmi_edit_clipboard {
+        +bl_idname
+        +bl_label
+        +bl_description
+        +bl_options
+        +execute(context)
+        +invoke(context, event)
+    }
+    class WM_OT_pmi_edit_auto {
+        +bl_idname
+        +bl_label
+        +bl_description
+        +bl_options
+        +ignored_operators
+        +execute(context)
+        +invoke(context, event)
+    }
+    class PME_MT_select_menu {
+        +bl_label
+        +draw(context)
+    }
+    class PME_MT_pm_new {
+        +bl_label
+        +draw_items(layout)
+        +draw(context)
+    }
+    class PME_OT_pm_add {
+        +bl_idname
+        +bl_label
+        +bl_description
+        +bl_options
+        #_draw(menu, context)
+        +execute(context)
+    }
+    class PME_OT_pm_edit {
+        +bl_idname
+        +bl_label
+        +bl_description
+        #_draw_pm(menu, context)
+        #_draw_rm(menu, context)
+        #_draw_debug(menu, context)
+        #_draw_pd(menu, context)
+        #_draw_script(menu, context)
+        #_draw_sticky(menu, context)
+        #_draw_panel(menu, context)
+        +execute(context)
+        +invoke(context, event)
+    }
+    class PME_OT_pmi_menu {
+        +bl_idname
+        +bl_label
+        +bl_description
+        +bl_options
+        +draw_func
+        +draw_menu(menu, context)
+        +execute(context)
+    }
+    class PME_OT_pmi_add {
+        +bl_idname
+        +bl_label
+        +bl_description
+        +get_collection()
+        +finish(item)
+    }
+    class PME_OT_pmi_move {
+        +bl_idname
+        +get_collection()
+        +get_icon(pmi, idx)
+        +get_title()
+        +finish()
+    }
+    class PME_OT_pmi_remove {
+        +bl_idname
+        +get_collection()
+        +finish()
+    }
+    class PME_OT_pmi_clear {
+        +bl_idname
+        +bl_label
+        +bl_description
+        +bl_options
+        +on_confirm(value)
+    }
+    class PME_OT_pmi_cmd_generate {
+        +bl_idname
+        +bl_label
+        +bl_description
+        +execute(context)
+    }
+    class WM_OT_pmi_data_edit {
+        +bl_idname
+        +bl_label
+        +bl_description
+        +bl_options
+        +execute(context)
+        +invoke(context, event)
+    }
+    class WM_OT_pmi_icon_tag_toggle {
+        +bl_idname
+        +bl_label
+        +bl_description
+        +bl_options
+        +execute(context)
+    }
+    class WM_OT_pmi_icon_select {
+        +bl_idname
+        +bl_label
+        +bl_description
+        +bl_options
+        +execute(context)
+        +invoke(context, event)
+    }
+    class PME_MT_header_menu_set {
+        +bl_label
+        +draw(context)
+    }
+    class PME_MT_screen_set {
+        +bl_label
+        +draw(context)
+    }
+    class PME_MT_brush_set {
+        +bl_label
+        +draw(context)
+    }
+    class PME_MT_poll_mesh {
+        +bl_label
+        +draw(context)
+    }
+    class PME_MT_poll_object {
+        +bl_label
+        +draw(context)
+    }
+    class PME_MT_poll_workspace {
+        +bl_label
+        +draw(context)
+    }
+    class PME_OT_poll_specials_call {
+        +bl_idname
+        +bl_label
+        +bl_description
+        +bl_options
+        #_poll_specials_call_menu(menu, context)
+        +execute(context)
+    }
+    class PME_OT_keymap_add {
+        +bl_idname
+        +bl_label
+        +bl_description
+        +bl_options
+        +bl_property
+        +items
+        +get_items(context)
+        +execute(context)
+        +invoke(context, event)
+    }
+    class PME_OT_pm_open_mode_select {
+        +bl_idname
+        +bl_label
+        +bl_description
+        #_draw(menu, context)
+        +execute(context)
+    }
+    class PME_OT_pm_hotkey_convert {
+        +bl_idname
+        +bl_label
+        +bl_options
+        +bl_description
+        +execute(context)
+    }
+    class PME_OT_pmi_copy {
+        +bl_idname
+        +bl_label
+        +bl_description
+        +bl_options
+        +execute(context)
+    }
+    class PME_OT_pmi_paste {
+        +bl_idname
+        +bl_label
+        +bl_description
+        +bl_options
+        +execute(context)
+        +^poll(context)
+    }
+    class PME_OT_pm_toggle {
+        +bl_idname
+        +bl_label
+        +bl_description
+        +bl_options
+        +execute(context)
+    }
+    class PME_OT_pmi_toggle {
+        +bl_idname
+        +bl_label
+        +bl_description
+        +bl_options
+        +execute(context)
+    }
+    class EditorBase {
+        <<abstract>>
+        #__init__()
+        +register_temp_prop(id, prop)
+        +register_pm_prop(id, prop)
+        +register_pmi_prop(id, prop)
+        +register_props(pm)
+        +unregister_props()
+        +init_pm(pm)
+        +on_pm_select(pm)
+        +on_pm_add(pm)
+        +on_pm_remove(pm)
+        +on_pm_duplicate(from_pm, pm)
+        +on_pm_enabled(pm, value)
+        +on_pm_rename(pm, name)
+        +on_pmi_check(pm, pmi_data)
+        +on_pmi_add(pm, pmi)
+        +on_pmi_move(pm)
+        +on_pmi_remove(pm)
+        +on_pmi_paste(pm, pmi)
+        +on_pmi_pre_edit(pm, pmi, data)
+        +on_pmi_rename(pm, pmi, old_name, name)
+        +on_pmi_toggle(pm, pmi)
+        +on_pmi_edit(pm, pmi)
+        +on_pmi_icon_edit(pm, pmi)
+        +draw_extra_settings(layout, pm)
+        +draw_pm_name(layout, pm)
+        +draw_keymap(layout, data)
+        +draw_hotkey(layout, data)
+        +draw_items(layout, pm)
+        +draw_item(pm, pmi, idx)
+        +draw_pmi_menu_btn(pr, idx)
+        +draw_pmi_menu(context, idx)
+        +get_supported_slot_modes(pm, slot, idx)
+        +get_use_slot_icon(pm, slot, idx)
+        +draw_slot_modes(layout, pm, slot, idx)
+        +get_pmi_icon(pm, pmi, idx)
+        +draw_edit_menu(menu, context)
+        +popup_edit_menu(pm, operator)
+        +use_scroll(pm)
+    }
+    class PME_OT_hpanel_menu {
+        +bl_idname
+        +bl_label
+        +bl_description
+        #_draw(menu, context)
+        +execute(context)
+    }
+    class PME_OT_hpanel_remove {
+        +bl_idname
+        +bl_label
+        +bl_description
+        +bl_options
+        +execute(context)
+    }
+    class Editor {
+        #__init__()
+        +init_pm(pm)
+        +on_pm_add(pm)
+        +on_pmi_check(pm, pmi_data)
+        +draw_extra_settings(layout, pm)
+        +get_pmi_icon(pm, pmi, idx)
+    }
+    class PME_OT_macro_exec_base {
+        +bl_idname
+        +bl_label
+        +bl_options
+        +macro_globals
+        +execute(context)
+    }
+    class PME_OT_macro_exec1 {
+        +bl_idname
+        +bl_label
+        +bl_options
+        +execute(context)
+    }
+    class WM_OT_rmi_add {
+        +bl_idname
+        +bl_label
+        +bl_description
+        +bl_options
+        +execute(context)
+    }
+    class WM_OT_rmi_move {
+        +bl_idname
+        +bl_label
+        +bl_description
+        +bl_options
+        #_draw(menu, context)
+        +execute(context)
+    }
+    class WM_OT_rm_col_specials_call {
+        +bl_idname
+        +bl_label
+        +bl_description
+        +bl_options
+        +cur_col
+        #_draw(menu, context)
+        +execute(context)
+    }
+    class WM_OT_rm_col_move {
+        +bl_idname
+        +bl_label
+        +bl_description
+        +bl_options
+        +cols
+        #_draw(menu, context)
+        +execute(context)
+    }
+    class WM_OT_rm_col_remove {
+        +bl_idname
+        +bl_label
+        +bl_description
+        +bl_options
+        #_draw(menu, context)
+        +execute(context)
+    }
+    class WM_OT_rm_col_copy {
+        +bl_idname
+        +bl_label
+        +bl_description
+        +bl_options
+        +execute(context)
+    }
+    class WM_OT_rm_col_paste {
+        +bl_idname
+        +bl_label
+        +bl_description
+        +bl_options
+        +execute(context)
+        +^poll(context)
+    }
+    class WM_OT_rmi_specials_call {
+        +bl_idname
+        +bl_label
+        +bl_description
+        +bl_options
+        #_draw(menu, context)
+        +execute(context)
+    }
+    class PME_OT_prop_data_reset {
+        +bl_idname
+        +bl_label
+        +bl_description
+        +bl_options
+        +execute(context)
+    }
+    class PME_OT_panel_sub_toggle {
+        +bl_idname
+        +bl_label
+        +bl_description
+        +bl_options
+        +execute(context)
+    }
+    class PME_OT_toolbar_menu {
+        +bl_idname
+        +bl_label
+        +bl_description
+        +bl_options
+        +draw_toolbar_menu(menu, context)
+        +execute(context)
+    }
+    class PME_PT_toolbar {
+        +bl_label
+        +bl_space_type
+        +bl_region_type
+        +bl_options
+        +$get_dir_name()
+        +draw(context)
+        +^poll(context)
+    }
+    class PME_OT_panel_menu {
+        +bl_idname
+        +bl_label
+        +bl_description
+        +bl_options
+        +extend_ui_operator(label, icon, mode, pm_name)
+        +draw_header_menu(menu, context)
+        +draw_menu_menu(menu, context)
+        +draw_panel_menu(menu, context)
+        +execute(context)
+    }
+    class PME_OT_interactive_panels_toggle {
+        +bl_idname
+        +bl_label
+        +bl_description
+        +bl_options
+        +active
+        +enabled
+        #$_draw(self, context)
+        #$_draw_menu(self, context)
+        #$_draw_header(self, context)
+        +execute(context)
+    }
+    class PME_OT_panel_add {
+        +bl_idname
+        +bl_label
+        +bl_description
+        +bl_options
+        +bl_property
+        +enum_items
+        +get_items(context)
+        +execute(context)
+        #_draw(menu, context)
+        +invoke(context, event)
+    }
+    class PME_OT_panel_item_move {
+        +bl_idname
+        +get_icon(item, idx)
+        +get_collection()
+        +finish()
+    }
+    class PME_OT_panel_item_remove {
+        +bl_idname
+        +bl_label
+        +bl_description
+        +bl_options
+        +execute(context)
+    }
+    class PME_OT_pdi_add {
+        +bl_idname
+        +bl_label
+        +bl_description
+        +bl_options
+        +execute(context)
+    }
+    class PME_OT_pdi_move {
+        +bl_idname
+        +bl_label
+        +bl_description
+        +bl_options
+        #_draw(menu, context)
+        +execute(context)
+        +invoke(context, event)
+    }
+    class PME_OT_pdi_remove {
+        +bl_idname
+        +bl_label
+        +bl_description
+        +bl_options
+        +on_confirm(value)
+    }
+    class PME_OT_pdr_fixed_col_set {
+        +bl_idname
+        +bl_label
+        +bl_description
+        +bl_options
+        +execute(context)
+    }
+    class PME_OT_pdr_fixed_but_set {
+        +bl_idname
+        +bl_label
+        +bl_description
+        +bl_options
+        +execute(context)
+    }
+    class PME_OT_pdr_prop_set {
+        +bl_idname
+        +bl_label
+        +bl_options
+        +execute(context)
+    }
+    class PME_OT_pdr_copy {
+        +bl_idname
+        +bl_label
+        +bl_description
+        +bl_options
+        +execute(context)
+    }
+    class PME_OT_pdr_paste {
+        +bl_idname
+        +bl_label
+        +bl_description
+        +bl_options
+        +execute(context)
+        +^poll(context)
+    }
+    class PME_OT_pdr_move {
+        +bl_idname
+        +bl_label
+        +bl_description
+        +get_collection()
+        +finish()
+        +draw_menu(menu, context)
+    }
+    class PME_OT_pdr_remove {
+        +bl_idname
+        +bl_label
+        +bl_description
+        +bl_options
+        +title
+        +on_confirm(value)
+    }
+    class PME_OT_pdi_alignment {
+        +bl_idname
+        +bl_label
+        +bl_options
+        +execute(context)
+    }
+    class PME_MT_pdr_alignment {
+        +bl_label
+        +draw(context)
+    }
+    class PME_MT_pdr_size {
+        +bl_label
+        +draw(context)
+    }
+    class PME_MT_pdr_spacer {
+        +bl_label
+        +draw(context)
+    }
+    class PME_OT_pdi_subrow_set {
+        +bl_idname
+        +bl_label
+        +bl_description
+        +bl_options
+        +execute(context)
+    }
+    class PME_OT_pdi_menu {
+        +bl_idname
+        +bl_label
+        +bl_description
+        +bl_options
+        #_draw(menu, context)
+        +execute(context)
+        +invoke(context, event)
+    }
+    class PME_OT_pdr_menu {
+        +bl_idname
+        +bl_label
+        +bl_description
+        +bl_options
+        #_draw(menu, context)
+        +execute(context)
+        +invoke(context, event)
+    }
+    class PME_OT_prop_class_set {
+        +bl_idname
+        +bl_label
+        +bl_description
+        +bl_property
+        +bl_options
+        +enum_items
+        +get_items(context)
+        +execute(context)
+        +invoke(context, event)
+    }
+    class PME_OT_prop_script_set {
+        +bl_idname
+        +bl_label
+        +bl_description
+        +bl_options
+        +execute(context)
+    }
+    class PME_OT_prop_pmi_move {
+        +bl_idname
+        +filter_item(pmi, idx)
+        +get_collection()
+        +get_icon(pmi, idx)
+        +get_title()
+        +finish()
+    }
+    class PME_OT_sticky_key_edit {
+        +bl_idname
+        +bl_label
+        +bl_description
+        +bl_options
+        +pmi_prop
+        +pmi_value
+        +$parse_prop_value(text)
+        +execute(context)
+    }
+    class PME_OT_dummy {
+        +bl_idname
+        +bl_label
+        +bl_options
+        +execute(context)
+        +invoke(context, event)
+    }
+    class PME_OT_modal_dummy {
+        +bl_idname
+        +bl_label
+        +modal(context, event)
+        +execute(context)
+        +invoke(context, event)
+    }
+    class PME_OT_none {
+        +bl_idname
+        +bl_label
+        +bl_options
+        +execute(context)
+        +invoke(context, event)
+    }
+    class WM_OT_pme_sidebar_toggle {
+        +bl_idname
+        +bl_label
+        +bl_description
+        +bl_options
+        +execute(context)
+    }
+    class PME_OT_sidebar_toggle {
+        +bl_idname
+        +bl_label
+        +bl_description
+        +execute(context)
+    }
+    class PME_OT_screen_set {
+        +bl_idname
+        +bl_label
+        +execute(context)
+    }
+    class PME_OT_popup_property {
+        +bl_idname
+        +bl_label
+        +bl_description
+        +bl_options
+        +draw(context)
+    }
+    class PME_OT_popup_user_preferences {
+        +bl_idname
+        +bl_label
+        +bl_description
+        +bl_options
+        +draw(context)
+        +invoke(context, event)
+    }
+    class PME_OT_popup_addon_preferences {
+        +bl_idname
+        +bl_label
+        +bl_description
+        +bl_options
+        +draw(context)
+        +invoke(context, event)
+    }
+    class PME_OT_popup_panel {
+        +bl_idname
+        +bl_label
+        +bl_description
+        +bl_options
+        +draw(context)
+        +cancel(context)
+        +execute(context)
+        +invoke(context, event)
+    }
+    class PME_OT_select_popup_panel {
+        +bl_idname
+        +bl_label
+        +bl_description
+        +bl_options
+        +bl_property
+        +enum_items
+        +get_items(context)
+        +execute(context)
+        +invoke(context, event)
+    }
+    class PME_OT_window_auto_close {
+        +bl_idname
+        +bl_label
+        +bl_options
+        +execute(context)
+        +invoke(context, event)
+    }
+    class PME_OT_area_move {
+        +bl_idname
+        +bl_label
+        +bl_description
+        +bl_options
+        +execute(context)
+        +invoke(context, event)
+    }
+    class PME_OT_sidearea_toggle {
+        +bl_idname
+        +bl_label
+        +bl_description
+        +bl_options
+        +sidebars_state
+        +get_side_areas(area)
+        +add_space(area, space_type)
+        +move_header(area)
+        +fix_area(area)
+        +save_sidebars(area)
+        +restore_sidebars(area)
+        +close_area(context, main, area)
+        +execute(context)
+    }
+    class PME_OT_popup_area {
+        +bl_idname
+        +bl_label
+        +bl_description
+        +bl_options
+        +update_header(context, on_top, visible, d)
+        +execute(context)
+        +invoke(context, event)
+    }
+    class PME_OT_clipboard_copy {
+        +bl_idname
+        +bl_label
+        +bl_options
+        +execute(context)
+    }
+    class _KMList {
+        +default_header
+        +default_empty
+        #__init__(window, header, tools, ui, channels, preview)
+        +get_keymaps(context)
+    }
+    class _View3DKMList {
+        +get_keymaps(context)
+    }
+    class _ImageKMList {
+        +get_keymaps(context)
+    }
+    class KeymapHelper {
+        #__init__()
+        #_add_item(km, item)
+        +available()
+        +keymap(name, space_type, region_type)
+        +menu(bl_class, hotkey, key, ctrl, shift, alt, oskey, key_mod)
+        +operator(bl_class, hotkey, key, ctrl, shift, alt, oskey, key_mod, any)
+        +pie(bl_class, hotkey, key, ctrl, shift, alt, oskey, key_mod)
+        +remove(item)
+        +unregister()
+    }
+    class Hotkey {
+        +lock
+        #_hotkey_update(context)
+        +add_kmi(kmi)
+        +draw(layout, key, key_mod, alert)
+        +clear()
+        +from_string(text)
+        +from_kmi(kmi)
+        +to_string()
+        +to_kmi(kmi)
+    }
+    class PME_OT_mouse_state {
+        +bl_idname
+        +bl_label
+        +bl_options
+        +inst
+        +stop()
+        +modal_stop(context)
+        +modal(context, event)
+        +invoke(context, event)
+    }
+    class PME_OT_mouse_state_wait {
+        +bl_idname
+        +bl_label
+        +bl_options
+        +inst
+        +stop()
+        +modal(context, event)
+        +invoke(context, event)
+    }
+    class PME_OT_mouse_state_init {
+        +bl_idname
+        +bl_label
+        +bl_options
+        +invoke(context, event)
+    }
+    class PME_OT_key_state {
+        +bl_idname
+        +bl_label
+        +bl_options
+        +inst
+        +stop()
+        +modal_stop(context)
+        +modal(context, event)
+        +invoke(context, event)
+    }
+    class PME_OT_key_state_init {
+        +bl_idname
+        +bl_label
+        +bl_options
+        +invoke(context, event)
+    }
+    class PME_OT_mouse_btn_state {
+        +bl_idname
+        +bl_label
+        +bl_options
+        +inst
+        +finish()
+        +invoke(context, event)
+    }
+    class PME_OT_key_is_pressed {
+        +bl_idname
+        +bl_label
+        +bl_options
+        +inst
+        +instance
+        +idx
+        +add_timer(step)
+        +remove_timer()
+        +stop()
+        +restart()
+        +modal(context, event)
+        +invoke(context, event)
+    }
+    class StackKey {
+        +name
+        +idx
+        +cur_idx
+        +count
+        +is_first
+        +cur_pm
+        +lo
+        +exec_globals
+        +operator_mode
+        +sk_states
+        #$_next_pmi(slot)
+        #$_reset()
+        +$next(pm, slot)
+    }
+    class CLayout {
+        +use_mouse_over_open
+        +real_getattribute
+        +layout
+        +depth
+        +$save()
+        +$restore()
+        +getattribute(attr)
+        +menu(menu, text, text_ctxt, translate, icon, icon_value, use_mouse_over_open)
+    }
+    class LayoutHelper {
+        #__init__(previews_helper)
+        +blank()
+        +box(parent, operator_context, enabled, alignment)
+        +column(parent, align, operator_context, enabled)
+        +label(text, icon)
+        +lt(layout, operator_context)
+        +menu(menu, text, icon, enabled, active, use_mouse_over_open)
+        +error(txt, message)
+        +operator(idname, txt, icon_id, enabled, active, emboss)
+        +op(idname, txt, icon, enabled, active, emboss)
+        +parse_icon(icon)
+        +prop(data, prop, text, icon, expand, slider, toggle, icon_only, event, full_event, emboss, index, enabled, active, alert)
+        +prop_compact(data, prop, text, icon, expand, slider, toggle, icon_only, event, full_event, emboss, index, enabled, active, alert)
+        +restore()
+        +row(parent, align, operator_context, enabled, active, alert, alignment)
+        +save()
+        +sep(parent, check, group)
+        +skip(flags)
+        +spacer()
+        +split(parent, factor, align)
+        +unregister()
+    }
+    class Row {
+        #__init__()
+        +find_ab(pm, idx)
+        +has_columns(pm)
+        +find_columns(pm)
+        +remove_subrows(pm)
+    }
+    class Col {
+        #__init__()
+        +add_cell(text, style, size)
+        +init()
+    }
+    class WM_OT_pme_none {
+        +bl_idname
+        +bl_label
+        +bl_options
+        +execute(context)
+    }
+    class WM_OT_pm_select {
+        +bl_idname
+        +bl_label
+        +bl_description
+        #_draw(menu, context)
+        +execute(context)
+    }
+    class PME_OT_pm_search_and_select {
+        +bl_idname
+        +bl_label
+        +bl_description
+        +bl_options
+        +bl_property
+        +enum_items
+        +get_items(context)
+        +execute(context)
+        +invoke(context, event)
+    }
+    class WM_OT_pme_user_command_exec {
+        +bl_idname
+        +bl_label
+        +bl_description
+        +bl_options
+        +cmds
+        +execute(context)
+        +invoke(context, event)
+    }
+    class PME_OT_exec {
+        +bl_idname
+        +bl_label
+        +bl_description
+        +bl_options
+        +cmds
+        +execute(context)
+        +invoke(context, event)
+    }
+    class PME_OT_exec_override {
+        +bl_idname
+        +bl_label
+        +bl_description
+        +bl_options
+        +execute(context)
+        +invoke(context, event)
+        +parse_kwargs()
+    }
+    class PME_OT_panel_hide {
+        +bl_idname
+        +bl_label
+        +bl_description
+        +bl_options
+        +bl_property
+        +enum_items
+        +get_items(context)
+        +draw_menu(menu, context)
+        +execute(context)
+        +invoke(context, event)
+    }
+    class PME_OT_panel_hide_by {
+        +bl_idname
+        +bl_label
+        +bl_description
+        +bl_options
+        +space_items
+        +region_items
+        +ctx_items
+        +cat_items
+        #_get_space_items(context)
+        #_get_region_items(context)
+        #_get_context_items(context)
+        #_get_category_items(context)
+        #_filtered_panels(num)
+        +check(context)
+        +draw(context)
+        +execute(context)
+        +invoke(context, event)
+    }
+    class PME_OT_sticky_key_base {
+        +bl_idname
+        +bl_label
+        +exec_globals
+        +root_instance
+        +active_instance
+        +idx
+        +is_root_instance()
+        +add_timer(step)
+        +remove_timer()
+        +stop(cancel)
+        +restart()
+        +modal(context, event)
+        +execute_pmi(idx)
+        +invoke(context, event)
+    }
+    class PME_OT_sticky_key {
+    }
+    class PME_OT_timeout {
+        +bl_idname
+        +bl_label
+        +modal(context, event)
+        +execute(context)
+        +invoke(context, event)
+    }
+    class PME_OT_restore_mouse_pos {
+        +bl_idname
+        +bl_label
+        +bl_options
+        +inst
+        +modal(context, event)
+        +execute(context)
+        +invoke(context, event)
+        +stop()
+    }
+    class PME_OT_modal_base {
+        +bl_idname
+        +bl_label
+        +bl_options
+        +prop_data
+        +active
+        +draw(context)
+        +execute_pm(pm, mode)
+        +execute_pmi(pmi, mode)
+        +execute_prop_pmi(pmi, delta, data)
+        +execute(context)
+        +stop()
+        +do_confirm(delay)
+        +do_cancel(delay)
+        +do_update(update_pmi)
+        +modal(context, event)
+        +update_prop_data(pmi)
+        +gen_value(pmi)
+        +update_overlay()
+        +invoke(context, event)
+    }
+    class PME_OT_modal_grab {
+        +bl_idname
+    }
+    class PME_OT_modal {
+        +bl_options
+    }
+    class PME_OT_restore_pie_prefs {
+        +bl_idname
+        +bl_label
+        +bl_options
+        +finish()
+    }
+    class PME_OT_restore_pie_radius {
+        +bl_idname
+        +bl_label
+        +bl_options
+        +modal(context, event)
+        +execute(context)
+        +invoke(context, event)
+    }
+    class WM_OT_pme_user_pie_menu_call {
+        +bl_idname
+        +bl_label
+        +bl_description
+        +bl_options
+        +hold_inst
+        +active_ops
+        +pressed_key
+        #$_draw_item(pr, pm, pmi, idx)
+        #_draw_pm(menu, context)
+        +$draw_rm(pm, layout)
+        #_draw_rm(menu, context)
+        #$_draw_slot(name, use_frame)
+        #_draw_popup_dialog(menu, context)
+        +cancel(context)
+        +check(context)
+        +modal(context, event)
+        +modal_start(add_timer)
+        +modal_stop()
+        +stop()
+        +execute(context)
+        +execute_menu(context, event)
+        #_parse_open_mode(pm)
+        +invoke(context, event)
+    }
+    class WM_OT_pme_user_dialog_call {
+        +bl_idname
+        +bl_label
+        +bl_options
+        +draw(context)
+        +invoke(context, event)
+    }
+    class WM_OT_pme_keyconfig_wait {
+        +bl_idname
+        +bl_label
+        +bl_options
+        +modal(context, event)
+        +execute(context)
+    }
+    class WM_OT_pmi_submenu_select {
+        +bl_idname
+        +bl_label
+        +bl_description
+        +bl_options
+        +bl_property
+        +get_items(context)
+        +execute(context)
+        +invoke(context, event)
+    }
+    class PME_OT_addonpref_search {
+        +bl_idname
+        +bl_label
+        +bl_description
+        +bl_options
+        +bl_property
+        +items
+        +get_items(context)
+        +execute(context)
+        +invoke(context, event)
+    }
+    class PME_OT_pmi_custom_set {
+        +bl_idname
+        +bl_label
+        +bl_description
+        +bl_options
+        +execute(context)
+    }
+    class PME_OT_preview {
+        +bl_idname
+        +bl_label
+        +bl_description
+        +bl_options
+        +execute(context)
+    }
+    class PME_OT_docs {
+        +bl_idname
+        +bl_label
+        +bl_description
+        +bl_options
+        +execute(context)
+    }
+    class PME_OT_pmi_pm_search {
+        +bl_idname
+        +bl_label
+        +bl_description
+        +bl_options
+        +bl_property
+        +items
+        +get_items(context)
+        +execute(context)
+        +invoke(context, event)
+    }
+    class PME_OT_pmi_operator_search {
+        +bl_idname
+        +bl_label
+        +bl_description
+        +bl_options
+        +bl_property
+        +items
+        +get_items(context)
+        +execute(context)
+        +invoke(context, event)
+    }
+    class PME_OT_pmi_panel_search {
+        +bl_idname
+        +bl_label
+        +bl_description
+        +bl_options
+        +bl_property
+        +items
+        +get_items(context)
+        +execute(context)
+        +invoke(context, event)
+    }
+    class PME_OT_pmi_area_search {
+        +bl_idname
+        +bl_label
+        +bl_description
+        +bl_options
+        +draw_pmi_area_search(menu, context)
+        +execute(context)
+        +invoke(context, event)
+    }
+    class WM_OT_pmidata_hints_show {
+        +bl_idname
+        +bl_label
+        +bl_description
+        +bl_options
+        #_draw(menu, context)
+        +execute(context)
+    }
+    class PME_OT_pmidata_specials_call {
+        +bl_idname
+        +bl_label
+        +bl_description
+        +bl_options
+        #_draw(menu, context)
+        #_draw_menu(menu, context)
+        +execute(context)
+    }
+    class SearchOperator {
+        +use_cache
+        +fill_enum_items(items)
+        +get_enum_items(context)
+        +invoke(context, event)
+    }
+    class PME_OT_pmi_menu_search {
+        +bl_idname
+        +bl_label
+        +bl_description
+        +bl_options
+        +bl_property
+        +fill_enum_items(items)
+        +execute(context)
+    }
+    class PME_OT_script_open {
+        +bl_idname
+        +bl_label
+        +bl_description
+        +bl_options
+        +filename_ext
+        +draw(context)
+        +execute(context)
+        +invoke(context, event)
+    }
+    class PME_OT_button_add {
+        +bl_idname
+        +bl_label
+        +bl_description
+        +bl_options
+        +execute(context)
+    }
+    class PME_OT_debug_mode_toggle {
+        +bl_idname
+        +bl_label
+        +bl_description
+        +execute(context)
+    }
+    class WM_OT_pme_hotkey_call {
+        +bl_idname
+        +bl_label
+        +execute(context)
+    }
+    class PME_OT_pm_chord_add {
+        +bl_idname
+        +bl_label
+        +bl_description
+        +bl_options
+        +execute(context)
+    }
+    class PME_OT_pm_hotkey_remove {
+        +bl_idname
+        +bl_label
+        +bl_description
+        +bl_options
+        +^poll(context)
+        +execute(context)
+        +invoke(context, event)
+    }
+    class _XUntokenizer {
+        +compat(token, iterable)
+    }
+    class Timer {
+        #__init__(interval, function)
+        +elapsed_time()
+        +run()
+        +cancel()
+    }
+    class SpaceGroup {
+        <<interface>>
+        #__init__(bl_type)
+    }
+    class Painter {
+        <<interface>>
+        #__init__()
+    }
+    class Style {
+        #__init__(color, size)
+        +update(color, size)
+    }
+    class Text {
+        +default_style
+        +secondary_style
+        #__init__(text, style, size)
+        +size()
+        +center(width)
+        +right(width)
+        +update(text)
+        +draw(x, y)
+    }
+    class TablePainter {
+        +spacing_x
+        +spacing_y
+        +spacing_h
+        +line_width
+        +col_style_scale
+        +col_styles
+        #__init__(num_cols, data, header, align_right)
+        +update(data)
+        +draw()
+    }
+    class Overlay {
+        #__init__(id)
+        +add_painter(painter)
+        +$draw(self)
+        +show()
+        +hide()
+        +tag_redraw()
+    }
+    class OverlayPrefs {
+        +size_update(context)
+        +color_update(context)
+        +color2_update(context)
+        +draw(layout)
+    }
+    class PME_OT_overlay {
+        +bl_idname
+        +bl_label
+        +bl_options
+        +is_running
+        +modal(context, event)
+        +execute(context)
+    }
+    class PME_OT_panel_toggle {
+        +bl_idname
+        +bl_label
+        +bl_description
+        +bl_options
+        +collapsed_panels
+        +execute(context)
+    }
+    class PME_OT_panel_reset {
+        +bl_idname
+        +bl_label
+        +bl_description
+        +bl_options
+        +execute(context)
+    }
+    class PME_OT_panel_editor_toggle {
+        +bl_idname
+        +bl_label
+        +bl_description
+        +bl_options
+        +execute(context)
+    }
+    class PME_OT_btn_hide {
+        +bl_idname
+        +bl_label
+        +bl_description
+        +bl_options
+        +execute(context)
+    }
+    class PLayout {
+        +real_operator
+        +real_getattribute
+        +idx
+        +item_id
+        +indices
+        +idx_map
+        +interactive_panels
+        +active
+        +editor
+        +$save(layout, item_id)
+        +$restore()
+        +getattribute(attr)
+        +empty()
+        +prop_name(data, property, default)
+        +btn_operator(text, icon, icon_value)
+        +prop(data, property, text, text_ctxt, translate, icon, expand, slider, toggle, icon_only, event, full_event, emboss, index, icon_value)
+        +props_enum(data, property)
+        +prop_menu_enum(data, property, text, text_ctxt, translate, icon)
+        +prop_enum(data, property, value, text, text_ctxt, translate, icon)
+        +prop_search(data, property, search_data, search_property, text, text_ctxt, translate, icon)
+        +operator(operator, text, text_ctxt, translate, icon, emboss, icon_value)
+        +operator_enum(operator, property)
+        +operator_menu_enum(operator, property, text, text_ctxt, translate, icon)
+        +label(text, text_ctxt, translate, icon, icon_value)
+        +menu(menu, text, text_ctxt, translate, icon, icon_value)
+        +template_ID(data, property, new, open, unlink)
+        +template_ID_preview(data, property, new, open, unlink, rows, cols)
+        +template_any_ID(data, property, type_property, text, text_ctxt, translate)
+        +template_path_builder(data, property, root, text, text_ctxt, translate)
+        +template_modifier(data)
+        +template_constraint(data)
+        +template_preview(id, show_buttons, parent, slot, preview_id)
+        +template_curve_mapping(data, property, type, levels, brush, use_negative_slope)
+        +template_color_ramp(data, property, expand)
+        +template_icon_view(data, property, show_labels, scale)
+        +template_histogram(data, property)
+        +template_waveform(data, property)
+        +template_vectorscope(data, property)
+        +template_layers(data, property, used_layers_data, used_layers_property, active_layer)
+        +template_color_picker(data, property, value_slider, lock, lock_luminosity, cubic)
+        +template_palette(data, property, color)
+        +template_image_layers(image, image_user)
+        +template_image(data, property, image_user, compact, multiview)
+        +template_image_settings(image_settings, color_management)
+        +template_image_stereo_3d(stereo_3d_format)
+        +template_image_views(image_settings)
+        +template_movieclip(data, property, compact)
+        +template_track(data, property)
+        +template_marker(data, property, clip_user, track, compact)
+        +template_movieclip_information(data, property, clip_user)
+        +template_list(listtype_name, list_id, dataptr, propname, active_dataptr, active_propname, item_dyntip_propname, rows, maxrows, type, columns)
+        +template_running_jobs()
+        +template_operator_search()
+        +template_header_3D()
+        +template_edit_mode_selection()
+        +template_reports_banner()
+        +template_node_link(ntree, node, socket)
+        +template_node_view(ntree, node, socket)
+        +template_texture_user()
+        +template_keymap_item_properties(item)
+        +template_component_menu(data, property, name)
+        +introspect()
+        +template_colorspace_settings(data, property)
+        +template_colormanaged_view_settings(data, property)
+        +template_node_socket(color)
+    }
+    class PME_OT_popup_panel_menu {
+        +bl_idname
+        +bl_label
+        +bl_description
+        +bl_options
+        +draw_popup_panel_menu(menu, context)
+        +execute(context)
+    }
+    class UserData {
+        +get(name, default)
+        +update()
+    }
+    class PMEContext {
+        #__init__()
+        +item_id()
+        +reset()
+        +add_global(key, value)
+        +layout()
+        +layout(value)
+        +event()
+        +event(value)
+        +globals()
+        +gen_globals()
+        +eval(expression, globals, menu, slot)
+        +exe(data, globals, menu, slot, use_try)
+    }
+    class PMEProp {
+        #__init__(type, name, default, ptype, items)
+        +decode_value(value)
+    }
+    class PMEProps {
+        +prop_map
+        +IntProperty(type, name, default)
+        +BoolProperty(type, name, default)
+        +StringProperty(type, name, default)
+        +EnumProperty(type, name, default, items)
+        #__init__()
+        +get(name)
+        +parse(text)
+        +encode(text, prop, value)
+        +clear(text)
+    }
+    class ParsedData {
+        #__init__(text)
+        +value(name)
+    }
+    class WM_OT_pm_import {
+        +bl_idname
+        +bl_label
+        +bl_description
+        +bl_options
+        +filename_ext
+        #_draw(menu, context)
+        +draw(context)
+        +import_json(json_data)
+        +import_file(filepath)
+        +execute(context)
+        +invoke(context, event)
+    }
+    class WM_OT_pm_export {
+        +bl_idname
+        +bl_label
+        +bl_description
+        +bl_options
+        +filename_ext
+        #_draw(menu, context)
+        +check(context)
+        +draw(context)
+        +execute(context)
+        +invoke(context, event)
+    }
+    class PME_OT_backup {
+        +bl_idname
+        +bl_label
+        +bl_description
+        +invoke(context, event)
+    }
+    class WM_OT_pm_duplicate {
+        +bl_idname
+        +bl_label
+        +bl_description
+        +bl_options
+        +execute(context)
+        +^poll(context)
+    }
+    class PME_OT_pm_remove {
+        +bl_idname
+        +bl_label
+        +bl_description
+        +bl_options
+        +on_confirm(value)
+        +^poll(context)
+        +invoke(context, event)
+    }
+    class PME_OT_pm_enable_all {
+        +bl_idname
+        +bl_label
+        +bl_description
+        +bl_options
+        +execute(context)
+        +^poll(context)
+    }
+    class PME_OT_pm_enable_by_tag {
+        +bl_idname
+        +bl_label
+        +bl_description
+        +bl_options
+        +execute(context)
+        +^poll(context)
+    }
+    class PME_OT_pm_remove_by_tag {
+        +bl_idname
+        +bl_label
+        +bl_description
+        +bl_options
+        +execute(context)
+        +^poll(context)
+    }
+    class WM_OT_pm_move {
+        +bl_idname
+        +bl_label
+        +bl_description
+        +bl_options
+        +execute(context)
+        +^poll(context)
+    }
+    class WM_OT_pm_sort {
+        +bl_idname
+        +bl_label
+        +bl_description
+        +bl_options
+        #_draw(menu, context)
+        +execute(context)
+        +^poll(context)
+    }
+    class PME_OT_pmi_name_apply {
+        +bl_idname
+        +bl_label
+        +bl_description
+        +bl_options
+        +execute(context)
+    }
+    class PME_OT_icons_refresh {
+        +bl_idname
+        +bl_label
+        +bl_description
+        +bl_options
+        +execute(context)
+    }
+    class PMEData {
+        +update_lock
+        +prop_data
+        +get_links_idx()
+        +set_links_idx(value)
+        +update_modal_item_hk(context)
+        +update_modal_item_prop_mode(context)
+        +set_modal_item_prop_step(value)
+        +modal_item_custom_update(context)
+        +modal_item_show_get()
+        +modal_item_show_set(value)
+        +init_tags()
+        +update_pie_menus()
+    }
+    class WM_UL_panel_list {
+        +draw_item(context, layout, data, item, icon, active_data, active_propname, index)
+    }
+    class WM_UL_pm_list {
+        +draw_filter
+        #_draw_filter(context, layout)
+        +draw_filter27(context, layout)
+        +draw_filter28(context, layout, reverse)
+        +draw_item(context, layout, data, item, icon, active_data, active_propname, index)
+        +filter_items(context, data, propname)
+    }
+    class PME_UL_pm_tree {
+        +locked
+        +groups
+        +collapsed_groups
+        +expanded_folders
+        +has_folders
+        +draw_filter
+        +$save_state()
+        +$load_state()
+        +$link_is_collapsed(link)
+        +$update_tree()
+        +draw_item(context, layout, data, item, icon, active_data, active_propname, index)
+        #_draw_filter(context, layout)
+        +draw_filter27(context, layout)
+        +draw_filter28(context, layout, reverse)
+        +filter_items(context, data, propname)
+    }
+    class PME_OT_tree_folder_toggle {
+        +bl_idname
+        +bl_label
+        +bl_description
+        +bl_options
+        +execute(context)
+    }
+    class PME_OT_tree_folder_toggle_all {
+        +bl_idname
+        +bl_label
+        +bl_description
+        +bl_options
+        +execute(context)
+    }
+    class PME_OT_tree_group_toggle {
+        +bl_idname
+        +bl_label
+        +bl_description
+        +bl_options
+        +execute(context)
+    }
+    class PMIClipboard {
+        #__init__()
+        +copy(pm, pmi)
+        +paste(pm, pmi)
+        +clear()
+        +has_data()
+    }
+    class PME_OT_list_specials {
+        +bl_idname
+        +bl_label
+        +bl_description
+        +bl_options
+        +draw_menu(menu, context)
+        +execute(context)
+    }
+    class PMIData {
+        #_kmi
+        +errors
+        +infos
+        +kmi()
+        +check_pmi_errors(context)
+        +mode_update(context)
+        +sname_update(context)
+        +info(text, is_error)
+        +has_info()
+        +has_errors(text)
+        +extract_flags()
+        +parse_icon(default_icon)
+    }
+    class PieMenuPrefs {
+        #__init__()
+        +save()
+        +restore()
+    }
+    class PieMenuRadius {
+        #__init__()
+        +is_saved()
+        +save()
+        +restore()
+    }
+    class TreeView {
+        +expand_km(name)
+        +lock()
+        +unlock()
+        +update()
+    }
+    class InvalidPMEPreferences {
+        +bl_idname
+        +draw(context)
+    }
+    class PMEPreferences {
+        +bl_idname
+        #_mode
+        +editors
+        +mode_history
+        +unregistered_pms
+        +old_pms
+        +missing_kms
+        +pie_menu_prefs
+        +pie_menu_radius
+        +tree
+        +pmi_clipboard
+        +pdr_clipboard
+        +rmc_clipboard
+        +window_kmis
+        +pie_menu_idx_get()
+        +pie_menu_idx_set(value)
+        +update_interactive_panels(context)
+        +update_show_names(context)
+        +update_show_hotkeys(context)
+        +update_tree(context)
+        +update_group_by(context)
+        +get_debug_mode()
+        +set_debug_mode(value)
+        +update_tree_mode(context)
+        +save_tree_update(context)
+        +get_maximize_prefs()
+        +set_maximize_prefs(value)
+        #_update_mouse_threshold(context)
+        +tree_ul()
+        +selected_pm()
+        +mode()
+        +mode(value)
+        +enter_mode(mode)
+        +leave_mode()
+        +is_edit_mode()
+        +use_groups()
+        +get_threshold(prop_type)
+        +enable_window_kmis(value)
+        +add_pm(mode, name, duplicate)
+        +remove_pm(pm)
+        +unique_pm_name(name)
+        +from_dict(value)
+        +to_dict()
+        #_draw_pm_item(context, layout)
+        #_draw_icons(context, layout)
+        #_draw_tab_editor(context, layout)
+        #_draw_hprop(layout, data, prop, url)
+        #_draw_hlabel(layout, text, url)
+        #_draw_tab_settings(context, layout)
+        #_draw_preferences(context, layout)
+        +draw_prefs(context, layout)
+        +draw(context)
+        +init_menus()
+        +backup_menus(operator)
+        +get_export_data(export_tags, mode, tag)
+        +ed(id)
+    }
+    class PME_PT_preferences {
+        +bl_space_type
+        +bl_region_type
+        +bl_label
+        +bl_category
+        +^poll(context)
+        +draw(context)
+    }
+    class PME_MT_button_context {
+        +bl_label
+        +draw(context)
+    }
+    class PME_OT_context_menu {
+        +bl_idname
+        +bl_label
+        +bl_description
+        +bl_options
+        +draw_menu(menu, context)
+        +execute(context)
+    }
+    class PreviewsHelper {
+        #__init__(folder)
+        +get_icon(name)
+        +get_icon_name_by_id(id)
+        +get_names()
+        +has_icon(name)
+        +refresh()
+        +unregister()
+    }
+    class PropertyData {
+        +DEFAULT_MIN
+        +DEFAULT_MAX
+        +DEFAULT_STEP
+        #__init__()
+        +clear()
+        +step()
+        +init(path, exec_globals, exec_locals)
+    }
+    class _PGVars {
+        +uid
+        +instances
+        +$get(item)
+    }
+    class DynamicPG {
+        +getvar(var)
+        +hasvar(var)
+        +setvar(var, value)
+    }
+    class ContextOverride {
+        #__init__()
+        +validate(context: bpy.types.Context) str
+    }
+    class BlenderState {
+        #__init__()
+        +update()
+    }
+    class UserProperties {
+    }
+    class EdProperties {
+    }
+    class Tag {
+        +filtered_pms
+        +$popup_menu(idname, title, icon, untagged, invoke)
+        +$filter()
+        +$check_pm(pm)
+    }
+    class PMLink {
+        +idx
+        +paths
+        +$add()
+        +$clear()
+        +curpath()
+        +fullpath()
+    }
+    class PMIItem {
+        +expandable_props
+        +get_pmi_label()
+        +set_pmi_label(value)
+        +rm_class()
+        +from_dict(value)
+        +to_dict()
+        +flags(data)
+        +parse(default_icon)
+        +parse_edit()
+        +extract_flags()
+        +parse_icon(default_icon)
+        +is_expandable_prop()
+    }
+    class PMItem {
+        +poll_methods
+        +kmis_map
+        +selected_pmi()
+        #$_parse_keymap(km_name, exists, splitter)
+        +parse_keymap(exists, splitter)
+        +get_pm_km_name()
+        +set_pm_km_name(value)
+        +get_pm_name()
+        +set_pm_name(value)
+        +update_keymap_item(context)
+        +get_key()
+        +set_key(value)
+        +update_open_mode(context)
+        +get_pm_key_mod()
+        +set_pm_key_mod(value)
+        +get_pm_enabled()
+        +set_pm_enabled(value)
+        +update_poll_cmd(context)
+        +update_panel_group()
+        +get_panel_context()
+        +set_panel_context(value)
+        +get_panel_category()
+        +set_panel_category(value)
+        +get_panel_region()
+        +set_panel_region(value)
+        +get_panel_space()
+        +set_panel_space(value)
+        +mo_lock_update(context)
+        +poll(context)
+        +is_new()
+        +register_hotkey(km_names)
+        +unregister_hotkey()
+        +filter_by_mode(pr)
+        +filter_list(pr)
+        +has_tag(tag)
+        +get_tags()
+        +add_tag(tag)
+        +remove_tag(tag)
+        +from_dict(value)
+        +to_dict()
+        +to_hotkey(use_key_names)
+        +get_data(key)
+        +set_data(key, value)
+        +clear_data()
+        +ed()
+    }
+    class PME_OT_userpref_show {
+        +bl_idname
+        +bl_label
+        +bl_options
+        +mod
+        +execute(context)
+    }
+    class PME_OT_userpref_restore {
+        +bl_idname
+        +bl_label
+        +execute(context)
+    }
+    class WM_MT_pme {
+        +bl_label
+        +draw(context)
+    }
+    PME_OT_pmi_add <|-- AddItemOperator
+    PME_OT_pmi_add <.. AddItemOperator
+    PME_OT_pmi_move <|-- MoveItemOperator
+    PME_OT_pmi_move <.. MoveItemOperator
+    PME_OT_pmi_remove <|-- RemoveItemOperator
+    PME_OT_pmi_remove <.. RemoveItemOperator
+    PME_OT_pmi_clear <|-- ConfirmBoxHandler
+    PME_OT_pmi_clear <.. ConfirmBoxHandler
+    Editor <|-- EditorBase
+    Editor <.. EditorBase
+    Editor <|-- EditorBase
+    Editor <|-- EditorBase
+    Editor <|-- EditorBase
+    PME_OT_panel_item_move <|-- MoveItemOperator
+    PME_OT_panel_item_move <.. MoveItemOperator
+    Editor <|-- EditorBase
+    Editor <|-- EditorBase
+    PME_OT_pdi_remove <|-- ConfirmBoxHandler
+    PME_OT_pdi_remove <.. ConfirmBoxHandler
+    PME_OT_pdr_move <|-- MoveItemOperator
+    PME_OT_pdr_move <.. MoveItemOperator
+    PME_OT_pdr_remove <|-- ConfirmBoxHandler
+    PME_OT_pdr_remove <.. ConfirmBoxHandler
+    Editor <|-- EditorBase
+    PME_OT_prop_pmi_move <|-- MoveItemOperator
+    PME_OT_prop_pmi_move <.. MoveItemOperator
+    Editor <|-- EditorBase
+    Editor <|-- EditorBase
+    Editor <|-- EditorBase
+    PME_OT_popup_property <|-- PopupOperator
+    PME_OT_popup_property <.. PopupOperator
+    PME_OT_popup_user_preferences <|-- PopupOperator
+    PME_OT_popup_user_preferences <.. PopupOperator
+    PME_OT_popup_addon_preferences <|-- PopupOperator
+    PME_OT_popup_addon_preferences <.. PopupOperator
+    PME_OT_popup_panel <|-- PopupOperator
+    PME_OT_popup_panel <.. PopupOperator
+    _View3DKMList <|-- _KMList
+    _View3DKMList <.. _KMList
+    _ImageKMList <|-- _KMList
+    _ImageKMList <.. _KMList
+    Hotkey <|-- DynamicPG
+    Hotkey <.. DynamicPG
+    PME_OT_mouse_btn_state <|-- HeadModalHandler
+    PME_OT_mouse_btn_state <.. HeadModalHandler
+    PME_OT_sticky_key <|-- PME_OT_sticky_key_base
+    PME_OT_sticky_key <.. PME_OT_sticky_key_base
+    PME_OT_modal_grab <|-- PME_OT_modal_base
+    PME_OT_modal_grab <.. PME_OT_modal_base
+    PME_OT_modal <|-- PME_OT_modal_base
+    PME_OT_modal <.. PME_OT_modal_base
+    PME_OT_restore_pie_prefs <|-- HeadModalHandler
+    PME_OT_restore_pie_prefs <.. HeadModalHandler
+    WM_OT_pme_user_dialog_call <|-- PopupOperator
+    WM_OT_pme_user_dialog_call <.. PopupOperator
+    PME_OT_pmi_menu_search <|-- SearchOperator
+    PME_OT_pmi_menu_search <.. SearchOperator
+    _XUntokenizer <|-- Untokenizer
+    _XUntokenizer <.. Untokenizer
+    TablePainter <|-- Painter
+    TablePainter <.. Painter
+    WM_OT_pm_import <|-- ImportHelper
+    WM_OT_pm_import <.. ImportHelper
+    WM_OT_pm_export <|-- ExportHelper
+    WM_OT_pm_export <.. ExportHelper
+    PME_OT_pm_remove <|-- ConfirmBoxHandler
+    PME_OT_pm_remove <.. ConfirmBoxHandler
+    Timer <|-- Thread
+    Timer <.. Thread
