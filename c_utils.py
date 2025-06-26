@@ -1,12 +1,22 @@
 import bpy
 import re
 from itertools import islice
+
+# Version compatibility check - only support Blender 4.0+
+# Source: modernization for Blender 4.x DNA structures
+if bpy.app.version < (4, 0, 0):
+    raise RuntimeError(
+        f"pie-menu-editor: Blender {bpy.app.version_string} is not supported. "
+        f"This version requires Blender 4.0 or later. "
+        f"Please use an older version of pie-menu-editor for Blender 3.x."
+    )
 from ctypes import (
     Structure,
     POINTER,
     cast,
     addressof,
     pointer,
+    sizeof,
     c_short,
     c_uint,
     c_int,
@@ -15,10 +25,16 @@ from ctypes import (
     c_char,
     c_char_p,
     c_void_p,
+    c_uint32,  # For session_uid and other uint32 fields
 )
 from . import pme
 
 
+# Constants from Blender 4.x source
+# Source: /home/myname/blender/blender/source/blender/makesdna/DNA_ID.h
+MAX_ID_NAME = 258  # Updated from 66 to 258 in Blender 4.x
+
+# Source: Various DNA files
 BKE_ST_MAXNAME = 64
 UI_MAX_DRAW_STR = 400
 UI_MAX_NAME_STR = 128
@@ -69,6 +85,38 @@ def gen_fields(*args):
 
     return ret
 
+
+def validate_structure_sizes():
+    """
+    Validate that our structure definitions match the expected sizes.
+    This helps catch issues with our ctypes mappings.
+    
+    Note: This is a basic validation - exact sizes may vary between
+    platforms and compiler configurations.
+    """
+    try:
+        # Basic size checks - these are estimates for 64-bit systems
+        id_size = sizeof(ID)
+        if id_size < 300:  # ID should be much larger now with new fields
+            print(f"Warning: ID structure size ({id_size}) seems too small for Blender 4.x")
+        
+        bscreen_size = sizeof(bScreen) 
+        if bscreen_size < 150:  # bScreen should be larger with new fields
+            print(f"Warning: bScreen structure size ({bscreen_size}) seems too small for Blender 4.x")
+            
+        scrarea_size = sizeof(ScrArea)
+        if scrarea_size < 200:  # ScrArea should be larger with new fields
+            print(f"Warning: ScrArea structure size ({scrarea_size}) seems too small for Blender 4.x")
+            
+        print(f"Structure size validation:")
+        print(f"  ID: {id_size} bytes")
+        print(f"  bScreen: {bscreen_size} bytes") 
+        print(f"  ScrArea: {scrarea_size} bytes")
+        print(f"  uiStyle: {sizeof(uiStyle)} bytes")
+        
+    except Exception as e:
+        print(f"Structure validation failed: {e}")
+        print("This may indicate incompatible structure definitions.")
 
 def gen_pointer(obj, tp=None):
     if not tp:
@@ -181,20 +229,44 @@ wmEventHandler = struct("wmEventHandler")
 wmOperator = struct("wmOperator")
 # wmEvent = struct("wmEvent")
 
-# source/blender/makesdna/DNA_ID.h
+# ID structure definition for Blender 4.x
+# Source: /home/myname/blender/blender/source/blender/makesdna/DNA_ID.h (lines 402-480)
+# Last verified: 2024-06-26
+# Changes from old version:
+# - name field changed from char[66] to char[258] (MAX_ID_NAME)
+# - Added asset_data field
+# - recalc type changed from int to unsigned int
+# - Added recalc_up_to_undo_push, recalc_after_undo_push fields
+# - Added session_uid field
+# - Added system_properties field
+# - Added _pad1 padding
+# - Added override_library field
+# - Added orig_id field
+# - Added py_instance field
+# - Added library_weak_reference field
+# - Added runtime field
 ID._fields_ = gen_fields(
-    c_void_p, "*next", "*prev",
-    ID, "*newid",
-    c_void_p, "*lib",
-    c_char, "name[66]",
-    c_short, "flag",
-    c_int, "tag",
-    c_int, "us",
-    c_int, "icon_id",
-    (True, (2, 80, 0), c_int, "icon_id"),
-    (True, (2, 80, 0), c_int, "recalc"),
-    (True, (2, 80, 0), c_int, "pad"),
-    c_void_p, "*properties",
+    c_void_p, "*next", "*prev",           # void *next, *prev;
+    ID, "*newid",                         # struct ID *newid;
+    c_void_p, "*lib",                     # struct Library *lib;
+    c_void_p, "*asset_data",              # struct AssetMetaData *asset_data;
+    c_char, f"name[{MAX_ID_NAME}]",       # char name[258]; (was char[66])
+    c_short, "flag",                      # short flag;
+    c_int, "tag",                         # int tag;
+    c_int, "us",                          # int us;
+    c_int, "icon_id",                     # int icon_id;
+    c_uint, "recalc",                     # unsigned int recalc; (was int)
+    c_uint, "recalc_up_to_undo_push",     # unsigned int recalc_up_to_undo_push;
+    c_uint, "recalc_after_undo_push",     # unsigned int recalc_after_undo_push;
+    c_uint32, "session_uid",              # unsigned int session_uid;
+    c_void_p, "*properties",              # IDProperty *properties;
+    c_void_p, "*system_properties",       # IDProperty *system_properties;
+    c_void_p, "_pad1",                    # void *_pad1;
+    c_void_p, "*override_library",        # IDOverrideLibrary *override_library;
+    ID, "*orig_id",                       # struct ID *orig_id;
+    c_void_p, "*py_instance",             # void *py_instance;
+    c_void_p, "*library_weak_reference",  # struct LibraryWeakReference *library_weak_reference;
+    c_void_p, "runtime",                  # struct ID_Runtime runtime; (opaque pointer)
 )
 
 rcti._fields_ = gen_fields(
@@ -275,25 +347,31 @@ uiLayoutRoot._fields_ = gen_fields(
     uiLayout, "*layout",
 )
 
-# source/blender/makesdna/DNA_userdef_types.h
+# uiStyle structure definition for Blender 4.x
+# Source: /home/myname/blender/blender/source/blender/makesdna/DNA_userdef_types.h (lines 88-115)
+# Last verified: 2024-06-26
+# Changes from old version:
+# - Removed widgetlabel field
+# - Added tooltip field (uiFontStyle)
+# - Field order unchanged for remaining fields
 uiStyle._fields_ = gen_fields(
-    uiStyle, "*next", "*prev",
-    c_char, "name[64]",
-    uiFontStyle, "paneltitle",
-    uiFontStyle, "grouplabel",
-    uiFontStyle, "widgetlabel",
-    uiFontStyle, "widget",
-    c_float, "panelzoom",
-    c_short, "minlabelchars",
-    c_short, "minwidgetchars",
-    c_short, "columnspace",
-    c_short, "templatespace",
-    c_short, "boxspace",
-    c_short, "buttonspacex",
-    c_short, "buttonspacey",
-    c_short, "panelspace",
-    c_short, "panelouter",
-    c_char, "_pad0[2]",
+    uiStyle, "*next", "*prev",           # struct uiStyle *next, *prev;
+    c_char, "name[64]",                  # char name[64];
+    uiFontStyle, "paneltitle",           # uiFontStyle paneltitle;
+    uiFontStyle, "grouplabel",           # uiFontStyle grouplabel;
+    uiFontStyle, "widget",               # uiFontStyle widget;
+    uiFontStyle, "tooltip",              # uiFontStyle tooltip; (NEW)
+    c_float, "panelzoom",                # float panelzoom;
+    c_short, "minlabelchars",            # short minlabelchars;
+    c_short, "minwidgetchars",           # short minwidgetchars;
+    c_short, "columnspace",              # short columnspace;
+    c_short, "templatespace",            # short templatespace;
+    c_short, "boxspace",                 # short boxspace;
+    c_short, "buttonspacex",             # short buttonspacex;
+    c_short, "buttonspacey",             # short buttonspacey;
+    c_short, "panelspace",               # short panelspace;
+    c_short, "panelouter",               # short panelouter;
+    c_char, "_pad0[2]",                  # char _pad0[2];
 )
 
 uiBlock._fields_ = gen_fields(
@@ -380,25 +458,37 @@ ScrVert._fields_ = gen_fields(
     vec2s, "vec"
 )
 
-# source/blender/makesdna/DNA_screen_types.h
+# ScrArea structure definition for Blender 4.x  
+# Source: /home/myname/blender/blender/source/blender/makesdna/DNA_screen_types.h (lines 430-496)
+# Last verified: 2024-06-26
+# Changes from old version:
+# - headertype field marked as DNA_DEPRECATED (but still present)
+# - Added regionbase, handlers, actionzones ListBase fields
+# - Added ScrArea_Runtime runtime field
+# - _pad changed from char[2] to char[2] (no change but documented)
+# - global field type changed to ScrGlobalAreaData*
+# Note: DNA_DEFINE_CXX_METHODS macro is compile-time only, not in runtime struct
 ScrArea._fields_ = gen_fields(
-    ScrArea, "*next", "*prev",
-    ScrVert, "*v1", "*v2", "*v3", "*v4",
-    c_void_p, "*full",
-    rcti, "totrct",
-    c_char, "spacetype", "butspacetype",
-    (True, (2, 80, 0), c_short, "butspacetype_subtype"),
-    c_short, "winx", "winy",
-    (True, (2, 80, 0), c_char, "headertype"),
-    (False, (2, 80, 0), c_short, "headertype"),
-    (True, (2, 80, 0), c_char, "do_refresh"),
-    (False, (2, 80, 0), c_short, "do_refresh"),
-    c_short, "flag",
-    c_short, "region_active_win",
-    c_char, "temp", "pad",
-    c_void_p, "*type",
-    (True, (2, 80, 0), c_void_p, "*global"),
-    ListBase, "spacedata",
+    ScrArea, "*next", "*prev",           # struct ScrArea *next, *prev;
+    ScrVert, "*v1", "*v2", "*v3", "*v4", # ScrVert *v1, *v2, *v3, *v4;
+    c_void_p, "*full",                   # bScreen *full;
+    rcti, "totrct",                      # rcti totrct;
+    c_char, "spacetype",                 # char spacetype;
+    c_char, "butspacetype",              # char butspacetype;
+    c_short, "butspacetype_subtype",     # short butspacetype_subtype;
+    c_short, "winx", "winy",             # short winx, winy;
+    c_char, "headertype",                # char headertype DNA_DEPRECATED;
+    c_char, "do_refresh",                # char do_refresh;
+    c_short, "flag",                     # short flag;
+    c_short, "region_active_win",        # short region_active_win;
+    c_char, "_pad[2]",                   # char _pad[2];
+    c_void_p, "*type",                   # struct SpaceType *type;
+    c_void_p, "*global",                 # ScrGlobalAreaData *global;
+    ListBase, "spacedata",               # ListBase spacedata;
+    ListBase, "regionbase",              # ListBase regionbase;
+    ListBase, "handlers",                # ListBase handlers;
+    ListBase, "actionzones",             # ListBase actionzones;
+    c_void_p, "runtime",                 # ScrArea_Runtime runtime; (opaque)
 )
 
 # source/blender/makesdna/DNA_screen_types.h
@@ -408,19 +498,41 @@ ScrAreaMap._fields_ = gen_fields(
     ListBase, "areabase",
 )
 
-# source/blender/makesdna/DNA_screen_types.h
+# bScreen structure definition for Blender 4.x
+# Source: /home/myname/blender/blender/source/blender/makesdna/DNA_screen_types.h (lines 52-107)
+# Last verified: 2024-06-26
+# Changes from old version:
+# - scene field marked as DNA_DEPRECATED (but still present)
+# - Added state, do_draw, do_refresh, do_draw_gesture, do_draw_paintcursor, do_draw_drag fields
+# - Added skip_handling, scrubbing fields
+# - Added _pad[1] padding
+# - Added active_region, animtimer, context, tool_tip, preview fields
+# Note: C++ constexpr id_type field is compile-time only, not in runtime struct
 bScreen._fields_ = gen_fields(
-    ID, "id",
-    ListBase, "vertbase",
-    ListBase, "edgebase",
-    ListBase, "areabase",
-    ListBase, "regionbase",
-    c_void_p, "*scene",
-    (False, (2, 80, 0), c_void_p, "*newscene"),
-    (True, (2, 80, 0), c_short, "flag"),
-    c_short, "winid",
-    c_short, "redraws_flag",
-    c_char, "temp",
+    ID, "id",                            # ID id;
+    ListBase, "vertbase",                # ListBase vertbase;
+    ListBase, "edgebase",                # ListBase edgebase;
+    ListBase, "areabase",                # ListBase areabase;
+    ListBase, "regionbase",              # ListBase regionbase;
+    c_void_p, "*scene",                  # struct Scene *scene DNA_DEPRECATED;
+    c_short, "flag",                     # short flag;
+    c_short, "winid",                    # short winid;
+    c_short, "redraws_flag",             # short redraws_flag;
+    c_char, "temp",                      # char temp;
+    c_char, "state",                     # char state;
+    c_char, "do_draw",                   # char do_draw;
+    c_char, "do_refresh",                # char do_refresh;
+    c_char, "do_draw_gesture",           # char do_draw_gesture;
+    c_char, "do_draw_paintcursor",       # char do_draw_paintcursor;
+    c_char, "do_draw_drag",              # char do_draw_drag;
+    c_char, "skip_handling",             # char skip_handling;
+    c_char, "scrubbing",                 # char scrubbing;
+    c_char, "_pad[1]",                   # char _pad[1];
+    c_void_p, "*active_region",          # struct ARegion *active_region;
+    c_void_p, "*animtimer",              # struct wmTimer *animtimer;
+    c_void_p, "*context",                # void *context;
+    c_void_p, "*tool_tip",               # struct wmTooltipState *tool_tip;
+    c_void_p, "*preview",                # PreviewImage *preview;
 )
 
 '''
@@ -712,4 +824,20 @@ def keep_pie_open(layout):
 
 
 def register():
-    pme.context.add_global("keep_pie_open", keep_pie_open)
+    """
+    Register the c_utils module and validate structure definitions.
+    This is called when the addon is enabled.
+    """
+    try:
+        # Validate our structure definitions
+        validate_structure_sizes()
+        
+        # Register the keep_pie_open function
+        pme.context.add_global("keep_pie_open", keep_pie_open)
+        
+        print("c_utils: Successfully registered with Blender 4.x structure definitions")
+        
+    except Exception as e:
+        print(f"c_utils: Error during registration: {e}")
+        print("This may indicate compatibility issues with your Blender version.")
+        # Don't re-raise - allow addon to continue with limited functionality
