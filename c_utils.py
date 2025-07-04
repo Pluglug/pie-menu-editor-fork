@@ -213,7 +213,7 @@ uiLayoutRoot = struct("uiLayoutRoot")
 uiStyle = struct("uiStyle")
 uiFontStyle = struct("uiFontStyle")
 uiBlock = struct("uiBlock")
-uiBut = struct("uiBut")
+# uiBut = struct("uiBut")  # see #18
 vec2s = struct("vec2s")
 ScrVert = struct("ScrVert")
 ScrArea = struct("ScrArea")
@@ -409,18 +409,18 @@ uiBlock._fields_ = gen_fields(
     # c_char, "dt",
 )
 
-uiBut._fields_ = gen_fields(
-    uiBut, "*next", "*prev",
-    c_int, "flag", "drawflag",
-    c_int, "type",
-    c_int, "pointype",
-    c_short, "bit", "bitnr", "retval", "strwidth", "alignnr",
-    c_short, "ofs", "pos", "selsta", "selend",
-    c_char, "*str",
-    c_char * UI_MAX_NAME_STR, "strdata",
-    c_char * UI_MAX_DRAW_STR, "drawstr",
-    rctf, "rect",
-)
+# uiBut._fields_ = gen_fields( # see #18
+#     uiBut, "*next", "*prev",
+#     c_int, "flag", "drawflag",
+#     c_int, "type",
+#     c_int, "pointype",
+#     c_short, "bit", "bitnr", "retval", "strwidth", "alignnr",
+#     c_short, "ofs", "pos", "selsta", "selend",
+#     c_char, "*str",
+#     c_char * UI_MAX_NAME_STR, "strdata",
+#     c_char * UI_MAX_DRAW_STR, "drawstr",
+#     rctf, "rect",
+# )
 
 bContext_wm._fields_ = gen_fields(
     c_void_p, "*manager",
@@ -667,11 +667,11 @@ def c_layout(layout):
     return ret
 
 
-def c_last_btn(clayout):
-    ret = cast(
-        clayout.root.contents.block.contents.buttons.last, POINTER(uiBut)
-    ).contents
-    return ret
+# def c_last_btn(clayout):
+#     ret = cast(
+#         clayout.root.contents.block.contents.buttons.last, POINTER(uiBut)  # see #18
+#     ).contents
+#     return ret
 
 
 def c_style(clayout):

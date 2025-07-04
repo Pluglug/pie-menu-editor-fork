@@ -61,17 +61,17 @@ class CLayout:
     ):
         bpy.types.UILayout.__getattribute__ = CLayout.real_getattribute
 
-        if use_mouse_over_open is True or CLayout.use_mouse_over_open is True:
-            # UI_LAYOUT_HEADER = 1
-            c_layout = CTU.c_layout(CLayout.layout)
-            # root_type = c_layout.root.contents.type
-            # c_layout.root.contents.type = UI_LAYOUT_HEADER
+        # if use_mouse_over_open is True or CLayout.use_mouse_over_open is True:
+        #     # UI_LAYOUT_HEADER = 1
+        #     c_layout = CTU.c_layout(CLayout.layout)
+        #     # root_type = c_layout.root.contents.type
+        #     # c_layout.root.contents.type = UI_LAYOUT_HEADER
 
-        elif use_mouse_over_open is False:
-            # UI_LAYOUT_PANEL = 0
-            c_layout = CTU.c_layout(CLayout.layout)
-            # root_type = c_layout.root.contents.type
-            # c_layout.root.contents.type = UI_LAYOUT_PANEL
+        # elif use_mouse_over_open is False:
+        #     # UI_LAYOUT_PANEL = 0
+        #     c_layout = CTU.c_layout(CLayout.layout)
+        #     # root_type = c_layout.root.contents.type
+        #     # c_layout.root.contents.type = UI_LAYOUT_PANEL
 
         if text is None:
             CLayout.layout.menu(
