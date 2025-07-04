@@ -828,38 +828,117 @@ def _find_areas_with_header_text_support(context):
     return [area for area in context.screen.areas if hasattr(area, 'header_text_set')]
 
 
-# FIXME: Width and Height are not actually applied.
 def popup_area(area, width=320, height=400, x=None, y=None):
-    r = c_utils.area_rect(area)
+    """
+    Create a popup window by duplicating an area with specified dimensions.
 
+    This function temporarily modifies the source area's size parameters to control
+    the resulting popup window size, then restores the original values.
+
+    Args:
+        area: Source area to duplicate
+        width: Desired width for the popup window
+        height: Desired height for the popup window
+        x: X position for window placement (optional)
+        y: Y position for window placement (optional)
+    """
     C = bpy.context
     window = C.window
-    if height > window.height:
-        height = window.height
 
-    if x is not None and y is not None:
-        r.xmin = x - (width >> 1)
-        r.ymin = y - height + 8
-        if r.ymin < 0:
-            r.ymin = 0
+    # Get direct access to ScrArea structure via c_utils
+    try:
+        from ctypes import cast, POINTER
+        carea = cast(area.as_pointer(), POINTER(c_utils.ScrArea))
+        area_struct = carea.contents
 
-    xmin, xmax, ymin, ymax = r.xmin, r.xmax, r.ymin, r.ymax
-    r.xmax = r.xmin + width
-    r.ymax = r.ymin + height
+        # Store original area dimensions
+        orig_totrct = {
+            'xmin': area_struct.totrct.xmin,
+            'xmax': area_struct.totrct.xmax, 
+            'ymin': area_struct.totrct.ymin,
+            'ymax': area_struct.totrct.ymax
+        }
+        orig_winx = area_struct.winx
+        orig_winy = area_struct.winy
 
-    upr = get_uprefs()
-    ui_scale = upr.view.ui_scale
-    ui_line_width = upr.view.ui_line_width
-    upr.view.ui_scale = 1
-    upr.view.ui_line_width = 'THIN'
+        # Apply UI scaling temporarily for consistent duplication
+        upr = get_uprefs()
+        ui_scale = upr.view.ui_scale
+        ui_line_width = upr.view.ui_line_width
+        upr.view.ui_scale = 1
+        upr.view.ui_line_width = 'THIN'
 
-    with C.temp_override(**ctx_dict(area=area)):  # MIGRATION_TODO: Delete ctx_dict
-        bpy.ops.screen.area_dupli('INVOKE_DEFAULT')
+        try:
+            # Calculate position if specified, otherwise use current area position
+            if x is not None and y is not None:
+                pos_x = max(0, x - (width // 2))
+                pos_y = max(0, y - (height // 2))
 
-    upr.view.ui_scale = ui_scale
-    upr.view.ui_line_width = ui_line_width
+                # Ensure window stays within screen bounds
+                max_x = window.width - min(width, 200)
+                max_y = window.height - min(height, 150)
+                pos_x = min(pos_x, max_x)
+                pos_y = min(pos_y, max_y)
+            else:
+                pos_x = orig_totrct['xmin']
+                pos_y = orig_totrct['ymin']
 
-    r.xmin, r.xmax, r.ymin, r.ymax = xmin, xmax, ymin, ymax
+            # Temporarily modify area size parameters that area_dupli uses
+            area_struct.totrct.xmin = pos_x
+            area_struct.totrct.ymin = pos_y
+            area_struct.totrct.xmax = pos_x + width
+            area_struct.totrct.ymax = pos_y + height
+            area_struct.winx = width
+            area_struct.winy = height
+
+            # Store current window count to identify new window
+            initial_windows = set(C.window_manager.windows)
+
+            # Create the duplicate window with modified area dimensions
+            with C.temp_override(**ctx_dict(area=area)):  # MIGRATION_TODO: Delete ctx_dict
+                bpy.ops.screen.area_dupli('INVOKE_DEFAULT')
+
+            # Log results for debugging
+            new_windows = set(C.window_manager.windows) - initial_windows
+            if new_windows:
+                new_window = list(new_windows)[0]
+                actual_width = new_window.width
+                actual_height = new_window.height
+                print(f"Popup area size: requested {width}x{height}, actual {actual_width}x{actual_height}")
+
+                if actual_width != width or actual_height != height:
+                    print(f"Size difference detected - this may be due to DPI scaling or window manager constraints")
+
+        finally:
+            # Always restore original area dimensions
+            area_struct.totrct.xmin = orig_totrct['xmin']
+            area_struct.totrct.xmax = orig_totrct['xmax']
+            area_struct.totrct.ymin = orig_totrct['ymin'] 
+            area_struct.totrct.ymax = orig_totrct['ymax']
+            area_struct.winx = orig_winx
+            area_struct.winy = orig_winy
+
+            # Restore UI settings
+            upr.view.ui_scale = ui_scale
+            upr.view.ui_line_width = ui_line_width
+
+    except Exception as e:
+        print(f"Error in popup_area: {e}")
+        print("Falling back to basic area duplication")
+
+        # Fallback to basic duplication if memory manipulation fails
+        upr = get_uprefs()
+        ui_scale = upr.view.ui_scale
+        ui_line_width = upr.view.ui_line_width
+        upr.view.ui_scale = 1
+        upr.view.ui_line_width = 'THIN'
+
+        try:
+            with C.temp_override(**ctx_dict(area=area)):
+                bpy.ops.screen.area_dupli('INVOKE_DEFAULT')
+        finally:
+            upr.view.ui_scale = ui_scale
+            upr.view.ui_line_width = ui_line_width
 
 
 def enum_item_idx(data, prop, identifier):

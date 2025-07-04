@@ -105,7 +105,7 @@ def validate_structure_sizes():
             print(f"Warning: bScreen structure size ({bscreen_size}) seems too small for Blender 4.x")
             
         scrarea_size = sizeof(ScrArea)
-        if scrarea_size < 200:  # ScrArea should be larger with new fields
+        if scrarea_size < 180:  # ScrArea should be ~184 bytes in Blender 4.x
             print(f"Warning: ScrArea structure size ({scrarea_size}) seems too small for Blender 4.x")
             
         print(f"Structure size validation:")
@@ -217,6 +217,7 @@ uiBlock = struct("uiBlock")
 vec2s = struct("vec2s")
 ScrVert = struct("ScrVert")
 ScrArea = struct("ScrArea")
+ScrArea_Runtime = struct("ScrArea_Runtime")
 ScrAreaMap = struct("ScrAreaMap")
 ARegion = struct("ARegion")
 bScreen = struct("bScreen")
@@ -458,13 +459,24 @@ ScrVert._fields_ = gen_fields(
     vec2s, "vec"
 )
 
+# ScrArea_Runtime structure definition for Blender 4.x
+# Source: /home/myname/blender/blender/source/blender/makesdna/DNA_screen_types.h (lines 423-427)
+# Last verified: 2024-06-26
+# This structure is embedded in ScrArea, not referenced by pointer
+ScrArea_Runtime._fields_ = gen_fields(
+    c_void_p, "*tool",           # struct bToolRef *tool;
+    c_char, "is_tool_set",       # char is_tool_set;
+    c_char, "_pad0[7]",          # char _pad0[7];
+)
+
 # ScrArea structure definition for Blender 4.x  
 # Source: /home/myname/blender/blender/source/blender/makesdna/DNA_screen_types.h (lines 430-496)
 # Last verified: 2024-06-26
+# Total size: 184 bytes (was incorrectly calculated as 176 bytes)
 # Changes from old version:
 # - headertype field marked as DNA_DEPRECATED (but still present)
 # - Added regionbase, handlers, actionzones ListBase fields
-# - Added ScrArea_Runtime runtime field
+# - Added ScrArea_Runtime runtime field (16 bytes, not 8-byte pointer)
 # - _pad changed from char[2] to char[2] (no change but documented)
 # - global field type changed to ScrGlobalAreaData*
 # Note: DNA_DEFINE_CXX_METHODS macro is compile-time only, not in runtime struct
@@ -488,7 +500,7 @@ ScrArea._fields_ = gen_fields(
     ListBase, "regionbase",              # ListBase regionbase;
     ListBase, "handlers",                # ListBase handlers;
     ListBase, "actionzones",             # ListBase actionzones;
-    c_void_p, "runtime",                 # ScrArea_Runtime runtime; (opaque)
+    ScrArea_Runtime, "runtime",          # ScrArea_Runtime runtime;
 )
 
 # source/blender/makesdna/DNA_screen_types.h
