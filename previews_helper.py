@@ -62,6 +62,9 @@ def custom_icon(icon):
     return ph.get_icon(icon)
 
 
+if "ph" in globals():
+    ph.unregister()
+
 ph = PreviewsHelper()
 ph.refresh()
 
