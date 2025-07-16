@@ -11,9 +11,13 @@ class PreviewsHelper:
         self.preview = None
 
     def get_icon(self, name):
+        if self.preview is None or name not in self.preview:
+            return 0
         return self.preview[name].icon_id
 
     def get_icon_name_by_id(self, id):
+        if self.preview is None:
+            return None
         name = None
         min_id = 99999999
         for k, i in self.preview.items():
@@ -26,10 +30,12 @@ class PreviewsHelper:
         return name
 
     def get_names(self):
+        if self.preview is None:
+            return []
         return self.preview.keys()
 
     def has_icon(self, name):
-        return name in self.preview
+        return self.preview is not None and name in self.preview
 
     def refresh(self):
         if self.preview:
