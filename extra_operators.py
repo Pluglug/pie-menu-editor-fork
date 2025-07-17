@@ -955,15 +955,24 @@ class PME_OT_popup_area(bpy.types.Operator):
             new_window = context.window_manager.windows[-1]
 
         if new_window:
+            if screen_name in bpy.data.screens:
+                new_window.screen = bpy.data.screens[screen_name]
+            else:
+                new_window.screen.name = screen_name
+                new_window.screen.user_clear()
+
             if self.cmd:
-                pme_timeout = getattr(bpy.ops.pme, "timeout")
-                with context.temp_override(**ctx_dict(window=new_window)):
-                    pme_timeout('INVOKE_DEFAULT', cmd=self.cmd)
-
-            new_screen_name = new_window.screen.name
-
-            new_window.screen.name = screen_name
-            new_window.screen.user_clear()
+                window_index = -1
+                for i, w in enumerate(context.window_manager.windows):
+                    if w == new_window:
+                        window_index = i
+                        break
+                
+                bpy.ops.pme.window_exec(
+                    cmd=self.cmd,
+                    window_index=window_index,
+                    screen_name=new_window.screen.name
+                )
 
         self.update_header(context, header_on_top, header_visible, header_dict)
 
@@ -1249,14 +1258,17 @@ class PME_OT_popup_window(bpy.types.Operator):
         new_window.screen.user_clear()
 
     def _execute_command(self, context, window):
-        cmd = getattr(bpy.ops.pme, "timeout")
-        with context.temp_override(
-            window=window,
-            screen=window.screen,
-            area=window.screen.areas[0],
-            region=window.screen.areas[0].regions[-1]
-        ):
-            cmd('INVOKE_DEFAULT', cmd=self.cmd)
+        window_index = -1
+        for i, w in enumerate(context.window_manager.windows):
+            if w == window:
+                window_index = i
+                break
+        
+        bpy.ops.pme.window_exec(
+            cmd=self.cmd,
+            window_index=window_index,
+            screen_name=window.screen.name
+        )
 
     def _cleanup(self, context, area):
         if self.original_area_type:
@@ -1275,6 +1287,70 @@ class PME_OT_clipboard_copy(bpy.types.Operator):
     def execute(self, context):
         context.window_manager.clipboard = self.text
         return {'FINISHED'}
+
+
+class PME_OT_window_exec(bpy.types.Operator):
+    bl_idname = "pme.window_exec"
+    bl_label = "Window Exec"
+    bl_description = "Execute command in specific window context"
+    bl_options = {'INTERNAL'}
+
+    cmd: bpy.props.StringProperty(
+        name="Command",
+        description="Python command to execute",
+        maxlen=MAX_STR_LEN,
+        options={'SKIP_SAVE', 'HIDDEN'},
+    )
+    window_index: bpy.props.IntProperty(
+        name="Window Index",
+        description="Target window index in window manager",
+        default=-1,
+        options={'SKIP_SAVE', 'HIDDEN'},
+    )
+    screen_name: bpy.props.StringProperty(
+        name="Screen Name",
+        description="Target window screen name for backup identification",
+        default="",
+        options={'SKIP_SAVE', 'HIDDEN'},
+    )
+
+    def execute(self, context):
+        target_window = None
+        if self.window_index >= 0 and self.window_index < len(context.window_manager.windows):
+            target_window = context.window_manager.windows[self.window_index]
+        if not target_window and self.screen_name:
+            for window in context.window_manager.windows:
+                if window.screen.name == self.screen_name:
+                    target_window = window
+                    break
+        if not target_window and context.window_manager.windows:
+            target_window = context.window_manager.windows[-1]
+        
+        if not target_window:
+            return {'CANCELLED'}
+        with context.temp_override(
+            window=target_window,
+            screen=target_window.screen,
+            area=target_window.screen.areas[0] if target_window.screen.areas else None,
+            region=target_window.screen.areas[0].regions[-1] if target_window.screen.areas and target_window.screen.areas[0].regions else None
+        ):
+            try:
+                local_globals = pme.context.gen_globals()
+                local_globals['C'] = context
+                local_globals['D'] = bpy.data
+                local_globals['target_window'] = target_window
+                local_globals['window'] = target_window
+                local_globals['screen'] = target_window.screen
+                
+                if target_window.screen.areas:
+                    local_globals['area'] = target_window.screen.areas[0]
+                    if target_window.screen.areas[0].regions:
+                        local_globals['region'] = target_window.screen.areas[0].regions[-1]
+
+                exec(self.cmd, local_globals)
+                return {'FINISHED'}
+            except Exception as e:
+                return {'CANCELLED'}
 
 
 @persistent
