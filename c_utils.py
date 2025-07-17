@@ -1,22 +1,14 @@
-import bpy
+from bpy.app import version as bl_version
+from bpy.props import StringProperty
 import re
 from itertools import islice
 
-# Version compatibility check - only support Blender 4.0+
-# Source: modernization for Blender 4.x DNA structures
-if bpy.app.version < (4, 0, 0):
-    raise RuntimeError(
-        f"pie-menu-editor: Blender {bpy.app.version_string} is not supported. "
-        f"This version requires Blender 4.0 or later. "
-        f"Please use an older version of pie-menu-editor for Blender 3.x."
-    )
 from ctypes import (
     Structure,
     POINTER,
     cast,
     addressof,
     pointer,
-    sizeof,
     c_short,
     c_uint,
     c_int,
@@ -67,7 +59,6 @@ def gen_fields(*args):
 
         ret.append((f, tp))
 
-    bl_version = bpy.app.version
     for a in args:
         if isinstance(a, tuple):
             if (a[0] and bl_version < a[1]) or (not a[0] and bl_version >= a[1]):
@@ -85,38 +76,6 @@ def gen_fields(*args):
 
     return ret
 
-
-def validate_structure_sizes():
-    """
-    Validate that our structure definitions match the expected sizes.
-    This helps catch issues with our ctypes mappings.
-    
-    Note: This is a basic validation - exact sizes may vary between
-    platforms and compiler configurations.
-    """
-    try:
-        # Basic size checks - these are estimates for 64-bit systems
-        id_size = sizeof(ID)
-        if id_size < 300:  # ID should be much larger now with new fields
-            print(f"Warning: ID structure size ({id_size}) seems too small for Blender 4.x")
-        
-        bscreen_size = sizeof(bScreen) 
-        if bscreen_size < 150:  # bScreen should be larger with new fields
-            print(f"Warning: bScreen structure size ({bscreen_size}) seems too small for Blender 4.x")
-            
-        scrarea_size = sizeof(ScrArea)
-        if scrarea_size < 180:  # ScrArea should be ~184 bytes in Blender 4.x
-            print(f"Warning: ScrArea structure size ({scrarea_size}) seems too small for Blender 4.x")
-            
-        print(f"Structure size validation:")
-        print(f"  ID: {id_size} bytes")
-        print(f"  bScreen: {bscreen_size} bytes") 
-        print(f"  ScrArea: {scrarea_size} bytes")
-        print(f"  uiStyle: {sizeof(uiStyle)} bytes")
-        
-    except Exception as e:
-        print(f"Structure validation failed: {e}")
-        print("This may indicate incompatible structure definitions.")
 
 def gen_pointer(obj, tp=None):
     if not tp:
@@ -634,7 +593,7 @@ del gen_fields
 
 
 class HeadModalHandler:
-    key: bpy.props.StringProperty(default="ESC", options={'SKIP_SAVE'})
+    key: StringProperty(default="ESC", options={'SKIP_SAVE'})
 
     def finish(self):
         pass
@@ -836,20 +795,4 @@ def keep_pie_open(layout):
 
 
 def register():
-    """
-    Register the c_utils module and validate structure definitions.
-    This is called when the addon is enabled.
-    """
-    try:
-        # Validate our structure definitions
-        validate_structure_sizes()
-        
-        # Register the keep_pie_open function
-        pme.context.add_global("keep_pie_open", keep_pie_open)
-        
-        print("c_utils: Successfully registered with Blender 4.x structure definitions")
-        
-    except Exception as e:
-        print(f"c_utils: Error during registration: {e}")
-        print("This may indicate compatibility issues with your Blender version.")
-        # Don't re-raise - allow addon to continue with limited functionality
+    pme.context.add_global("keep_pie_open", keep_pie_open)
