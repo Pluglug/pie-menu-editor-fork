@@ -556,6 +556,10 @@ class PME_OT_sidearea_toggle(bpy.types.Operator):
     bl_description = "Toggle side area"
     bl_options = {'INTERNAL'}
 
+    _tolerance_cache = None
+    _cache_ui_scale = None
+    _cache_ui_line_width = None
+
     sidebars_state = None
 
     action: bpy.props.EnumProperty(
@@ -618,17 +622,14 @@ class PME_OT_sidearea_toggle(bpy.types.Operator):
         """
         Calculate actual Blender area gap based on source code analysis.
         Based on Blender 5.0.0-alpha: source/blender/editors/screen/screen_draw.cc:176
-        
+
         Formula: Area Gap = border_width × scale_factor
         Where: scale_factor = (auto_dpi × ui_scale × 72.0/96.0) / 72.0
         """
-        import bpy
-        prefs = bpy.context.preferences
-        
-        # Get Blender's actual values
+        prefs = get_uprefs()
         ui_scale = prefs.view.ui_scale
         ui_line_width = prefs.view.ui_line_width  # 'THIN', 'AUTO', 'THICK'
-        
+
         # Calculate border_width based on ui_line_width setting
         # Based on Blender documentation and source analysis
         if ui_line_width == 'THIN':
@@ -638,16 +639,16 @@ class PME_OT_sidearea_toggle(bpy.types.Operator):
         else:  # 'AUTO' or fallback
             # Auto scales with UI scale, base value is 2
             border_width = max(1, round(2 * ui_scale))
-        
+
         # Calculate scale factor (from Blender source)
         # auto_dpi is typically 96 on most systems, but Blender adjusts internally
         auto_dpi = 96.0  # Base DPI assumption from Blender source
         dpi = auto_dpi * ui_scale * (72.0 / 96.0)
         scale_factor = dpi / 72.0
-        
+
         # Calculate edge thickness (actual area gap)
         edge_thickness = float(border_width) * scale_factor
-        
+
         return {
             'gap': edge_thickness,
             'scale_factor': scale_factor,
@@ -657,152 +658,204 @@ class PME_OT_sidearea_toggle(bpy.types.Operator):
         }
 
     @classmethod
-    def _calculate_robust_tolerance(cls):
+    def _get_cached_tolerance(cls):
         """
-        Calculate adaptive tolerance using Blender's actual gap calculation.
-        Implements o3 research findings: logical normalization + adaptive tolerance.
+        Performance optimized: Cache expensive tolerance calculations.
+        Only recalculates when UI preferences actually change.
         """
         try:
+            prefs = get_uprefs()
+            current_ui_scale = prefs.view.ui_scale
+            current_ui_line_width = prefs.view.ui_line_width
+
+            # Check if preferences actually changed (value-based caching)
+            if (cls._tolerance_cache is not None and
+                cls._cache_ui_scale == current_ui_scale and
+                cls._cache_ui_line_width == current_ui_line_width):
+                # Cache hit! Return immediately without any calculations
+                return cls._tolerance_cache
+
+            # Cache miss: Recalculate tolerance
             gap_info = cls._get_blender_area_gap()
             actual_gap = gap_info['gap']
-            
-            # Minimum tolerance: 1 logical pixel
+
+            # Three-layer tolerance calculation:
+            # 1. Minimum tolerance: 1 logical pixel
             min_tolerance = 1.0 / gap_info['scale_factor']
-            
-            # Adaptive tolerance: 50% of actual gap + floating point safety
+
+            # 2. Adaptive tolerance: 50% of actual gap
             adaptive_tolerance = actual_gap * 0.5
-            
-            # Floating point precision guard for large coordinates
+
+            # 3. Floating point precision guard for large coordinates
             fp_tolerance = abs(actual_gap) * 4 * 2.220446049250313e-16  # 4 * machine epsilon
-            
+
             # Final tolerance: maximum of all considerations
             final_tolerance = max(min_tolerance, adaptive_tolerance, fp_tolerance, 0.1)
-            
-            return {
+
+            # Update cache with new values
+            cls._tolerance_cache = {
                 'tolerance': final_tolerance,
                 'expected_gap': actual_gap,
                 'min_tolerance': min_tolerance,
                 'scale_factor': gap_info['scale_factor']
             }
+            cls._cache_ui_scale = current_ui_scale
+            cls._cache_ui_line_width = current_ui_line_width
+
+            return cls._tolerance_cache
+
         except Exception as e:
-            # Fallback to simple tolerance calculation
-            print(f"Warning: Could not calculate Blender gap, using fallback. Error: {e}")
-            import bpy
-            ui_scale = getattr(bpy.context.preferences.view, 'ui_scale', 1.0)
-            fallback_gap = 2.0 * ui_scale
-            fallback_tolerance = max(1.0, fallback_gap * 0.5)
-            
-            return {
-                'tolerance': fallback_tolerance,
-                'expected_gap': fallback_gap,
+            # Fallback with simple caching
+            print(f"Warning: Could not calculate cached tolerance, using fallback. Error: {e}")
+            fallback_tolerance = {
+                'tolerance': 2.0,
+                'expected_gap': 2.0,
                 'min_tolerance': 1.0,
-                'scale_factor': ui_scale
+                'scale_factor': 1.0
             }
+            cls._tolerance_cache = fallback_tolerance
+            # Don't update scale values on error to force recalc next time
+            return fallback_tolerance
 
     def get_side_areas(self, area):
         """
-        Robust side area detection using Blender's actual gap calculation.
-        Implements mathematical foundation from o3 research.
+        Performance optimized side area detection.
+        Uses cached tolerance and single-pass search.
         Returns: (left_area, right_area)
         """
-        # Get robust tolerance based on actual Blender implementation
-        tol_info = self._calculate_robust_tolerance()
+        # Get cached tolerance (fast!)
+        tol_info = self._get_cached_tolerance()
         expected_gap = tol_info['expected_gap']
         tolerance = tol_info['tolerance']
-        
-        # Find adjacent areas using mathematical gap detection
+        max_search_gap = expected_gap * 3  # Precompute search limit
+
+        # Single-pass area detection with early termination
         left_area = None
         right_area = None
         bottom_area = None
         top_area = None
-        
+
+        # Fallback candidates for closest search
+        best_left = None
+        best_left_gap = float('inf')
+        best_right = None
+        best_right_gap = float('inf')
+
         for candidate_area in bpy.context.screen.areas:
-            # Horizontal adjacency (same height and y position)
+            # Skip self and ignored types
+            if candidate_area == area or candidate_area.ui_type in self.ia:
+                continue
+
+            # Horizontal adjacency check (same height and y position)
             if (candidate_area.height == area.height and 
-                candidate_area.y == area.y and 
-                candidate_area.ui_type not in self.ia):
-                
+                candidate_area.y == area.y):
+
                 # Left adjacency: candidate's right edge to area's left edge
                 left_gap = area.x - (candidate_area.x + candidate_area.width)
                 if not left_area and abs(left_gap - expected_gap) <= tolerance:
                     left_area = candidate_area
-                
+                elif not left_area and 0 < left_gap <= max_search_gap and left_gap < best_left_gap:
+                    best_left = candidate_area
+                    best_left_gap = left_gap
+
                 # Right adjacency: area's right edge to candidate's left edge
                 right_gap = candidate_area.x - (area.x + area.width)
                 if not right_area and abs(right_gap - expected_gap) <= tolerance:
                     right_area = candidate_area
-            
-            # Vertical adjacency (same width and x position)
-            if (candidate_area.width == area.width and 
-                candidate_area.x == area.x and 
-                candidate_area.ui_type not in self.ia):
-                
+                elif not right_area and 0 < right_gap <= max_search_gap and right_gap < best_right_gap:
+                    best_right = candidate_area
+                    best_right_gap = right_gap
+
+            # Vertical adjacency check (same width and x position)
+            elif (candidate_area.width == area.width and 
+                  candidate_area.x == area.x):
+
                 # Bottom adjacency: candidate's top edge to area's bottom edge
                 bottom_gap = area.y - (candidate_area.y + candidate_area.height)
                 if not bottom_area and abs(bottom_gap - expected_gap) <= tolerance:
                     bottom_area = candidate_area
-                
+
                 # Top adjacency: area's top edge to candidate's bottom edge
                 top_gap = candidate_area.y - (area.y + area.height)
                 if not top_area and abs(top_gap - expected_gap) <= tolerance:
                     top_area = candidate_area
-        
-        # Fallback: closest gap detection (o3 spatial relationship strategy)
-        if not left_area or not right_area:
-            max_search_gap = expected_gap * 3  # Search within 3x expected gap
-            
-            best_left = None
-            best_left_gap = float('inf')
-            best_right = None
-            best_right_gap = float('inf')
-            
-            for candidate_area in bpy.context.screen.areas:
-                if (candidate_area.height == area.height and 
-                    candidate_area.y == area.y and 
-                    candidate_area.ui_type not in self.ia):
-                    
-                    # Check left
-                    left_gap = area.x - (candidate_area.x + candidate_area.width)
-                    if (not left_area and 0 < left_gap <= max_search_gap and 
-                        left_gap < best_left_gap):
-                        best_left = candidate_area
-                        best_left_gap = left_gap
-                    
-                    # Check right
-                    right_gap = candidate_area.x - (area.x + area.width)
-                    if (not right_area and 0 < right_gap <= max_search_gap and 
-                        right_gap < best_right_gap):
-                        best_right = candidate_area
-                        best_right_gap = right_gap
-            
-            if not left_area:
-                left_area = best_left
-            if not right_area:
-                right_area = best_right
-        
+
+            # Early termination: if we found all horizontal targets, break
+            if left_area and right_area:
+                break
+
+        # Use fallback candidates if exact matches not found
+        if not left_area and best_left:
+            left_area = best_left
+        if not right_area and best_right:
+            right_area = best_right
+
         # Original logic: if vertical areas found, clear horizontal ones
         if bottom_area or top_area:
             left_area, right_area = None, None
-        
+
         return left_area, right_area
 
     @classmethod
     def debug_gap_calculation(cls):
         """
         Debug method to print current gap calculation values.
-        Useful for verifying the implementation against actual Blender behavior.
+        Includes performance information and cache status.
         """
-        gap_info = cls._get_blender_area_gap()
-        tol_info = cls._calculate_robust_tolerance()
+        import time
+        start_time = time.time()
         
-        print("=== Blender Area Gap Debug Info ===")
+        # Check current UI settings
+        import bpy
+        prefs = bpy.context.preferences
+        current_ui_scale = prefs.view.ui_scale
+        current_ui_line_width = prefs.view.ui_line_width
+        
+        # Test cache efficiency
+        cache_hit = (cls._tolerance_cache is not None and
+                    cls._cache_ui_scale == current_ui_scale and
+                    cls._cache_ui_line_width == current_ui_line_width)
+        
+        # Get gap info and tolerance
+        gap_info = cls._get_blender_area_gap()
+        gap_calc_time = time.time()
+        
+        tol_info = cls._get_cached_tolerance()
+        total_time = time.time()
+        
+        print("=== Blender Area Gap Debug Info (Value-Based Cache) ===")
         print(f"UI Scale: {gap_info['ui_scale']:.3f}")
+        print(f"UI Line Width: {gap_info['ui_line_width']}")
         print(f"Border Width: {gap_info['border_width']}")
         print(f"Scale Factor: {gap_info['scale_factor']:.3f}")
         print(f"Calculated Gap: {gap_info['gap']:.3f} pixels")
         print(f"Tolerance: {tol_info['tolerance']:.3f} pixels")
         print(f"Min Tolerance: {tol_info['min_tolerance']:.3f} pixels")
-        print("=====================================")
+        print("")
+        print("=== Performance Info ===")
+        print(f"Gap calculation time: {(gap_calc_time - start_time) * 1000:.2f}ms")
+        print(f"Total time (with cache): {(total_time - start_time) * 1000:.2f}ms")
+        print("")
+        print("=== Cache Status ===")
+        print(f"Cache status: {'HIT' if cache_hit else 'MISS'}")
+        print(f"Cache exists: {'Yes' if cls._tolerance_cache else 'No'}")
+        if cls._tolerance_cache:
+            print(f"Cached UI Scale: {cls._cache_ui_scale}")
+            print(f"Cached UI Line Width: {cls._cache_ui_line_width}")
+            print(f"Current UI Scale: {current_ui_scale}")
+            print(f"Current UI Line Width: {current_ui_line_width}")
+            settings_changed = (cls._cache_ui_scale != current_ui_scale or 
+                              cls._cache_ui_line_width != current_ui_line_width)
+            print(f"Settings changed: {'Yes' if settings_changed else 'No'}")
+        print("")
+        print("=== Area Count Info ===")
+        try:
+            area_count = len(bpy.context.screen.areas)
+            print(f"Total areas: {area_count}")
+            print(f"Estimated search complexity: O({area_count})")
+        except:
+            print("Could not get area count")
+        print("================================================")
         
         return gap_info, tol_info
 
