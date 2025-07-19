@@ -36,8 +36,7 @@ def split_area(mode='AUTO'):
 
     mouse = mode == 'VERTICAL' and vertical or horizontal or vertical
     if mouse:
-        bpy.ops.screen.area_split(
-            'INVOKE_DEFAULT', cursor=[mouse[0], mouse[1]])
+        bpy.ops.screen.area_split('INVOKE_DEFAULT', cursor=[mouse[0], mouse[1]])
 
 
 mode = locals().get("kwargs", {}).get("mode", 'AUTO')

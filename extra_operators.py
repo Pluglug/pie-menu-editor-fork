@@ -1,12 +1,15 @@
 import bpy
 import addon_utils
 from bpy.app.handlers import persistent
-from .addon import ADDON_ID, prefs, uprefs, is_28
+from .addon import ADDON_ID, get_prefs, get_uprefs, is_28
 from .bl_utils import PopupOperator, popup_area, ctx_dict, area_header_text_set
 from .panel_utils import panel, panel_label, bl_panel_enum_items
 from .constants import (
-    PME_TEMP_SCREEN, PME_SCREEN, MAX_STR_LEN,
-    WINDOW_MIN_WIDTH, WINDOW_MIN_HEIGHT
+    PME_TEMP_SCREEN,
+    PME_SCREEN,
+    MAX_STR_LEN,
+    WINDOW_MIN_WIDTH,
+    WINDOW_MIN_HEIGHT,
 )
 from . import constants as CC
 from . import c_utils as CTU
@@ -33,8 +36,10 @@ class PME_OT_modal_dummy(bpy.types.Operator):
     bl_label = "Dummy Modal"
 
     message: bpy.props.StringProperty(
-        name="Message", options={'SKIP_SAVE'},
-        default="OK: Enter/LClick, Cancel: Esc/RClick)")
+        name="Message",
+        options={'SKIP_SAVE'},
+        default="OK: Enter/LClick, Cancel: Esc/RClick)",
+    )
 
     def modal(self, context, event):
         if event.value == 'PRESS':
@@ -88,21 +93,24 @@ class PME_OT_sidebar_toggle(bpy.types.Operator):
     bl_description = "Toggle sidebar"
 
     sidebar: bpy.props.EnumProperty(
-        name="Sidebar", description="Sidebar",
+        name="Sidebar",
+        description="Sidebar",
         items=(
             ('TOOLS', "Tools", "", 'PREFERENCES', 0),
             ('PROPERTIES', "Properties", "", 'BUTS', 1),
         ),
-        options={'SKIP_SAVE'})
+        options={'SKIP_SAVE'},
+    )
 
     action: bpy.props.EnumProperty(
-        name="Action", description="Action",
+        name="Action",
+        description="Action",
         items=(
             ('TOGGLE', "Toggle", ""),
             ('SHOW', "Show", ""),
             ('HIDE', "Hide", ""),
         ),
-        options={'SKIP_SAVE'}
+        options={'SKIP_SAVE'},
     )
 
     def execute(self, context):
@@ -112,9 +120,7 @@ class PME_OT_sidebar_toggle(bpy.types.Operator):
         elif self.action == 'HIDE':
             value = False
 
-        SU.toggle_sidebar(
-            tools=self.sidebar == 'TOOLS',
-            value=value)
+        SU.toggle_sidebar(tools=self.sidebar == 'TOOLS', value=value)
 
         return {'FINISHED'}
 
@@ -124,8 +130,8 @@ class PME_OT_screen_set(bpy.types.Operator):
     bl_label = "Set Screen/Workspace By Name"
 
     name: bpy.props.StringProperty(
-        name="Screen Layout/Workspace Name",
-        description="Screen layout/workspace name")
+        name="Screen Layout/Workspace Name", description="Screen layout/workspace name"
+    )
 
     def execute(self, context):
         if self.name not in bpy.data.workspaces:
@@ -167,7 +173,9 @@ class PME_OT_popup_user_preferences(PopupOperator, bpy.types.Operator):
     bl_options = {'INTERNAL'}
 
     tab: bpy.props.EnumProperty(
-        name="Tab", description="Tab", options={'SKIP_SAVE'},
+        name="Tab",
+        description="Tab",
+        options={'SKIP_SAVE'},
         items=(
             ('CURRENT', "Current", ""),
             ('INTERFACE', "Interface", ""),
@@ -177,21 +185,24 @@ class PME_OT_popup_user_preferences(PopupOperator, bpy.types.Operator):
             ('THEMES', "Themes", ""),
             ('FILES', "File", ""),
             ('SYSTEM', "System", ""),
-        ))
+        ),
+    )
     width: bpy.props.IntProperty(
-        name="Width", description="Width of the popup",
-        default=800, options={'SKIP_SAVE'})
+        name="Width",
+        description="Width of the popup",
+        default=800,
+        options={'SKIP_SAVE'},
+    )
     center: bpy.props.BoolProperty(
-        name="Center", description="Center",
-        default=True, options={'SKIP_SAVE'})
+        name="Center", description="Center", default=True, options={'SKIP_SAVE'}
+    )
 
     def draw(self, context):
         PopupOperator.draw(self, context)
 
-        upr = uprefs()
+        upr = get_uprefs()
         col = self.layout.column(align=True)
-        col.row(align=True).prop(
-            upr, "active_section", expand=True)
+        col.row(align=True).prop(upr, "active_section", expand=True)
 
         if upr.active_section == 'INTERFACE':
             tp = bpy.types.USERPREF_PT_interface
@@ -206,8 +217,9 @@ class PME_OT_popup_user_preferences(PopupOperator, bpy.types.Operator):
         elif upr.active_section == 'FILES':
             tp = bpy.types.USERPREF_PT_file
         elif upr.active_section == 'SYSTEM':
-            tp = getattr(bpy.types, "USERPREF_PT_system", None) or \
-                getattr(bpy.types, "USERPREF_PT_system_general", None)
+            tp = getattr(bpy.types, "USERPREF_PT_system", None) or getattr(
+                bpy.types, "USERPREF_PT_system_general", None
+            )
 
         pme.context.layout = col
         panel(tp, frame=True, header=False, poll=False)
@@ -215,7 +227,7 @@ class PME_OT_popup_user_preferences(PopupOperator, bpy.types.Operator):
     def invoke(self, context, event):
         if self.tab != 'CURRENT':
             try:
-                uprefs().active_section = self.tab
+                get_uprefs().active_section = self.tab
             except:
                 pass
 
@@ -229,16 +241,23 @@ class PME_OT_popup_addon_preferences(PopupOperator, bpy.types.Operator):
     bl_options = {'INTERNAL'}
 
     addon: bpy.props.StringProperty(
-        name="Add-on", description="Add-on", options={'SKIP_SAVE'})
+        name="Add-on", description="Add-on", options={'SKIP_SAVE'}
+    )
     width: bpy.props.IntProperty(
-        name="Width", description="Width of the popup",
-        default=800, options={'SKIP_SAVE'})
+        name="Width",
+        description="Width of the popup",
+        default=800,
+        options={'SKIP_SAVE'},
+    )
     center: bpy.props.BoolProperty(
-        default=True, name="Center", description="Center",
-        options={'SKIP_SAVE'})
+        default=True, name="Center", description="Center", options={'SKIP_SAVE'}
+    )
     auto_close: bpy.props.BoolProperty(
-        default=False, name="Auto Close",
-        description="Auto close the popup", options={'SKIP_SAVE'})
+        default=False,
+        name="Auto Close",
+        description="Auto close the popup",
+        options={'SKIP_SAVE'},
+    )
 
     def draw(self, context):
         title = None
@@ -252,7 +271,7 @@ class PME_OT_popup_addon_preferences(PopupOperator, bpy.types.Operator):
         PopupOperator.draw(self, context, title)
 
         addon_prefs = None
-        for addon in uprefs().addons:
+        for addon in get_uprefs().addons:
             if addon.module == self.addon:
                 addon_prefs = addon.preferences
                 break
@@ -285,19 +304,26 @@ class PME_OT_popup_panel(PopupOperator, bpy.types.Operator):
             "Comma/semicolon separated panel ID(s).\n"
             "  Use a semicolon to add columns.\n"
         ),
-        options={'SKIP_SAVE'})
+        options={'SKIP_SAVE'},
+    )
     frame: bpy.props.BoolProperty(
-        name="Frame", description="Frame",
-        default=True, options={'SKIP_SAVE'})
+        name="Frame", description="Frame", default=True, options={'SKIP_SAVE'}
+    )
     header: bpy.props.BoolProperty(
-        name="Header", description="Header",
-        default=True, options={'SKIP_SAVE'})
+        name="Header", description="Header", default=True, options={'SKIP_SAVE'}
+    )
     area: bpy.props.EnumProperty(
-        name="Area Type", description="Area type",
-        items=CC.area_type_enum_items(), options={'SKIP_SAVE'})
+        name="Area Type",
+        description="Area type",
+        items=CC.area_type_enum_items(),
+        options={'SKIP_SAVE'},
+    )
     width: bpy.props.IntProperty(
-        name="Width", description="Width of the popup",
-        default=-1, options={'SKIP_SAVE'})
+        name="Width",
+        description="Width of the popup",
+        default=-1,
+        options={'SKIP_SAVE'},
+    )
 
     def draw(self, context):
         title = None
@@ -326,8 +352,12 @@ class PME_OT_popup_panel(PopupOperator, bpy.types.Operator):
                     expand = False
                     p = p[1:]
                 panel(
-                    p.strip(), frame=self.frame, header=self.header,
-                    area=self.area, expand=expand)
+                    p.strip(),
+                    frame=self.frame,
+                    header=self.header,
+                    area=self.area,
+                    expand=expand,
+                )
 
     def cancel(self, context):
         PopupOperator.cancel(self, context)
@@ -363,8 +393,7 @@ class PME_OT_select_popup_panel(bpy.types.Operator):
 
         return PME_OT_select_popup_panel.enum_items
 
-    item: bpy.props.EnumProperty(
-        items=get_items, options={'SKIP_SAVE', 'HIDDEN'})
+    item: bpy.props.EnumProperty(items=get_items, options={'SKIP_SAVE', 'HIDDEN'})
 
     def execute(self, context):
         PME_OT_select_popup_panel.enum_items = None
@@ -431,7 +460,7 @@ class PME_OT_window_auto_close(bpy.types.Operator):
             #             dict(window=w, screen=s),
             #             'INVOKE_DEFAULT', name=s.name)
 
-            prefs().enable_window_kmis(False)
+            get_prefs().enable_window_kmis(False)
 
         return {'PASS_THROUGH'}
 
@@ -446,24 +475,28 @@ class PME_OT_area_move(bpy.types.Operator):
     bl_options = {'INTERNAL'}
 
     area: bpy.props.EnumProperty(
-        name="Area Type", description="Area type",
+        name="Area Type",
+        description="Area type",
         items=CC.area_type_enum_items(),
-        options={'SKIP_SAVE'})
+        options={'SKIP_SAVE'},
+    )
     edge: bpy.props.EnumProperty(
-        name="Area Edge", description="Edge of the area to move",
+        name="Area Edge",
+        description="Edge of the area to move",
         items=(
             ('TOP', "Top", "", 'TRIA_TOP_BAR', 0),
             ('BOTTOM', "Bottom", "", 'TRIA_BOTTOM_BAR', 1),
             ('LEFT', "Left", "", 'TRIA_LEFT_BAR', 2),
             ('RIGHT', "Right", "", 'TRIA_RIGHT_BAR', 3),
         ),
-        options={'SKIP_SAVE'})
+        options={'SKIP_SAVE'},
+    )
     delta: bpy.props.IntProperty(
-        name="Delta", description="Delta", default=300,
-        options={'SKIP_SAVE'})
+        name="Delta", description="Delta", default=300, options={'SKIP_SAVE'}
+    )
     move_cursor: bpy.props.BoolProperty(
-        name="Move Cursor", description="Move cursor",
-        options={'SKIP_SAVE'})
+        name="Move Cursor", description="Move cursor", options={'SKIP_SAVE'}
+    )
 
     def get_target_area(self, context):
         if self.area == 'CURRENT':
@@ -522,73 +555,308 @@ class PME_OT_sidearea_toggle(bpy.types.Operator):
     bl_description = "Toggle side area"
     bl_options = {'INTERNAL'}
 
+    _tolerance_cache = None
+    _cache_ui_scale = None
+    _cache_ui_line_width = None
+
     sidebars_state = None
 
     action: bpy.props.EnumProperty(
-        name="Action", description="Action",
+        name="Action",
+        description="Action",
         items=(
             ('TOGGLE', "Toggle", ""),
             ('SHOW', "Show", ""),
             ('HIDE', "Hide", ""),
         ),
-        options={'SKIP_SAVE'}
+        options={'SKIP_SAVE'},
     )
     main_area: bpy.props.EnumProperty(
-        name="Main Area Type", description="Main area type",
+        name="Main Area Type",
+        description="Main area type",
         items=CC.area_type_enum_items(current=False),
         default='VIEW_3D',
-        options={'SKIP_SAVE'})
+        options={'SKIP_SAVE'},
+    )
     area: bpy.props.EnumProperty(
-        name="Side Area Type", description="Side area type",
+        name="Side Area Type",
+        description="Side area type",
         items=CC.area_type_enum_items(current=False),
         default='OUTLINER',
-        options={'SKIP_SAVE'})
+        options={'SKIP_SAVE'},
+    )
     ignore_area: bpy.props.EnumProperty(
-        name="Ignore Area Type", description="Area type to ignore",
+        name="Ignore Area Type",
+        description="Area type to ignore",
         items=CC.area_type_enum_items(current=False, none=True),
         default='NONE',
-        options={'SKIP_SAVE'})
+        options={'SKIP_SAVE'},
+    )
     side: bpy.props.EnumProperty(
-        name="Side", description="Side",
+        name="Side",
+        description="Side",
         items=(
             ('LEFT', "Left", "", 'TRIA_LEFT_BAR', 0),
             ('RIGHT', "Right", "", 'TRIA_RIGHT_BAR', 1),
         ),
-        options={'SKIP_SAVE'})
+        options={'SKIP_SAVE'},
+    )
     width: bpy.props.IntProperty(
-        name="Width", default=300,
-        subtype='PIXEL', options={'SKIP_SAVE'})
+        name="Width", default=300, subtype='PIXEL', options={'SKIP_SAVE'}
+    )
     header: bpy.props.EnumProperty(
-        name="Header", description="Header options",
+        name="Header",
+        description="Header options",
         items=CC.header_action_enum_items(),
-        options={'SKIP_SAVE'})
+        options={'SKIP_SAVE'},
+    )
     ignore_areas: bpy.props.StringProperty(
         name="Ignore Area Types",
         description="Comma separated area types to ignore",
-        options={'SKIP_SAVE'})
+        options={'SKIP_SAVE'},
+    )
+
+    @staticmethod
+    def _get_blender_area_gap():
+        """
+        Calculate actual Blender area gap based on source code analysis.
+        Based on Blender 5.0.0-alpha: source/blender/editors/screen/screen_draw.cc:176
+
+        Formula: Area Gap = border_width × scale_factor
+        Where: scale_factor = (auto_dpi × ui_scale × 72.0/96.0) / 72.0
+        """
+        prefs = get_uprefs()
+        ui_scale = prefs.view.ui_scale
+        ui_line_width = prefs.view.ui_line_width  # 'THIN', 'AUTO', 'THICK'
+
+        # Calculate border_width based on ui_line_width setting
+        # Based on Blender documentation and source analysis
+        if ui_line_width == 'THIN':
+            border_width = 1
+        elif ui_line_width == 'THICK':
+            border_width = 3
+        else:  # 'AUTO' or fallback
+            # Auto scales with UI scale, base value is 2
+            border_width = max(1, round(2 * ui_scale))
+
+        # Calculate scale factor (from Blender source)
+        # auto_dpi is typically 96 on most systems, but Blender adjusts internally
+        auto_dpi = 96.0  # Base DPI assumption from Blender source
+        dpi = auto_dpi * ui_scale * (72.0 / 96.0)
+        scale_factor = dpi / 72.0
+
+        # Calculate edge thickness (actual area gap)
+        edge_thickness = float(border_width) * scale_factor
+
+        return {
+            'gap': edge_thickness,
+            'scale_factor': scale_factor,
+            'ui_scale': ui_scale,
+            'border_width': border_width,
+            'ui_line_width': ui_line_width
+        }
+
+    @classmethod
+    def _get_cached_tolerance(cls):
+        """
+        Performance optimized: Cache expensive tolerance calculations.
+        Only recalculates when UI preferences actually change.
+        """
+        try:
+            prefs = get_uprefs()
+            current_ui_scale = prefs.view.ui_scale
+            current_ui_line_width = prefs.view.ui_line_width
+
+            # Check if preferences actually changed (value-based caching)
+            if (cls._tolerance_cache is not None and
+                cls._cache_ui_scale == current_ui_scale and
+                cls._cache_ui_line_width == current_ui_line_width):
+                # Cache hit! Return immediately without any calculations
+                return cls._tolerance_cache
+
+            # Cache miss: Recalculate tolerance
+            gap_info = cls._get_blender_area_gap()
+            actual_gap = gap_info['gap']
+
+            # Three-layer tolerance calculation:
+            # 1. Minimum tolerance: 1 logical pixel
+            min_tolerance = 1.0 / gap_info['scale_factor']
+
+            # 2. Adaptive tolerance: 50% of actual gap
+            adaptive_tolerance = actual_gap * 0.5
+
+            # 3. Floating point precision guard for large coordinates
+            fp_tolerance = abs(actual_gap) * 4 * 2.220446049250313e-16  # 4 * machine epsilon
+
+            # Final tolerance: maximum of all considerations
+            final_tolerance = max(min_tolerance, adaptive_tolerance, fp_tolerance, 0.1)
+
+            # Update cache with new values
+            cls._tolerance_cache = {
+                'tolerance': final_tolerance,
+                'expected_gap': actual_gap,
+                'min_tolerance': min_tolerance,
+                'scale_factor': gap_info['scale_factor']
+            }
+            cls._cache_ui_scale = current_ui_scale
+            cls._cache_ui_line_width = current_ui_line_width
+
+            return cls._tolerance_cache
+
+        except Exception as e:
+            # Fallback with simple caching
+            print(f"Warning: Could not calculate cached tolerance, using fallback. Error: {e}")
+            fallback_tolerance = {
+                'tolerance': 2.0,
+                'expected_gap': 2.0,
+                'min_tolerance': 1.0,
+                'scale_factor': 1.0
+            }
+            cls._tolerance_cache = fallback_tolerance
+            # Don't update scale values on error to force recalc next time
+            return fallback_tolerance
 
     def get_side_areas(self, area):
-        l, r, b, t = None, None, None, None
-        # XXX: In fact, it is also affected by view.ui_scale.
-        line_width = {'AUTO': 1, 'THIN': 1, 'THICK': 3}[uprefs().view.ui_line_width]
-        for a in bpy.context.screen.areas:
-            if a.height == area.height and a.y == area.y and \
-                    a.ui_type not in self.ia:
-                if not l and a.x + a.width + line_width == area.x:
-                    l = a
-                elif not r and area.x + area.width + line_width == a.x:
-                    r = a
+        """
+        Performance optimized side area detection.
+        Uses cached tolerance and single-pass search.
+        Returns: (left_area, right_area)
+        """
+        # Get cached tolerance (fast!)
+        tol_info = self._get_cached_tolerance()
+        expected_gap = tol_info['expected_gap']
+        tolerance = tol_info['tolerance']
+        max_search_gap = expected_gap * 3  # Precompute search limit
 
-            if a.width == area.width and a.x == area.x:
-                if not b and a.y + a.height + line_width == area.y:
-                    b = a
-                elif not t and area.y + area.height + line_width == a.y:
-                    t = a
+        # Single-pass area detection with early termination
+        left_area = None
+        right_area = None
+        bottom_area = None
+        top_area = None
 
-        if b or t:
-            l, r = None, None
+        # Fallback candidates for closest search
+        best_left = None
+        best_left_gap = float('inf')
+        best_right = None
+        best_right_gap = float('inf')
 
-        return l, r
+        for candidate_area in bpy.context.screen.areas:
+            # Skip self and ignored types
+            if candidate_area == area or candidate_area.ui_type in self.ia:
+                continue
+
+            # Horizontal adjacency check (same height and y position)
+            if (candidate_area.height == area.height and 
+                candidate_area.y == area.y):
+
+                # Left adjacency: candidate's right edge to area's left edge
+                left_gap = area.x - (candidate_area.x + candidate_area.width)
+                if not left_area and abs(left_gap - expected_gap) <= tolerance:
+                    left_area = candidate_area
+                elif not left_area and 0 < left_gap <= max_search_gap and left_gap < best_left_gap:
+                    best_left = candidate_area
+                    best_left_gap = left_gap
+
+                # Right adjacency: area's right edge to candidate's left edge
+                right_gap = candidate_area.x - (area.x + area.width)
+                if not right_area and abs(right_gap - expected_gap) <= tolerance:
+                    right_area = candidate_area
+                elif not right_area and 0 < right_gap <= max_search_gap and right_gap < best_right_gap:
+                    best_right = candidate_area
+                    best_right_gap = right_gap
+
+            # Vertical adjacency check (same width and x position)
+            elif (candidate_area.width == area.width and 
+                  candidate_area.x == area.x):
+
+                # Bottom adjacency: candidate's top edge to area's bottom edge
+                bottom_gap = area.y - (candidate_area.y + candidate_area.height)
+                if not bottom_area and abs(bottom_gap - expected_gap) <= tolerance:
+                    bottom_area = candidate_area
+
+                # Top adjacency: area's top edge to candidate's bottom edge
+                top_gap = candidate_area.y - (area.y + area.height)
+                if not top_area and abs(top_gap - expected_gap) <= tolerance:
+                    top_area = candidate_area
+
+            # Early termination: if we found all horizontal targets, break
+            if left_area and right_area:
+                break
+
+        # Use fallback candidates if exact matches not found
+        if not left_area and best_left:
+            left_area = best_left
+        if not right_area and best_right:
+            right_area = best_right
+
+        # Original logic: if vertical areas found, clear horizontal ones
+        if bottom_area or top_area:
+            left_area, right_area = None, None
+
+        return left_area, right_area
+
+    @classmethod
+    def debug_gap_calculation(cls):
+        """
+        Debug method to print current gap calculation values.
+        Includes performance information and cache status.
+        """
+        import time
+        start_time = time.time()
+        
+        # Check current UI settings
+        import bpy
+        prefs = bpy.context.preferences
+        current_ui_scale = prefs.view.ui_scale
+        current_ui_line_width = prefs.view.ui_line_width
+        
+        # Test cache efficiency
+        cache_hit = (cls._tolerance_cache is not None and
+                    cls._cache_ui_scale == current_ui_scale and
+                    cls._cache_ui_line_width == current_ui_line_width)
+        
+        # Get gap info and tolerance
+        gap_info = cls._get_blender_area_gap()
+        gap_calc_time = time.time()
+        
+        tol_info = cls._get_cached_tolerance()
+        total_time = time.time()
+        
+        print("=== Blender Area Gap Debug Info (Value-Based Cache) ===")
+        print(f"UI Scale: {gap_info['ui_scale']:.3f}")
+        print(f"UI Line Width: {gap_info['ui_line_width']}")
+        print(f"Border Width: {gap_info['border_width']}")
+        print(f"Scale Factor: {gap_info['scale_factor']:.3f}")
+        print(f"Calculated Gap: {gap_info['gap']:.3f} pixels")
+        print(f"Tolerance: {tol_info['tolerance']:.3f} pixels")
+        print(f"Min Tolerance: {tol_info['min_tolerance']:.3f} pixels")
+        print("")
+        print("=== Performance Info ===")
+        print(f"Gap calculation time: {(gap_calc_time - start_time) * 1000:.2f}ms")
+        print(f"Total time (with cache): {(total_time - start_time) * 1000:.2f}ms")
+        print("")
+        print("=== Cache Status ===")
+        print(f"Cache status: {'HIT' if cache_hit else 'MISS'}")
+        print(f"Cache exists: {'Yes' if cls._tolerance_cache else 'No'}")
+        if cls._tolerance_cache:
+            print(f"Cached UI Scale: {cls._cache_ui_scale}")
+            print(f"Cached UI Line Width: {cls._cache_ui_line_width}")
+            print(f"Current UI Scale: {current_ui_scale}")
+            print(f"Current UI Line Width: {current_ui_line_width}")
+            settings_changed = (cls._cache_ui_scale != current_ui_scale or 
+                              cls._cache_ui_line_width != current_ui_line_width)
+            print(f"Settings changed: {'Yes' if settings_changed else 'No'}")
+        print("")
+        print("=== Area Count Info ===")
+        try:
+            area_count = len(bpy.context.screen.areas)
+            print(f"Total areas: {area_count}")
+            print(f"Estimated search complexity: O({area_count})")
+        except:
+            print("Could not get area count")
+        print("================================================")
+        
+        return gap_info, tol_info
 
     def add_space(self, area, space_type):
         a_type = area.ui_type
@@ -598,15 +866,12 @@ class PME_OT_sidearea_toggle(bpy.types.Operator):
     def move_header(self, area):
         if self.header != 'DEFAULT':
             SU.move_header(
-                area,
-                top='TOP' in self.header,
-                visible='HIDE' not in self.header)
+                area, top='TOP' in self.header, visible='HIDE' not in self.header
+            )
 
     def fix_area(self, area):
         if area.ui_type in ('INFO', 'PROPERTIES'):
-            bpy.ops.pme.timeout(
-                'INVOKE_DEFAULT',
-                cmd=("redraw_screen()"))
+            bpy.ops.pme.timeout('INVOKE_DEFAULT', cmd=("redraw_screen()"))
 
     def save_sidebars(self, area):
         if self.sidebars_state is None:
@@ -621,11 +886,11 @@ class PME_OT_sidearea_toggle(bpy.types.Operator):
 
         self.sidebars_state[area.ui_type] = (
             r_tools and r_tools.width or 0,
-            r_ui and r_ui.width or 0)
+            r_ui and r_ui.width or 0,
+        )
 
     def restore_sidebars(self, area):
-        if self.sidebars_state is None or \
-                area.ui_type not in self.sidebars_state:
+        if self.sidebars_state is None or area.ui_type not in self.sidebars_state:
             return
 
         state = self.sidebars_state[area.ui_type]
@@ -646,11 +911,13 @@ class PME_OT_sidearea_toggle(bpy.types.Operator):
         if area.x < main.x:
             try:
                 bpy.ops.screen.area_join(
-                    min_x=area.x + 2, min_y=area.y + 2,
-                    max_x=area.x - 2, max_y=area.y + 2)
+                    min_x=area.x + 2,
+                    min_y=area.y + 2,
+                    max_x=area.x - 2,
+                    max_y=area.y + 2,
+                )
             except:
-                bpy.ops.screen.area_join(
-                    cursor=(area.x, area.y + 2))
+                bpy.ops.screen.area_join(cursor=(area.x, area.y + 2))
 
         else:
             try:
@@ -658,12 +925,11 @@ class PME_OT_sidearea_toggle(bpy.types.Operator):
                     min_x=area.x + area.width - 2,
                     min_y=area.y + area.height - 2,
                     max_x=area.x + area.width + 2,
-                    max_y=area.y + area.height - 2)
+                    max_y=area.y + area.height - 2,
+                )
             except:
-                bpy.ops.screen.area_swap(
-                    cursor=(area.x + area.width - 2, area.y + 2))
-                bpy.ops.screen.area_join(
-                    cursor=(area.x + area.width - 2, area.y + 2))
+                bpy.ops.screen.area_swap(cursor=(area.x + area.width - 2, area.y + 2))
+                bpy.ops.screen.area_join(cursor=(area.x + area.width - 2, area.y + 2))
 
     def execute(self, context):
         self.ia = set(a.strip() for a in self.ignore_areas.split(","))
@@ -680,9 +946,12 @@ class PME_OT_sidearea_toggle(bpy.types.Operator):
 
         l, r = self.get_side_areas(a)
 
-        if l and self.side == 'LEFT' and \
-                self.action in ('TOGGLE', 'SHOW') and \
-                l.ui_type != self.area:
+        if (
+            l
+            and self.side == 'LEFT'
+            and self.action in ('TOGGLE', 'SHOW')
+            and l.ui_type != self.area
+        ):
             self.save_sidebars(l)
             CTU.swap_spaces(l, a, l.ui_type)
             self.add_space(a, self.area)
@@ -697,9 +966,12 @@ class PME_OT_sidearea_toggle(bpy.types.Operator):
             self.move_header(l)
             self.fix_area(l)
 
-        elif r and self.side == 'RIGHT' and \
-                self.action in ('TOGGLE', 'SHOW') and \
-                r.ui_type != self.area:
+        elif (
+            r
+            and self.side == 'RIGHT'
+            and self.action in ('TOGGLE', 'SHOW')
+            and r.ui_type != self.area
+        ):
             self.save_sidebars(r)
             CTU.swap_spaces(r, a, r.ui_type)
             self.add_space(a, self.area)
@@ -724,9 +996,10 @@ class PME_OT_sidearea_toggle(bpy.types.Operator):
             self.close_area(context, a, r)
             SU.redraw_screen()
 
-        elif (not l and self.side == 'LEFT' or
-                not r and self.side == 'RIGHT') and \
-                self.action in ('TOGGLE', 'SHOW'):
+        elif (
+            (self.side == 'LEFT' and not l) or 
+            (self.side == 'RIGHT' and not r)
+        ) and self.action in ('TOGGLE', 'SHOW'):
             if self.width > a.width >> 1:
                 self.width = a.width >> 1
 
@@ -737,7 +1010,8 @@ class PME_OT_sidearea_toggle(bpy.types.Operator):
             self.add_space(a, self.area)
             mouse = {}
             area_split_props = operator_utils.get_rna_type(
-                bpy.ops.screen.area_split).properties
+                bpy.ops.screen.area_split
+            ).properties
 
             if "cursor" in area_split_props:
                 mouse["cursor"] = [a.x + 1, a.y + 1]
@@ -746,10 +1020,7 @@ class PME_OT_sidearea_toggle(bpy.types.Operator):
                 mouse["mouse_y"] = a.y + 1
 
             with context.temp_override(area=a):
-                bpy.ops.screen.area_split(
-                    direction='VERTICAL',
-                    factor=factor,
-                    **mouse)
+                bpy.ops.screen.area_split(direction='VERTICAL', factor=factor, **mouse)
 
             new_area = context.screen.areas[-1]
             new_area.ui_type = self.area
@@ -769,29 +1040,50 @@ class PME_OT_popup_area(bpy.types.Operator):
     bl_options = {'INTERNAL'}
 
     width: bpy.props.IntProperty(
-        name="Width", description="Width of the window (-1 - auto)",
+        name="Width",
+        description="Width of the window (-1 - auto)",
         subtype='PIXEL',
-        default=-1, min=WINDOW_MIN_WIDTH, soft_min=-1, options={'SKIP_SAVE'})
+        default=-1,
+        min=WINDOW_MIN_WIDTH,
+        soft_min=-1,
+        options={'SKIP_SAVE'},
+    )
     height: bpy.props.IntProperty(
-        name="Height", description="Height of the window (-1 - auto)",
+        name="Height",
+        description="Height of the window (-1 - auto)",
         subtype='PIXEL',
-        default=-1, min=WINDOW_MIN_HEIGHT, soft_min=-1, options={'SKIP_SAVE'})
+        default=-1,
+        min=WINDOW_MIN_HEIGHT,
+        soft_min=-1,
+        options={'SKIP_SAVE'},
+    )
     center: bpy.props.BoolProperty(
-        name="Center", description="Center", options={'SKIP_SAVE'})
+        name="Center", description="Center", options={'SKIP_SAVE'}
+    )
     area: bpy.props.EnumProperty(
-        name="Area", description="Area",
-        items=CC.area_type_enum_items(), options={'SKIP_SAVE'})
+        name="Area",
+        description="Area",
+        items=CC.area_type_enum_items(),
+        options={'SKIP_SAVE'},
+    )
     auto_close: bpy.props.BoolProperty(
-        default=True, name="Auto Close",
-        description="Click outside to close the window", options={'SKIP_SAVE'})
+        default=True,
+        name="Auto Close",
+        description="Click outside to close the window",
+        options={'SKIP_SAVE'},
+    )
     header: bpy.props.EnumProperty(
-        name="Header", description="Header options",
+        name="Header",
+        description="Header options",
         items=CC.header_action_enum_items(),
-        options={'SKIP_SAVE'})
+        options={'SKIP_SAVE'},
+    )
     cmd: bpy.props.StringProperty(
         name="Exec on Open",
         description="Execute python code on window open",
-        maxlen=MAX_STR_LEN, options={'SKIP_SAVE'})
+        maxlen=MAX_STR_LEN,
+        options={'SKIP_SAVE'},
+    )
 
     def update_header(self, context, on_top, visible, d):
         if self.header == 'DEFAULT':
@@ -819,35 +1111,22 @@ class PME_OT_popup_area(bpy.types.Operator):
         return {'FINISHED'}
 
     def invoke(self, context, event):
+        # Setup area
         if self.area == 'CURRENT':
             if not context.area:
                 return {'CANCELLED'}
 
-            self.area = context.area.ui_type if is_28() else context.area.type
+            self.area = context.area.ui_type
 
-        area_name = ""
-        for item in CC.area_type_enum_items():
-            if item[0] == self.area:
-                area_name = item[1]
-                break
-
+        # Setup Screen Name
+        area_name = next((item[1] for item in CC.area_type_enum_items() if item[0] == self.area), "")
         screen_name = PME_TEMP_SCREEN if self.auto_close else PME_SCREEN
         screen_name += area_name
 
         area_type = None
-        new_screen_flag = False
-        # if screen_name in bpy.data.screens:
-        if False:
-            area = bpy.data.screens[screen_name].areas[0]
-        else:
-            new_screen_flag = True
-            area = context.screen.areas[0]
-            if is_28():
-                area_type = area.ui_type
-                area.ui_type = self.area
-            else:
-                area_type = area.type
-                area.type = self.area
+        area = context.screen.areas[0]
+        area_type = area.ui_type
+        area.ui_type = self.area
 
         rh, rw = None, None
         for r in area.regions:
@@ -870,11 +1149,9 @@ class PME_OT_popup_area(bpy.types.Operator):
 
         if self.width == -1:
             if self.area == 'PROPERTIES':
-                self.width = round(
-                    350 * uprefs().view.ui_scale)
+                self.width = round(350 * get_uprefs().view.ui_scale)
             elif self.area == 'OUTLINER':
-                self.width = round(
-                    400 * uprefs().view.ui_scale)
+                self.width = round(400 * get_uprefs().view.ui_scale)
             else:
                 self.width = round(window.width * 0.8)
 
@@ -891,8 +1168,7 @@ class PME_OT_popup_area(bpy.types.Operator):
         x, y = event.mouse_x, event.mouse_y
         if self.center:
             x = window.width >> 1
-            y = window.height - (
-                window.height - self.height >> 1)
+            y = window.height - (window.height - self.height >> 1)
             context.window.cursor_warp(x, y)
 
         popup_area(area, self.width, self.height, x, y)
@@ -902,36 +1178,28 @@ class PME_OT_popup_area(bpy.types.Operator):
             new_window = context.window_manager.windows[-1]
 
         if new_window:
-            if self.cmd:
-                pme_timeout = getattr(bpy.ops.pme, "timeout")
-                with context.temp_override(**ctx_dict(window=new_window)):  # MIGRATION_TODO: Delete ctx_dict
-                    pme_timeout('INVOKE_DEFAULT', cmd=self.cmd)
-
-            new_screen_name = new_window.screen.name
-            
-            # Refactor_TODO: Double-check roaoao's original code and see if we need to reinstate it properly.
-            # if screen_name in bpy.data.screens:
-            if False:  
-                with context.temp_override(**ctx_dict(window=new_window, screen=bpy.data.screens[new_screen_name])):  # MIGRATION_TODO: Delete ctx_dict
-                    bpy.ops.screen.delete()
-
-                with context.temp_override(**ctx_dict(window=new_window)):  # MIGRATION_TODO: Delete ctx_dict
-                    bpy.ops.pme.screen_set(name=screen_name)
-
+            if screen_name in bpy.data.screens:
+                new_window.screen = bpy.data.screens[screen_name]
             else:
                 new_window.screen.name = screen_name
                 new_window.screen.user_clear()
 
-        if new_screen_flag:
-            self.update_header(context, header_on_top, header_visible, header_dict)
+                # FIXME: Screen reuse not implemented - commands only execute on first creation
+                if self.cmd:
+                    target_area = new_window.screen.areas[0] if new_window.screen.areas else None
+                    SU.exec_with_override(
+                        cmd=self.cmd,
+                        window=new_window,
+                        screen=new_window.screen,
+                        area=target_area,
+                    )
+
+        self.update_header(context, header_on_top, header_visible, header_dict)
 
         if area_type:
-            if is_28():
-                area.ui_type = area_type
-            else:
-                area.type = area_type
+            area.ui_type = area_type
 
-        prefs().enable_window_kmis()
+        get_prefs().enable_window_kmis()
 
         return {'FINISHED'}
 

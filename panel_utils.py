@@ -3,7 +3,7 @@ import re
 from inspect import isclass
 from itertools import chain
 from types import MethodType
-from .addon import prefs, uprefs, print_exc, ic, is_28
+from .addon import get_prefs, get_uprefs, print_exc, ic, is_28
 from . import constants as CC
 from . import c_utils as CTU
 from bl_ui import space_userpref
@@ -31,12 +31,12 @@ def panel_types_sorter(tp, value=0):
         return value
     else:
         return panel_types_sorter(
-            getattr(bpy.types, pid, _hidden_panels.get(pid, None)), value + 1)
+            getattr(bpy.types, pid, _hidden_panels.get(pid, None)), value + 1
+        )
 
 
 def panel_type_names_sorter(tp_name):
-    return panel_types_sorter(
-        getattr(bpy.types, tp_name, None))
+    return panel_types_sorter(getattr(bpy.types, tp_name, None))
 
 
 def hide_panel(tp_name):
@@ -104,10 +104,12 @@ def get_hidden_panels():
 
 def bar_panel_poll(poll=None):
     def func(cls, context):
-        pr = prefs()
-        return context.area.width > pr.toolbar_width and \
-            context.area.height > pr.toolbar_height and (
-                not poll or poll(context))
+        pr = get_prefs()
+        return (
+            context.area.width > pr.toolbar_width
+            and context.area.height > pr.toolbar_height
+            and (not poll or poll(context))
+        )
 
     return func
 
@@ -140,15 +142,33 @@ def add_panel_group(pm, draw_pme_panel, poll_pme_panel):
             last_parent = gen_panel_tp_name(pm.name, i, pmi.text)
 
         add_panel(
-            pm.name, i, pmi.text, pmi.name,
-            pm.panel_space, pm.panel_region,
-            pm.panel_context, pm.panel_category,
-            draw_pme_panel, poll_pme_panel, parent)
+            pm.name,
+            i,
+            pmi.text,
+            pmi.name,
+            pm.panel_space,
+            pm.panel_region,
+            pm.panel_context,
+            pm.panel_category,
+            draw_pme_panel,
+            poll_pme_panel,
+            parent,
+        )
 
 
 def add_panel(
-        name, idx, id, label, space, region,
-        context=None, category=None, draw=None, poll=None, parent=None):
+    name,
+    idx,
+    id,
+    label,
+    space,
+    region,
+    context=None,
+    category=None,
+    draw=None,
+    poll=None,
+    parent=None,
+):
     if name not in _panels:
         _panels[name] = []
 
@@ -163,7 +183,7 @@ def add_panel(
         "pm_name": name,
         "pme_data": id,
         "draw": draw,
-        "poll": classmethod(poll)
+        "poll": classmethod(poll),
     }
     if context and context != 'ANY':
         defs["bl_context"] = context
@@ -226,8 +246,12 @@ def rename_panel_group(old_name, name):
 
 
 def move_panel(name, old_idx, idx):
-    if name not in _panels or old_idx == idx or \
-            old_idx >= len(_panels[name]) or idx > len(_panels[name]):
+    if (
+        name not in _panels
+        or old_idx == idx
+        or old_idx >= len(_panels[name])
+        or idx > len(_panels[name])
+    ):
         return
 
     panels = _panels[name]
@@ -244,21 +268,24 @@ def panel_context_items(self, context):
         contexts = set()
         for tp_name in dir(bpy.types):
             tp = getattr(bpy.types, tp_name, None)
-            if not tp or tp == panel_tp or not isclass(tp) or \
-                    not issubclass(tp, panel_tp) or \
-                    not hasattr(tp, "bl_context"):
+            if (
+                not tp
+                or tp == panel_tp
+                or not isclass(tp)
+                or not issubclass(tp, panel_tp)
+                or not hasattr(tp, "bl_context")
+            ):
                 continue
 
             contexts.add(tp.bl_context)
 
         idx = 1
-        ic_items = prefs().rna_type.properties[
-            "panel_info_visibility"].enum_items
+        ic_items = get_prefs().rna_type.properties["panel_info_visibility"].enum_items
 
         for ctx in sorted(contexts):
-            _context_items.append((
-                ctx, ctx.replace("_", " ").title(), "",
-                ic_items['CTX'].icon, idx))
+            _context_items.append(
+                (ctx, ctx.replace("_", " ").title(), "", ic_items['CTX'].icon, idx)
+            )
             idx += 1
 
     return _context_items
@@ -300,13 +327,15 @@ def bl_panel_types():
     ret = []
     panel_tp = bpy.types.Panel
     for tp_name in chain(dir(bpy.types), _hidden_panels.keys()):
-        tp = _hidden_panels[tp_name] if tp_name in _hidden_panels else \
-            getattr(bpy.types, tp_name, None)
+        tp = (
+            _hidden_panels[tp_name]
+            if tp_name in _hidden_panels
+            else getattr(bpy.types, tp_name, None)
+        )
         if not tp or not isclass(tp):
             continue
 
-        if tp is panel_tp or not issubclass(tp, panel_tp) or \
-                hasattr(tp, "pme_data"):
+        if tp is panel_tp or not issubclass(tp, panel_tp) or hasattr(tp, "pme_data"):
             continue
 
         ret.append(tp)
@@ -317,24 +346,28 @@ def bl_panel_types():
 def bl_panel_enum_items(include_hidden=True):
     ret = []
     panel_tp = bpy.types.Panel
-    panels = chain(dir(bpy.types), _hidden_panels.keys()) if include_hidden \
+    panels = (
+        chain(dir(bpy.types), _hidden_panels.keys())
+        if include_hidden
         else dir(bpy.types)
+    )
     for tp_name in panels:
-        tp = _hidden_panels[tp_name] if tp_name in _hidden_panels else \
-            getattr(bpy.types, tp_name, None)
+        tp = (
+            _hidden_panels[tp_name]
+            if tp_name in _hidden_panels
+            else getattr(bpy.types, tp_name, None)
+        )
         if not tp or not isclass(tp):
             continue
 
-        if tp == panel_tp or not issubclass(tp, panel_tp) or \
-                hasattr(tp, "pme_data"):
+        if tp == panel_tp or not issubclass(tp, panel_tp) or hasattr(tp, "pme_data"):
             continue
 
         tp_name = getattr(tp, "bl_idname", tp.__name__)
         ctx, _, name = tp_name.partition("_PT_")
         if ctx == tp_name:
             ctx = "USER"
-        label = hasattr(
-            tp, "bl_label") and tp.bl_label or name or tp_name
+        label = hasattr(tp, "bl_label") and tp.bl_label or name or tp_name
         label = "%s|%s" % (utitle(label), ctx)
 
         ret.append((tp_name, label, ""))
@@ -423,7 +456,7 @@ class PLayout:
         bpy.types.UILayout.__getattribute__ = PLayout.getattribute
         PLayout.real_operator = layout.operator
         PLayout.idx = 0
-        PLayout.interactive_panels = prefs().interactive_panels
+        PLayout.interactive_panels = get_prefs().interactive_panels
 
     @staticmethod
     def restore():
@@ -458,16 +491,28 @@ class PLayout:
 
     def btn_operator(text="", icon='NONE', icon_value=0):
         p = PLayout.real_operator(
-            PME_OT_btn_hide.bl_idname, text,
-            icon=ic(icon), icon_value=icon_value)
+            PME_OT_btn_hide.bl_idname, text, icon=ic(icon), icon_value=icon_value
+        )
         p.idx = PLayout.idx
         p.item_id = PLayout.item_id
 
     def prop(
-            data, property, text=None, text_ctxt="", translate=True,
-            icon='NONE', expand=False, slider=False, toggle=False,
-            icon_only=False, event=False, full_event=False, emboss=True,
-            index=-1, icon_value=0):
+        data,
+        property,
+        text=None,
+        text_ctxt="",
+        translate=True,
+        icon='NONE',
+        expand=False,
+        slider=False,
+        toggle=False,
+        icon_only=False,
+        event=False,
+        full_event=False,
+        emboss=True,
+        index=-1,
+        icon_value=0,
+    ):
         if text is None:
             prop = data.bl_rna.properties[property]
             text = prop.name or property
@@ -478,8 +523,7 @@ class PLayout:
             if icon == 'NONE' and icon_value == 0:
                 icon = prop.icon
             # if icon == 'NONE':
-            if prop.type in {'ENUM', 'POINTER'} or \
-                    prop.subtype == 'COLOR_GAMMA':
+            if prop.type in {'ENUM', 'POINTER'} or prop.subtype == 'COLOR_GAMMA':
                 text = data.bl_rna.properties[property].name or property
 
         if icon_only:
@@ -488,68 +532,70 @@ class PLayout:
         PLayout.btn_operator(text, icon, icon_value)
 
     def props_enum(data, property):
-        PLayout.btn_operator(
-            PLayout.prop_name(data, property, "Enum"))
+        PLayout.btn_operator(PLayout.prop_name(data, property, "Enum"))
 
     def prop_menu_enum(
-            data, property, text="", text_ctxt="", translate=True,
-            icon='NONE'):
-        PLayout.btn_operator(
-            PLayout.prop_name(data, property, "Enum"))
+        data, property, text="", text_ctxt="", translate=True, icon='NONE'
+    ):
+        PLayout.btn_operator(PLayout.prop_name(data, property, "Enum"))
 
     def prop_enum(
-            data, property, value, text="", text_ctxt="", translate=True,
-            icon='NONE'):
-        PLayout.btn_operator(
-            PLayout.prop_name(data, property, "Enum"))
+        data, property, value, text="", text_ctxt="", translate=True, icon='NONE'
+    ):
+        PLayout.btn_operator(PLayout.prop_name(data, property, "Enum"))
 
     def prop_search(
-            data, property, search_data, search_property, text="",
-            text_ctxt="", translate=True, icon='NONE'):
-        PLayout.btn_operator(
-            PLayout.prop_name(data, property, "Search"))
+        data,
+        property,
+        search_data,
+        search_property,
+        text="",
+        text_ctxt="",
+        translate=True,
+        icon='NONE',
+    ):
+        PLayout.btn_operator(PLayout.prop_name(data, property, "Search"))
 
     def operator(
-            operator, text=None, text_ctxt="", translate=True, icon='NONE',
-            emboss=True, icon_value=0):
+        operator,
+        text=None,
+        text_ctxt="",
+        translate=True,
+        icon='NONE',
+        emboss=True,
+        icon_value=0,
+    ):
         PLayout.btn_operator(text if text else "", icon, icon_value)
 
     def operator_enum(operator, property):
         PLayout.btn_operator(operator)
 
     def operator_menu_enum(
-            operator, property, text="", text_ctxt="", translate=True,
-            icon='NONE'):
+        operator, property, text="", text_ctxt="", translate=True, icon='NONE'
+    ):
         PLayout.btn_operator(operator)
 
-    def label(
-            text="", text_ctxt="", translate=True, icon='NONE', icon_value=0):
+    def label(text="", text_ctxt="", translate=True, icon='NONE', icon_value=0):
         PLayout.btn_operator(text, icon, icon_value)
 
-    def menu(
-            menu, text="", text_ctxt="", translate=True, icon='NONE',
-            icon_value=0):
+    def menu(menu, text="", text_ctxt="", translate=True, icon='NONE', icon_value=0):
         PLayout.btn_operator(text, icon, icon_value)
 
     def template_ID(data, property, new="", open="", unlink=""):
-        PLayout.btn_operator(
-            PLayout.prop_name(data, property, "ID"))
+        PLayout.btn_operator(PLayout.prop_name(data, property, "ID"))
 
-    def template_ID_preview(
-            data, property, new="", open="", unlink="", rows=0, cols=0):
-        PLayout.btn_operator(
-            PLayout.prop_name(data, property, "ID Preview"))
+    def template_ID_preview(data, property, new="", open="", unlink="", rows=0, cols=0):
+        PLayout.btn_operator(PLayout.prop_name(data, property, "ID Preview"))
 
     def template_any_ID(
-            data, property, type_property, text="", text_ctxt="",
-            translate=True):
-        PLayout.btn_operator(
-            PLayout.prop_name(data, property, "Any ID"))
+        data, property, type_property, text="", text_ctxt="", translate=True
+    ):
+        PLayout.btn_operator(PLayout.prop_name(data, property, "Any ID"))
 
     def template_path_builder(
-            data, property, root, text="", text_ctxt="", translate=True):
-        PLayout.btn_operator(
-            PLayout.prop_name(data, property, "Path Builder"))
+        data, property, root, text="", text_ctxt="", translate=True
+    ):
+        PLayout.btn_operator(PLayout.prop_name(data, property, "Path Builder"))
 
     def template_modifier(data):
         PLayout.btn_operator("Modifiers")
@@ -557,13 +603,12 @@ class PLayout:
     def template_constraint(data):
         PLayout.btn_operator("Constraints")
 
-    def template_preview(
-            id, show_buttons=True, parent=None, slot=None, preview_id=""):
+    def template_preview(id, show_buttons=True, parent=None, slot=None, preview_id=""):
         PLayout.btn_operator("Preview")
 
     def template_curve_mapping(
-            data, property, type='NONE', levels=False,
-            brush=False, use_negative_slope=False):
+        data, property, type='NONE', levels=False, brush=False, use_negative_slope=False
+    ):
         PLayout.btn_operator("Curve Mapping")
 
     def template_color_ramp(data, property, expand=False):
@@ -582,13 +627,18 @@ class PLayout:
         PLayout.btn_operator("VectorScope")
 
     def template_layers(
-            data, property, used_layers_data, used_layers_property,
-            active_layer):
+        data, property, used_layers_data, used_layers_property, active_layer
+    ):
         PLayout.btn_operator("Layers")
 
     def template_color_picker(
-            data, property, value_slider=False, lock=False,
-            lock_luminosity=False, cubic=False):
+        data,
+        property,
+        value_slider=False,
+        lock=False,
+        lock_luminosity=False,
+        cubic=False,
+    ):
         PLayout.btn_operator("Color Picker")
 
     def template_palette(data, property, color=False):
@@ -597,8 +647,7 @@ class PLayout:
     def template_image_layers(image, image_user):
         PLayout.btn_operator("Image Layers")
 
-    def template_image(
-            data, property, image_user, compact=False, multiview=False):
+    def template_image(data, property, image_user, compact=False, multiview=False):
         PLayout.btn_operator("Image")
 
     def template_image_settings(image_settings, color_management=False):
@@ -623,9 +672,18 @@ class PLayout:
         PLayout.btn_operator("MovieClip Info")
 
     def template_list(
-            listtype_name, list_id, dataptr, propname, active_dataptr,
-            active_propname, item_dyntip_propname="", rows=5, maxrows=5,
-            type='DEFAULT', columns=9):
+        listtype_name,
+        list_id,
+        dataptr,
+        propname,
+        active_dataptr,
+        active_propname,
+        item_dyntip_propname="",
+        rows=5,
+        maxrows=5,
+        type='DEFAULT',
+        columns=9,
+    ):
         PLayout.btn_operator("List")
 
     def template_running_jobs():
@@ -707,14 +765,22 @@ class PME_OT_popup_panel_menu(bpy.types.Operator):
 
     def execute(self, context):
         context.window_manager.popup_menu(
-            self.draw_popup_panel_menu, title=panel_label(self.panel))
+            self.draw_popup_panel_menu, title=panel_label(self.panel)
+        )
         return {'FINISHED'}
 
 
 def panel(
-        pt, frame=True, header=True, expand=None, area=None,
-        root=False, poll=True, layout=None,
-        **kwargs):
+    pt,
+    frame=True,
+    header=True,
+    expand=None,
+    area=None,
+    root=False,
+    poll=True,
+    layout=None,
+    **kwargs
+):
     ctx = bl_context or bpy.context
 
     if area and area != 'CURRENT':
@@ -728,8 +794,7 @@ def panel(
             if not hasattr(bpy.types, pt):
                 row = pme.context.layout.row(align=True)
                 row.alert = True
-                p = row.operator(
-                    "pme.message_box", text="Panel not found")
+                p = row.operator("pme.message_box", text="Panel not found")
                 p.message = "Panel '%s' not found" % pt
                 return True
             pt = getattr(bpy.types, pt)
@@ -763,15 +828,16 @@ def panel(
         panel.active = False
 
     try:
-        if "tabs_interface" in uprefs().addons:
+        if "tabs_interface" in get_uprefs().addons:
             import tabs_interface
+
             tabs_interface.USE_DEFAULT_POLL = True
 
         if poll and hasattr(pt, "poll") and not pt.poll(ctx):
             restore_data()
             return True
 
-        if "tabs_interface" in uprefs().addons:
+        if "tabs_interface" in get_uprefs().addons:
             tabs_interface.USE_DEFAULT_POLL = False
 
     except:
@@ -784,8 +850,7 @@ def panel(
         layout = pme.context.layout
     else:
         if layout is None:
-            layout = pme.context.layout.box() if frame else \
-                pme.context.layout.column()
+            layout = pme.context.layout.box() if frame else pme.context.layout.column()
         else:
             if CTU.is_row(layout):
                 layout = layout.column()
@@ -816,8 +881,8 @@ def panel(
         is_collapsed = header_id in PME_OT_panel_toggle.collapsed_panels
         icon = 'TRIA_RIGHT' if is_collapsed else 'TRIA_DOWN'
         sub.operator(
-            PME_OT_panel_toggle.bl_idname, text="",
-            icon=ic(icon), emboss=False).panel_id = header_id
+            PME_OT_panel_toggle.bl_idname, text="", icon=ic(icon), emboss=False
+        ).panel_id = header_id
         if hasattr(p, "draw_header"):
             p.layout = sub
             if isinstance(p.draw_header, MethodType):
@@ -825,11 +890,11 @@ def panel(
             else:
                 p.draw_header(p, ctx)
         sub.operator(
-            PME_OT_panel_toggle.bl_idname, text=panel_label(pt),
-            emboss=False).panel_id = header_id
-        row.operator(
-            PME_OT_panel_toggle.bl_idname, text=" ",
-            emboss=False).panel_id = header_id
+            PME_OT_panel_toggle.bl_idname, text=panel_label(pt), emboss=False
+        ).panel_id = header_id
+        row.operator(PME_OT_panel_toggle.bl_idname, text=" ", emboss=False).panel_id = (
+            header_id
+        )
         # row.operator(
         #     PME_OT_popup_panel_menu.bl_idname, text="",
         #     icon='COLLAPSEMENU', emboss=False)
@@ -838,7 +903,7 @@ def panel(
         p.layout = layout if root else layout.column()
         try:
             if hasattr(p, "draw"):
-                # if prefs().interactive_panels:
+                # if get_prefs().interactive_panels:
                 #     sub = p.layout.row(align=True)
                 #     sub.operator(
                 #         PME_OT_panel_reset.bl_idname,
@@ -892,8 +957,7 @@ def register():
 
     global _prefs_panel_types, _prefs_panel_polls
     bpy_types = bpy.types
-    _prefs_panel_types = [
-        v for v in dir(bpy_types) if "USERPREF_PT" in v]
+    _prefs_panel_types = [v for v in dir(bpy_types) if "USERPREF_PT" in v]
 
     def sorter(tp_name):
         if tp_name == "USERPREF_PT_tabs":
@@ -922,7 +986,8 @@ def register():
 
     global handle_view
     handle_view = bpy.types.SpaceView3D.draw_handler_add(
-        draw_callback_view, (), 'WINDOW', 'POST_VIEW')
+        draw_callback_view, (), 'WINDOW', 'POST_VIEW'
+    )
     # global handle_props
     # handle_props = bpy.types.SpaceProperties.draw_handler_add(
     #     draw_callback_props, (), 'WINDOW', 'POST_VIEW')

@@ -1,9 +1,6 @@
 import bpy
 from . import pme
-from .constants import (
-    MODAL_CMD_MODES, W_PMI_HOTKEY, I_MODAL_PROP_MOVE,
-    W_PMI_EXPR
-)
+from .constants import MODAL_CMD_MODES, W_PMI_HOTKEY, I_MODAL_PROP_MOVE, W_PMI_EXPR
 from .bl_utils import uname
 from .ed_base import EditorBase
 from .addon import temp_prefs
@@ -41,10 +38,14 @@ class Editor(EditorBase):
         self.use_preview = False
         self.default_pmi_data = "mo?"
         self.supported_slot_modes = {
-            'COMMAND', 'PROP', 'INVOKE', 'FINISH', 'CANCEL', 'UPDATE'}
-        self.supported_paste_modes = {
-            'MODAL'
+            'COMMAND',
+            'PROP',
+            'INVOKE',
+            'FINISH',
+            'CANCEL',
+            'UPDATE',
         }
+        self.supported_paste_modes = {'MODAL'}
 
     def init_pm(self, pm):
         pass
@@ -65,14 +66,18 @@ class Editor(EditorBase):
                 except:
                     pmi_data.info(W_PMI_EXPR)
 
-        if pmi_data.mode == 'COMMAND' or \
-                pmi_data.mode == 'PROP' and tpr.modal_item_prop_mode == 'KEY':
+        if (
+            pmi_data.mode == 'COMMAND'
+            or pmi_data.mode == 'PROP'
+            and tpr.modal_item_prop_mode == 'KEY'
+        ):
             if tpr.modal_item_hk.key == 'NONE':
                 pmi_data.info(W_PMI_HOTKEY)
 
         elif pmi_data.mode in MODAL_CMD_MODES:
             pmi_data.sname = bpy.types.UILayout.enum_item_name(
-                pmi_data, "mode", pmi_data.mode)
+                pmi_data, "mode", pmi_data.mode
+            )
 
         # elif pmi_data.mode == 'PROP':
         #     pmi_data.sname = bpy.types.UILayout.enum_item_name(
@@ -124,8 +129,7 @@ class Editor(EditorBase):
         if pmi.mode == 'COMMAND':
             icon = 'FILE_SCRIPT'
         elif pmi.mode == 'PROP':
-            if 'WHEELUPMOUSE' in pmi.icon or \
-                    'WHEELDOWNMOUSE' in pmi.icon:
+            if 'WHEELUPMOUSE' in pmi.icon or 'WHEELDOWNMOUSE' in pmi.icon:
                 icon = 'DECORATE_OVERRIDE'
             elif pmi.icon.startswith('MOUSEMOVE'):
                 icon = 'CENTER_ONLY'

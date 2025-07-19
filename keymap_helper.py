@@ -1,6 +1,6 @@
 import bpy
 from . import constants as CC
-from .addon import uprefs, print_exc, is_28
+from .addon import get_uprefs, print_exc, is_28
 from .property_utils import DynamicPG, to_py_value
 from .debug_utils import *
 from . import c_utils as CTU
@@ -11,10 +11,15 @@ from . import (
 )
 
 MOUSE_BUTTONS = {
-    'LEFTMOUSE', 'MIDDLEMOUSE', 'RIGHTMOUSE',
-    'BUTTON4MOUSE', 'BUTTON5MOUSE', 'BUTTON6MOUSE', 'BUTTON7MOUSE'}
-TWEAKS = {
-    'EVT_TWEAK_L', 'EVT_TWEAK_M', 'EVT_TWEAK_R', 'EVT_TWEAK_A', 'EVT_TWEAK_S'}
+    'LEFTMOUSE',
+    'MIDDLEMOUSE',
+    'RIGHTMOUSE',
+    'BUTTON4MOUSE',
+    'BUTTON5MOUSE',
+    'BUTTON6MOUSE',
+    'BUTTON7MOUSE',
+}
+TWEAKS = {'EVT_TWEAK_L', 'EVT_TWEAK_M', 'EVT_TWEAK_R', 'EVT_TWEAK_A', 'EVT_TWEAK_S'}
 MAP_TYPES = ['KEYBOARD', 'MOUSE', 'TWEAK', 'NDOF', 'TEXTINPUT', 'TIMER']
 
 CTRL = 1 << 0
@@ -76,17 +81,13 @@ class _KMList:
         "Frames",
         "Header",
         "Window",
-        "Screen"
+        "Screen",
     ]
-    default_empty = [
-        "Screen Editing",
-        "Window",
-        "Screen"
-    ]
+    default_empty = ["Screen Editing", "Window", "Screen"]
 
     def __init__(
-            self, window=None, header=None, tools=None, ui=None,
-            channels=None, preview=None):
+        self, window=None, header=None, tools=None, ui=None, channels=None, preview=None
+    ):
 
         def init_rlist(lst):
             if lst is not None:
@@ -102,7 +103,7 @@ class _KMList:
             'TOOLS': init_rlist(tools),
             'TOOL_PROPS': tools,
             'UI': init_rlist(ui) if ui else tools,
-            'PREVIEW': init_rlist(preview)
+            'PREVIEW': init_rlist(preview),
         }
 
     def get_keymaps(self, context):
@@ -117,10 +118,7 @@ class _View3DKMList(_KMList):
     def get_keymaps(self, context):
         region = context.region.type
         if region == 'WINDOW':
-            lst = [
-                "Screen Editing",
-                "Grease Pencil"
-            ]
+            lst = ["Screen Editing", "Grease Pencil"]
 
             mode = "OBJECT"
             if context.active_object:
@@ -150,23 +148,22 @@ class _ImageKMList(_KMList):
     def get_keymaps(self, context):
         region = context.region.type
         if region == 'WINDOW':
-            lst = [
-                "Screen Editing",
-                "Frames",
-                "Grease Pencil"
-            ]
+            lst = ["Screen Editing", "Frames", "Grease Pencil"]
 
             mode = bpy.context.space_data.mode
             if mode == 'PAINT':
                 lst.append("Image Paint")
             elif mode == 'MASK':
                 lst.append("Mask Editing")
-            elif mode == 'VIEW' and not is_28() or \
-                    mode == 'UV' and is_28():
+            elif mode == 'VIEW' and not is_28() or mode == 'UV' and is_28():
                 ao = context.active_object
-                if ao and ao.data and \
-                        ao.type == 'MESH' and ao.mode == 'EDIT' and \
-                        ao.data.uv_layers.active:
+                if (
+                    ao
+                    and ao.data
+                    and ao.type == 'MESH'
+                    and ao.mode == 'EDIT'
+                    and ao.data.uv_layers.active
+                ):
                     lst.append("UV Editor")
 
             lst.append("Image Generic")
@@ -181,242 +178,95 @@ class _ImageKMList(_KMList):
 
 _km_lists = {
     "VIEW_3D": _View3DKMList(
-        header=[
-            "View2D",
-            "Frames",
-            "Header",
-            "3D View Generic"
-        ],
-        tools=[
-            "Frames",
-            "View2D Buttons List",
-            "3D View Generic"
-        ]),
-
+        header=["View2D", "Frames", "Header", "3D View Generic"],
+        tools=["Frames", "View2D Buttons List", "3D View Generic"],
+    ),
     "TIMELINE": _KMList(
-        window=[
-            "View2D",
-            "Markers",
-            "Animation",
-            "Frames",
-            "Timeline"
-        ]),
-
+        window=["View2D", "Markers", "Animation", "Frames", "Timeline"]
+    ),
     "GRAPH_EDITOR": _KMList(
         window=[
             "View2D",
             "Animation",
             "Frames",
             "Graph Editor",
-            "Graph Editor Generic"
+            "Graph Editor Generic",
         ],
-        channels=[
-            "View2D",
-            "Frames",
-            "Animation Channels",
-            "Graph Editor Generic"
-        ],
-        tools=[
-            "View2D Buttons List",
-            "Graph Editor Generic"
-        ]),
-
+        channels=["View2D", "Frames", "Animation Channels", "Graph Editor Generic"],
+        tools=["View2D Buttons List", "Graph Editor Generic"],
+    ),
     "DOPESHEET_EDITOR": _KMList(
-        window=[
-            "View2D",
-            "Animation",
-            "Frames",
-            "Dopesheet",
-            "Dopesheet Generic",
-        ],
-        channels=[
-            "View2D",
-            "Frames",
-            "Animation Channels"
-        ]),
-
+        window=["View2D", "Animation", "Frames", "Dopesheet", "Dopesheet Generic",],
+        channels=["View2D", "Frames", "Animation Channels"],
+    ),
     "NLA_EDITOR": _KMList(
-        window=[
-            "View2D",
-            "Animation",
-            "Frames",
-            "NLA Editor",
-            "NLA Generic"
-        ],
+        window=["View2D", "Animation", "Frames", "NLA Editor", "NLA Generic"],
         channels=[
             "View2D",
             "Frames",
             "NLA Channels",
             "Animation Channels",
-            "NLA Generic"
+            "NLA Generic",
         ],
-        tools=[
-            "View2D Buttons List",
-            "NLA Generic"
-        ]),
-
+        tools=["View2D Buttons List", "NLA Generic"],
+    ),
     "IMAGE_EDITOR": _ImageKMList(
-        tools=[
-            "Frames",
-            "View2D Buttons List",
-            "Image Generic"
-        ]),
-
+        tools=["Frames", "View2D Buttons List", "Image Generic"]
+    ),
     "SEQUENCE_EDITOR": _KMList(
-        window=[
-            "View2D",
-            "Animation",
-            "Frames",
-            "SequencerCommon",
-            "Sequencer"
-        ],
+        window=["View2D", "Animation", "Frames", "SequencerCommon", "Sequencer"],
         preview=[
             "View2D",
             "Frames",
             "Grease Pencil",
             "SequencerCommon",
-            "SequencerPreview"
+            "SequencerPreview",
         ],
-        tools=[
-            "Frames",
-            "SequencerCommon",
-            "View2D Buttons List"
-        ]),
-
+        tools=["Frames", "SequencerCommon", "View2D Buttons List"],
+    ),
     "CLIP_EDITOR": _KMList(
-        window=[
-            "Frames",
-            "Grease Pencil",
-            "Clip",
-            "Clip Editor"
-        ],
-        channels=[
-            "Frames",
-            "Clip Dopesheet Editor"
-        ],
+        window=["Frames", "Grease Pencil", "Clip", "Clip Editor"],
+        channels=["Frames", "Clip Dopesheet Editor"],
         preview=[
             "View2D",
             "Frames",
             "Clip",
             "Clip Graph Editor",
-            "Clip Dopesheet Editor"
+            "Clip Dopesheet Editor",
         ],
-        tools=[
-            "Frames",
-            "View2D Buttons List",
-            "Clip"
-        ]),
-
+        tools=["Frames", "View2D Buttons List", "Clip"],
+    ),
     "TEXT_EDITOR": _KMList(
-        window=[
-            "Text Generic",
-            "Text"
-        ],
-        header=[
-            "View2D",
-            "Header"
-        ],
-        tools=[
-            "View2D Buttons List",
-            "Text Generic"
-        ]),
-
+        window=["Text Generic", "Text"],
+        header=["View2D", "Header"],
+        tools=["View2D Buttons List", "Text Generic"],
+    ),
     "NODE_EDITOR": _KMList(
-        window=[
-            "View2D",
-            "Frames",
-            "Grease Pencil",
-            "Node Generic",
-            "Node Editor"
-        ],
-        header=[
-            "View2D",
-            "Header",
-            "Frames"
-        ],
-        tools=[
-            "Frames",
-            "View2D Buttons List",
-            "Node Generic"
-        ]),
-
+        window=["View2D", "Frames", "Grease Pencil", "Node Generic", "Node Editor"],
+        header=["View2D", "Header", "Frames"],
+        tools=["Frames", "View2D Buttons List", "Node Generic"],
+    ),
     "LOGIC_EDITOR": _KMList(
-        window=[
-            "View2D",
-            "Frames",
-            "Logic Editor"
-        ],
-        tools=[
-            "Frames",
-            "View2D Buttons List",
-            "Logic Editor"
-        ]),
-
-    "PROPERTIES": _KMList(
-        window=[
-            "Frames",
-            "View2D Buttons List",
-            "Property Editor"
-        ]),
-
-    "OUTLINER": _KMList(
-        window=[
-            "View2D",
-            "Frames",
-            "Outliner"
-        ]),
-
-    CC.UPREFS: _KMList(
-        window=[
-            "View2D Buttons List"
-        ],
-        header=[
-            "View2D",
-            "Header"
-        ]),
-
-    "INFO": _KMList(
-        window=[
-            "View2D",
-            "Frames",
-            "Info"
-        ]),
-
+        window=["View2D", "Frames", "Logic Editor"],
+        tools=["Frames", "View2D Buttons List", "Logic Editor"],
+    ),
+    "PROPERTIES": _KMList(window=["Frames", "View2D Buttons List", "Property Editor"]),
+    "OUTLINER": _KMList(window=["View2D", "Frames", "Outliner"]),
+    CC.UPREFS: _KMList(window=["View2D Buttons List"], header=["View2D", "Header"]),
+    "INFO": _KMList(window=["View2D", "Frames", "Info"]),
     "FILE_BROWSER": _KMList(
-        window=[
-            "View2D",
-            "File Browser",
-            "File Browser Main"
-        ],
-        header=[
-            "View2D",
-            "Header",
-            "File Browser"
-        ],
-        tools=[
-            "View2D Buttons List",
-            "File Browser"
-        ],
-        ui=[
-            "File Browser",
-            "File Browser Buttons"
-        ]),
-
-    "CONSOLE": _KMList(
-        window=[
-            "View2D",
-            "Console"
-        ],
-        header=[
-            "View2D",
-            "Header"
-        ])
+        window=["View2D", "File Browser", "File Browser Main"],
+        header=["View2D", "Header", "File Browser"],
+        tools=["View2D Buttons List", "File Browser"],
+        ui=["File Browser", "File Browser Buttons"],
+    ),
+    "CONSOLE": _KMList(window=["View2D", "Console"], header=["View2D", "Header"]),
 }
 
 
 def is_default_select_key():
     context = bpy.context
-    upr = uprefs()
+    upr = get_uprefs()
     if hasattr(upr.inputs, "select_mouse"):
         ret = upr.inputs.select_mouse == 'RIGHT'
     else:
@@ -548,16 +398,18 @@ def run_operator(context, key, ctrl, shift, alt, oskey, key_mod):
             continue
         km = keymaps[km_name]
         for kmi in km.keymap_items:
-            if (kmi.type == key1 or kmi.type == key2) and \
-                    kmi.value == 'PRESS' and \
-                    kmi.active and \
-                    kmi.ctrl == ctrl and \
-                    kmi.shift == shift and \
-                    kmi.alt == alt and \
-                    kmi.oskey == oskey and \
-                    kmi.key_modifier == key_mod and \
-                    kmi.idname != "pme.mouse_state" and \
-                    kmi.idname != "wm.pme_user_pie_menu_call":
+            if (
+                (kmi.type == key1 or kmi.type == key2)
+                and kmi.value == 'PRESS'
+                and kmi.active
+                and kmi.ctrl == ctrl
+                and kmi.shift == shift
+                and kmi.alt == alt
+                and kmi.oskey == oskey
+                and kmi.key_modifier == key_mod
+                and kmi.idname != "pme.mouse_state"
+                and kmi.idname != "wm.pme_user_pie_menu_call"
+            ):
                 module, _, operator = kmi.idname.rpartition(".")
                 if not module or "." in module:
                     continue
@@ -617,8 +469,16 @@ def to_key_name(key):
 
 
 def to_hotkey(
-        key, ctrl=False, shift=False, alt=False, oskey=False,
-        key_mod=None, any=False, use_key_names=False, chord=None):
+    key,
+    ctrl=False,
+    shift=False,
+    alt=False,
+    oskey=False,
+    key_mod=None,
+    any=False,
+    use_key_names=False,
+    chord=None,
+):
     if not key or key == 'NONE':
         return ""
 
@@ -703,7 +563,7 @@ class KeymapHelper:
         self.keymap_items[km.name].append(item)
 
     def available(self):
-        DBG_INIT and not bpy.context.window_manager.keyconfigs.addon and \
+        if DBG_INIT and not bpy.context.window_manager.keyconfigs.addon:
             loge("KH is not available")
         return True if bpy.context.window_manager.keyconfigs.addon else False
 
@@ -718,26 +578,38 @@ class KeymapHelper:
             elif name in _keymap_names:
                 space_type = _keymap_names[name][0]
                 region_type = _keymap_names[name][1]
-            keymaps.new(
-                name=name, space_type=space_type, region_type=region_type)
+            keymaps.new(name=name, space_type=space_type, region_type=region_type)
 
         self.km = keymaps[name]
 
     def menu(
-            self, bl_class, hotkey=None,
-            key='NONE', ctrl=False, shift=False, alt=False, oskey=False,
-            key_mod='NONE'):
+        self,
+        bl_class,
+        hotkey=None,
+        key='NONE',
+        ctrl=False,
+        shift=False,
+        alt=False,
+        oskey=False,
+        key_mod='NONE',
+    ):
         if not self.km:
             return
 
         if hotkey:
-            key, ctrl, shift, alt, oskey, any, key_mod, _ = \
-                parse_hotkey(hotkey)
+            key, ctrl, shift, alt, oskey, any, key_mod, _ = parse_hotkey(hotkey)
 
         item = self.km.keymap_items.new(
-            'wm.call_menu', key, 'PRESS',
-            ctrl=ctrl, shift=shift, alt=alt, oskey=oskey, any=any,
-            key_modifier=key_mod)
+            'wm.call_menu',
+            key,
+            'PRESS',
+            ctrl=ctrl,
+            shift=shift,
+            alt=alt,
+            oskey=oskey,
+            any=any,
+            key_modifier=key_mod,
+        )
         item.properties.name = bl_class.bl_idname
 
         self._add_item(self.km, item)
@@ -745,33 +617,56 @@ class KeymapHelper:
         return item
 
     def operator(
-            self, bl_class, hotkey=None,
-            key='NONE', ctrl=False, shift=False, alt=False, oskey=False,
-            key_mod='NONE', any=False, **kwargs):
+        self,
+        bl_class,
+        hotkey=None,
+        key='NONE',
+        ctrl=False,
+        shift=False,
+        alt=False,
+        oskey=False,
+        key_mod='NONE',
+        any=False,
+        **kwargs
+    ):
         if not self.km:
             return
 
         if hotkey:
             if isinstance(hotkey, str):
-                key, ctrl, shift, alt, oskey, any, key_mod, _ = \
-                    parse_hotkey(hotkey)
+                key, ctrl, shift, alt, oskey, any, key_mod, _ = parse_hotkey(hotkey)
             else:
-                key, ctrl, shift, alt, oskey, key_mod = \
-                    hotkey.key, hotkey.ctrl, hotkey.shift, hotkey.alt, \
-                    hotkey.oskey, hotkey.key_mod
+                key, ctrl, shift, alt, oskey, key_mod = (
+                    hotkey.key,
+                    hotkey.ctrl,
+                    hotkey.shift,
+                    hotkey.alt,
+                    hotkey.oskey,
+                    hotkey.key_mod,
+                )
 
         item = self.km.keymap_items.new(
-            bl_class.bl_idname, key, 'PRESS',
-            ctrl=ctrl, shift=shift, alt=alt, oskey=oskey, key_modifier=key_mod,
-            any=any)
+            bl_class.bl_idname,
+            key,
+            'PRESS',
+            ctrl=ctrl,
+            shift=shift,
+            alt=alt,
+            oskey=oskey,
+            key_modifier=key_mod,
+            any=any,
+        )
 
         if bl_class != PME_OT_key_state_init:
             n = len(self.km.keymap_items)
             i = n - 1
             ms_items = []
             keys = []
-            while i >= 1 and self.km.keymap_items[i - 1].idname == \
-                    PME_OT_key_state_init.bl_idname:
+            while (
+                i >= 1
+                and self.km.keymap_items[i - 1].idname
+                == PME_OT_key_state_init.bl_idname
+            ):
                 ms_item = self.km.keymap_items[i - 1]
                 ms_items.append(ms_item)
                 keys.append(ms_item.type)
@@ -783,8 +678,8 @@ class KeymapHelper:
 
                 for key in keys:
                     self.km.keymap_items.new(
-                        PME_OT_key_state_init.bl_idname,
-                        key, 'PRESS', 1, 1, 1, 1, 1).properties.key = key
+                        PME_OT_key_state_init.bl_idname, key, 'PRESS', 1, 1, 1, 1, 1
+                    ).properties.key = key
 
         self._add_item(self.km, item)
 
@@ -793,19 +688,33 @@ class KeymapHelper:
 
         return item
 
-    def pie(self, bl_class, hotkey=None,
-            key='NONE', ctrl=False, shift=False, alt=False, oskey=False,
-            key_mod='NONE'):
+    def pie(
+        self,
+        bl_class,
+        hotkey=None,
+        key='NONE',
+        ctrl=False,
+        shift=False,
+        alt=False,
+        oskey=False,
+        key_mod='NONE',
+    ):
         if not self.km:
             return
 
         if hotkey:
-            key, ctrl, shift, alt, oskey, any, key_mod, _ = \
-                parse_hotkey(hotkey)
+            key, ctrl, shift, alt, oskey, any, key_mod, _ = parse_hotkey(hotkey)
 
         item = self.km.keymap_items.new(
-            'wm.call_menu_pie', key, 'PRESS',
-            ctrl=ctrl, shift=shift, alt=alt, oskey=oskey, key_modifier=key_mod)
+            'wm.call_menu_pie',
+            key,
+            'PRESS',
+            ctrl=ctrl,
+            shift=shift,
+            alt=alt,
+            oskey=oskey,
+            key_modifier=key_mod,
+        )
         item.properties.name = bl_class.bl_idname
 
         self._add_item(self.km, item)
@@ -818,9 +727,11 @@ class KeymapHelper:
 
         keymaps = bpy.context.window_manager.keyconfigs.addon.keymaps
 
-        if self.km.name not in keymaps or \
-                self.km.name not in self.keymap_items or \
-                item not in self.keymap_items[self.km.name]:
+        if (
+            self.km.name not in keymaps
+            or self.km.name not in self.keymap_items
+            or item not in self.keymap_items[self.km.name]
+        ):
             return
 
         try:
@@ -860,19 +771,21 @@ class Hotkey(DynamicPG):
                 self.to_kmi(kmi)
 
     key: bpy.props.EnumProperty(
-        items=key_items, description="Key pressed", update=_hotkey_update)
-    ctrl: bpy.props.BoolProperty(
-        description="Ctrl key pressed", update=_hotkey_update)
+        items=key_items, description="Key pressed", update=_hotkey_update
+    )
+    ctrl: bpy.props.BoolProperty(description="Ctrl key pressed", update=_hotkey_update)
     shift: bpy.props.BoolProperty(
-        description="Shift key pressed", update=_hotkey_update)
-    alt: bpy.props.BoolProperty(
-        description="Alt key pressed", update=_hotkey_update)
+        description="Shift key pressed", update=_hotkey_update
+    )
+    alt: bpy.props.BoolProperty(description="Alt key pressed", update=_hotkey_update)
     oskey: bpy.props.BoolProperty(
-        description="Operating system key pressed", update=_hotkey_update)
+        description="Operating system key pressed", update=_hotkey_update
+    )
     key_mod: bpy.props.EnumProperty(
         items=key_items,
         description="Regular key pressed as a modifier",
-        update=_hotkey_update)
+        update=_hotkey_update,
+    )
 
     def add_kmi(self, kmi):
         if not self.hasvar("kmis"):
@@ -907,8 +820,16 @@ class Hotkey(DynamicPG):
 
     def from_string(self, text):
         Hotkey.lock = True
-        self.key, self.ctrl, self.shift, self.alt, self.oskey, self.any, \
-            self.key_modifier, _ = parse_hotkey(text)
+        (
+            self.key,
+            self.ctrl,
+            self.shift,
+            self.alt,
+            self.oskey,
+            self.any,
+            self.key_modifier,
+            _,
+        ) = parse_hotkey(text)
         Hotkey.lock = False
 
     def from_kmi(self, kmi):
@@ -923,8 +844,8 @@ class Hotkey(DynamicPG):
 
     def to_string(self):
         return to_hotkey(
-            self.key, self.ctrl, self.shift, self.alt, self.oskey,
-            self.key_mod)
+            self.key, self.ctrl, self.shift, self.alt, self.oskey, self.key_mod
+        )
 
     def to_kmi(self, kmi):
         set_kmi_type(kmi, self.key)
@@ -947,9 +868,9 @@ class PME_OT_mouse_state(bpy.types.Operator):
 
     def stop(self):
         self.cancelled = True
-        self.bl_timer = \
-            bpy.context.window_manager.event_timer_add(
-                0.1, window=bpy.context.window)
+        self.bl_timer = bpy.context.window_manager.event_timer_add(
+            0.1, window=bpy.context.window
+        )
 
     def modal_stop(self, context):
         if self.bl_timer:
@@ -973,8 +894,7 @@ class PME_OT_mouse_state(bpy.types.Operator):
         if event.value == 'PRESS':
             if event.type == 'ESC':
                 return {'CANCELLED'}
-            elif event.type != 'MOUSEMOVE' and \
-                    event.type != 'INBETWEEN_MOUSEMOVE':
+            elif event.type != 'MOUSEMOVE' and event.type != 'INBETWEEN_MOUSEMOVE':
                 update_mouse_state(self.key)
                 return {'PASS_THROUGH'}
 
@@ -1036,9 +956,9 @@ class PME_OT_mouse_state_wait(bpy.types.Operator):
     def invoke(self, context, event):
         self.cancelled = False
         context.window_manager.modal_handler_add(self)
-        self.bl_timer = \
-            context.window_manager.event_timer_add(
-                0.0001, window=context.window)
+        self.bl_timer = context.window_manager.event_timer_add(
+            0.0001, window=context.window
+        )
 
         self.__class__.inst = self
         return {'RUNNING_MODAL'}
@@ -1097,8 +1017,7 @@ class PME_OT_key_state(bpy.types.Operator):
             self.stop()
             return {'PASS_THROUGH'}
 
-        if event.type == 'MOUSEMOVE' or \
-                event.type == 'INBETWEEN_MOUSEMOVE':
+        if event.type == 'MOUSEMOVE' or event.type == 'INBETWEEN_MOUSEMOVE':
             self.active = True
             return {'PASS_THROUGH'}
 
@@ -1139,7 +1058,8 @@ class PME_OT_key_state(bpy.types.Operator):
         self.active = True
         self.__class__.inst = self
         self.bl_timer = context.window_manager.event_timer_add(
-            0.01, window=bpy.context.window)
+            0.01, window=bpy.context.window
+        )
         context.window_manager.modal_handler_add(self)
 
         return {'RUNNING_MODAL'}
@@ -1180,8 +1100,7 @@ class PME_OT_mouse_btn_state(bpy.types.Operator, CTU.HeadModalHandler):
 
 
 def is_key_pressed(key):
-    ret = PME_OT_mouse_btn_state.inst and \
-        PME_OT_mouse_btn_state.inst.key == key
+    ret = PME_OT_mouse_btn_state.inst and PME_OT_mouse_btn_state.inst.key == key
     # ret = PME_OT_key_state.inst and PME_OT_key_state.inst.key == key
     return ret
     # return PME_OT_mouse_state.inst and PME_OT_mouse_state.inst.key == key or \
@@ -1219,7 +1138,14 @@ def add_mouse_button(key, kh, km="Screen Editing"):
             PME_OT_mouse_btn_state,
             # PME_OT_key_state_init,
             # PME_OT_mouse_state_init,
-            None, key, 1, 1, 1, 1, any=True).properties.key = key
+            None,
+            key,
+            1,
+            1,
+            1,
+            1,
+            any=True,
+        ).properties.key = key
 
 
 def remove_mouse_button(key, kh, km="Screen Editing"):
@@ -1234,8 +1160,7 @@ def remove_mouse_button(key, kh, km="Screen Editing"):
 
         items = kh.keymap_items[km]
         for i, item in enumerate(items):
-            if item.type == key and \
-                    item.idname == PME_OT_mouse_btn_state.bl_idname:
+            if item.type == key and item.idname == PME_OT_mouse_btn_state.bl_idname:
                 keymaps[km].keymap_items.remove(item)
                 items.pop(i)
                 break
@@ -1256,7 +1181,8 @@ class PME_OT_key_is_pressed(bpy.types.Operator):
         if self.timer:
             bpy.context.window_manager.event_timer_remove(self.timer)
         self.timer = bpy.context.window_manager.event_timer_add(
-            step, window=bpy.context.window)
+            step, window=bpy.context.window
+        )
 
     def remove_timer(self):
         if self.timer:
@@ -1308,8 +1234,7 @@ class PME_OT_key_is_pressed(bpy.types.Operator):
                 self.instance.stop()
             self.stop()
 
-        elif event.type == 'MOUSEMOVE' or \
-                event.type == 'INBETWEEN_MOUSEMOVE':
+        elif event.type == 'MOUSEMOVE' or event.type == 'INBETWEEN_MOUSEMOVE':
             return {'PASS_THROUGH'}
 
         if event.type == self.key:
@@ -1461,12 +1386,14 @@ class StackKey:
         else:
             StackKey.is_first = pm is not None and cpm.name != StackKey.name
 
-            lo = len(bpy.context.window_manager.operators) and \
-                bpy.context.window_manager.operators[-1].as_pointer()
+            lo = (
+                len(bpy.context.window_manager.operators)
+                and bpy.context.window_manager.operators[-1].as_pointer()
+            )
 
             if not StackKey.is_first and (
-                    lo == 0 and StackKey.lo or
-                    lo and StackKey.lo and lo != StackKey.lo):
+                lo == 0 and StackKey.lo or lo and StackKey.lo and lo != StackKey.lo
+            ):
                 StackKey.is_first = True
 
             StackKey.name = cpm.name
@@ -1474,8 +1401,11 @@ class StackKey:
             if StackKey.is_first:
                 StackKey.operator_mode = prop.s_undo
 
-            if not StackKey.is_first and StackKey.operator_mode and \
-                    StackKey.cur_idx == -1:
+            if (
+                not StackKey.is_first
+                and StackKey.operator_mode
+                and StackKey.cur_idx == -1
+            ):
                 if not lo or not StackKey.lo or lo != StackKey.lo:
                     StackKey.is_first = True
                 elif not selection_state.check():
@@ -1491,15 +1421,27 @@ class StackKey:
                 StackKey.sk_states[cpm.name] = StackKey.idx
 
             DBG_STACK and logh(
-                "STACK: %s (OpM: %d, 1st: %d, i: %d, c: %d, ci: %d) %s" % (
-                    cpm.name, StackKey.operator_mode, StackKey.is_first,
-                    StackKey.idx, StackKey.count, StackKey.cur_idx, pmi.name
-                ))
+                "STACK: %s (OpM: %d, 1st: %d, i: %d, c: %d, ci: %d) %s"
+                % (
+                    cpm.name,
+                    StackKey.operator_mode,
+                    StackKey.is_first,
+                    StackKey.idx,
+                    StackKey.count,
+                    StackKey.cur_idx,
+                    pmi.name,
+                )
+            )
             DBG_STACK and logi("AO: %s, LO: %s" % (str(lo), str(StackKey.lo)))
 
         try:
-            if slot == -1 and num_pmis > 1 and \
-                    prop.s_undo and not StackKey.is_first and pm:
+            if (
+                slot == -1
+                and num_pmis > 1
+                and prop.s_undo
+                and not StackKey.is_first
+                and pm
+            ):
                 bpy.ops.ed.undo()
 
             cur_idx = StackKey.idx
@@ -1512,9 +1454,7 @@ class StackKey:
                 run_operator_by_hotkey(bpy.context, pmi.text)
             elif pmi.mode == 'COMMAND':
                 StackKey.exec_globals.update(menu=cpm.name, slot=pmi.name)
-                pme.context.exe(
-                    OU.add_default_args(pmi.text),
-                    StackKey.exec_globals)
+                pme.context.exe(OU.add_default_args(pmi.text), StackKey.exec_globals)
 
             if StackKey.idx == cur_idx and len(cpm.pmis) > 1:
                 selection_state.update()
@@ -1526,8 +1466,10 @@ class StackKey:
 
         StackKey.cur_idx = -1
 
-        StackKey.lo = len(bpy.context.window_manager.operators) and \
-            bpy.context.window_manager.operators[-1].as_pointer()
+        StackKey.lo = (
+            len(bpy.context.window_manager.operators)
+            and bpy.context.window_manager.operators[-1].as_pointer()
+        )
         if lo != 0 and not StackKey.operator_mode:
             if StackKey.lo and lo != StackKey.lo:
                 StackKey.operator_mode = True

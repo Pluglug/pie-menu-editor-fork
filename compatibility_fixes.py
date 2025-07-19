@@ -1,13 +1,13 @@
 import re
 from . import addon
-from .addon import prefs
+from .addon import get_prefs
 from .debug_utils import *
 from . import constants as CC
 
 
 def fix(pms=None, version=None):
     DBG_INIT and logh("PME Fixes")
-    pr = prefs()
+    pr = get_prefs()
     pr_version = version or tuple(pr.version)
     if pr_version == addon.VERSION:
         return
@@ -38,7 +38,7 @@ def fix(pms=None, version=None):
 
 def fix_json(pm, menu, version):
     DBG_INIT and logh("PME JSON Fixes")
-    pr = prefs()
+    pr = get_prefs()
     fixes = []
     re_fix = re.compile(r"fix_json_(\d+)_(\d+)_(\d+)")
     for k, v in globals().items():
@@ -61,11 +61,13 @@ def fix_1_14_0(pr, pm):
     if pm.mode == 'PMENU':
         for pmi in pm.pmis:
             if pmi.mode == 'MENU':
-                sub_pm = pmi.text in pr.pie_menus and \
-                    pr.pie_menus[pmi.text]
+                sub_pm = pmi.text in pr.pie_menus and pr.pie_menus[pmi.text]
 
-                if sub_pm and sub_pm.mode == 'DIALOG' and \
-                        sub_pm.get_data("pd_panel") == 0:
+                if (
+                    sub_pm
+                    and sub_pm.mode == 'DIALOG'
+                    and sub_pm.get_data("pd_panel") == 0
+                ):
                     pmi.text = CC.F_EXPAND + pmi.text
 
                     if sub_pm.get_data("pd_box"):
@@ -76,8 +78,7 @@ def fix_1_14_0(pr, pm):
             pm.set_data("pd_expand", False)
             for pmi in pm.pmis:
                 if pmi.mode == 'MENU':
-                    sub_pm = pmi.text in pr.pie_menus and \
-                        pr.pie_menus[pmi.text]
+                    sub_pm = pmi.text in pr.pie_menus and pr.pie_menus[pmi.text]
                     if sub_pm and sub_pm.mode == 'DIALOG':
                         pmi.text = CC.F_EXPAND + pmi.text
 

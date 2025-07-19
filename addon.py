@@ -1,7 +1,13 @@
+from __future__ import annotations
+
 import bpy
 import os
 import sys
 import traceback
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from .preferences import PMEPreferences
 
 
 VERSION = None
@@ -10,17 +16,66 @@ ADDON_ID = os.path.basename(os.path.dirname(os.path.abspath(__file__)))
 ADDON_PATH = os.path.normpath(os.path.dirname(os.path.abspath(__file__)))
 SCRIPT_PATH = os.path.join(ADDON_PATH, "scripts/")
 SAFE_MODE = "--pme-safe-mode" in sys.argv
-ICON_ENUM_ITEMS = bpy.types.UILayout.bl_rna.functions[
-    "prop"].parameters["icon"].enum_items
+ICON_ENUM_ITEMS = (
+    bpy.types.UILayout.bl_rna.functions["prop"].parameters["icon"].enum_items
+)
+
+
+def get_uprefs(context: bpy.types.Context = bpy.context) -> bpy.types.Preferences:
+    """
+    Get user preferences
+
+    Args:
+        context: Blender context (defaults to bpy.context)
+
+    Returns:
+        bpy.types.Preferences: User preferences
+
+    Raises:
+        AttributeError: If preferences cannot be accessed
+    """
+    preferences = getattr(context, "preferences", None)
+    if preferences is not None:
+        return preferences
+    raise AttributeError("Could not access preferences")
+
+
+def get_prefs(context: bpy.types.Context = bpy.context) -> PMEPreferences:
+    """
+    Get addon preferences
+
+    Args:
+        context: Blender context (defaults to bpy.context)
+
+    Returns:
+        bpy.types.AddonPreferences: Addon preferences
+
+    Raises:
+        KeyError: If addon is not found
+    """
+    user_prefs = get_uprefs(context)
+    addon_prefs = user_prefs.addons.get(ADDON_ID)
+    if addon_prefs is not None:
+        return addon_prefs.preferences
+    raise KeyError(f"Addon '{ADDON_ID}' not found")
 
 
 def uprefs():
-    return getattr(bpy.context, "user_preferences", None) or \
-        getattr(bpy.context, "preferences", None)
+    stack = traceback.extract_stack()
+    caller = stack[-2]
+    print(
+        f"Warning: uprefs() is deprecated. Called from {caller.filename}:{caller.lineno}"
+    )
+    return get_uprefs()
 
 
 def prefs():
-    return uprefs().addons[ADDON_ID].preferences
+    stack = traceback.extract_stack()
+    caller = stack[-2]
+    print(
+        f"Warning: prefs() is deprecated. Called from {caller.filename}:{caller.lineno}"
+    )
+    return get_prefs()
 
 
 def temp_prefs():
@@ -40,7 +95,7 @@ def check_context():
 
 
 def print_exc(text=None):
-    if not prefs().show_error_trace:
+    if not get_prefs().show_error_trace:
         return
 
     if text is not None:

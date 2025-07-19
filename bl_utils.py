@@ -1,7 +1,7 @@
 import bpy
 import _bpy
 import re
-from .addon import print_exc, ic, uprefs, is_28
+from .addon import print_exc, ic, get_uprefs, is_28
 from .screen_utils import get_override_args
 from . import constants as CC
 from . import pme
@@ -27,7 +27,6 @@ CTX_PATHS = {
     "World": "C.scene.world",
     "Object": "C.object",
     "Material": "C.object.active_material",
-
     "Area": "C.area",
     "Region": "C.region",
     "SpaceUVEditor": "C.space_data.uv_editor",
@@ -61,11 +60,7 @@ def find_context(area_type):
     if not area:
         return None
 
-    return {
-        "area": area,
-        "window": bpy.context.window,
-        "screen": bpy.context.screen
-    }
+    return {"area": area, "window": bpy.context.window, "screen": bpy.context.screen}
 
 
 def paint_settings(context=None):
@@ -90,6 +85,7 @@ def unified_paint_panel():
         return ret
 
     from bl_ui.properties_paint_common import UnifiedPaintPanel
+
     return UnifiedPaintPanel
 
 
@@ -208,24 +204,24 @@ class BlContext:
                     value = BlContext.bl_area
 
                 elif attr == "material_slot":
-                    if ao and ao.active_material_index < len(
-                            ao.material_slots):
+                    if ao and ao.active_material_index < len(ao.material_slots):
                         value = ao.material_slots[ao.active_material_index]
 
                 elif attr == "material":
                     if self.areas:
                         sd = self.area_map[self.areas[-1]]
                         if sd.type == 'PROPERTIES':
-                            texture_context = getattr(
-                                sd, "texture_context", None)
+                            texture_context = getattr(sd, "texture_context", None)
 
                     # if True:
                     if texture_context == 'MATERIAL':
                         value = ao and ao.active_material
 
                 elif attr == "world":
-                    value = hasattr(BlContext.context, "scene") and \
-                        BlContext.context.scene.world
+                    value = (
+                        hasattr(BlContext.context, "scene")
+                        and BlContext.context.scene.world
+                    )
 
                 elif attr == "brush":
                     ps = paint_settings(BlContext.context)
@@ -283,8 +279,7 @@ class BlContext:
 
                 elif attr == "particle_system":
                     if ao and len(ao.particle_systems):
-                        value = ao.particle_systems[
-                            ao.particle_systems.active_index]
+                        value = ao.particle_systems[ao.particle_systems.active_index]
                     else:
                         value = None
 
@@ -373,26 +368,35 @@ class PopupOperator:
     active = 0
 
     width: bpy.props.IntProperty(
-        name="Width", description="Width of the popup",
-        default=300, options={'SKIP_SAVE'})
+        name="Width",
+        description="Width of the popup",
+        default=300,
+        options={'SKIP_SAVE'},
+    )
     auto_close: bpy.props.BoolProperty(
-        default=True, name="Auto Close",
-        description="Auto close the popup", options={'SKIP_SAVE'})
+        default=True,
+        name="Auto Close",
+        description="Auto close the popup",
+        options={'SKIP_SAVE'},
+    )
     hide_title: bpy.props.BoolProperty(
         default=False, name="Hide Title",
         description=(
             "Hide title.\n"
             "  Used when Auto Close is enabled.\n"
-        ), options={'SKIP_SAVE'})
+        ), options={'SKIP_SAVE'},
+    )
     center: bpy.props.BoolProperty(
-        name="Center", description="Center", options={'SKIP_SAVE'})
+        name="Center", description="Center", options={'SKIP_SAVE'}
+    )
     title: bpy.props.StringProperty(
         name="Title",
         description=(
             "Title of the popup.\n"
             "  Used when Auto Close is enabled.\n"
         ),
-        options={'SKIP_SAVE'})
+        options={'SKIP_SAVE'},
+    )
 
     def check(self, context):
         return True
@@ -436,8 +440,8 @@ class PopupOperator:
         bl_context.reset(context)
 
         popup_padding = round(
-            2 * CC.POPUP_PADDING * uprefs().view.ui_scale +
-            CC.WINDOW_MARGIN)
+            2 * CC.POPUP_PADDING * get_uprefs().view.ui_scale + CC.WINDOW_MARGIN
+        )
         if self.width > context.window.width - popup_padding:
             self.width = context.window.width - popup_padding
 
@@ -452,12 +456,11 @@ class PopupOperator:
             context.window.cursor_warp(mx, my)
 
         else:
-            offset = round(30 * uprefs().view.ui_scale)
+            offset = round(30 * get_uprefs().view.ui_scale)
             w2 = self.width >> 1
             mid_x = context.window.width >> 1
             min_x = w2 + CC.POPUP_PADDING + offset
-            max_x = context.window.width - (
-                self.width >> 1) - CC.POPUP_PADDING - offset
+            max_x = context.window.width - (self.width >> 1) - CC.POPUP_PADDING - offset
             mx, my = event.mouse_x, event.mouse_y
             if self.auto_close:
                 min_x -= w2
@@ -479,11 +482,9 @@ class PopupOperator:
                     context.window.cursor_warp(self.mx - w2, self.my)
 
         if self.auto_close:
-            return context.window_manager.invoke_popup(
-                self, width=self.width)
+            return context.window_manager.invoke_popup(self, width=self.width)
         else:
-            return context.window_manager.invoke_props_dialog(
-                self, width=self.width)
+            return context.window_manager.invoke_props_dialog(self, width=self.width)
 
 
 class ConfirmBoxHandler:
@@ -518,7 +519,8 @@ class ConfirmBoxHandler:
                 return context.window_manager.invoke_confirm(self, event)
 
             self.timer = context.window_manager.event_timer_add(
-                0.1, window=context.window)
+                0.1, window=context.window
+            )
             context.window_manager.modal_handler_add(self)
             msg = getattr(self, "title", self.bl_label) or "OK?"
 
@@ -538,12 +540,9 @@ class PME_OT_confirm_box(bpy.types.Operator):
 
     func = None
 
-    message: bpy.props.StringProperty(
-        default="Confirm", options={'SKIP_SAVE'})
-    icon: bpy.props.StringProperty(
-        default='QUESTION', options={'SKIP_SAVE'})
-    width: bpy.props.IntProperty(
-        default=0, options={'SKIP_SAVE'})
+    message: bpy.props.StringProperty(default="Confirm", options={'SKIP_SAVE'})
+    icon: bpy.props.StringProperty(default='QUESTION', options={'SKIP_SAVE'})
+    width: bpy.props.IntProperty(default=0, options={'SKIP_SAVE'})
 
     def draw(self, context):
         row = self.layout.row(align=True)
@@ -566,14 +565,14 @@ class PME_OT_confirm_box(bpy.types.Operator):
         if self.width:
             kwargs.update(width=self.width)
 
-        return context.window_manager.invoke_props_dialog(
-            self, **kwargs)
+        return context.window_manager.invoke_props_dialog(self, **kwargs)
 
 
 def confirm_box(message, func=None, icon='QUESTION', width=0):
     PME_OT_confirm_box.func = func
     bpy.ops.pme.confirm_box(
-        'INVOKE_DEFAULT', message=message, icon=ic(icon), width=width)
+        'INVOKE_DEFAULT', message=message, icon=ic(icon), width=width
+    )
 
 
 class PME_OT_message_box(bpy.types.Operator):
@@ -582,11 +581,9 @@ class PME_OT_message_box(bpy.types.Operator):
     bl_description = "Message Box"
     bl_options = {'INTERNAL'}
 
-    title: bpy.props.StringProperty(
-        default="Pie Menu Editor", options={'SKIP_SAVE'})
+    title: bpy.props.StringProperty(default="Pie Menu Editor", options={'SKIP_SAVE'})
     message: bpy.props.StringProperty(options={'SKIP_SAVE'})
-    icon: bpy.props.StringProperty(
-        default='INFO', options={'SKIP_SAVE'})
+    icon: bpy.props.StringProperty(default='INFO', options={'SKIP_SAVE'})
 
     def draw_message_box(self, menu, context):
         lines = self.message.split("\n")
@@ -596,8 +593,7 @@ class PME_OT_message_box(bpy.types.Operator):
             icon = 'NONE'
 
     def execute(self, context):
-        context.window_manager.popup_menu(
-            self.draw_message_box, title=self.title)
+        context.window_manager.popup_menu(self.draw_message_box, title=self.title)
         return {'FINISHED'}
 
 
@@ -647,8 +643,7 @@ class PME_OT_input_box(bpy.types.Operator):
 
 def input_box(func=None, prop=None):
     PME_OT_input_box.func = func
-    bpy.ops.pme.input_box(
-        'INVOKE_DEFAULT', prop=prop or "")
+    bpy.ops.pme.input_box('INVOKE_DEFAULT', prop=prop or "")
     return True
 
 
@@ -667,7 +662,7 @@ def gen_prop_path(ptr, prop):
         return _gen_prop_path(ptr, prop, "C.space_data")
 
     if isinstance(ptr, bpy.types.Brush):
-        return ("paint_settings().brush." + prop.identifier)
+        return "paint_settings().brush." + prop.identifier
 
     ptr_clname = ptr.__class__.__name__
     id_data = ptr.id_data
@@ -768,15 +763,24 @@ def get_space_data(area_type):
 
 # MIGRATION_TODO: Replace dictionary override with context.temp_override
 def ctx_dict(
-        window=None, screen=None, area=None, region=None, scene=None,
-        workspace=None):
+    window=None, screen=None, area=None, region=None, scene=None, workspace=None
+):
     import warnings
+
     warnings.warn(
         "ctx_dict() is deprecated, use get_override_args() instead",
-        DeprecationWarning, stacklevel=2)
+        DeprecationWarning,
+        stacklevel=2,
+    )
 
-    d = get_override_args(area=area, region=region, screen=screen,
-                window=window, scene=scene, workspace=workspace)
+    d = get_override_args(
+        area=area,
+        region=region,
+        screen=screen,
+        window=window,
+        scene=scene,
+        workspace=workspace,
+    )
 
     # default_kwargs = {
     #     "window": bl_context.window,
@@ -803,7 +807,10 @@ def area_header_text_set(text=None, area=None):
         # Note: bpy.context.area becomes None during modal execution if `screen.screen_full_area` is called.
         areas = _find_areas_with_header_text_support(bpy.context)
         if not areas:
-            logw("area_header_text_set", "No valid areas with 'header_text_set' available in current context. Exiting function.")
+            logw(
+                "area_header_text_set",
+                "No valid areas with 'header_text_set' available in current context. Exiting function.",
+            )
             return
     else:
         areas = [area]
@@ -821,38 +828,117 @@ def _find_areas_with_header_text_support(context):
     return [area for area in context.screen.areas if hasattr(area, 'header_text_set')]
 
 
-# FIXME: Width and Height are not actually applied.
 def popup_area(area, width=320, height=400, x=None, y=None):
-    r = c_utils.area_rect(area)
+    """
+    Create a popup window by duplicating an area with specified dimensions.
 
+    This function temporarily modifies the source area's size parameters to control
+    the resulting popup window size, then restores the original values.
+
+    Args:
+        area: Source area to duplicate
+        width: Desired width for the popup window
+        height: Desired height for the popup window
+        x: X position for window placement (optional)
+        y: Y position for window placement (optional)
+    """
     C = bpy.context
     window = C.window
-    if height > window.height:
-        height = window.height
 
-    if x is not None and y is not None:
-        r.xmin = x - (width >> 1)
-        r.ymin = y - height + 8
-        if r.ymin < 0:
-            r.ymin = 0
+    # Get direct access to ScrArea structure via c_utils
+    try:
+        from ctypes import cast, POINTER
+        carea = cast(area.as_pointer(), POINTER(c_utils.ScrArea))
+        area_struct = carea.contents
 
-    xmin, xmax, ymin, ymax = r.xmin, r.xmax, r.ymin, r.ymax
-    r.xmax = r.xmin + width
-    r.ymax = r.ymin + height
+        # Store original area dimensions
+        orig_totrct = {
+            'xmin': area_struct.totrct.xmin,
+            'xmax': area_struct.totrct.xmax, 
+            'ymin': area_struct.totrct.ymin,
+            'ymax': area_struct.totrct.ymax
+        }
+        orig_winx = area_struct.winx
+        orig_winy = area_struct.winy
 
-    upr = uprefs()
-    ui_scale = upr.view.ui_scale
-    ui_line_width = upr.view.ui_line_width
-    upr.view.ui_scale = 1
-    upr.view.ui_line_width = 'THIN'
+        # Apply UI scaling temporarily for consistent duplication
+        upr = get_uprefs()
+        ui_scale = upr.view.ui_scale
+        ui_line_width = upr.view.ui_line_width
+        upr.view.ui_scale = 1
+        upr.view.ui_line_width = 'THIN'
 
-    with C.temp_override(**ctx_dict(area=area)):  # MIGRATION_TODO: Delete ctx_dict
-        bpy.ops.screen.area_dupli('INVOKE_DEFAULT')
+        try:
+            # Calculate position if specified, otherwise use current area position
+            if x is not None and y is not None:
+                pos_x = max(0, x - (width // 2))
+                pos_y = max(0, y - (height // 2))
 
-    upr.view.ui_scale = ui_scale
-    upr.view.ui_line_width = ui_line_width
+                # Ensure window stays within screen bounds
+                max_x = window.width - min(width, 200)
+                max_y = window.height - min(height, 150)
+                pos_x = min(pos_x, max_x)
+                pos_y = min(pos_y, max_y)
+            else:
+                pos_x = orig_totrct['xmin']
+                pos_y = orig_totrct['ymin']
 
-    r.xmin, r.xmax, r.ymin, r.ymax = xmin, xmax, ymin, ymax
+            # Temporarily modify area size parameters that area_dupli uses
+            area_struct.totrct.xmin = pos_x
+            area_struct.totrct.ymin = pos_y
+            area_struct.totrct.xmax = pos_x + width
+            area_struct.totrct.ymax = pos_y + height
+            area_struct.winx = width
+            area_struct.winy = height
+
+            # Store current window count to identify new window
+            initial_windows = set(C.window_manager.windows)
+
+            # Create the duplicate window with modified area dimensions
+            with C.temp_override(**ctx_dict(area=area)):  # MIGRATION_TODO: Delete ctx_dict
+                bpy.ops.screen.area_dupli('INVOKE_DEFAULT')
+
+            # Log results for debugging
+            new_windows = set(C.window_manager.windows) - initial_windows
+            if new_windows:
+                new_window = list(new_windows)[0]
+                actual_width = new_window.width
+                actual_height = new_window.height
+                print(f"Popup area size: requested {width}x{height}, actual {actual_width}x{actual_height}")
+
+                if actual_width != width or actual_height != height:
+                    print(f"Size difference detected - this may be due to DPI scaling or window manager constraints")
+
+        finally:
+            # Always restore original area dimensions
+            area_struct.totrct.xmin = orig_totrct['xmin']
+            area_struct.totrct.xmax = orig_totrct['xmax']
+            area_struct.totrct.ymin = orig_totrct['ymin'] 
+            area_struct.totrct.ymax = orig_totrct['ymax']
+            area_struct.winx = orig_winx
+            area_struct.winy = orig_winy
+
+            # Restore UI settings
+            upr.view.ui_scale = ui_scale
+            upr.view.ui_line_width = ui_line_width
+
+    except Exception as e:
+        print(f"Error in popup_area: {e}")
+        print("Falling back to basic area duplication")
+
+        # Fallback to basic duplication if memory manipulation fails
+        upr = get_uprefs()
+        ui_scale = upr.view.ui_scale
+        ui_line_width = upr.view.ui_line_width
+        upr.view.ui_scale = 1
+        upr.view.ui_line_width = 'THIN'
+
+        try:
+            with C.temp_override(**ctx_dict(area=area)):
+                bpy.ops.screen.area_dupli('INVOKE_DEFAULT')
+        finally:
+            upr.view.ui_scale = ui_scale
+            upr.view.ui_line_width = ui_line_width
 
 
 def enum_item_idx(data, prop, identifier):

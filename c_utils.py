@@ -1,13 +1,32 @@
-import bpy
+from bpy.app import version as bl_version
+from bpy.props import StringProperty
 import re
 from itertools import islice
+
 from ctypes import (
-    Structure, POINTER, cast, addressof, pointer,
-    c_short, c_uint, c_int, c_float, c_bool, c_char, c_char_p, c_void_p
+    Structure,
+    POINTER,
+    cast,
+    addressof,
+    pointer,
+    c_short,
+    c_uint,
+    c_int,
+    c_float,
+    c_bool,
+    c_char,
+    c_char_p,
+    c_void_p,
+    c_uint32,  # For session_uid and other uint32 fields
 )
 from . import pme
 
 
+# Constants from Blender 4.x source
+# Source: /home/myname/blender/blender/source/blender/makesdna/DNA_ID.h
+MAX_ID_NAME = 258  # Updated from 66 to 258 in Blender 4.x
+
+# Source: Various DNA files
 BKE_ST_MAXNAME = 64
 UI_MAX_DRAW_STR = 400
 UI_MAX_NAME_STR = 128
@@ -40,11 +59,9 @@ def gen_fields(*args):
 
         ret.append((f, tp))
 
-    bl_version = bpy.app.version
     for a in args:
         if isinstance(a, tuple):
-            if a[0] and bl_version < a[1] or \
-                    not a[0] and bl_version >= a[1]:
+            if (a[0] and bl_version < a[1]) or (not a[0] and bl_version >= a[1]):
                 continue
 
             cur_tp = a[2]
@@ -82,15 +99,13 @@ class _ListBase:
 
     def insert(self, prevlink, newlink):
         if prevlink:
-            a = prevlink if isinstance(prevlink, int) else \
-                addressof(prevlink)
+            a = prevlink if isinstance(prevlink, int) else addressof(prevlink)
             prevlink_p = cast(a, POINTER(Link)).contents
         else:
             prevlink_p = None
 
         if newlink:
-            a = newlink if isinstance(newlink, int) else \
-                addressof(newlink)
+            a = newlink if isinstance(newlink, int) else addressof(newlink)
             newlink_p = cast(a, POINTER(Link)).contents
         else:
             newlink_p = None
@@ -157,10 +172,11 @@ uiLayoutRoot = struct("uiLayoutRoot")
 uiStyle = struct("uiStyle")
 uiFontStyle = struct("uiFontStyle")
 uiBlock = struct("uiBlock")
-uiBut = struct("uiBut")
+# uiBut = struct("uiBut")  # see #18
 vec2s = struct("vec2s")
 ScrVert = struct("ScrVert")
 ScrArea = struct("ScrArea")
+ScrArea_Runtime = struct("ScrArea_Runtime")
 ScrAreaMap = struct("ScrAreaMap")
 ARegion = struct("ARegion")
 bScreen = struct("bScreen")
@@ -173,20 +189,44 @@ wmEventHandler = struct("wmEventHandler")
 wmOperator = struct("wmOperator")
 # wmEvent = struct("wmEvent")
 
-# source/blender/makesdna/DNA_ID.h
+# ID structure definition for Blender 4.x
+# Source: /home/myname/blender/blender/source/blender/makesdna/DNA_ID.h (lines 402-480)
+# Last verified: 2024-06-26
+# Changes from old version:
+# - name field changed from char[66] to char[258] (MAX_ID_NAME)
+# - Added asset_data field
+# - recalc type changed from int to unsigned int
+# - Added recalc_up_to_undo_push, recalc_after_undo_push fields
+# - Added session_uid field
+# - Added system_properties field
+# - Added _pad1 padding
+# - Added override_library field
+# - Added orig_id field
+# - Added py_instance field
+# - Added library_weak_reference field
+# - Added runtime field
 ID._fields_ = gen_fields(
-    c_void_p, "*next", "*prev",
-    ID, "*newid",
-    c_void_p, "*lib",
-    c_char, "name[66]",
-    c_short, "flag",
-    c_int, "tag",
-    c_int, "us",
-    c_int, "icon_id",
-    (True, (2, 80, 0), c_int, "icon_id"),
-    (True, (2, 80, 0), c_int, "recalc"),
-    (True, (2, 80, 0), c_int, "pad"),
-    c_void_p, "*properties",
+    c_void_p, "*next", "*prev",           # void *next, *prev;
+    ID, "*newid",                         # struct ID *newid;
+    c_void_p, "*lib",                     # struct Library *lib;
+    c_void_p, "*asset_data",              # struct AssetMetaData *asset_data;
+    c_char, f"name[{MAX_ID_NAME}]",       # char name[258]; (was char[66])
+    c_short, "flag",                      # short flag;
+    c_int, "tag",                         # int tag;
+    c_int, "us",                          # int us;
+    c_int, "icon_id",                     # int icon_id;
+    c_uint, "recalc",                     # unsigned int recalc; (was int)
+    c_uint, "recalc_up_to_undo_push",     # unsigned int recalc_up_to_undo_push;
+    c_uint, "recalc_after_undo_push",     # unsigned int recalc_after_undo_push;
+    c_uint32, "session_uid",              # unsigned int session_uid;
+    c_void_p, "*properties",              # IDProperty *properties;
+    c_void_p, "*system_properties",       # IDProperty *system_properties;
+    c_void_p, "_pad1",                    # void *_pad1;
+    c_void_p, "*override_library",        # IDOverrideLibrary *override_library;
+    ID, "*orig_id",                       # struct ID *orig_id;
+    c_void_p, "*py_instance",             # void *py_instance;
+    c_void_p, "*library_weak_reference",  # struct LibraryWeakReference *library_weak_reference;
+    c_void_p, "runtime",                  # struct ID_Runtime runtime; (opaque pointer)
 )
 
 rcti._fields_ = gen_fields(
@@ -267,25 +307,31 @@ uiLayoutRoot._fields_ = gen_fields(
     uiLayout, "*layout",
 )
 
-# source/blender/makesdna/DNA_userdef_types.h
+# uiStyle structure definition for Blender 4.x
+# Source: /home/myname/blender/blender/source/blender/makesdna/DNA_userdef_types.h (lines 88-115)
+# Last verified: 2024-06-26
+# Changes from old version:
+# - Removed widgetlabel field
+# - Added tooltip field (uiFontStyle)
+# - Field order unchanged for remaining fields
 uiStyle._fields_ = gen_fields(
-    uiStyle, "*next", "*prev",
-    c_char, "name[64]",
-    uiFontStyle, "paneltitle",
-    uiFontStyle, "grouplabel",
-    uiFontStyle, "widgetlabel",
-    uiFontStyle, "widget",
-    c_float, "panelzoom",
-    c_short, "minlabelchars",
-    c_short, "minwidgetchars",
-    c_short, "columnspace",
-    c_short, "templatespace",
-    c_short, "boxspace",
-    c_short, "buttonspacex",
-    c_short, "buttonspacey",
-    c_short, "panelspace",
-    c_short, "panelouter",
-    c_char, "_pad0[2]",
+    uiStyle, "*next", "*prev",           # struct uiStyle *next, *prev;
+    c_char, "name[64]",                  # char name[64];
+    uiFontStyle, "paneltitle",           # uiFontStyle paneltitle;
+    uiFontStyle, "grouplabel",           # uiFontStyle grouplabel;
+    uiFontStyle, "widget",               # uiFontStyle widget;
+    uiFontStyle, "tooltip",              # uiFontStyle tooltip; (NEW)
+    c_float, "panelzoom",                # float panelzoom;
+    c_short, "minlabelchars",            # short minlabelchars;
+    c_short, "minwidgetchars",           # short minwidgetchars;
+    c_short, "columnspace",              # short columnspace;
+    c_short, "templatespace",            # short templatespace;
+    c_short, "boxspace",                 # short boxspace;
+    c_short, "buttonspacex",             # short buttonspacex;
+    c_short, "buttonspacey",             # short buttonspacey;
+    c_short, "panelspace",               # short panelspace;
+    c_short, "panelouter",               # short panelouter;
+    c_char, "_pad0[2]",                  # char _pad0[2];
 )
 
 uiBlock._fields_ = gen_fields(
@@ -323,18 +369,18 @@ uiBlock._fields_ = gen_fields(
     # c_char, "dt",
 )
 
-uiBut._fields_ = gen_fields(
-    uiBut, "*next", "*prev",
-    c_int, "flag", "drawflag",
-    c_int, "type",
-    c_int, "pointype",
-    c_short, "bit", "bitnr", "retval", "strwidth", "alignnr",
-    c_short, "ofs", "pos", "selsta", "selend",
-    c_char, "*str",
-    c_char * UI_MAX_NAME_STR, "strdata",
-    c_char * UI_MAX_DRAW_STR, "drawstr",
-    rctf, "rect",
-)
+# uiBut._fields_ = gen_fields( # see #18
+#     uiBut, "*next", "*prev",
+#     c_int, "flag", "drawflag",
+#     c_int, "type",
+#     c_int, "pointype",
+#     c_short, "bit", "bitnr", "retval", "strwidth", "alignnr",
+#     c_short, "ofs", "pos", "selsta", "selend",
+#     c_char, "*str",
+#     c_char * UI_MAX_NAME_STR, "strdata",
+#     c_char * UI_MAX_DRAW_STR, "drawstr",
+#     rctf, "rect",
+# )
 
 bContext_wm._fields_ = gen_fields(
     c_void_p, "*manager",
@@ -372,25 +418,48 @@ ScrVert._fields_ = gen_fields(
     vec2s, "vec"
 )
 
-# source/blender/makesdna/DNA_screen_types.h
+# ScrArea_Runtime structure definition for Blender 4.x
+# Source: /home/myname/blender/blender/source/blender/makesdna/DNA_screen_types.h (lines 423-427)
+# Last verified: 2024-06-26
+# This structure is embedded in ScrArea, not referenced by pointer
+ScrArea_Runtime._fields_ = gen_fields(
+    c_void_p, "*tool",           # struct bToolRef *tool;
+    c_char, "is_tool_set",       # char is_tool_set;
+    c_char, "_pad0[7]",          # char _pad0[7];
+)
+
+# ScrArea structure definition for Blender 4.x  
+# Source: /home/myname/blender/blender/source/blender/makesdna/DNA_screen_types.h (lines 430-496)
+# Last verified: 2024-06-26
+# Total size: 184 bytes (was incorrectly calculated as 176 bytes)
+# Changes from old version:
+# - headertype field marked as DNA_DEPRECATED (but still present)
+# - Added regionbase, handlers, actionzones ListBase fields
+# - Added ScrArea_Runtime runtime field (16 bytes, not 8-byte pointer)
+# - _pad changed from char[2] to char[2] (no change but documented)
+# - global field type changed to ScrGlobalAreaData*
+# Note: DNA_DEFINE_CXX_METHODS macro is compile-time only, not in runtime struct
 ScrArea._fields_ = gen_fields(
-    ScrArea, "*next", "*prev",
-    ScrVert, "*v1", "*v2", "*v3", "*v4",
-    c_void_p, "*full",
-    rcti, "totrct",
-    c_char, "spacetype", "butspacetype",
-    (True, (2, 80, 0), c_short, "butspacetype_subtype"),
-    c_short, "winx", "winy",
-    (True, (2, 80, 0), c_char, "headertype"),
-    (False, (2, 80, 0), c_short, "headertype"),
-    (True, (2, 80, 0), c_char, "do_refresh"),
-    (False, (2, 80, 0), c_short, "do_refresh"),
-    c_short, "flag",
-    c_short, "region_active_win",
-    c_char, "temp", "pad",
-    c_void_p, "*type",
-    (True, (2, 80, 0), c_void_p, "*global"),
-    ListBase, "spacedata",
+    ScrArea, "*next", "*prev",           # struct ScrArea *next, *prev;
+    ScrVert, "*v1", "*v2", "*v3", "*v4", # ScrVert *v1, *v2, *v3, *v4;
+    c_void_p, "*full",                   # bScreen *full;
+    rcti, "totrct",                      # rcti totrct;
+    c_char, "spacetype",                 # char spacetype;
+    c_char, "butspacetype",              # char butspacetype;
+    c_short, "butspacetype_subtype",     # short butspacetype_subtype;
+    c_short, "winx", "winy",             # short winx, winy;
+    c_char, "headertype",                # char headertype DNA_DEPRECATED;
+    c_char, "do_refresh",                # char do_refresh;
+    c_short, "flag",                     # short flag;
+    c_short, "region_active_win",        # short region_active_win;
+    c_char, "_pad[2]",                   # char _pad[2];
+    c_void_p, "*type",                   # struct SpaceType *type;
+    c_void_p, "*global",                 # ScrGlobalAreaData *global;
+    ListBase, "spacedata",               # ListBase spacedata;
+    ListBase, "regionbase",              # ListBase regionbase;
+    ListBase, "handlers",                # ListBase handlers;
+    ListBase, "actionzones",             # ListBase actionzones;
+    ScrArea_Runtime, "runtime",          # ScrArea_Runtime runtime;
 )
 
 # source/blender/makesdna/DNA_screen_types.h
@@ -400,19 +469,41 @@ ScrAreaMap._fields_ = gen_fields(
     ListBase, "areabase",
 )
 
-# source/blender/makesdna/DNA_screen_types.h
+# bScreen structure definition for Blender 4.x
+# Source: /home/myname/blender/blender/source/blender/makesdna/DNA_screen_types.h (lines 52-107)
+# Last verified: 2024-06-26
+# Changes from old version:
+# - scene field marked as DNA_DEPRECATED (but still present)
+# - Added state, do_draw, do_refresh, do_draw_gesture, do_draw_paintcursor, do_draw_drag fields
+# - Added skip_handling, scrubbing fields
+# - Added _pad[1] padding
+# - Added active_region, animtimer, context, tool_tip, preview fields
+# Note: C++ constexpr id_type field is compile-time only, not in runtime struct
 bScreen._fields_ = gen_fields(
-    ID, "id",
-    ListBase, "vertbase",
-    ListBase, "edgebase",
-    ListBase, "areabase",
-    ListBase, "regionbase",
-    c_void_p, "*scene",
-    (False, (2, 80, 0), c_void_p, "*newscene"),
-    (True, (2, 80, 0), c_short, "flag"),
-    c_short, "winid",
-    c_short, "redraws_flag",
-    c_char, "temp",
+    ID, "id",                            # ID id;
+    ListBase, "vertbase",                # ListBase vertbase;
+    ListBase, "edgebase",                # ListBase edgebase;
+    ListBase, "areabase",                # ListBase areabase;
+    ListBase, "regionbase",              # ListBase regionbase;
+    c_void_p, "*scene",                  # struct Scene *scene DNA_DEPRECATED;
+    c_short, "flag",                     # short flag;
+    c_short, "winid",                    # short winid;
+    c_short, "redraws_flag",             # short redraws_flag;
+    c_char, "temp",                      # char temp;
+    c_char, "state",                     # char state;
+    c_char, "do_draw",                   # char do_draw;
+    c_char, "do_refresh",                # char do_refresh;
+    c_char, "do_draw_gesture",           # char do_draw_gesture;
+    c_char, "do_draw_paintcursor",       # char do_draw_paintcursor;
+    c_char, "do_draw_drag",              # char do_draw_drag;
+    c_char, "skip_handling",             # char skip_handling;
+    c_char, "scrubbing",                 # char scrubbing;
+    c_char, "_pad[1]",                   # char _pad[1];
+    c_void_p, "*active_region",          # struct ARegion *active_region;
+    c_void_p, "*animtimer",              # struct wmTimer *animtimer;
+    c_void_p, "*context",                # void *context;
+    c_void_p, "*tool_tip",               # struct wmTooltipState *tool_tip;
+    c_void_p, "*preview",                # PreviewImage *preview;
 )
 
 '''
@@ -502,8 +593,7 @@ del gen_fields
 
 
 class HeadModalHandler:
-    key: bpy.props.StringProperty(
-        default="ESC", options={'SKIP_SAVE'})
+    key: StringProperty(default="ESC", options={'SKIP_SAVE'})
 
     def finish(self):
         pass
@@ -534,7 +624,8 @@ class HeadModalHandler:
         self.finished = False
 
         self.timer = context.window_manager.event_timer_add(
-            0.001, window=context.window)
+            0.001, window=context.window
+        )
         context.window_manager.modal_handler_add(self)
         return {'RUNNING_MODAL'}
 
@@ -547,11 +638,11 @@ def c_layout(layout):
     return ret
 
 
-def c_last_btn(clayout):
-    ret = cast(
-        clayout.root.contents.block.contents.buttons.last,
-        POINTER(uiBut)).contents
-    return ret
+# def c_last_btn(clayout):
+#     ret = cast(
+#         clayout.root.contents.block.contents.buttons.last, POINTER(uiBut)  # see #18
+#     ).contents
+#     return ret
 
 
 def c_style(clayout):
@@ -588,8 +679,7 @@ def set_area(context, area=None):
     C = c_context(context)
     if area:
         set_area.area = C.wm.area
-        C.wm.area = cast(
-            area.as_pointer(), POINTER(ScrArea))
+        C.wm.area = cast(area.as_pointer(), POINTER(ScrArea))
 
     elif hasattr(set_area, "area"):
         C.wm.area = set_area.area
@@ -599,8 +689,7 @@ def set_region(context, region=None):
     C = c_context(context)
     if region:
         set_region.region = C.wm.region
-        C.wm.region = cast(
-            region.as_pointer(), POINTER(ARegion))
+        C.wm.region = cast(region.as_pointer(), POINTER(ARegion))
 
     elif hasattr(set_region, "region"):
         C.wm.region = set_region.region

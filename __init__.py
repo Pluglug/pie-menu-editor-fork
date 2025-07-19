@@ -8,7 +8,7 @@ bl_info = {
     # "wiki_url": (
     #     "https://archive.blender.org/wiki/2015/index.php/User:Raa/Addons/Pie_Menu_Editor/"),
     "doc_url": "https://pluglug.github.io/pme-docs",
-    "category": "User Interface"
+    "category": "User Interface",
 }
 
 import bpy
@@ -73,8 +73,7 @@ def get_classes():
         mod = sys.modules["%s.%s" % (__name__, mod)]
         # mod = sys.modules[mod]
         for name, mem in inspect.getmembers(mod):
-            if inspect.isclass(mem) and issubclass(mem, bpy_struct) and \
-                    mem not in mems:
+            if inspect.isclass(mem) and issubclass(mem, bpy_struct) and mem not in mems:
 
                 mems.add(mem)
                 classes = []
@@ -85,20 +84,14 @@ def get_classes():
                             continue
 
                         pfunc = getattr(pd, "function", None) or pd[0]
-                        pkeywords = pd.keywords if hasattr(pd, "keywords") \
-                            else pd[1]
+                        pkeywords = pd.keywords if hasattr(pd, "keywords") else pd[1]
                         if pfunc is cprop or pfunc is pprop:
                             classes.append(pkeywords["type"])
 
                 if not classes:
                     ret.add(mem)
                 else:
-                    mem_data.append(
-                        dict(
-                            mem=mem,
-                            classes=classes
-                        )
-                    )
+                    mem_data.append(dict(mem=mem, classes=classes))
 
     mems.clear()
 
@@ -151,6 +144,7 @@ def unregister_module():
 
 if not bpy.app.background:
     import importlib
+
     for mod in MODULES:
         if mod in locals():
             try:
@@ -161,7 +155,7 @@ if not bpy.app.background:
 
         importlib.import_module("pie_menu_editor." + mod)
 
-    from .addon import prefs, temp_prefs
+    from .addon import get_prefs, temp_prefs
     from . import property_utils
     from . import pme
     from . import compatibility_fixes
@@ -183,7 +177,7 @@ def load_pre_handler(_):
     DBG_INIT and logh("Load Pre (%s)" % bpy.data.filepath)
 
     global tmp_data
-    tmp_data = property_utils.to_dict(prefs())
+    tmp_data = property_utils.to_dict(get_prefs())
 
     global tmp_filepath
     tmp_filepath = bpy.data.filepath
@@ -200,7 +194,7 @@ def load_post_handler(filepath):
         DBG_INIT and logw("Skip")
         return
 
-    pr = prefs()
+    pr = get_prefs()
     if not bpy.data.filepath:
         property_utils.from_dict(pr, tmp_data)
 
@@ -233,8 +227,7 @@ def on_context():
     pme.context.add_global("EnumProperty", bpy.props.EnumProperty)
     pme.context.add_global("CollectionProperty", bpy.props.CollectionProperty)
     pme.context.add_global("PointerProperty", bpy.props.PointerProperty)
-    pme.context.add_global(
-        "FloatVectorProperty", bpy.props.FloatVectorProperty)
+    pme.context.add_global("FloatVectorProperty", bpy.props.FloatVectorProperty)
 
     for k, v in globals().items():
         if k.startswith("__"):
@@ -242,7 +235,7 @@ def on_context():
 
     register_module()
 
-    pr = prefs()
+    pr = get_prefs()
     global re_enable_data
     if re_enable_data is not None:
         if len(pr.pie_menus) == 0 and re_enable_data:
@@ -267,7 +260,7 @@ def on_context():
 def init_keymaps():
     DBG_INIT and logi("Waiting Keymaps")
 
-    pr = prefs()
+    pr = get_prefs()
     if not bpy.context.window_manager.keyconfigs.user:
         return
 
@@ -288,7 +281,7 @@ def on_timer():
     init_keymaps()
 
     global timer
-    pr = prefs()
+    pr = get_prefs()
     if not pr.missing_kms or timer.elapsed_time > 10:
         timer.cancel()
         timer = None
@@ -340,8 +333,7 @@ class PME_OT_wait_context(bpy.types.Operator):
         self.cancelled = False
         self.instances.append(self)
         context.window_manager.modal_handler_add(self)
-        self.timer = context.window_manager.event_timer_add(
-            0.01, window=context.window)
+        self.timer = context.window_manager.event_timer_add(0.01, window=context.window)
         return {'RUNNING_MODAL'}
 
 
@@ -361,7 +353,7 @@ class PME_OT_wait_keymaps(bpy.types.Operator):
         if event.type == 'TIMER':
             init_keymaps()
 
-            pr = prefs()
+            pr = get_prefs()
             if not pr.missing_kms or self.timer.time_duration > 5:
                 self.remove_timer()
                 self.instances.remove(self)
@@ -373,7 +365,8 @@ class PME_OT_wait_keymaps(bpy.types.Operator):
                 if pr.missing_kms:
                     print(
                         "PME: Some hotkeys cannot be registered. "
-                        "Please restart Blender")
+                        "Please restart Blender"
+                    )
 
                 temp_prefs().init_tags()
                 pr.tree.update()
@@ -400,8 +393,7 @@ class PME_OT_wait_keymaps(bpy.types.Operator):
         self.cancelled = False
         self.instances.append(self)
         context.window_manager.modal_handler_add(self)
-        self.timer = context.window_manager.event_timer_add(
-            0.2, window=context.window)
+        self.timer = context.window_manager.event_timer_add(0.2, window=context.window)
         return {'RUNNING_MODAL'}
 
 
@@ -433,9 +425,10 @@ def register():
     else:
         global invalid_prefs
         from .preferences import InvalidPMEPreferences
+
         invalid_prefs = type(
-            "PMEPreferences",
-            (InvalidPMEPreferences, bpy.types.AddonPreferences), {})
+            "PMEPreferences", (InvalidPMEPreferences, bpy.types.AddonPreferences), {}
+        )
         bpy.utils.register_class(invalid_prefs)
 
 
@@ -462,7 +455,7 @@ def unregister():
         return
 
     global re_enable_data
-    re_enable_data = property_utils.to_dict(prefs())
+    re_enable_data = property_utils.to_dict(get_prefs())
 
     for mod in reversed(MODULES):
         m = sys.modules["%s.%s" % (__name__, mod)]

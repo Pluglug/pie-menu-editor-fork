@@ -2,8 +2,18 @@ import bpy
 from io import BytesIO
 from itertools import chain
 from tokenize import (
-    tokenize, Untokenizer,
-    OP, ENCODING, NAME, STRING, NUMBER, ENDMARKER, INDENT, DEDENT, NEWLINE, NL
+    tokenize,
+    Untokenizer,
+    OP,
+    ENCODING,
+    NAME,
+    STRING,
+    NUMBER,
+    ENDMARKER,
+    INDENT,
+    DEDENT,
+    NEWLINE,
+    NL,
 )
 from .addon import print_exc
 from . import pme
@@ -157,8 +167,7 @@ def _extract_args(stm, idx, encoding):
                     if len(arg) == 1:
                         args.pop()
 
-                    has_pos_args = has_pos_args or \
-                        len(args) > 0 and not equal
+                    has_pos_args = has_pos_args or len(args) > 0 and not equal
                     if args and not equal:
                         pos_args.append(args.pop())
 
@@ -306,7 +315,7 @@ def _parse_pos_args(pos_args: list[str]) -> tuple[str, bool]:
             continue
 
         if arg in ("True", "False"):
-            C_undo = (arg == "True")
+            C_undo = arg == "True"
             count += 1
         else:
             trimmed = arg.strip('"\'')
@@ -329,7 +338,8 @@ def parse_pos_args(pos_args: list[str]) -> tuple[str, bool]:  # Issue#25
     lg_exec, lg_undo = legacy_parse_pos_args(pos_args)
     C_exec, C_undo = _parse_pos_args(pos_args)
 
-    print("""
+    print(
+        """
     parse_pos_args:
       Legacy:
         C_exec: {0} (type: {1})
@@ -338,11 +348,16 @@ def parse_pos_args(pos_args: list[str]) -> tuple[str, bool]:  # Issue#25
         C_exec: {4} (type: {5})
         C_undo: {6} (type: {7})
     """.format(
-        lg_exec, type(lg_exec),
-        lg_undo, type(lg_undo),
-        C_exec, type(C_exec),
-        C_undo, type(C_undo)
-    ))
+            lg_exec,
+            type(lg_exec),
+            lg_undo,
+            type(lg_undo),
+            C_exec,
+            type(C_exec),
+            C_undo,
+            type(C_undo),
+        )
+    )
 
     return C_exec, C_undo
 

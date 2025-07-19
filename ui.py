@@ -5,7 +5,7 @@ from .debug_utils import *
 from . import operator_utils
 from . import pme
 from .bl_utils import bp, ctx_dict
-from .addon import uprefs, ic
+from .addon import get_uprefs, ic
 
 uilayout_getattribute = bpy.types.UILayout.__getattribute__
 draw_addons_default = None
@@ -93,8 +93,7 @@ def tag_redraw_windows(area=None, region=None):
 
     for w in wm.windows:
         for a in w.screen.areas:
-            if area is None or a.type == area or \
-                    area == CC.UPREFS and not a.type:
+            if area is None or a.type == area or area == CC.UPREFS and not a.type:
                 for r in a.regions:
                     if region is None or r.type == region:
                         r.tag_redraw()
@@ -110,7 +109,7 @@ def draw_addons_maximized(self, context):
         row.scale_y = 1.5
         row.operator(PME_OT_userpref_restore.bl_idname, text="Restore")
 
-    prefs = uprefs().addons[PME_OT_userpref_show.mod].preferences
+    prefs = get_uprefs().addons[PME_OT_userpref_show.mod].preferences
 
     draw = getattr(prefs, "draw", None)
     prefs_class = type(prefs)
@@ -147,7 +146,7 @@ class PME_OT_userpref_show(bpy.types.Operator):
             bpy.types.USERPREF_PT_addons.draw = draw_addons_default
 
         if self.tab:
-            uprefs().active_section = self.tab
+            get_uprefs().active_section = self.tab
 
         tag_redraw()
         return {'FINISHED'}
@@ -164,15 +163,25 @@ class PME_OT_userpref_restore(bpy.types.Operator):
 
 def pme_uilayout_getattribute(self, attr):
     def pme_operator(
-            operator, text="",
-            text_ctxt="", translate=True, icon='NONE',
-            emboss=True, icon_value=0):
+        operator,
+        text="",
+        text_ctxt="",
+        translate=True,
+        icon='NONE',
+        emboss=True,
+        icon_value=0,
+    ):
         uilayout_operator = uilayout_getattribute(self, "operator")
 
         return uilayout_operator(
-            operator, text=text,
-            text_ctxt=text_ctxt, translate=translate,
-            icon=icon, emboss=emboss, icon_value=icon_value)
+            operator,
+            text=text,
+            text_ctxt=text_ctxt,
+            translate=translate,
+            icon=icon,
+            emboss=emboss,
+            icon_value=icon_value,
+        )
 
     if attr == "operator":
         return pme_operator

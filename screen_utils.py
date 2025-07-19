@@ -5,13 +5,13 @@ from typing import Any, Dict, Optional, Union
 
 from . import c_utils as CTU
 from . import pme
-from .addon import uprefs
+from .addon import get_uprefs, print_exc
+
 # from .bl_utils import ctx_dict
-from .debug_utils import logi
 
 
 def redraw_screen():
-    view = uprefs().view
+    view = get_uprefs().view
     s = view.ui_scale
     view.ui_scale = 0.5
     view.ui_scale = s
@@ -105,7 +105,7 @@ def find_area(
 def find_region(
     region_or_type: Union[str, bpy.types.Region, None],
     area_or_type: Union[str, bpy.types.Area, None] = None,
-    screen_or_name: Union[str, bpy.types.Screen, None] = None
+    screen_or_name: Union[str, bpy.types.Screen, None] = None,
 ) -> Optional[bpy.types.Region]:
     """Find and return a Region object within the specified Area, or None if not found."""
     if region_or_type is None:
@@ -190,7 +190,7 @@ class ContextOverride:
         context: bpy.types.Context,
         *,
         # extra_priority: bool = False,
-        delete_none: bool = True
+        delete_none: bool = True,
     ) -> Dict[str, Any]:
 
         # Resolve all fields
@@ -320,9 +320,50 @@ def toggle_sidebar(area=None, tools=True, value=None):
     return True
 
 
+def exec_with_override(cmd, window=None, screen=None, area=None, region=None, **kwargs):
+    """Execute a command with a temporary bl_context"""
+    try:
+        context = bpy.context
+        window = find_window(window, context) or context.window
+        screen = find_screen(screen, context) or context.screen
+        area = find_area(area, screen) or context.area
+        region = (
+            find_region(region, area, screen)
+            or (area.regions[-1] if area and area.regions else None)
+        )
+
+        override_args = {
+            'window': window,
+            'screen': screen, 
+            'area': area,
+            'region': region,
+            'blend_data': context.blend_data,
+            **kwargs
+        }
+
+        # Remove None values
+        override_args = {k: v for k, v in override_args.items() if v is not None}
+
+        with context.temp_override(**override_args):
+            from . import bl_utils
+            original_context = bl_utils.bl_context.context
+            bl_utils.bl_context.set_context(bpy.context)
+
+            try:
+                exec_globals = pme.context.gen_globals()
+                exec(cmd, exec_globals)
+                return True
+            finally:
+                bl_utils.bl_context.set_context(original_context)
+    except Exception as e:
+        print_exc(f"Failed to execute command: {cmd}\nError: {e}")
+        return False
+
+
 def register():
     pme.context.add_global("focus_area", focus_area)
     pme.context.add_global("move_header", move_header)
     pme.context.add_global("toggle_sidebar", toggle_sidebar)
     pme.context.add_global("override_context", override_context)
     pme.context.add_global("redraw_screen", redraw_screen)
+    pme.context.add_global("exec_with_override", exec_with_override)
