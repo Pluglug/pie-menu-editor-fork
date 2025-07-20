@@ -619,37 +619,21 @@ class PME_OT_sidearea_toggle(bpy.types.Operator):
 
     @staticmethod
     def _get_blender_area_gap():
-        """
-        Calculate actual Blender area gap based on source code analysis.
-        Based on Blender 5.0.0-alpha: source/blender/editors/screen/screen_draw.cc:176
-
-        Formula: Area Gap = border_width × scale_factor
-        Where: scale_factor = (system_dpi × ui_scale × 72.0/96.0) / 72.0
-        """
+        """Calculate actual Blender area gap based on UI settings."""
         prefs = get_uprefs()
         ui_scale = prefs.view.ui_scale
-        ui_line_width = prefs.view.ui_line_width  # 'THIN', 'AUTO', 'THICK'
-
-        # Get actual system DPI and pixel size from Blender
-        system_dpi = getattr(prefs.system, 'dpi', 72.0)  # Fallback to 72 if not available
-        pixel_size = getattr(prefs.system, 'pixel_size', 1.0)  # HiDPI multiplier
-
-        # Calculate border_width based on ui_line_width setting
+        ui_line_width = prefs.view.ui_line_width
+        system_dpi = getattr(prefs.system, 'dpi', 72.0)
+        pixel_size = getattr(prefs.system, 'pixel_size', 1.0)
         if ui_line_width == 'THIN':
             border_width = 1
         elif ui_line_width == 'THICK':
             border_width = 3
-        else:  # 'AUTO' or fallback
-            # Auto scales with UI scale, base value is 2
+        else: # 'AUTO'
             border_width = max(1, round(2 * ui_scale))
-
-        # Calculate scale factor using actual system DPI (improved for 4K monitors)
-        # Apply pixel_size multiplier for HiDPI displays
         effective_dpi = system_dpi * pixel_size
         dpi = effective_dpi * ui_scale * (72.0 / 96.0)
         scale_factor = dpi / 72.0
-
-        # Calculate edge thickness (actual area gap)
         edge_thickness = float(border_width) * scale_factor
 
         return {
@@ -665,34 +649,27 @@ class PME_OT_sidearea_toggle(bpy.types.Operator):
 
     @classmethod
     def _learn_gap_patterns(cls, areas):
-        """
-        Learn actual gap patterns from current area layout.
-        Returns statistical analysis of gaps for improved detection accuracy.
-        """
+        """Learn gap patterns from current area layout."""
         if len(areas) < 2:
             return None
 
         horizontal_gaps = []
 
-        # Collect horizontal gaps between areas
         for i, area_a in enumerate(areas):
             for j, area_b in enumerate(areas):
                 if i >= j:
                     continue
 
-                # Horizontal adjacency (same height and y position with tolerance)
                 if (abs(area_a.height - area_b.height) <= 5 and 
                     abs(area_a.y - area_b.y) <= 5):
-                    # Calculate horizontal gap
                     if area_a.x < area_b.x:
                         gap = area_b.x - (area_a.x + area_a.width)
                     else:
                         gap = area_a.x - (area_b.x + area_b.width)
 
-                    if 0 < gap < 50:  # Reasonable gap range
+                    if 0 < gap < 50:
                         horizontal_gaps.append(gap)
 
-        # Return horizontal gap statistics
         if horizontal_gaps:
             h_gaps = sorted(horizontal_gaps)
             return {
@@ -708,9 +685,7 @@ class PME_OT_sidearea_toggle(bpy.types.Operator):
 
     @classmethod
     def _get_cached_tolerance(cls):
-        """
-        Fallback tolerance calculation when gap learning fails.
-        """
+        """Fallback tolerance calculation."""
         try:
             gap_info = cls._get_blender_area_gap()
             actual_gap = gap_info['gap']
@@ -729,15 +704,10 @@ class PME_OT_sidearea_toggle(bpy.types.Operator):
 
     @classmethod
     def _get_adaptive_tolerance(cls, areas):
-        """
-        Calculate adaptive tolerance based on learned gap patterns.
-        Falls back to cached tolerance if no patterns are available.
-        """
-        # Learn current gap patterns
+        """Calculate adaptive tolerance based on learned gap patterns."""
         gap_pattern = cls._learn_gap_patterns(areas)
 
         if not gap_pattern:
-            # Fallback to cached tolerance if no patterns learned
             cached = cls._get_cached_tolerance()
             return {
                 'tolerance': cached['tolerance'],
@@ -745,19 +715,12 @@ class PME_OT_sidearea_toggle(bpy.types.Operator):
                 'method': 'fallback'
             }
 
-        # Use actual observed gap as expected value
         expected_gap = gap_pattern['median']
-
-        # Calculate adaptive tolerance based on gap variance
         gap_range = gap_pattern['max'] - gap_pattern['min']
         if gap_range > 0:
-            # Tolerance = 50% of gap variance + minimum safe margin
             adaptive_tolerance = gap_range * 0.5 + 1.0
         else:
-            # Single gap value observed, use 50% margin
             adaptive_tolerance = expected_gap * 0.5 + 1.0
-
-        # Ensure reasonable bounds
         min_tolerance = 0.5
         max_tolerance = expected_gap * 2.0
         final_tolerance = max(min_tolerance, min(adaptive_tolerance, max_tolerance))
@@ -770,28 +733,13 @@ class PME_OT_sidearea_toggle(bpy.types.Operator):
         }
 
     def get_side_areas(self, area):
-        """
-        Detect adjacent side areas using adaptive gap learning.
-        Returns: (left_area, right_area)
-        """
-        # Get all areas for pattern learning
+        """Detect adjacent side areas using adaptive gap learning."""
         all_areas = list(bpy.context.screen.areas)
-
-        # Use adaptive tolerance based on learned patterns
         tol_info = self._get_adaptive_tolerance(all_areas)
         expected_gap = tol_info['expected_gap']
         tolerance = tol_info['tolerance']
         max_search_gap = expected_gap * 3
 
-        # Debug output (simplified)
-        print(f"\n=== Adaptive Side Area Detection ===")
-        print(f"Method: {tol_info['method']}")
-        print(f"Expected gap: {expected_gap:.3f}, Tolerance: {tolerance:.3f}")
-        if 'gap_pattern' in tol_info and tol_info['gap_pattern']:
-            gaps = tol_info['gap_pattern']['gaps']
-            print(f"Learned gaps: {gaps}")
-
-        # Area detection with early termination
         left_area = None
         right_area = None
         best_left = None
@@ -800,137 +748,34 @@ class PME_OT_sidearea_toggle(bpy.types.Operator):
         best_right_gap = float('inf')
 
         for candidate_area in all_areas:
-            # Skip self and ignored types
             if candidate_area == area or candidate_area.ui_type in self.ia:
                 continue
-
-            # Horizontal adjacency check (with tolerance for imperfect alignment)
             height_match = abs(candidate_area.height - area.height) <= 5
             y_match = abs(candidate_area.y - area.y) <= 5
 
             if height_match and y_match:
-                # Left adjacency: candidate's right edge to area's left edge
                 left_gap = area.x - (candidate_area.x + candidate_area.width)
                 if not left_area and abs(left_gap - expected_gap) <= tolerance:
                     left_area = candidate_area
-                    print(f"Found left area: {candidate_area.ui_type} (gap: {left_gap:.1f})")
                 elif not left_area and 0 < left_gap <= max_search_gap and left_gap < best_left_gap:
                     best_left = candidate_area
                     best_left_gap = left_gap
 
-                # Right adjacency: area's right edge to candidate's left edge
                 right_gap = candidate_area.x - (area.x + area.width)
                 if not right_area and abs(right_gap - expected_gap) <= tolerance:
                     right_area = candidate_area
-                    print(f"Found right area: {candidate_area.ui_type} (gap: {right_gap:.1f})")
                 elif not right_area and 0 < right_gap <= max_search_gap and right_gap < best_right_gap:
                     best_right = candidate_area
                     best_right_gap = right_gap
 
-            # Early termination if both found
             if left_area and right_area:
                 break
-
-        # Use fallback candidates if exact matches not found
         if not left_area and best_left:
             left_area = best_left
-            print(f"Using fallback left: {best_left.ui_type} (gap: {best_left_gap:.1f})")
         if not right_area and best_right:
             right_area = best_right
-            print(f"Using fallback right: {best_right.ui_type} (gap: {best_right_gap:.1f})")
-
-        print(f"Result: Left={left_area.ui_type if left_area else None}, Right={right_area.ui_type if right_area else None}")
-        print("=" * 40)
 
         return left_area, right_area
-
-    @classmethod
-    def debug_gap_calculation(cls):
-        """
-        Debug method to print current gap calculation values.
-        Includes performance information and cache status.
-        Enhanced for 4K monitor debugging.
-        """
-        import time
-        start_time = time.time()
-        
-        # Check current UI settings
-        import bpy
-        prefs = bpy.context.preferences
-        current_ui_scale = prefs.view.ui_scale
-        current_ui_line_width = prefs.view.ui_line_width
-        current_system_dpi = getattr(prefs.system, 'dpi', 72.0)
-        current_pixel_size = getattr(prefs.system, 'pixel_size', 1.0)
-        
-        # Test cache efficiency
-        cache_hit = (cls._tolerance_cache is not None and
-                    cls._cache_ui_scale == current_ui_scale and
-                    cls._cache_ui_line_width == current_ui_line_width and
-                    getattr(cls, '_cache_system_dpi', None) == current_system_dpi and
-                    getattr(cls, '_cache_pixel_size', None) == current_pixel_size)
-        
-        # Get gap info and tolerance
-        gap_info = cls._get_blender_area_gap()
-        gap_calc_time = time.time()
-        
-        tol_info = cls._get_cached_tolerance()
-        total_time = time.time()
-        
-        print("=== Blender Area Gap Debug Info (Enhanced 4K Support) ===")
-        print(f"UI Scale: {gap_info['ui_scale']:.3f}")
-        print(f"UI Line Width: {gap_info['ui_line_width']}")
-        print(f"Border Width: {gap_info['border_width']}")
-        print(f"System DPI: {gap_info['system_dpi']:.1f}")
-        print(f"Pixel Size (HiDPI): {gap_info['pixel_size']:.3f}")
-        print(f"Effective DPI: {gap_info['effective_dpi']:.1f}")
-        print(f"Scale Factor: {gap_info['scale_factor']:.3f}")
-        print(f"Calculated Gap: {gap_info['gap']:.3f} pixels")
-        print(f"Tolerance: {tol_info['tolerance']:.3f} pixels")
-        print(f"Min Tolerance: {tol_info['min_tolerance']:.3f} pixels")
-        print(f"Adaptive Tolerance: {tol_info['adaptive_tolerance']:.3f} pixels")
-        print(f"System Min: {tol_info['system_min']:.3f} pixels")
-        print("")
-        print("=== Display Type Detection ===")
-        if gap_info['effective_dpi'] > 200:
-            print("Display: 4K/Retina detected")
-        elif gap_info['effective_dpi'] > 144:
-            print("Display: High DPI detected")
-        else:
-            print("Display: Standard DPI")
-        print(f"HiDPI scaling factor: {gap_info['pixel_size']:.3f}")
-        print("")
-        print("=== Performance Info ===")
-        print(f"Gap calculation time: {(gap_calc_time - start_time) * 1000:.2f}ms")
-        print(f"Total time (with cache): {(total_time - start_time) * 1000:.2f}ms")
-        print("")
-        print("=== Cache Status ===")
-        print(f"Cache status: {'HIT' if cache_hit else 'MISS'}")
-        print(f"Cache exists: {'Yes' if cls._tolerance_cache else 'No'}")
-        if cls._tolerance_cache:
-            print(f"Cached UI Scale: {cls._cache_ui_scale}")
-            print(f"Cached UI Line Width: {cls._cache_ui_line_width}")
-            print(f"Cached System DPI: {getattr(cls, '_cache_system_dpi', 'N/A')}")
-            print(f"Cached Pixel Size: {getattr(cls, '_cache_pixel_size', 'N/A')}")
-            print(f"Current UI Scale: {current_ui_scale}")
-            print(f"Current UI Line Width: {current_ui_line_width}")
-            print(f"Current System DPI: {current_system_dpi}")
-            print(f"Current Pixel Size: {current_pixel_size}")
-            settings_changed = (cls._cache_ui_scale != current_ui_scale or 
-                              cls._cache_ui_line_width != current_ui_line_width or
-                              getattr(cls, '_cache_system_dpi', None) != current_system_dpi or
-                              getattr(cls, '_cache_pixel_size', None) != current_pixel_size)
-            print(f"Settings changed: {'Yes' if settings_changed else 'No'}")
-        print("")
-        print("=== Area Count Info ===")
-        try:
-            area_count = len(bpy.context.screen.areas)
-            print(f"Total areas: {area_count}")
-            print(f"Estimated search complexity: O({area_count})")
-        except:
-            print("Could not get area count")
-        print("================================================")
-        
-        return gap_info, tol_info
 
     def add_space(self, area, space_type):
         a_type = area.ui_type
@@ -992,7 +837,6 @@ class PME_OT_sidearea_toggle(bpy.types.Operator):
                 )
             except:
                 bpy.ops.screen.area_join(cursor=(area.x, area.y + 2))
-
         else:
             try:
                 bpy.ops.screen.area_join(
@@ -1006,14 +850,6 @@ class PME_OT_sidearea_toggle(bpy.types.Operator):
                 bpy.ops.screen.area_join(cursor=(area.x + area.width - 2, area.y + 2))
 
     def execute(self, context):
-        # Simplified debug output - only show adaptive learning results
-        if hasattr(self, '_show_debug') and self._show_debug:
-            print("\n" + "="*60)
-            print("PME Side Area Toggle - Debug Output")
-            print("="*60)
-            self.debug_gap_calculation()
-            print("="*60 + "\n")
-
         self.ia = set(a.strip() for a in self.ignore_areas.split(","))
         self.ia.add(self.ignore_area)
         if self.area in self.ia:
@@ -1034,7 +870,6 @@ class PME_OT_sidearea_toggle(bpy.types.Operator):
             and self.action in ('TOGGLE', 'SHOW')
             and l.ui_type != self.area
         ):
-            print(f"Converting left area from {l.ui_type} to {self.area}")
             self.save_sidebars(l)
             CTU.swap_spaces(l, a, l.ui_type)
             self.add_space(a, self.area)
@@ -1055,7 +890,6 @@ class PME_OT_sidearea_toggle(bpy.types.Operator):
             and self.action in ('TOGGLE', 'SHOW')
             and r.ui_type != self.area
         ):
-            print(f"Converting right area from {r.ui_type} to {self.area}")
             self.save_sidebars(r)
             CTU.swap_spaces(r, a, r.ui_type)
             self.add_space(a, self.area)
@@ -1071,13 +905,11 @@ class PME_OT_sidearea_toggle(bpy.types.Operator):
             self.fix_area(r)
 
         elif l and self.side == 'LEFT' and self.action in ('TOGGLE', 'HIDE'):
-            print(f"Closing left area ({l.ui_type})")
             self.save_sidebars(l)
             self.close_area(context, a, l)
             SU.redraw_screen()
 
         elif r and self.side == 'RIGHT' and self.action in ('TOGGLE', 'HIDE'):
-            print(f"Closing right area ({r.ui_type})")
             self.save_sidebars(r)
             self.close_area(context, a, r)
             SU.redraw_screen()
@@ -1086,7 +918,6 @@ class PME_OT_sidearea_toggle(bpy.types.Operator):
             (self.side == 'LEFT' and not l) or 
             (self.side == 'RIGHT' and not r)
         ) and self.action in ('TOGGLE', 'SHOW'):
-            print(f"Creating new {self.side} area")
             if self.width > a.width >> 1:
                 self.width = a.width >> 1
 
