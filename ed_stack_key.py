@@ -26,16 +26,17 @@ class Editor(EditorBase):
                 name="Undo Previous Command",
                 description="Undo previous command",
                 get=lambda s: s.get_data("s_undo"),
-                set=lambda s, v: s.set_data("s_undo", v)
-            )
+                set=lambda s, v: s.set_data("s_undo", v),
+            ),
         )
         self.register_pm_prop(
             "ed_state",
             bpy.props.BoolProperty(
-                name="Remember State", description="Remember state",
+                name="Remember State",
+                description="Remember state",
                 get=lambda s: s.get_data("s_state"),
-                set=lambda s, v: s.set_data("s_state", v)
-            )
+                set=lambda s, v: s.set_data("s_state", v),
+            ),
         )
 
     def init_pm(self, pm):

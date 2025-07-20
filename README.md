@@ -3,16 +3,19 @@
 ## Overview
 This repository is a community-driven maintenance project for the Blender addon "Pie Menu Editor (PME)" Under the terms of the GPL license, we are exploring a sustainable development model and focusing on expanding PME’s reach to a broader user base.
 
-PME was originally developed by [roaoao](https://github.com/roaoao) in 2016 and made available on the [Blender Market](https://blendermarket.com/products/pie-menu-editor) and [Gumroad](https://roaoao.gumroad.com/l/pie_menu_editor).
+PME was originally developed by [roaoao](https://github.com/roaoao) in 2016 and made available on the [Blender Market](https://superhivemarket.com/products/pie-menu-editor?ref=7373) and [Gumroad](https://roaoao.gumroad.com/l/pie_menu_editor).
 
 With PME, users could easily extend their custom UI and enhance their efficiency when working with Blender. Its ease of use and extensibility have consistently earned high praise from the user community.
 
 Our goal is to ensure the long-term stability and growth of this exceptional tool within the Blender ecosystem.
 
+[![Sponsor](https://img.shields.io/badge/Support%20PME-30363D?style=for-the-badge&logo=GitHub-Sponsors&logoColor=#white)](https://github.com/sponsors/Pluglug)
 ---
 
-**Documentation (WIP)**:  
+**Documentation**:  
 For more details, guides, and instructions, please visit our documentation site: [PME Docs](https://pluglug.github.io/pme-docs/)
+
+We're also looking for contributors to help improve our documentation. If you're interested in writing guides or tutorials, please reach out!
 
 ---
 
@@ -39,7 +42,7 @@ The original copyrights remain with roaoao, and this repository is maintained in
 2. **Pull Requests**  
    Fork the repository, make your changes, and create a pull request for review.
 3. **Community Discussion**  
-   Share ideas and collaborate with other participants in the [Discussions](../../discussions) section.
+   Join the active community on [BlenderArtists Forum](http://blenderartists.org/forum/showthread.php?392910). You can also use the [Discussions](../../discussions) section for additional topics.
 
 **Trusted Contributors**  
 Active contributors may be invited to join as collaborators with expanded project management permissions.

@@ -2,7 +2,7 @@ import bpy
 import blf
 import bgl
 from time import time
-from .addon import ADDON_ID, prefs, uprefs, ic, is_28
+from .addon import ADDON_ID, get_prefs, get_uprefs, ic, is_28
 from .utils import multiton
 from .layout_helper import split
 from . import pme
@@ -217,7 +217,7 @@ class TablePainter(Painter):
         self.update(data)
 
     def update(self, data=None):
-        pr = prefs().overlay
+        pr = get_prefs().overlay
         self.col_size = pr.size * 1
 
         if data is not None:
@@ -235,8 +235,8 @@ class TablePainter(Painter):
                 col = self.cols[col_idx]
                 col_style = self.col_styles[col_idx % 2]
                 col.add_cell(
-                    cell, col_style,
-                    round(col_style.size * self.col_style_scale))
+                    cell, col_style, round(col_style.size * self.col_style_scale)
+                )
                 col_idx = (col_idx + 1) % self.num_cols
 
         self.width = 0
@@ -252,8 +252,8 @@ class TablePainter(Painter):
             num_cells = len(col.cells)
             width += col.width
             height = max(
-                height,
-                self.col_size * num_cells + self.spacing_y * (num_cells - 1))
+                height, self.col_size * num_cells + self.spacing_y * (num_cells - 1)
+            )
         self.width = max(self.width, width)
         if height:
             if self.header:
@@ -286,14 +286,21 @@ class TablePainter(Painter):
                 bgl.glBegin(bgl.GL_LINES)
                 bgl.glVertex2f(self.x, y - self.spacing_h - self.line_width)
                 bgl.glVertex2f(
-                    self.x + self.width, y - self.spacing_h - self.line_width)
+                    self.x + self.width, y - self.spacing_h - self.line_width
+                )
                 bgl.glEnd()
 
         x = 0
         for i in range(0, self.num_cols - self.align_right):
             col = self.cols[i]
-            y = -self.header.size - self.spacing_y - 2 * self.spacing_h - \
-                self.line_width if self.header else 0
+            y = (
+                -self.header.size
+                - self.spacing_y
+                - 2 * self.spacing_h
+                - self.line_width
+                if self.header
+                else 0
+            )
             for cell in col.cells:
                 cell.draw(self.x + x, self.y + y - self.col_size)
                 y -= self.col_size + self.spacing_y
@@ -302,8 +309,14 @@ class TablePainter(Painter):
         x = self.width
         for i in range(0, self.align_right):
             col = self.cols[self.num_cols - i - 1]
-            y = -self.header.size - self.spacing_y - 2 * self.spacing_h - \
-                self.line_width if self.header else 0
+            y = (
+                -self.header.size
+                - self.spacing_y
+                - 2 * self.spacing_h
+                - self.line_width
+                if self.header
+                else 0
+            )
             for cell in col.cells:
                 cell.draw(self.x + x - cell.width, self.y + y - self.col_size)
                 y -= self.col_size + self.spacing_y
@@ -330,7 +343,7 @@ class Overlay:
 
     @staticmethod
     def draw(self):
-        pr = prefs().overlay
+        pr = get_prefs().overlay
 
         if pr.shadow:
             a = 1
@@ -348,7 +361,8 @@ class Overlay:
         if self.handler:
             return
         self.handler = self.space.draw_handler_add(
-            self.__class__.draw, (self,), 'WINDOW', 'POST_PIXEL')
+            self.__class__.draw, (self,), 'WINDOW', 'POST_PIXEL'
+        )
 
         self.win_area = bpy.context.area
         # for r in bpy.context.area.regions:
@@ -392,34 +406,63 @@ class OverlayPrefs(bpy.types.PropertyGroup):
     overlay: bpy.props.BoolProperty(
         name="Use Overlay",
         description="Use overlay for stack keys and modal operators",
-        default=True)
+        default=True,
+    )
     size: bpy.props.IntProperty(
-        name="Font Size", description="Font size",
-        default=24, min=10, max=50, options={'SKIP_SAVE'},
-        update=size_update)
+        name="Font Size",
+        description="Font size",
+        default=24,
+        min=10,
+        max=50,
+        options={'SKIP_SAVE'},
+        update=size_update,
+    )
     color: bpy.props.FloatVectorProperty(
-        name="Color", description="Color",
-        default=(1, 1, 1, 1), subtype='COLOR', size=4, min=0, max=1,
-        update=color_update)
+        name="Color",
+        description="Color",
+        default=(1, 1, 1, 1),
+        subtype='COLOR',
+        size=4,
+        min=0,
+        max=1,
+        update=color_update,
+    )
     color2: bpy.props.FloatVectorProperty(
-        name="Color", description="Color",
-        default=(1, 1, 0, 1), subtype='COLOR', size=4, min=0, max=1,
-        update=color2_update)
+        name="Color",
+        description="Color",
+        default=(1, 1, 0, 1),
+        subtype='COLOR',
+        size=4,
+        min=0,
+        max=1,
+        update=color2_update,
+    )
     alignment: bpy.props.EnumProperty(
         name="Alignment",
         description="Alignment",
         items=OVERLAY_ALIGNMENT_ITEMS,
-        default='TOP')
+        default='TOP',
+    )
     duration: bpy.props.FloatProperty(
-        name="Duration", subtype='TIME', min=1, max=10, default=2, step=10)
+        name="Duration", subtype='TIME', min=1, max=10, default=2, step=10
+    )
     offset_x: bpy.props.IntProperty(
-        name="Offset X", description="Offset from area edges",
-        subtype='PIXEL', default=10, min=0)
+        name="Offset X",
+        description="Offset from area edges",
+        subtype='PIXEL',
+        default=10,
+        min=0,
+    )
     offset_y: bpy.props.IntProperty(
-        name="Offset Y", description="Offset from area edges",
-        subtype='PIXEL', default=10, min=0)
+        name="Offset Y",
+        description="Offset from area edges",
+        subtype='PIXEL',
+        default=10,
+        min=0,
+    )
     shadow: bpy.props.BoolProperty(
-        name="Use Shadow", description="Use shadow", default=True)
+        name="Use Shadow", description="Use shadow", default=True
+    )
 
     def draw(self, layout):
         # if not self.overlay:
@@ -457,16 +500,33 @@ class PME_OT_overlay(bpy.types.Operator):
         name="Alignment",
         description="Alignment",
         items=OVERLAY_ALIGNMENT_ITEMS,
-        default='TOP', options={'SKIP_SAVE'})
+        default='TOP',
+        options={'SKIP_SAVE'},
+    )
     duration: bpy.props.FloatProperty(
-        name="Duration", subtype='TIME', min=1, default=2, step=10,
-        options={'SKIP_SAVE'})
+        name="Duration",
+        subtype='TIME',
+        min=1,
+        default=2,
+        step=10,
+        options={'SKIP_SAVE'},
+    )
     offset_x: bpy.props.IntProperty(
-        name="Offset X", description="Offset from area edges",
-        subtype='PIXEL', default=10, min=0, options={'SKIP_SAVE'})
+        name="Offset X",
+        description="Offset from area edges",
+        subtype='PIXEL',
+        default=10,
+        min=0,
+        options={'SKIP_SAVE'},
+    )
     offset_y: bpy.props.IntProperty(
-        name="Offset Y", description="Offset from area edges",
-        subtype='PIXEL', default=10, min=0, options={'SKIP_SAVE'})
+        name="Offset Y",
+        description="Offset from area edges",
+        subtype='PIXEL',
+        default=10,
+        min=0,
+        options={'SKIP_SAVE'},
+    )
 
     def modal(self, context, event):
         if event.type == 'TIMER':
@@ -479,8 +539,7 @@ class PME_OT_overlay(bpy.types.Operator):
                 active_areas.add(name)
 
                 if space.timer.update():
-                    space.type.draw_handler_remove(
-                        space.handler, 'WINDOW')
+                    space.type.draw_handler_remove(space.handler, 'WINDOW')
                     space.handler = None
                 else:
                     num_handlers += 1
@@ -501,7 +560,7 @@ class PME_OT_overlay(bpy.types.Operator):
         if context.area.type not in space_groups:
             return {'CANCELLED'}
 
-        pr = uprefs().addons[ADDON_ID].preferences
+        pr = get_uprefs().addons[ADDON_ID].preferences
 
         # if not pr.overlay.overlay:
         # if not hasattr(bgl, "glColor4f"):
@@ -509,16 +568,19 @@ class PME_OT_overlay(bpy.types.Operator):
 
         space = space_groups[context.area.type]
         space.timer.reset(
-            self.duration if "duration" in self.properties
-            else pr.overlay.duration)
+            self.duration if "duration" in self.properties else pr.overlay.duration
+        )
         space.text = self.text
         space.size = pr.overlay.size
-        space.alignment = self.alignment if "alignment" in self.properties \
-            else pr.overlay.alignment
-        space.offset_x = self.offset_x if "offset_x" in self.properties \
-            else pr.overlay.offset_x
-        space.offset_y = self.offset_y if "offset_y" in self.properties \
-            else pr.overlay.offset_y
+        space.alignment = (
+            self.alignment if "alignment" in self.properties else pr.overlay.alignment
+        )
+        space.offset_x = (
+            self.offset_x if "offset_x" in self.properties else pr.overlay.offset_x
+        )
+        space.offset_y = (
+            self.offset_y if "offset_y" in self.properties else pr.overlay.offset_y
+        )
         space.shadow = pr.overlay.shadow
         space.color = list(pr.overlay.color)
 
@@ -526,13 +588,15 @@ class PME_OT_overlay(bpy.types.Operator):
             return {'CANCELLED'}
 
         space.handler = space.type.draw_handler_add(
-            _draw_handler, (space,), 'WINDOW', 'POST_PIXEL')
+            _draw_handler, (space,), 'WINDOW', 'POST_PIXEL'
+        )
 
         if not PME_OT_overlay.is_running:
             PME_OT_overlay.is_running = True
             context.window_manager.modal_handler_add(self)
             self.timer = context.window_manager.event_timer_add(
-                0.1, window=bpy.context.window)
+                0.1, window=bpy.context.window
+            )
 
         return {'RUNNING_MODAL'}
 
@@ -543,7 +607,7 @@ def overlay(text, **kwargs):
 
 
 def register():
-    opr = prefs().overlay
+    opr = get_prefs().overlay
     Text.default_style.update(list(opr.color), opr.size)
     Text.secondary_style.update(list(opr.color2), opr.size)
     # TablePainter.col_styles[0].update(

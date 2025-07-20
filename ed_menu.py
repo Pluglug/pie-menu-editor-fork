@@ -1,10 +1,17 @@
 import bpy
 from .ed_base import (
-    EditorBase, PME_OT_pmi_copy, PME_OT_pmi_paste, WM_OT_pmi_data_edit,
-    PME_OT_pmi_remove, WM_OT_pmi_icon_select, PME_OT_pmi_toggle,
-    extend_panel, unextend_panel)
+    EditorBase,
+    PME_OT_pmi_copy,
+    PME_OT_pmi_paste,
+    WM_OT_pmi_data_edit,
+    PME_OT_pmi_remove,
+    WM_OT_pmi_icon_select,
+    PME_OT_pmi_toggle,
+    extend_panel,
+    unextend_panel,
+)
 from .bl_utils import PME_OT_input_box
-from .addon import prefs, ic_eye
+from .addon import get_prefs, ic_eye
 from .layout_helper import lh, Col
 from .ui import tag_redraw, shorten_str
 from .constants import SPACER_SCALE_Y, SEPARATOR_SCALE_Y
@@ -21,7 +28,7 @@ class WM_OT_rmi_add(bpy.types.Operator):
     index: bpy.props.IntProperty()
 
     def execute(self, context):
-        pm = prefs().selected_pm
+        pm = get_prefs().selected_pm
         pmi = pm.pmis.add()
 
         if self.mode == 'ITEM':
@@ -60,7 +67,7 @@ class WM_OT_rmi_move(bpy.types.Operator):
     idx: bpy.props.IntProperty()
 
     def _draw(self, menu, context):
-        pm = prefs().selected_pm
+        pm = get_prefs().selected_pm
 
         row = menu.layout.row()
         lh.column(row)
@@ -68,14 +75,15 @@ class WM_OT_rmi_move(bpy.types.Operator):
         for idx, pmi in enumerate(pm.pmis):
             name = pmi.name
             # icon = pmi.parse_icon()
-            icon = 'KEYTYPE_KEYFRAME_VEC' if idx == self.pm_item else 'HANDLETYPE_FREE_VEC'
+            icon = (
+                'KEYTYPE_KEYFRAME_VEC' if idx == self.pm_item else 'HANDLETYPE_FREE_VEC'
+            )
 
             if pmi.mode == 'EMPTY':
                 if pmi.text == "column":
                     lh.operator(
-                        WM_OT_rmi_move.bl_idname, ". . .",
-                        pm_item=self.pm_item,
-                        idx=idx)
+                        WM_OT_rmi_move.bl_idname, ". . .", pm_item=self.pm_item, idx=idx
+                    )
                     lh.column(row)
                     continue
 
@@ -88,17 +96,15 @@ class WM_OT_rmi_move(bpy.types.Operator):
                     icon = 'NONE'
 
             lh.operator(
-                WM_OT_rmi_move.bl_idname, name, icon,
-                pm_item=self.pm_item,
-                idx=idx)
+                WM_OT_rmi_move.bl_idname, name, icon, pm_item=self.pm_item, idx=idx
+            )
 
         lh.operator(
-            WM_OT_rmi_move.bl_idname, ". . .",
-            pm_item=self.pm_item,
-            idx=idx + 1)
+            WM_OT_rmi_move.bl_idname, ". . .", pm_item=self.pm_item, idx=idx + 1
+        )
 
     def execute(self, context):
-        pm = prefs().selected_pm
+        pm = get_prefs().selected_pm
 
         if self.idx == -1:
             bpy.context.window_manager.popup_menu(self._draw)
@@ -125,37 +131,52 @@ class WM_OT_rm_col_specials_call(bpy.types.Operator):
     col_idx: bpy.props.IntProperty()
 
     def _draw(self, menu, context):
-        pr = prefs()
+        pr = get_prefs()
         pm = pr.selected_pm
 
         lh.lt(menu.layout, operator_context='INVOKE_DEFAULT')
 
         lh.operator(
-            WM_OT_rmi_add.bl_idname, "Add Column", 'ADD',
+            WM_OT_rmi_add.bl_idname,
+            "Add Column",
+            'ADD',
             index=self.cur_col.a,
-            mode='COLUMN')
+            mode='COLUMN',
+        )
 
         lh.sep(check=True)
 
         lh.operator(
-            WM_OT_rmi_add.bl_idname, "Add Slot", 'ADD',
+            WM_OT_rmi_add.bl_idname,
+            "Add Slot",
+            'ADD',
             index=self.cur_col.b,
-            mode='ITEM')
+            mode='ITEM',
+        )
 
         lh.operator(
-            WM_OT_rmi_add.bl_idname, "Add Label", 'ADD',
+            WM_OT_rmi_add.bl_idname,
+            "Add Label",
+            'ADD',
             index=self.cur_col.b,
-            mode='LABEL')
+            mode='LABEL',
+        )
 
         lh.operator(
-            WM_OT_rmi_add.bl_idname, "Add Separator", 'ADD',
+            WM_OT_rmi_add.bl_idname,
+            "Add Separator",
+            'ADD',
             index=self.cur_col.b,
-            mode='SEPARATOR')
+            mode='SEPARATOR',
+        )
 
         lh.operator(
-            WM_OT_rmi_add.bl_idname, "Add Spacer", 'ADD',
+            WM_OT_rmi_add.bl_idname,
+            "Add Spacer",
+            'ADD',
             index=self.cur_col.b,
-            mode='SPACER')
+            mode='SPACER',
+        )
 
         lh.sep(check=True)
 
@@ -163,57 +184,72 @@ class WM_OT_rm_col_specials_call(bpy.types.Operator):
 
             lh.operator(
                 WM_OT_rm_col_remove.bl_idname,
-                "Join Column", 'FULLSCREEN_EXIT',
+                "Join Column",
+                'FULLSCREEN_EXIT',
                 ask=True,
                 mode='JOIN',
                 col_idx=self.cur_col.a,
-                col_last_idx=self.cur_col.b)
+                col_last_idx=self.cur_col.b,
+            )
 
         lh.sep(check=True)
 
         if self.cur_col.calc_num_items(pm) > 0:
             lh.operator(
-                WM_OT_rm_col_copy.bl_idname, "Copy Column", 'COPYDOWN',
+                WM_OT_rm_col_copy.bl_idname,
+                "Copy Column",
+                'COPYDOWN',
                 idx=self.cur_col.a,
-                last_idx=self.cur_col.b)
+                last_idx=self.cur_col.b,
+            )
 
         if pr.rmc_clipboard:
             lh.operator(
-                WM_OT_rm_col_paste.bl_idname, "Paste Column", 'BACK',
+                WM_OT_rm_col_paste.bl_idname,
+                "Paste Column",
+                'BACK',
                 idx=self.cur_col.a,
                 last_idx=self.cur_col.b,
-                left=True)
+                left=True,
+            )
 
             lh.operator(
-                WM_OT_rm_col_paste.bl_idname, "Paste Column", 'FORWARD',
+                WM_OT_rm_col_paste.bl_idname,
+                "Paste Column",
+                'FORWARD',
                 idx=self.cur_col.a,
                 last_idx=self.cur_col.b,
-                left=False)
+                left=False,
+            )
 
         lh.sep(check=True)
 
         lh.operator(
-            WM_OT_rm_col_move.bl_idname, "Move Column", 'FORWARD',
+            WM_OT_rm_col_move.bl_idname,
+            "Move Column",
+            'FORWARD',
             col_idx=self.cur_col.b,
-            move_idx=-1)
+            move_idx=-1,
+        )
 
         lh.sep(check=True)
 
         lh.operator(
             WM_OT_rm_col_remove.bl_idname,
-            "Remove Column", 'X',
+            "Remove Column",
+            'X',
             ask=True,
             mode='REMOVE',
             col_idx=self.cur_col.a,
-            col_last_idx=self.cur_col.b)
+            col_last_idx=self.cur_col.b,
+        )
 
     def execute(self, context):
-        pm = prefs().selected_pm
+        pm = get_prefs().selected_pm
 
         self.cur_col.find_ab(pm, self.col_idx)
 
-        context.window_manager.popup_menu(
-            self._draw, title="Column")
+        context.window_manager.popup_menu(self._draw, title="Column")
 
         return {'FINISHED'}
 
@@ -232,14 +268,21 @@ class WM_OT_rm_col_move(bpy.types.Operator):
         lh.lt(menu.layout)
 
         for idx, col in enumerate(WM_OT_rm_col_move.cols):
-            icon = 'KEYTYPE_KEYFRAME_VEC' if self.col_idx == col[1] else 'HANDLETYPE_FREE_VEC'
+            icon = (
+                'KEYTYPE_KEYFRAME_VEC'
+                if self.col_idx == col[1]
+                else 'HANDLETYPE_FREE_VEC'
+            )
             lh.operator(
-                WM_OT_rm_col_move.bl_idname, "Column %d" % (idx + 1), icon,
+                WM_OT_rm_col_move.bl_idname,
+                "Column %d" % (idx + 1),
+                icon,
                 move_idx=idx,
-                col_idx=self.col_idx)
+                col_idx=self.col_idx,
+            )
 
     def execute(self, context):
-        pm = prefs().selected_pm
+        pm = get_prefs().selected_pm
 
         if self.move_idx == -1:
             cols = []
@@ -262,7 +305,8 @@ class WM_OT_rm_col_move(bpy.types.Operator):
             WM_OT_rm_col_move.cols = cols
 
             context.window_manager.popup_menu(
-                self._draw, title=WM_OT_rm_col_move.bl_description)
+                self._draw, title=WM_OT_rm_col_move.bl_description
+            )
 
         else:
             forward = True
@@ -299,9 +343,9 @@ class WM_OT_rm_col_move(bpy.types.Operator):
                 if col_last_idx >= len(pm.pmis):
                     pm.pmis.move(col_idx, col_last_idx - 1)
 
-                if (col_last_idx < len(pm.pmis) or
-                        col_idx + 1 != col_last_idx) and \
-                        Col.is_column(pm.pmis[col_idx]):
+                if Col.is_column(pm.pmis[col_idx]) and (
+                    col_last_idx < len(pm.pmis) or col_idx + 1 != col_last_idx
+                ):
                     col_idx += 1
 
                 for i in range(0, col_last_idx - col_idx + 1):
@@ -326,13 +370,16 @@ class WM_OT_rm_col_remove(bpy.types.Operator):
     def _draw(self, menu, context):
         lh.lt(menu.layout)
         lh.operator(
-            WM_OT_rm_col_remove.bl_idname, "Remove", 'X',
+            WM_OT_rm_col_remove.bl_idname,
+            "Remove",
+            'X',
             col_idx=self.col_idx,
             col_last_idx=self.col_last_idx,
-            ask=False)
+            ask=False,
+        )
 
     def execute(self, context):
-        pm = prefs().selected_pm
+        pm = get_prefs().selected_pm
 
         if self.mode == 'JOIN':
             pm.pmis.remove(self.col_last_idx)
@@ -341,7 +388,8 @@ class WM_OT_rm_col_remove(bpy.types.Operator):
 
         if self.ask:
             context.window_manager.popup_menu(
-                self._draw, title=WM_OT_rm_col_remove.bl_description)
+                self._draw, title=WM_OT_rm_col_remove.bl_description
+            )
         else:
             if self.col_idx == self.col_last_idx:
                 pm.pmis.remove(self.col_idx)
@@ -368,7 +416,7 @@ class WM_OT_rm_col_copy(bpy.types.Operator):
     last_idx: bpy.props.IntProperty()
 
     def execute(self, context):
-        pr = prefs()
+        pr = get_prefs()
         pm = pr.selected_pm
 
         pr.rmc_clipboard.clear()
@@ -393,12 +441,11 @@ class WM_OT_rm_col_paste(bpy.types.Operator):
     left: bpy.props.BoolProperty()
 
     def execute(self, context):
-        pr = prefs()
+        pr = get_prefs()
         pm = pr.selected_pm
 
         idx = self.idx if self.left else self.last_idx
-        if self.left and Col.is_column(pm.pmis[idx]) and \
-                self.idx != self.last_idx:
+        if self.left and Col.is_column(pm.pmis[idx]) and self.idx != self.last_idx:
             idx += 1
 
         last_idx = len(pm.pmis)
@@ -434,7 +481,7 @@ class WM_OT_rm_col_paste(bpy.types.Operator):
 
     @classmethod
     def poll(cls, context):
-        return prefs().rmc_clipboard is not None
+        return get_prefs().rmc_clipboard is not None
 
 
 class WM_OT_rmi_specials_call(bpy.types.Operator):
@@ -446,7 +493,7 @@ class WM_OT_rmi_specials_call(bpy.types.Operator):
     pm_item: bpy.props.IntProperty()
 
     def _draw(self, menu, context):
-        pr = prefs()
+        pr = get_prefs()
         pm = pr.selected_pm
         pmi = pm.pmis[self.pm_item]
 
@@ -458,71 +505,85 @@ class WM_OT_rmi_specials_call(bpy.types.Operator):
         if pmi.mode != 'EMPTY':
             lh.operator(
                 WM_OT_pmi_data_edit.bl_idname,
-                "Edit Slot", 'TEXT',
+                "Edit Slot",
+                'TEXT',
                 idx=self.pm_item,
-                ok=False)
+                ok=False,
+            )
 
         lh.sep(check=True)
 
         lh.operator(
-            WM_OT_rmi_add.bl_idname, "Add Slot", 'ADD',
-            index=self.pm_item,
-            mode='ITEM')
+            WM_OT_rmi_add.bl_idname, "Add Slot", 'ADD', index=self.pm_item, mode='ITEM'
+        )
 
         lh.operator(
-            WM_OT_rmi_add.bl_idname, "Add Label", 'ADD',
+            WM_OT_rmi_add.bl_idname,
+            "Add Label",
+            'ADD',
             index=self.pm_item,
-            mode='LABEL')
+            mode='LABEL',
+        )
 
         lh.operator(
-            WM_OT_rmi_add.bl_idname, "Add Separator", 'ADD',
+            WM_OT_rmi_add.bl_idname,
+            "Add Separator",
+            'ADD',
             index=self.pm_item,
-            mode='SEPARATOR')
+            mode='SEPARATOR',
+        )
 
         lh.operator(
-            WM_OT_rmi_add.bl_idname, "Add Spacer", 'ADD',
+            WM_OT_rmi_add.bl_idname,
+            "Add Spacer",
+            'ADD',
             index=self.pm_item,
-            mode='SPACER')
+            mode='SPACER',
+        )
 
         lh.sep(check=True)
 
         lh.operator(
-            WM_OT_rmi_add.bl_idname, "Split Column", 'FULLSCREEN_ENTER',
+            WM_OT_rmi_add.bl_idname,
+            "Split Column",
+            'FULLSCREEN_ENTER',
             index=self.pm_item,
-            mode='COLUMN')
+            mode='COLUMN',
+        )
 
         lh.sep(check=True)
 
         if pmi.mode != 'EMPTY':
-            lh.operator(
-                PME_OT_pmi_copy.bl_idname, None, 'COPYDOWN',
-                idx=self.pm_item)
+            lh.operator(PME_OT_pmi_copy.bl_idname, None, 'COPYDOWN', idx=self.pm_item)
 
         if pmi.mode != 'EMPTY':
             if pr.pmi_clipboard.has_data():
                 lh.operator(
-                    PME_OT_pmi_paste.bl_idname, None, 'PASTEDOWN',
-                    idx=self.pm_item)
+                    PME_OT_pmi_paste.bl_idname, None, 'PASTEDOWN', idx=self.pm_item
+                )
 
         lh.sep(check=True)
 
         lh.operator(
-            WM_OT_rmi_move.bl_idname, "Move Slot", 'FORWARD',
+            WM_OT_rmi_move.bl_idname,
+            "Move Slot",
+            'FORWARD',
             pm_item=self.pm_item,
-            idx=-1)
+            idx=-1,
+        )
 
         lh.sep(check=True)
         lh.operator(
             PME_OT_pmi_toggle.bl_idname,
-            "Enabled" if pmi.enabled else "Disabled", ic_eye(pmi.enabled),
-            pm=pm.name, pmi=self.pm_item)
+            "Enabled" if pmi.enabled else "Disabled",
+            ic_eye(pmi.enabled),
+            pm=pm.name,
+            pmi=self.pm_item,
+        )
 
         lh.sep(check=True)
 
-        lh.operator(
-            PME_OT_pmi_remove.bl_idname,
-            "Remove", 'X',
-            idx=self.pm_item)
+        lh.operator(PME_OT_pmi_remove.bl_idname, "Remove", 'X', idx=self.pm_item)
 
     def execute(self, context):
         context.window_manager.popup_menu(self._draw)
@@ -590,20 +651,14 @@ class Editor(EditorBase):
             if pmi.mode == 'EMPTY':
                 if not pmi.text:
                     lh.row(column, active=pmi.enabled)
-                    lh.operator(
-                        WM_OT_rmi_specials_call.bl_idname,
-                        " ",
-                        pm_item=idx)
+                    lh.operator(WM_OT_rmi_specials_call.bl_idname, " ", pm_item=idx)
                     lh.layout.scale_y = SEPARATOR_SCALE_Y
                     scale_y += SEPARATOR_SCALE_Y
                     continue
 
                 elif pmi.text == "spacer":
                     lh.row(column, active=pmi.enabled)
-                    lh.operator(
-                        WM_OT_rmi_specials_call.bl_idname,
-                        " ",
-                        pm_item=idx)
+                    lh.operator(WM_OT_rmi_specials_call.bl_idname, " ", pm_item=idx)
                     lh.layout.active = False
                     scale_y += 1
                     continue
@@ -615,13 +670,14 @@ class Editor(EditorBase):
 
                     lh.row(column)
                     lh.operator(
-                        WM_OT_rmi_add.bl_idname, "Add Slot",
-                        index=idx,
-                        mode='ITEM')
+                        WM_OT_rmi_add.bl_idname, "Add Slot", index=idx, mode='ITEM'
+                    )
                     lh.operator(
                         WM_OT_rm_col_specials_call.bl_idname,
-                        "", 'COLLAPSEMENU',
-                        col_idx=idx)
+                        "",
+                        'COLLAPSEMENU',
+                        col_idx=idx,
+                    )
 
                     if max_scale_y < scale_y:
                         max_scale_y = scale_y
@@ -634,34 +690,28 @@ class Editor(EditorBase):
 
             if pmi.mode == 'EMPTY':
                 lh.operator(
-                    PME_OT_input_box.bl_idname, "",
+                    PME_OT_input_box.bl_idname,
+                    "",
                     'FONT_DATA',
-                    prop="prefs().selected_pm.pmis[%d].name" % idx)
+                    prop="get_prefs().selected_pm.pmis[%d].name" % idx,
+                )
             else:
                 lh.operator(
-                    WM_OT_pmi_data_edit.bl_idname, "",
-                    self.icon,
-                    idx=idx,
-                    ok=False)
+                    WM_OT_pmi_data_edit.bl_idname, "", self.icon, idx=idx, ok=False
+                )
 
             if pmi.mode == 'EMPTY' and pmi.text != "label":
                 icon = 'BLANK1'
             else:
                 icon = pmi.parse_icon('FILE_HIDDEN')
 
-            lh.operator(
-                WM_OT_pmi_icon_select.bl_idname, "", icon,
-                idx=idx,
-                icon="")
+            lh.operator(WM_OT_pmi_icon_select.bl_idname, "", icon, idx=idx, icon="")
 
-            lh.prop(
-                pmi, "name", "",
-                enabled=pmi.mode != 'EMPTY' or pmi.text == "label")
+            lh.prop(pmi, "name", "", enabled=pmi.mode != 'EMPTY' or pmi.text == "label")
 
             lh.operator(
-                WM_OT_rmi_specials_call.bl_idname,
-                "", 'COLLAPSEMENU',
-                pm_item=idx)
+                WM_OT_rmi_specials_call.bl_idname, "", 'COLLAPSEMENU', pm_item=idx
+            )
 
             scale_y += 1
 
@@ -673,23 +723,17 @@ class Editor(EditorBase):
             max_scale_y = scale_y
 
         lh.row(column)
+        lh.operator(WM_OT_rmi_add.bl_idname, "Add Slot", index=-1, mode='ITEM')
         lh.operator(
-            WM_OT_rmi_add.bl_idname, "Add Slot",
-            index=-1,
-            mode='ITEM')
-        lh.operator(
-            WM_OT_rm_col_specials_call.bl_idname, "", 'COLLAPSEMENU',
-            col_idx=idx + 1)
+            WM_OT_rm_col_specials_call.bl_idname, "", 'COLLAPSEMENU', col_idx=idx + 1
+        )
 
         column = row.column(align=True)
         lh.lt(column)
         row = lh.row(column)
         row.scale_y = max_scale_y + 1
 
-        lh.operator(
-            WM_OT_rmi_add.bl_idname, "", 'ADD',
-            index=-1,
-            mode='COLUMN')
+        lh.operator(WM_OT_rmi_add.bl_idname, "", 'ADD', index=-1, mode='COLUMN')
 
 
 def register():

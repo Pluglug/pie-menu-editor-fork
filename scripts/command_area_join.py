@@ -52,8 +52,8 @@ def join_area():
 
     for rect in rects:
         if 'RUNNING_MODAL' in bpy.ops.screen.area_join(
-                'INVOKE_DEFAULT', min_x=rect[0], min_y=rect[1],
-                max_x=rect[2], max_y=rect[3]):
+            'INVOKE_DEFAULT', min_x=rect[0], min_y=rect[1], max_x=rect[2], max_y=rect[3]
+        ):
             break
 
 

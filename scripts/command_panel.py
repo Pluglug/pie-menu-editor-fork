@@ -91,8 +91,10 @@ def _open_panels_by(name=None, category=None, region='ANY'):
     panels_to_show = []
     panels_to_hide = []
     for tp in _panel_types():
-        if tp.bl_space_type != context.area.type or \
-                tp.bl_region_type not in side_regions:
+        if (
+            tp.bl_space_type != context.area.type
+            or tp.bl_region_type not in side_regions
+        ):
             continue
         if name and getattr(tp, "bl_label", None) == name:
             panels_to_show.append(tp)

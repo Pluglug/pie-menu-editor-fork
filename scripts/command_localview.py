@@ -34,15 +34,19 @@ def localview(mode='TOGGLE'):
             view_perspective=region.view_perspective,
             is_perspective=region.is_perspective,
             view_rotation=region.view_rotation.copy(),
-        ) for region in regions]
+        )
+        for region in regions
+    ]
 
     upr = getattr(context, "user_preferences", context.preferences)
     smooth_view = upr.view.smooth_view
     upr.view.smooth_view = 0
 
-    if mode == 'TOGGLE' or \
-            mode == 'LOCAL' and not context.space_data.local_view or \
-            mode == 'GLOBAL' and context.space_data.local_view:
+    if (
+        mode == 'TOGGLE'
+        or (mode == 'LOCAL' and not context.space_data.local_view)
+        or (mode == 'GLOBAL' and context.space_data.local_view)
+    ):
         bpy.ops.view3d.localview()
 
     upr.view.smooth_view = smooth_view

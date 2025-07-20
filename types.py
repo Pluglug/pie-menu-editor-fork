@@ -5,7 +5,7 @@ from . import ui_utils as UU
 from . import panel_utils as PAU
 from . import macro_utils as MAU
 from . import utils as U
-from .addon import prefs, temp_prefs, ic_fb
+from .addon import get_prefs, temp_prefs, ic_fb
 from . import keymap_helper as KH
 from . import pme
 from .ui import tag_redraw
@@ -26,8 +26,8 @@ class Tag(bpy.types.PropertyGroup):
 
     @staticmethod
     def popup_menu(
-            idname, title="", icon='NONE',
-            untagged=True, invoke=False, **kwargs):
+        idname, title="", icon='NONE', untagged=True, invoke=False, **kwargs
+    ):
         def draw_menu(menu, context):
             tpr = temp_prefs()
             layout = menu.layout
@@ -42,18 +42,16 @@ class Tag(bpy.types.PropertyGroup):
             if untagged:
                 if tpr.tags:
                     layout.separator()
-                p = layout.operator(
-                    idname, text=CC.UNTAGGED, icon=ic_fb(False))
+                p = layout.operator(idname, text=CC.UNTAGGED, icon=ic_fb(False))
                 p.tag = CC.UNTAGGED
                 for k, v in kwargs.items():
                     setattr(p, k, v)
 
-        bpy.context.window_manager.popup_menu(
-            draw_menu, title=title, icon=icon)
+        bpy.context.window_manager.popup_menu(draw_menu, title=title, icon=icon)
 
     @staticmethod
     def filter():
-        pr = prefs()
+        pr = get_prefs()
         tpr = temp_prefs()
         if not tpr.tags or not pr.tag_filter:
             Tag.filtered_pms = None
@@ -102,7 +100,11 @@ class PMLink(bpy.types.PropertyGroup):
 
     def __str__(self):
         return "%s [%s] (%r) (%s)" % (
-            self.pm_name, "/".join(self.path), self.is_folder, self.label)
+            self.pm_name,
+            "/".join(self.path),
+            self.is_folder,
+            self.label,
+        )
 
     def curpath(self):
         ret = self.group + CC.TREE_SPLITTER
@@ -122,13 +124,12 @@ class PMLink(bpy.types.PropertyGroup):
 class PMIItem(bpy.types.PropertyGroup):
     expandable_props = {}
 
-    mode: bpy.props.EnumProperty(
-        items=CC.MODE_ITEMS, description="Type of the item")
+    mode: bpy.props.EnumProperty(items=CC.MODE_ITEMS, description="Type of the item")
     text: bpy.props.StringProperty(maxlen=CC.MAX_STR_LEN)
     icon: bpy.props.StringProperty(description="Icon")
     enabled: bpy.props.BoolProperty(
-        name="Enable/Disable",
-        description="Enable/Disable", default=True)
+        name="Enable/Disable", description="Enable/Disable", default=True
+    )
 
     def get_pmi_label(self):
         return self.name
@@ -137,11 +138,12 @@ class PMIItem(bpy.types.PropertyGroup):
         if self.name == value:
             return
 
-        pm = prefs().selected_pm
+        pm = get_prefs().selected_pm
         pm.ed.on_pmi_rename(pm, self, self.name, value)
 
     label: bpy.props.StringProperty(
-        description="Label", get=get_pmi_label, set=set_pmi_label)
+        description="Label", get=get_pmi_label, set=set_pmi_label
+    )
 
     @property
     def rm_class(self):
@@ -176,13 +178,14 @@ class PMIItem(bpy.types.PropertyGroup):
 
         if not hidden:
             if self.mode == 'PROP':
-                bl_prop = BU.bp.get(
-                    self.prop if hasattr(self, "prop") else self.text)
+                bl_prop = BU.bp.get(self.prop if hasattr(self, "prop") else self.text)
                 if bl_prop:
                     if bl_prop.type in {'STRING', 'ENUM', 'POINTER'}:
                         text = ""
-                    if bl_prop.type in {'FLOAT', 'INT', 'BOOLEAN'} and len(
-                            bl_prop.default_array) > 1:
+                    if (
+                        bl_prop.type in {'FLOAT', 'INT', 'BOOLEAN'}
+                        and len(bl_prop.default_array) > 1
+                    ):
                         text = ""
 
             if icon[0] != CC.F_EXPAND and icon not in CC.BL_ICONS:
@@ -194,8 +197,7 @@ class PMIItem(bpy.types.PropertyGroup):
         text, icon, oicon, icon_only, hidden, use_cb = self.parse()
 
         if not text and not hidden:
-            if self.mode == 'PROP' and (
-                    self.is_expandable_prop() or icon == 'NONE'):
+            if self.mode == 'PROP' and (self.is_expandable_prop() or icon == 'NONE'):
                 if icon_only:
                     text = "[%s]" % self.name if self.name else " "
                 else:
@@ -205,7 +207,8 @@ class PMIItem(bpy.types.PropertyGroup):
 
     def extract_flags(self):
         icon, icon_only, hidden, use_cb = U.extract_str_flags(
-            self.icon, CC.F_ICON_ONLY, CC.F_HIDDEN, CC.F_CB)
+            self.icon, CC.F_ICON_ONLY, CC.F_HIDDEN, CC.F_CB
+        )
         return icon, icon_only, hidden, use_cb
 
     def parse_icon(self, default_icon='NONE'):
@@ -261,8 +264,7 @@ class PMItem(bpy.types.PropertyGroup):
                 continue
 
             name_in_keymaps = name in keymaps
-            if exists and not name_in_keymaps or \
-                    not exists and name_in_keymaps:
+            if exists and not name_in_keymaps or not exists and name_in_keymaps:
                 continue
 
             names.append(name)
@@ -288,8 +290,7 @@ class PMItem(bpy.types.PropertyGroup):
         if not value:
             value = "Window"
         else:
-            value = (CC.KEYMAP_SPLITTER + " ").join(
-                PMItem._parse_keymap(value))
+            value = (CC.KEYMAP_SPLITTER + " ").join(PMItem._parse_keymap(value))
 
         if "km_name" not in self or self["km_name"] != value:
             if "km_name" in self:
@@ -298,17 +299,20 @@ class PMItem(bpy.types.PropertyGroup):
             self["km_name"] = value
             self.register_hotkey()
 
-        prefs().update_tree()
+        get_prefs().update_tree()
 
     km_name: bpy.props.StringProperty(
-        default="Window", description="Keymap names",
-        get=get_pm_km_name, set=set_pm_km_name)
+        default="Window",
+        description="Keymap names",
+        get=get_pm_km_name,
+        set=set_pm_km_name,
+    )
 
     def get_pm_name(self):
         return self.name
 
     def set_pm_name(self, value):
-        pr = prefs()
+        pr = get_prefs()
 
         value = value.replace(CC.F_EXPAND, "")
 
@@ -321,7 +325,8 @@ class PMItem(bpy.types.PropertyGroup):
         self.ed.on_pm_rename(self, value)
 
     label: bpy.props.StringProperty(
-        get=get_pm_name, set=set_pm_name, description="Menu name")
+        get=get_pm_name, set=set_pm_name, description="Menu name"
+    )
 
     pmis: bpy.props.CollectionProperty(type=PMIItem)
     mode: bpy.props.EnumProperty(items=CC.PM_ITEMS)
@@ -331,7 +336,7 @@ class PMItem(bpy.types.PropertyGroup):
         if not self.ed.has_hotkey:
             return
 
-        pr = prefs()
+        pr = get_prefs()
         kmis = self.kmis_map[self.name]
 
         if kmis:
@@ -347,9 +352,9 @@ class PMItem(bpy.types.PropertyGroup):
                     kmi.oskey = self.oskey
 
                 kmi.key_modifier = self.key_mod
-                kmi.value = \
-                    'DOUBLE_CLICK' if self.open_mode == 'DOUBLE_CLICK' \
-                    else 'PRESS'
+                kmi.value = (
+                    'DOUBLE_CLICK' if self.open_mode == 'DOUBLE_CLICK' else 'PRESS'
+                )
 
                 if self.key == 'NONE' or not self.enabled:
                     if pr.kh.available():
@@ -371,46 +376,47 @@ class PMItem(bpy.types.PropertyGroup):
         self["key"] = value
         self.update_keymap_item(bpy.context)
 
-        pr = prefs()
+        pr = get_prefs()
         if pr.group_by == 'KEY':
             pr.tree.update()
 
     def update_open_mode(self, context):
         if self.open_mode == 'CHORDS' and self.chord == 'NONE':
             self.chord = 'A'
-        if self.open_mode != 'CHORDS' and self. chord != 'NONE':
+        if self.open_mode != 'CHORDS' and self.chord != 'NONE':
             self.chord = 'NONE'
 
         self.update_keymap_item(context)
 
     open_mode: bpy.props.EnumProperty(
-        name="Hotkey Mode",
-        items=CC.OPEN_MODE_ITEMS,
-        update=update_open_mode)
+        name="Hotkey Mode", items=CC.OPEN_MODE_ITEMS, update=update_open_mode
+    )
     key: bpy.props.EnumProperty(
-        items=KH.key_items,
-        description="Key pressed",
-        get=get_key, set=set_key)
+        items=KH.key_items, description="Key pressed", get=get_key, set=set_key
+    )
 
-    chord: bpy.props.EnumProperty(
-        items=KH.key_items,
-        description="Chord pressed")
+    chord: bpy.props.EnumProperty(items=KH.key_items, description="Chord pressed")
     any: bpy.props.BoolProperty(
-        description="Any key pressed", update=update_keymap_item)
+        description="Any key pressed", update=update_keymap_item
+    )
     ctrl: bpy.props.BoolProperty(
-        description="Ctrl key pressed", update=update_keymap_item)
+        description="Ctrl key pressed", update=update_keymap_item
+    )
     shift: bpy.props.BoolProperty(
-        description="Shift key pressed", update=update_keymap_item)
+        description="Shift key pressed", update=update_keymap_item
+    )
     alt: bpy.props.BoolProperty(
-        description="Alt key pressed", update=update_keymap_item)
+        description="Alt key pressed", update=update_keymap_item
+    )
     oskey: bpy.props.BoolProperty(
-        description="Operating system key pressed", update=update_keymap_item)
+        description="Operating system key pressed", update=update_keymap_item
+    )
 
     def get_pm_key_mod(self):
         return self["key_mod"] if "key_mod" in self else 0
 
     def set_pm_key_mod(self, value):
-        pr = prefs()
+        pr = get_prefs()
         prev_value = self.key_mod
         self["key_mod"] = value
         value = self.key_mod
@@ -430,7 +436,9 @@ class PMItem(bpy.types.PropertyGroup):
     key_mod: bpy.props.EnumProperty(
         items=KH.key_items,
         description="Regular key pressed as a modifier",
-        get=get_pm_key_mod, set=set_pm_key_mod)
+        get=get_pm_key_mod,
+        set=set_pm_key_mod,
+    )
 
     def get_pm_enabled(self):
         if "enabled" not in self:
@@ -448,7 +456,9 @@ class PMItem(bpy.types.PropertyGroup):
     enabled: bpy.props.BoolProperty(
         description="Enable or disable the menu",
         default=True,
-        get=get_pm_enabled, set=set_pm_enabled)
+        get=get_pm_enabled,
+        set=set_pm_enabled,
+    )
 
     def update_poll_cmd(self, context):
         if self.poll_cmd == CC.DEFAULT_POLL:
@@ -456,16 +466,18 @@ class PMItem(bpy.types.PropertyGroup):
         else:
             try:
                 co = compile(
-                    "def poll(cls, context):" + self.poll_cmd,
-                    "<string>", "exec")
+                    "def poll(cls, context):" + self.poll_cmd, "<string>", "exec"
+                )
                 self.poll_methods[self.name] = co
             except:
                 self.poll_methods[self.name] = None
 
     poll_cmd: bpy.props.StringProperty(
-        description=(
-            "Poll method\nTest if the item can be called/displayed or not"),
-        default=CC.DEFAULT_POLL, maxlen=CC.MAX_STR_LEN, update=update_poll_cmd)
+        description=("Poll method\nTest if the item can be called/displayed or not"),
+        default=CC.DEFAULT_POLL,
+        maxlen=CC.MAX_STR_LEN,
+        update=update_poll_cmd,
+    )
     data: bpy.props.StringProperty(maxlen=CC.MAX_STR_LEN)
 
     def update_panel_group(self):
@@ -490,7 +502,9 @@ class PMItem(bpy.types.PropertyGroup):
         items=PAU.panel_context_items,
         name="Context",
         description="Panel context",
-        get=get_panel_context, set=set_panel_context)
+        get=get_panel_context,
+        set=set_panel_context,
+    )
 
     def get_panel_category(self):
         prop = pp.parse(self.data)
@@ -504,8 +518,11 @@ class PMItem(bpy.types.PropertyGroup):
         self.update_panel_group()
 
     panel_category: bpy.props.StringProperty(
-        default="", description="Panel category (tab)",
-        get=get_panel_category, set=set_panel_category)
+        default="",
+        description="Panel category (tab)",
+        get=get_panel_category,
+        set=set_panel_category,
+    )
 
     def get_panel_region(self):
         prop = pp.parse(self.data)
@@ -526,7 +543,9 @@ class PMItem(bpy.types.PropertyGroup):
         items=CC.REGION_ITEMS,
         name="Region",
         description="Panel region",
-        get=get_panel_region, set=set_panel_region)
+        get=get_panel_region,
+        set=set_panel_region,
+    )
 
     def get_panel_space(self):
         prop = pp.parse(self.data)
@@ -547,75 +566,107 @@ class PMItem(bpy.types.PropertyGroup):
         items=CC.SPACE_ITEMS,
         name="Space",
         description="Panel space",
-        get=get_panel_space, set=set_panel_space)
+        get=get_panel_space,
+        set=set_panel_space,
+    )
 
     panel_wicons: bpy.props.BoolProperty(
         name="Use Wide Icon Buttons",
         description="Use wide icon buttons",
         get=lambda s: s.get_data("pg_wicons"),
-        set=lambda s, v: s.set_data("pg_wicons", v))
+        set=lambda s, v: s.set_data("pg_wicons", v),
+    )
 
     pm_radius: bpy.props.IntProperty(
         subtype='PIXEL',
         description="Radius of the pie menu (-1 - use default value)",
         get=lambda s: s.get_data("pm_radius"),
         set=lambda s, v: s.set_data("pm_radius", v),
-        default=-1, step=10, min=-1, max=1000)
+        default=-1,
+        step=10,
+        min=-1,
+        max=1000,
+    )
     pm_threshold: bpy.props.IntProperty(
         subtype='PIXEL',
         description=(
             "Distance from center needed "
-            "before a selection can be made(-1 - use default value)"),
+            "before a selection can be made(-1 - use default value)"
+        ),
         get=lambda s: s.get_data("pm_threshold"),
         set=lambda s, v: s.set_data("pm_threshold", v),
-        default=-1, step=10, min=-1, max=1000)
+        default=-1,
+        step=10,
+        min=-1,
+        max=1000,
+    )
     pm_confirm: bpy.props.IntProperty(
         subtype='PIXEL',
         description=(
             "Distance threshold after which selection is made "
-            "(-1 - use default value)"),
+            "(-1 - use default value)"
+        ),
         get=lambda s: s.get_data("pm_confirm"),
         set=lambda s, v: s.set_data("pm_confirm", v),
-        default=-1, step=10, min=-1, max=1000)
+        default=-1,
+        step=10,
+        min=-1,
+        max=1000,
+    )
     pm_flick: bpy.props.BoolProperty(
         name="Confirm on Release",
         description="Confirm selection when releasing the hotkey",
         get=lambda s: s.get_data("pm_flick"),
-        set=lambda s, v: s.set_data("pm_flick", v))
+        set=lambda s, v: s.set_data("pm_flick", v),
+    )
     pd_title: bpy.props.BoolProperty(
-        name="Show Title", description="Show title",
+        name="Show Title",
+        description="Show title",
         get=lambda s: s.get_data("pd_title"),
-        set=lambda s, v: s.set_data("pd_title", v))
+        set=lambda s, v: s.set_data("pd_title", v),
+    )
     pd_box: bpy.props.BoolProperty(
-        name="Use Frame", description="Use a frame",
+        name="Use Frame",
+        description="Use a frame",
         get=lambda s: s.get_data("pd_box"),
-        set=lambda s, v: s.set_data("pd_box", v))
+        set=lambda s, v: s.set_data("pd_box", v),
+    )
     pd_auto_close: bpy.props.BoolProperty(
-        name="Auto Close on Mouse Out", description="Auto close on mouse out",
+        name="Auto Close on Mouse Out",
+        description="Auto close on mouse out",
         get=lambda s: s.get_data("pd_auto_close"),
-        set=lambda s, v: s.set_data("pd_auto_close", v))
+        set=lambda s, v: s.set_data("pd_auto_close", v),
+    )
     pd_expand: bpy.props.BoolProperty(
         name="Expand Sub Popup Dialogs",
         description=(
-            "Expand all sub popup dialogs "
-            "instead of using them as a button"),
+            "Expand all sub popup dialogs instead of using them as a button"
+        ),
         get=lambda s: s.get_data("pd_expand"),
-        set=lambda s, v: s.set_data("pd_expand", v))
+        set=lambda s, v: s.set_data("pd_expand", v),
+    )
     pd_panel: bpy.props.EnumProperty(
-        name="Mode", description="Popup dialog mode",
+        name="Mode",
+        description="Popup dialog mode",
         items=CC.PD_MODE_ITEMS,
         get=lambda s: s.get_data("pd_panel"),
-        set=lambda s, v: s.set_data("pd_panel", v))
+        set=lambda s, v: s.set_data("pd_panel", v),
+    )
     pd_width: bpy.props.IntProperty(
-        name="Width", description="Width of the popup",
+        name="Width",
+        description="Width of the popup",
         subtype='PIXEL',
         get=lambda s: s.get_data("pd_width"),
         set=lambda s, v: s.set_data("pd_width", v),
-        min=100, max=2000)
+        min=100,
+        max=2000,
+    )
     rm_title: bpy.props.BoolProperty(
-        name="Show Title", description="Show title",
+        name="Show Title",
+        description="Show title",
         get=lambda s: s.get_data("rm_title"),
-        set=lambda s, v: s.set_data("rm_title", v))
+        set=lambda s, v: s.set_data("rm_title", v),
+    )
     # s_scroll: bpy.props.BoolProperty(
     #     description="Use both WheelUp and WheelDown hotkeys",
     #     get=lambda s: s.get_data("s_scroll"),
@@ -628,24 +679,28 @@ class PMItem(bpy.types.PropertyGroup):
             "Useful when the Sticky Key is a part of Macro Operator."
         ),
         get=lambda s: s.get_data("sk_block_ui"),
-        set=lambda s, v: s.set_data("sk_block_ui", v))
+        set=lambda s, v: s.set_data("sk_block_ui", v),
+    )
     mo_confirm_on_release: bpy.props.BoolProperty(
         name="Confirm On Release",
         description="Confirm on release",
         get=lambda s: s.get_data("confirm"),
-        set=lambda s, v: s.set_data("confirm", v))
+        set=lambda s, v: s.set_data("confirm", v),
+    )
     mo_block_ui: bpy.props.BoolProperty(
         name="Block UI",
         description="Block other hotkeys",
         get=lambda s: s.get_data("block_ui"),
-        set=lambda s, v: s.set_data("block_ui", v))
+        set=lambda s, v: s.set_data("block_ui", v),
+    )
 
     def mo_lock_update(self, context):
-        for pm in prefs().pie_menus:
+        for pm in get_prefs().pie_menus:
             if pm.mode == 'MACRO':
                 for pmi in pm.pmis:
                     menu_name, *_ = U.extract_str_flags(
-                        pmi.text, CC.F_EXPAND, CC.F_EXPAND)
+                        pmi.text, CC.F_EXPAND, CC.F_EXPAND
+                    )
                     if menu_name == self.name:
                         MAU.update_macro(pm)
 
@@ -654,7 +709,8 @@ class PMItem(bpy.types.PropertyGroup):
         description="Lock the mouse in the current area",
         get=lambda s: s.get_data("lock"),
         set=lambda s, v: s.set_data("lock", v),
-        update=mo_lock_update)
+        update=mo_lock_update,
+    )
 
     def poll(self, cls=None, context=None):
         if self.poll_cmd == CC.DEFAULT_POLL:
@@ -677,10 +733,10 @@ class PMItem(bpy.types.PropertyGroup):
 
     @property
     def is_new(self):
-        return self.name not in prefs().old_pms
+        return self.name not in get_prefs().old_pms
 
     def register_hotkey(self, km_names=None):
-        pr = prefs()
+        pr = get_prefs()
         if self.name not in self.kmis_map:
             self.kmis_map[self.name] = None
 
@@ -702,19 +758,22 @@ class PMItem(bpy.types.PropertyGroup):
                     kmi = pr.kh.operator(
                         WM_OT_pme_user_pie_menu_call,
                         None,  # hotkey
-                        key, self.ctrl, self.shift, self.alt, self.oskey,
-                        'NONE' if self.key_mod in KH.MOUSE_BUTTONS else \
-                        self.key_mod,
-                        self.any
+                        key,
+                        self.ctrl,
+                        self.shift,
+                        self.alt,
+                        self.oskey,
+                        'NONE' if self.key_mod in KH.MOUSE_BUTTONS else self.key_mod,
+                        self.any,
                     )
 
                     kmi.properties.pie_menu_name = self.name
                     kmi.properties.invoke_mode = 'HOTKEY'
                     kmi.properties.keymap = km_name
 
-                    kmi.value = \
-                        'DOUBLE_CLICK' if self.open_mode == 'DOUBLE_CLICK' \
-                        else 'PRESS'
+                    kmi.value = (
+                        'DOUBLE_CLICK' if self.open_mode == 'DOUBLE_CLICK' else 'PRESS'
+                    )
 
                     if self.kmis_map[self.name]:
                         self.kmis_map[self.name][km_name] = kmi
@@ -725,9 +784,12 @@ class PMItem(bpy.types.PropertyGroup):
                         KH.add_mouse_button(self.key_mod, pr.kh, km_name)
 
     def unregister_hotkey(self):
-        pr = prefs()
-        if pr.kh.available() and self.name in self.kmis_map and \
-                self.kmis_map[self.name]:
+        pr = get_prefs()
+        if (
+            pr.kh.available()
+            and self.name in self.kmis_map
+            and self.kmis_map[self.name]
+        ):
             for k, v in self.kmis_map[self.name].items():
                 pr.kh.keymap(k)
                 if isinstance(v, list):
@@ -746,8 +808,11 @@ class PMItem(bpy.types.PropertyGroup):
         return self.mode in pr.mode_filter
 
     def filter_list(self, pr):
-        return self.filter_by_mode(pr) and (
-            not pr.show_only_new_pms or self.is_new) and Tag.check_pm(self)
+        return (
+            self.filter_by_mode(pr)
+            and (not pr.show_only_new_pms or self.is_new)
+            and Tag.check_pm(self)
+        )
 
     def has_tag(self, tag):
         if not self.tag:
@@ -788,9 +853,16 @@ class PMItem(bpy.types.PropertyGroup):
 
     def to_hotkey(self, use_key_names=False):
         return KH.to_hotkey(
-            self.key, self.ctrl, self.shift, self.alt, self.oskey,
-            self.key_mod, self.any, use_key_names=use_key_names,
-            chord=self.chord)
+            self.key,
+            self.ctrl,
+            self.shift,
+            self.alt,
+            self.oskey,
+            self.key_mod,
+            self.any,
+            use_key_names=use_key_names,
+            chord=self.chord,
+        )
 
     def get_data(self, key):
         value = getattr(pp.parse(self.data), key)
@@ -804,11 +876,12 @@ class PMItem(bpy.types.PropertyGroup):
 
     @property
     def ed(self):
-        return prefs().ed(self.mode)
+        return get_prefs().ed(self.mode)
 
     def __str__(self):
         return "[%s][%s][%s] %s" % (
             "V" if self.enabled else " ",
-            self.mode, self.to_hotkey(), self.label
+            self.mode,
+            self.to_hotkey(),
+            self.label,
         )
-

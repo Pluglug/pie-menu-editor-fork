@@ -201,3 +201,6 @@ Thumbs.db
 
 # JetBrains IDE
 .idea/
+
+.personal/
+*.dat

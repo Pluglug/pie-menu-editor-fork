@@ -1,6 +1,6 @@
 import bpy
 from .ed_base import EditorBase
-from .addon import prefs, temp_prefs, SAFE_MODE
+from .addon import get_prefs, temp_prefs, SAFE_MODE
 from .layout_helper import lh
 from . import panel_utils as PAU
 from .ui import tag_redraw
@@ -13,19 +13,16 @@ class PME_OT_hpanel_menu(bpy.types.Operator):
     bl_description = "Hide panels"
 
     def _draw(self, menu, context):
-        pr = prefs()
+        pr = get_prefs()
         lh.lt(menu.layout, 'INVOKE_DEFAULT')
-        lh.operator(
-            PME_OT_panel_hide.bl_idname, None, 'ADD',
-            group=pr.selected_pm.name)
+        lh.operator(PME_OT_panel_hide.bl_idname, None, 'ADD', group=pr.selected_pm.name)
         lh.operator(PME_OT_panel_hide_by.bl_idname, None, 'ADD')
         lh.sep()
 
         lh.prop(pr, "interactive_panels")
 
     def execute(self, context):
-        context.window_manager.popup_menu(
-            self._draw, title=self.bl_description)
+        context.window_manager.popup_menu(self._draw, title=self.bl_description)
         return {'FINISHED'}
 
 
@@ -38,7 +35,7 @@ class PME_OT_hpanel_remove(bpy.types.Operator):
     idx: bpy.props.IntProperty()
 
     def execute(self, context):
-        pm = prefs().selected_pm
+        pm = get_prefs().selected_pm
 
         if self.idx == -1:
             PAU.unhide_panels([pmi.text for pmi in pm.pmis])
@@ -102,23 +99,21 @@ class Editor(EditorBase):
 
         row = layout.row()
         row.template_list(
-            "WM_UL_panel_list", "",
-            pm, "pmis", tpr, "hidden_panels_idx", rows=10)
+            "WM_UL_panel_list", "", pm, "pmis", tpr, "hidden_panels_idx", rows=10
+        )
 
         lh.column(row)
         lh.operator(PME_OT_hpanel_menu.bl_idname, "", 'ADD')
 
         if len(pm.pmis):
             lh.operator(
-                PME_OT_hpanel_remove.bl_idname, "", 'REMOVE',
-                idx=tpr.hidden_panels_idx)
-            lh.operator(
-                PME_OT_hpanel_remove.bl_idname, "", 'X', idx=-1)
+                PME_OT_hpanel_remove.bl_idname, "", 'REMOVE', idx=tpr.hidden_panels_idx
+            )
+            lh.operator(PME_OT_hpanel_remove.bl_idname, "", 'X', idx=-1)
 
         lh.sep()
 
-        lh.layout.prop(
-            prefs(), "panel_info_visibility", text="", expand=True)
+        lh.layout.prop(get_prefs(), "panel_info_visibility", text="", expand=True)
 
 
 def register():
