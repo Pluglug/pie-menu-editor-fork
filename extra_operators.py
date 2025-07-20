@@ -553,7 +553,7 @@ class PME_OT_sidearea_toggle(bpy.types.Operator):
     bl_idname = "pme.sidearea_toggle"
     bl_label = "Toggle Side Area"
     bl_description = "Toggle side area"
-    bl_options = {'INTERNAL'}
+    bl_options = {"INTERNAL"}
 
     _tolerance_cache = None
     _cache_ui_scale = None
@@ -565,298 +565,220 @@ class PME_OT_sidearea_toggle(bpy.types.Operator):
         name="Action",
         description="Action",
         items=(
-            ('TOGGLE', "Toggle", ""),
-            ('SHOW', "Show", ""),
-            ('HIDE', "Hide", ""),
+            ("TOGGLE", "Toggle", ""),
+            ("SHOW", "Show", ""),
+            ("HIDE", "Hide", ""),
         ),
-        options={'SKIP_SAVE'},
+        options={"SKIP_SAVE"},
     )
     main_area: bpy.props.EnumProperty(
         name="Main Area Type",
         description="Main area type",
         items=CC.area_type_enum_items(current=False),
-        default='VIEW_3D',
-        options={'SKIP_SAVE'},
+        default="VIEW_3D",
+        options={"SKIP_SAVE"},
     )
     area: bpy.props.EnumProperty(
         name="Side Area Type",
         description="Side area type",
         items=CC.area_type_enum_items(current=False),
-        default='OUTLINER',
-        options={'SKIP_SAVE'},
+        default="OUTLINER",
+        options={"SKIP_SAVE"},
     )
     ignore_area: bpy.props.EnumProperty(
         name="Ignore Area Type",
         description="Area type to ignore",
         items=CC.area_type_enum_items(current=False, none=True),
-        default='NONE',
-        options={'SKIP_SAVE'},
+        default="NONE",
+        options={"SKIP_SAVE"},
     )
     side: bpy.props.EnumProperty(
         name="Side",
         description="Side",
         items=(
-            ('LEFT', "Left", "", 'TRIA_LEFT_BAR', 0),
-            ('RIGHT', "Right", "", 'TRIA_RIGHT_BAR', 1),
+            ("LEFT", "Left", "", "TRIA_LEFT_BAR", 0),
+            ("RIGHT", "Right", "", "TRIA_RIGHT_BAR", 1),
         ),
-        options={'SKIP_SAVE'},
+        options={"SKIP_SAVE"},
     )
     width: bpy.props.IntProperty(
-        name="Width", default=300, subtype='PIXEL', options={'SKIP_SAVE'}
+        name="Width", default=300, subtype="PIXEL", options={"SKIP_SAVE"}
     )
     header: bpy.props.EnumProperty(
         name="Header",
         description="Header options",
         items=CC.header_action_enum_items(),
-        options={'SKIP_SAVE'},
+        options={"SKIP_SAVE"},
     )
     ignore_areas: bpy.props.StringProperty(
         name="Ignore Area Types",
         description="Comma separated area types to ignore",
-        options={'SKIP_SAVE'},
+        options={"SKIP_SAVE"},
     )
 
     @staticmethod
     def _get_blender_area_gap():
-        """
-        Calculate actual Blender area gap based on source code analysis.
-        Based on Blender 5.0.0-alpha: source/blender/editors/screen/screen_draw.cc:176
-
-        Formula: Area Gap = border_width × scale_factor
-        Where: scale_factor = (auto_dpi × ui_scale × 72.0/96.0) / 72.0
-        """
+        """Calculate actual Blender area gap based on UI settings."""
         prefs = get_uprefs()
         ui_scale = prefs.view.ui_scale
-        ui_line_width = prefs.view.ui_line_width  # 'THIN', 'AUTO', 'THICK'
-
-        # Calculate border_width based on ui_line_width setting
-        # Based on Blender documentation and source analysis
-        if ui_line_width == 'THIN':
+        ui_line_width = prefs.view.ui_line_width
+        system_dpi = getattr(prefs.system, "dpi", 72.0)
+        pixel_size = getattr(prefs.system, "pixel_size", 1.0)
+        if ui_line_width == "THIN":
             border_width = 1
-        elif ui_line_width == 'THICK':
+        elif ui_line_width == "THICK":
             border_width = 3
-        else:  # 'AUTO' or fallback
-            # Auto scales with UI scale, base value is 2
+        else:  # 'AUTO'
             border_width = max(1, round(2 * ui_scale))
-
-        # Calculate scale factor (from Blender source)
-        # auto_dpi is typically 96 on most systems, but Blender adjusts internally
-        auto_dpi = 96.0  # Base DPI assumption from Blender source
-        dpi = auto_dpi * ui_scale * (72.0 / 96.0)
+        effective_dpi = system_dpi * pixel_size
+        dpi = effective_dpi * ui_scale * (72.0 / 96.0)
         scale_factor = dpi / 72.0
-
-        # Calculate edge thickness (actual area gap)
         edge_thickness = float(border_width) * scale_factor
 
         return {
-            'gap': edge_thickness,
-            'scale_factor': scale_factor,
-            'ui_scale': ui_scale,
-            'border_width': border_width,
-            'ui_line_width': ui_line_width
+            "gap": edge_thickness,
+            "scale_factor": scale_factor,
+            "ui_scale": ui_scale,
+            "border_width": border_width,
+            "ui_line_width": ui_line_width,
+            "system_dpi": system_dpi,
+            "pixel_size": pixel_size,
+            "effective_dpi": effective_dpi,
         }
 
     @classmethod
+    def _learn_gap_patterns(cls, areas):
+        """Learn gap patterns from current area layout."""
+        if len(areas) < 2:
+            return None
+
+        horizontal_gaps = []
+
+        for i, area_a in enumerate(areas):
+            for j, area_b in enumerate(areas):
+                if i >= j:
+                    continue
+
+                if (
+                    abs(area_a.height - area_b.height) <= 5
+                    and abs(area_a.y - area_b.y) <= 5
+                ):
+                    if area_a.x < area_b.x:
+                        gap = area_b.x - (area_a.x + area_a.width)
+                    else:
+                        gap = area_a.x - (area_b.x + area_b.width)
+
+                    if 0 < gap < 50:
+                        horizontal_gaps.append(gap)
+
+        if horizontal_gaps:
+            h_gaps = sorted(horizontal_gaps)
+            return {
+                "gaps": h_gaps,
+                "median": h_gaps[len(h_gaps) // 2],
+                "mean": sum(h_gaps) / len(h_gaps),
+                "min": min(h_gaps),
+                "max": max(h_gaps),
+                "count": len(h_gaps),
+            }
+
+        return None
+
+    @classmethod
     def _get_cached_tolerance(cls):
-        """
-        Performance optimized: Cache expensive tolerance calculations.
-        Only recalculates when UI preferences actually change.
-        """
+        """Fallback tolerance calculation."""
         try:
-            prefs = get_uprefs()
-            current_ui_scale = prefs.view.ui_scale
-            current_ui_line_width = prefs.view.ui_line_width
-
-            # Check if preferences actually changed (value-based caching)
-            if (cls._tolerance_cache is not None and
-                cls._cache_ui_scale == current_ui_scale and
-                cls._cache_ui_line_width == current_ui_line_width):
-                # Cache hit! Return immediately without any calculations
-                return cls._tolerance_cache
-
-            # Cache miss: Recalculate tolerance
             gap_info = cls._get_blender_area_gap()
-            actual_gap = gap_info['gap']
-
-            # Three-layer tolerance calculation:
-            # 1. Minimum tolerance: 1 logical pixel
-            min_tolerance = 1.0 / gap_info['scale_factor']
-
-            # 2. Adaptive tolerance: 50% of actual gap
+            actual_gap = gap_info["gap"]
             adaptive_tolerance = actual_gap * 0.5
+            final_tolerance = max(1.0, adaptive_tolerance, 0.1)
 
-            # 3. Floating point precision guard for large coordinates
-            fp_tolerance = abs(actual_gap) * 4 * 2.220446049250313e-16  # 4 * machine epsilon
+            return {"tolerance": final_tolerance, "expected_gap": actual_gap}
+        except Exception:
+            return {"tolerance": 2.0, "expected_gap": 2.0}
 
-            # Final tolerance: maximum of all considerations
-            final_tolerance = max(min_tolerance, adaptive_tolerance, fp_tolerance, 0.1)
+    @classmethod
+    def _get_adaptive_tolerance(cls, areas):
+        """Calculate adaptive tolerance based on learned gap patterns."""
+        gap_pattern = cls._learn_gap_patterns(areas)
 
-            # Update cache with new values
-            cls._tolerance_cache = {
-                'tolerance': final_tolerance,
-                'expected_gap': actual_gap,
-                'min_tolerance': min_tolerance,
-                'scale_factor': gap_info['scale_factor']
+        if not gap_pattern:
+            cached = cls._get_cached_tolerance()
+            return {
+                "tolerance": cached["tolerance"],
+                "expected_gap": cached["expected_gap"],
+                "method": "fallback",
             }
-            cls._cache_ui_scale = current_ui_scale
-            cls._cache_ui_line_width = current_ui_line_width
 
-            return cls._tolerance_cache
+        expected_gap = gap_pattern["median"]
+        gap_range = gap_pattern["max"] - gap_pattern["min"]
+        if gap_range > 0:
+            adaptive_tolerance = gap_range * 0.5 + 1.0
+        else:
+            adaptive_tolerance = expected_gap * 0.5 + 1.0
+        min_tolerance = 0.5
+        max_tolerance = expected_gap * 2.0
+        final_tolerance = max(min_tolerance, min(adaptive_tolerance, max_tolerance))
 
-        except Exception as e:
-            # Fallback with simple caching
-            print(f"Warning: Could not calculate cached tolerance, using fallback. Error: {e}")
-            fallback_tolerance = {
-                'tolerance': 2.0,
-                'expected_gap': 2.0,
-                'min_tolerance': 1.0,
-                'scale_factor': 1.0
-            }
-            cls._tolerance_cache = fallback_tolerance
-            # Don't update scale values on error to force recalc next time
-            return fallback_tolerance
+        return {
+            "tolerance": final_tolerance,
+            "expected_gap": expected_gap,
+            "gap_pattern": gap_pattern,
+            "method": "adaptive_learning",
+        }
 
     def get_side_areas(self, area):
-        """
-        Performance optimized side area detection.
-        Uses cached tolerance and single-pass search.
-        Returns: (left_area, right_area)
-        """
-        # Get cached tolerance (fast!)
-        tol_info = self._get_cached_tolerance()
-        expected_gap = tol_info['expected_gap']
-        tolerance = tol_info['tolerance']
-        max_search_gap = expected_gap * 3  # Precompute search limit
+        """Detect adjacent side areas using adaptive gap learning."""
+        all_areas = list(bpy.context.screen.areas)
+        tol_info = self._get_adaptive_tolerance(all_areas)
+        expected_gap = tol_info["expected_gap"]
+        tolerance = tol_info["tolerance"]
+        max_search_gap = expected_gap * 3
 
-        # Single-pass area detection with early termination
         left_area = None
         right_area = None
-        bottom_area = None
-        top_area = None
-
-        # Fallback candidates for closest search
         best_left = None
-        best_left_gap = float('inf')
+        best_left_gap = float("inf")
         best_right = None
-        best_right_gap = float('inf')
+        best_right_gap = float("inf")
 
-        for candidate_area in bpy.context.screen.areas:
-            # Skip self and ignored types
+        for candidate_area in all_areas:
             if candidate_area == area or candidate_area.ui_type in self.ia:
                 continue
+            height_match = abs(candidate_area.height - area.height) <= 5
+            y_match = abs(candidate_area.y - area.y) <= 5
 
-            # Horizontal adjacency check (same height and y position)
-            if (candidate_area.height == area.height and 
-                candidate_area.y == area.y):
-
-                # Left adjacency: candidate's right edge to area's left edge
+            if height_match and y_match:
                 left_gap = area.x - (candidate_area.x + candidate_area.width)
                 if not left_area and abs(left_gap - expected_gap) <= tolerance:
                     left_area = candidate_area
-                elif not left_area and 0 < left_gap <= max_search_gap and left_gap < best_left_gap:
+                elif (
+                    not left_area
+                    and 0 < left_gap <= max_search_gap
+                    and left_gap < best_left_gap
+                ):
                     best_left = candidate_area
                     best_left_gap = left_gap
 
-                # Right adjacency: area's right edge to candidate's left edge
                 right_gap = candidate_area.x - (area.x + area.width)
                 if not right_area and abs(right_gap - expected_gap) <= tolerance:
                     right_area = candidate_area
-                elif not right_area and 0 < right_gap <= max_search_gap and right_gap < best_right_gap:
+                elif (
+                    not right_area
+                    and 0 < right_gap <= max_search_gap
+                    and right_gap < best_right_gap
+                ):
                     best_right = candidate_area
                     best_right_gap = right_gap
 
-            # Vertical adjacency check (same width and x position)
-            elif (candidate_area.width == area.width and 
-                  candidate_area.x == area.x):
-
-                # Bottom adjacency: candidate's top edge to area's bottom edge
-                bottom_gap = area.y - (candidate_area.y + candidate_area.height)
-                if not bottom_area and abs(bottom_gap - expected_gap) <= tolerance:
-                    bottom_area = candidate_area
-
-                # Top adjacency: area's top edge to candidate's bottom edge
-                top_gap = candidate_area.y - (area.y + area.height)
-                if not top_area and abs(top_gap - expected_gap) <= tolerance:
-                    top_area = candidate_area
-
-            # Early termination: if we found all horizontal targets, break
             if left_area and right_area:
                 break
-
-        # Use fallback candidates if exact matches not found
         if not left_area and best_left:
             left_area = best_left
         if not right_area and best_right:
             right_area = best_right
 
-        # Original logic: if vertical areas found, clear horizontal ones
-        if bottom_area or top_area:
-            left_area, right_area = None, None
-
         return left_area, right_area
-
-    @classmethod
-    def debug_gap_calculation(cls):
-        """
-        Debug method to print current gap calculation values.
-        Includes performance information and cache status.
-        """
-        import time
-        start_time = time.time()
-        
-        # Check current UI settings
-        import bpy
-        prefs = bpy.context.preferences
-        current_ui_scale = prefs.view.ui_scale
-        current_ui_line_width = prefs.view.ui_line_width
-        
-        # Test cache efficiency
-        cache_hit = (cls._tolerance_cache is not None and
-                    cls._cache_ui_scale == current_ui_scale and
-                    cls._cache_ui_line_width == current_ui_line_width)
-        
-        # Get gap info and tolerance
-        gap_info = cls._get_blender_area_gap()
-        gap_calc_time = time.time()
-        
-        tol_info = cls._get_cached_tolerance()
-        total_time = time.time()
-        
-        print("=== Blender Area Gap Debug Info (Value-Based Cache) ===")
-        print(f"UI Scale: {gap_info['ui_scale']:.3f}")
-        print(f"UI Line Width: {gap_info['ui_line_width']}")
-        print(f"Border Width: {gap_info['border_width']}")
-        print(f"Scale Factor: {gap_info['scale_factor']:.3f}")
-        print(f"Calculated Gap: {gap_info['gap']:.3f} pixels")
-        print(f"Tolerance: {tol_info['tolerance']:.3f} pixels")
-        print(f"Min Tolerance: {tol_info['min_tolerance']:.3f} pixels")
-        print("")
-        print("=== Performance Info ===")
-        print(f"Gap calculation time: {(gap_calc_time - start_time) * 1000:.2f}ms")
-        print(f"Total time (with cache): {(total_time - start_time) * 1000:.2f}ms")
-        print("")
-        print("=== Cache Status ===")
-        print(f"Cache status: {'HIT' if cache_hit else 'MISS'}")
-        print(f"Cache exists: {'Yes' if cls._tolerance_cache else 'No'}")
-        if cls._tolerance_cache:
-            print(f"Cached UI Scale: {cls._cache_ui_scale}")
-            print(f"Cached UI Line Width: {cls._cache_ui_line_width}")
-            print(f"Current UI Scale: {current_ui_scale}")
-            print(f"Current UI Line Width: {current_ui_line_width}")
-            settings_changed = (cls._cache_ui_scale != current_ui_scale or 
-                              cls._cache_ui_line_width != current_ui_line_width)
-            print(f"Settings changed: {'Yes' if settings_changed else 'No'}")
-        print("")
-        print("=== Area Count Info ===")
-        try:
-            area_count = len(bpy.context.screen.areas)
-            print(f"Total areas: {area_count}")
-            print(f"Estimated search complexity: O({area_count})")
-        except:
-            print("Could not get area count")
-        print("================================================")
-        
-        return gap_info, tol_info
 
     def add_space(self, area, space_type):
         a_type = area.ui_type
@@ -864,14 +786,14 @@ class PME_OT_sidearea_toggle(bpy.types.Operator):
         area.ui_type = a_type
 
     def move_header(self, area):
-        if self.header != 'DEFAULT':
+        if self.header != "DEFAULT":
             SU.move_header(
-                area, top='TOP' in self.header, visible='HIDE' not in self.header
+                area, top="TOP" in self.header, visible="HIDE" not in self.header
             )
 
     def fix_area(self, area):
-        if area.ui_type in ('INFO', 'PROPERTIES'):
-            bpy.ops.pme.timeout('INVOKE_DEFAULT', cmd=("redraw_screen()"))
+        if area.ui_type in ("INFO", "PROPERTIES"):
+            bpy.ops.pme.timeout("INVOKE_DEFAULT", cmd=("redraw_screen()"))
 
     def save_sidebars(self, area):
         if self.sidebars_state is None:
@@ -879,9 +801,9 @@ class PME_OT_sidearea_toggle(bpy.types.Operator):
 
         r_tools, r_ui = None, None
         for r in area.regions:
-            if r.type == 'TOOLS':
+            if r.type == "TOOLS":
                 r_tools = r
-            elif r.type == 'UI':
+            elif r.type == "UI":
                 r_ui = r
 
         self.sidebars_state[area.ui_type] = (
@@ -918,7 +840,6 @@ class PME_OT_sidearea_toggle(bpy.types.Operator):
                 )
             except:
                 bpy.ops.screen.area_join(cursor=(area.x, area.y + 2))
-
         else:
             try:
                 bpy.ops.screen.area_join(
@@ -941,15 +862,15 @@ class PME_OT_sidearea_toggle(bpy.types.Operator):
             if a.ui_type == self.main_area:
                 break
         else:
-            self.report({'WARNING'}, "Main area not found")
-            return {'CANCELLED'}
+            self.report({"WARNING"}, "Main area not found")
+            return {"CANCELLED"}
 
         l, r = self.get_side_areas(a)
 
         if (
             l
-            and self.side == 'LEFT'
-            and self.action in ('TOGGLE', 'SHOW')
+            and self.side == "LEFT"
+            and self.action in ("TOGGLE", "SHOW")
             and l.ui_type != self.area
         ):
             self.save_sidebars(l)
@@ -959,7 +880,7 @@ class PME_OT_sidearea_toggle(bpy.types.Operator):
             CTU.swap_spaces(l, a, self.area)
 
             if l.width != self.width:
-                CTU.resize_area(l, self.width, direction='RIGHT')
+                CTU.resize_area(l, self.width, direction="RIGHT")
                 SU.redraw_screen()
 
             self.restore_sidebars(l)
@@ -968,8 +889,8 @@ class PME_OT_sidearea_toggle(bpy.types.Operator):
 
         elif (
             r
-            and self.side == 'RIGHT'
-            and self.action in ('TOGGLE', 'SHOW')
+            and self.side == "RIGHT"
+            and self.action in ("TOGGLE", "SHOW")
             and r.ui_type != self.area
         ):
             self.save_sidebars(r)
@@ -979,32 +900,31 @@ class PME_OT_sidearea_toggle(bpy.types.Operator):
             CTU.swap_spaces(r, a, self.area)
 
             if r.width != self.width:
-                CTU.resize_area(r, self.width, direction='LEFT')
+                CTU.resize_area(r, self.width, direction="LEFT")
                 SU.redraw_screen()
 
             self.restore_sidebars(r)
             self.move_header(r)
             self.fix_area(r)
 
-        elif l and self.side == 'LEFT' and self.action in ('TOGGLE', 'HIDE'):
+        elif l and self.side == "LEFT" and self.action in ("TOGGLE", "HIDE"):
             self.save_sidebars(l)
             self.close_area(context, a, l)
             SU.redraw_screen()
 
-        elif r and self.side == 'RIGHT' and self.action in ('TOGGLE', 'HIDE'):
+        elif r and self.side == "RIGHT" and self.action in ("TOGGLE", "HIDE"):
             self.save_sidebars(r)
             self.close_area(context, a, r)
             SU.redraw_screen()
 
         elif (
-            (self.side == 'LEFT' and not l) or 
-            (self.side == 'RIGHT' and not r)
-        ) and self.action in ('TOGGLE', 'SHOW'):
+            (self.side == "LEFT" and not l) or (self.side == "RIGHT" and not r)
+        ) and self.action in ("TOGGLE", "SHOW"):
             if self.width > a.width >> 1:
                 self.width = a.width >> 1
 
             factor = (self.width - 1) / a.width
-            if self.side == 'RIGHT':
+            if self.side == "RIGHT":
                 factor = 1 - factor
 
             self.add_space(a, self.area)
@@ -1020,7 +940,7 @@ class PME_OT_sidearea_toggle(bpy.types.Operator):
                 mouse["mouse_y"] = a.y + 1
 
             with context.temp_override(area=a):
-                bpy.ops.screen.area_split(direction='VERTICAL', factor=factor, **mouse)
+                bpy.ops.screen.area_split(direction="VERTICAL", factor=factor, **mouse)
 
             new_area = context.screen.areas[-1]
             new_area.ui_type = self.area
@@ -1030,7 +950,7 @@ class PME_OT_sidearea_toggle(bpy.types.Operator):
             self.move_header(new_area)
             self.fix_area(new_area)
 
-        return {'FINISHED'}
+        return {"FINISHED"}
 
 
 class PME_OT_popup_area(bpy.types.Operator):
