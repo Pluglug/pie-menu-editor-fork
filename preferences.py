@@ -448,10 +448,15 @@ class WM_OT_pm_import(bpy.types.Operator, ImportHelper):
 
         self.refresh_icons_flag = False
         try:
-            for f in self.files:
-                filepath = os.path.join(self.directory, f.name)
-                if os.path.isfile(filepath):
-                    self.import_file(filepath)
+            # From direct file path
+            if not self.files and self.filepath and os.path.isfile(self.filepath):
+                self.import_file(self.filepath)
+            else:
+                # From file selection dialog
+                for f in self.files:
+                    filepath = os.path.join(self.directory, f.name)
+                    if os.path.isfile(filepath):
+                        self.import_file(filepath)
         except:
             raise
         finally:
