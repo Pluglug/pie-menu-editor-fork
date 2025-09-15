@@ -1,6 +1,5 @@
 import bpy
 import blf
-import bgl
 from time import time
 from .addon import ADDON_ID, get_prefs, get_uprefs, ic, is_28
 from .utils import multiton
@@ -19,10 +18,7 @@ OVERLAY_ALIGNMENT_ITEMS = (
 
 
 def blf_color(r, g, b, a):
-    if is_28():
-        blf.color(0, r, g, b, a)
-    else:
-        bgl.glColor4f(r, g, b, a)
+    blf.color(0, r, g, b, a)
 
 
 class Timer:
@@ -88,7 +84,6 @@ add_space_group(CC.UPREFS, "Space" + CC.UPREFS_CLS)
 add_space_group("VIEW_3D", "SpaceView3D")
 
 del add_space_group
-
 
 _line_y = 0
 
@@ -280,15 +275,6 @@ class TablePainter(Painter):
             y = round(self.y - self.header.size)
             self.header.draw(x, y)
 
-            if not is_28():
-                bgl.glLineWidth(self.line_width)
-                blf_color(*self.header.style.color)
-                bgl.glBegin(bgl.GL_LINES)
-                bgl.glVertex2f(self.x, y - self.spacing_h - self.line_width)
-                bgl.glVertex2f(
-                    self.x + self.width, y - self.spacing_h - self.line_width
-                )
-                bgl.glEnd()
 
         x = 0
         for i in range(0, self.num_cols - self.align_right):
@@ -561,10 +547,6 @@ class PME_OT_overlay(bpy.types.Operator):
             return {'CANCELLED'}
 
         pr = get_uprefs().addons[ADDON_ID].preferences
-
-        # if not pr.overlay.overlay:
-        # if not hasattr(bgl, "glColor4f"):
-        #     return {'CANCELLED'}
 
         space = space_groups[context.area.type]
         space.timer.reset(
