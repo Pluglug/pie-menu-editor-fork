@@ -19,7 +19,6 @@ from .addon import (
     ic_fb,
     ic_cb,
     ic_eye,
-    is_28,
 )
 from . import constants as CC
 from . import operators as OPS
@@ -3313,7 +3312,7 @@ class PMEPreferences(bpy.types.AddonPreferences):
             subcol = col.column(align=True)
             subcol.prop(
                 get_uprefs().inputs,
-                "drag_threshold" if is_28() else "tweak_threshold",
+                "drag_threshold",
                 text="Tweak Mode Threshold",
             )
             subcol.prop(pr, "hold_time")

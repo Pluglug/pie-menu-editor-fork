@@ -4,7 +4,7 @@ import traceback
 from inspect import isclass
 from math import pi as PI
 from time import time
-from .addon import get_prefs, get_uprefs, temp_prefs, ADDON_PATH, print_exc, ic, is_28
+from .addon import get_prefs, get_uprefs, temp_prefs, ADDON_PATH, print_exc, ic
 from .bl_utils import (
     bl_context,
     gen_prop_path,
@@ -1789,7 +1789,7 @@ class WM_OT_pme_user_pie_menu_call(bpy.types.Operator):
             ):
                 tt = getattr(
                     get_uprefs().inputs,
-                    "drag_threshold" if is_28() else "tweak_threshold",
+                    "drag_threshold",
                 )
                 if abs(self.x - event.mouse_x) > tt or abs(self.y - event.mouse_y) > tt:
                     self.modal_stop()
@@ -2501,9 +2501,7 @@ class PME_OT_pmi_custom_set(bpy.types.Operator):
             pr.pmi_data.sname = "Texture Mask"
 
         elif self.mode == 'RECENT_FILES':
-            recent_files_menu = "INFO_MT_file_open_recent"
-            if is_28():
-                recent_files_menu = "TOPBAR_MT_file_open_recent"
+            recent_files_menu = "TOPBAR_MT_file_open_recent"
 
             pr.pmi_data.custom = (
                 "L.menu('%s', " "text=text, icon=icon, icon_value=icon_value)"
@@ -2897,13 +2895,12 @@ class PME_OT_pmidata_specials_call(bpy.types.Operator):
 
         lh.sep()
 
-        if is_28():
-            lh.operator(
-                PME_OT_pmi_panel_search.bl_idname,
-                "Popover Panel",
-                'WINDOW',
-                popover=True,
-            )
+        lh.operator(
+            PME_OT_pmi_panel_search.bl_idname,
+            "Popover Panel",
+            'WINDOW',
+            popover=True,
+        )
 
         lh.operator(PME_OT_pmi_panel_search.bl_idname, "Popup Panel", 'WINDOW')
 

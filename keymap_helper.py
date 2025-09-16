@@ -1,6 +1,6 @@
 import bpy
 from . import constants as CC
-from .addon import get_uprefs, print_exc, is_28
+from .addon import get_uprefs, print_exc
 from .property_utils import DynamicPG, to_py_value
 from .debug_utils import *
 from . import c_utils as CTU
@@ -155,7 +155,7 @@ class _ImageKMList(_KMList):
                 lst.append("Image Paint")
             elif mode == 'MASK':
                 lst.append("Mask Editing")
-            elif mode == 'VIEW' and not is_28() or mode == 'UV' and is_28():
+            elif mode == 'UV':
                 ao = context.active_object
                 if (
                     ao

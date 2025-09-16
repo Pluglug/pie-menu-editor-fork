@@ -1,7 +1,7 @@
 import bpy
 import _bpy
 import re
-from .addon import print_exc, ic, get_uprefs, is_28
+from .addon import print_exc, ic, get_uprefs
 from .screen_utils import get_override_args
 from . import constants as CC
 from . import pme
@@ -818,10 +818,8 @@ def area_header_text_set(text=None, area=None):
     for area in areas:
         if text:
             area.header_text_set(text=text)
-        elif is_28():
-            area.header_text_set(text=None)
-        else:
-            area.header_text_set()
+        area.header_text_set(text=None)
+
 
 
 def _find_areas_with_header_text_support(context):

@@ -1,7 +1,7 @@
 import bpy
 import blf
 from time import time
-from .addon import ADDON_ID, get_prefs, get_uprefs, ic, is_28
+from .addon import ADDON_ID, get_prefs, get_uprefs, ic
 from .utils import multiton
 from .layout_helper import split
 from . import pme
