@@ -105,10 +105,6 @@ def print_exc(text=None):
     traceback.print_exc()
 
 
-def is_28():
-    return bpy.app.version >= (2, 80, 0)
-
-
 def ic(icon):
     # Legacy_TODO: Remove or Enhance
     # Support for 2.79 and 2.8+

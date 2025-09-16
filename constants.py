@@ -1,5 +1,5 @@
 import bpy
-from .addon import ic, is_28
+from .addon import ic
 from .previews_helper import ph
 
 MAX_STR_LEN = 1024

@@ -2,7 +2,7 @@ import bpy
 from . import constants as CC
 from .collection_utils import MoveItemOperator
 from .ed_base import EditorBase, PME_OT_pm_edit, PME_OT_pm_add
-from .addon import get_prefs, get_uprefs, ic, ic_cb, is_28
+from .addon import get_prefs, get_uprefs, ic, ic_cb
 from .layout_helper import lh, operator, draw_pme_layout
 from .ui import utitle, tag_redraw
 from .ui_utils import draw_menu
@@ -332,21 +332,20 @@ class PME_OT_panel_menu(bpy.types.Operator):
                     % (self.panel, context.area.type),
                 )
 
-                if is_28():
-                    lh.operator(
-                        PME_OT_pm_edit.bl_idname,
-                        "Add as Popover to '%s'" % pm.name,
-                        'ADD',
-                        auto=False,
-                        name=label,
-                        mode='CUSTOM',
-                        text=(
-                            "L.popover("
-                            "panel='%s', "
-                            "text=slot, icon=icon, icon_value=icon_value)"
-                        )
-                        % self.panel,
+                lh.operator(
+                    PME_OT_pm_edit.bl_idname,
+                    "Add as Popover to '%s'" % pm.name,
+                    'ADD',
+                    auto=False,
+                    name=label,
+                    mode='CUSTOM',
+                    text=(
+                        "L.popover("
+                        "panel='%s', "
+                        "text=slot, icon=icon, icon_value=icon_value)"
                     )
+                    % self.panel,
+                )
 
             if pm.mode == 'PANEL':
                 lh.operator(
