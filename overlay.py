@@ -17,10 +17,6 @@ OVERLAY_ALIGNMENT_ITEMS = (
 )
 
 
-def blf_color(r, g, b, a):
-    blf.color(0, r, g, b, a)
-
-
 class Timer:
     def __init__(self, t):
         self.reset(t)
@@ -110,7 +106,7 @@ def _draw_line(space, r, g, b, a):
         _line_y += space.size + 3
 
     blf.position(0, x, y, 0)
-    blf_color(r, g, b, a)
+    blf.color(0, r, g, b, a)
     blf.draw(0, space.text)
 
 
@@ -173,7 +169,7 @@ class Text:
         self.width, self.height = blf.dimensions(0, text)
 
     def draw(self, x, y):
-        blf_color(*self.style.color)
+        blf.color(0, *self.style.color)
         blf.position(0, x, y, 0)
         blf.size(0, self.size)
         blf.draw(0, self.text)
