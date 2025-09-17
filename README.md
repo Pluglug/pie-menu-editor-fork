@@ -10,6 +10,9 @@ With PME, users could easily extend their custom UI and enhance their efficiency
 Our goal is to ensure the long-term stability and growth of this exceptional tool within the Blender ecosystem.
 
 [![Sponsor](https://img.shields.io/badge/Support%20PME-30363D?style=for-the-badge&logo=GitHub-Sponsors&logoColor=#white)](https://github.com/sponsors/Pluglug)
+
+[![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/Pluglug)
+
 ---
 
 **Documentation**:  
@@ -66,3 +69,4 @@ Any maintenance work conducted through this repository is performed in good fait
 
 ## Contact
 For questions or suggestions, please use the [Issues](../../issues) section.
+

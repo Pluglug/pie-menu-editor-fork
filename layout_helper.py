@@ -1,7 +1,7 @@
 import bpy
 from . import pme
 from . import c_utils as CTU
-from .addon import get_prefs, print_exc, ic, is_28
+from .addon import get_prefs, print_exc, ic
 from .constants import SCALE_X, SPACER_SCALE_Y, F_CUSTOM_ICON
 from .bl_utils import bp, PME_OT_message_box
 from .utils import format_exception
@@ -1068,7 +1068,7 @@ def operator(
     if text is not None:
         d["text"] = text
 
-    if depress is not None and is_28():
+    if depress is not None:
         d["depress"] = depress
 
     properties = layout.operator(idname, **d)

@@ -1,7 +1,7 @@
 import bpy
 import addon_utils
 from bpy.app.handlers import persistent
-from .addon import ADDON_ID, get_prefs, get_uprefs, is_28
+from .addon import ADDON_ID, get_prefs, get_uprefs
 from .bl_utils import PopupOperator, popup_area, ctx_dict, area_header_text_set
 from .panel_utils import panel, panel_label, bl_panel_enum_items
 from .constants import (

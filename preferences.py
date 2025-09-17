@@ -19,7 +19,6 @@ from .addon import (
     ic_fb,
     ic_cb,
     ic_eye,
-    is_28,
 )
 from . import constants as CC
 from . import operators as OPS
@@ -1132,22 +1131,13 @@ class WM_UL_panel_list(bpy.types.UIList):
 
 class WM_UL_pm_list(bpy.types.UIList):
 
-    def _draw_filter(self, context, layout):
+    def draw_filter(self, context, layout):
         pr = get_prefs()
 
         col = layout.column(align=True)
         col.prop(self, "filter_name", text="", icon=ic('VIEWZOOM'))
         col.prop(pr, "list_size")
         col.prop(pr, "num_list_rows")
-
-    def draw_filter27(self, context, layout):
-        self._draw_filter(context, layout)
-
-    def draw_filter28(self, context, layout, reverse=False):
-        self._draw_filter(context, layout)
-
-    draw_filter = draw_filter27
-    # draw_filter = draw_filter28 if is_28() else draw_filter27
 
     def draw_item(
         self, context, layout, data, item, icon, active_data, active_propname, index
@@ -1733,22 +1723,13 @@ class PME_UL_pm_tree(bpy.types.UIList):
                 all=True,
             )
 
-    def _draw_filter(self, context, layout):
+    def draw_filter(self, context, layout):
         pr = get_prefs()
 
         col = layout.column(align=True)
         # col.prop(self, "filter_name", text="", icon='VIEWZOOM')
         col.prop(pr, "list_size")
         col.prop(pr, "num_list_rows")
-
-    def draw_filter27(self, context, layout):
-        self._draw_filter(context, layout)
-
-    def draw_filter28(self, context, layout, reverse=False):
-        self._draw_filter(context, layout)
-
-    draw_filter = draw_filter27
-    # draw_filter = draw_filter28 if is_28() else draw_filter27
 
     def filter_items(self, context, data, propname):
         pr = get_prefs()
@@ -3318,7 +3299,7 @@ class PMEPreferences(bpy.types.AddonPreferences):
             subcol = col.column(align=True)
             subcol.prop(
                 get_uprefs().inputs,
-                "drag_threshold" if is_28() else "tweak_threshold",
+                "drag_threshold",
                 text="Tweak Mode Threshold",
             )
             subcol.prop(pr, "hold_time")
