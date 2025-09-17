@@ -3812,7 +3812,8 @@ def register():
     pr.maximize_prefs = False
     pr.show_advanced_settings = False
     pr.mode_filter = CC.PM_ITEMS_M_DEFAULT
-    pr["tag_filter"] = ""
+    if hasattr(pr,"tag_filter"):
+        pr.tag_filter = ""
     Tag.filter()
 
     h = pr.hotkey
