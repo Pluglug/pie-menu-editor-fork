@@ -2211,6 +2211,7 @@ class EditorBase:
         if pm.name not in pm.kmis_map:
             pm.register_hotkey()
 
+        Tag.filter()
         pr.update_tree()
 
     def on_pmi_check(self, pm, pmi_data):

@@ -615,7 +615,8 @@ class WM_OT_pm_duplicate(bpy.types.Operator):
 
         pm.ed.on_pm_duplicate(apm, pm)
 
-        PME_UL_pm_tree.update_tree()
+        Tag.filter()
+        pr.update_tree()
 
         return {'FINISHED'}
 
@@ -2359,6 +2360,11 @@ class PMEPreferences(bpy.types.AddonPreferences):
         update=update_tree,
     )
     tag_filter: bpy.props.StringProperty(update=update_tree)
+    auto_tag_on_add: bpy.props.BoolProperty(
+        name="Tag New Menus with Active Filter",
+        default=False,
+        description="When a tag filter is active, automatically assign that tag to newly created menus",
+    )
     show_only_new_pms: bpy.props.BoolProperty(
         description="Show only new menus", update=update_tree
     )
@@ -2629,6 +2635,10 @@ class PMEPreferences(bpy.types.AddonPreferences):
 
         else:
             pm.ed.on_pm_add(pm)
+
+            if self.auto_tag_on_add and self.tag_filter and self.tag_filter != CC.UNTAGGED:
+                pm.add_tag(self.tag_filter)
+                Tag.filter()
 
         pm.register_hotkey()
 
@@ -3275,6 +3285,7 @@ class PMEPreferences(bpy.types.AddonPreferences):
             )
             self._draw_hprop(subcol, pr, "cache_scripts")
             self._draw_hprop(subcol, pr, "save_tree")
+            self._draw_hprop(subcol, pr, "auto_tag_on_add")
             self._draw_hprop(subcol, pr, "auto_backup")
             self._draw_hprop(subcol, pr, "show_error_trace")
             subcol.separator()
