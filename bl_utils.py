@@ -893,7 +893,7 @@ def popup_area(area, width=320, height=400, x=None, y=None):
             initial_windows = set(C.window_manager.windows)
 
             # Create the duplicate window with modified area dimensions
-            with C.temp_override(**ctx_dict(area=area)):  # MIGRATION_TODO: Delete ctx_dict
+            with C.temp_override(area=area):
                 bpy.ops.screen.area_dupli('INVOKE_DEFAULT')
 
             # Log results for debugging
@@ -932,7 +932,7 @@ def popup_area(area, width=320, height=400, x=None, y=None):
         upr.view.ui_line_width = 'THIN'
 
         try:
-            with C.temp_override(**ctx_dict(area=area)):
+            with C.temp_override(area=area):
                 bpy.ops.screen.area_dupli('INVOKE_DEFAULT')
         finally:
             upr.view.ui_scale = ui_scale

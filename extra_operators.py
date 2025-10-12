@@ -1043,10 +1043,7 @@ class PME_OT_popup_area(bpy.types.Operator):
         screen_name = PME_TEMP_SCREEN if self.auto_close else PME_SCREEN
         screen_name += area_name
 
-        area_type = None
-        area = context.screen.areas[0]
-        area_type = area.ui_type
-        area.ui_type = self.area
+        area = context.area or context.screen.areas[0]
 
         rh, rw = None, None
         for r in area.regions:
@@ -1098,6 +1095,9 @@ class PME_OT_popup_area(bpy.types.Operator):
             new_window = context.window_manager.windows[-1]
 
         if new_window:
+            target_area = new_window.screen.areas[0] if new_window.screen.areas else None
+            target_area.ui_type = self.area
+
             if screen_name in bpy.data.screens:
                 new_window.screen = bpy.data.screens[screen_name]
             else:
@@ -1106,7 +1106,6 @@ class PME_OT_popup_area(bpy.types.Operator):
 
                 # FIXME: Screen reuse not implemented - commands only execute on first creation
                 if self.cmd:
-                    target_area = new_window.screen.areas[0] if new_window.screen.areas else None
                     SU.exec_with_override(
                         cmd=self.cmd,
                         window=new_window,
@@ -1115,9 +1114,6 @@ class PME_OT_popup_area(bpy.types.Operator):
                     )
 
         self.update_header(context, header_on_top, header_visible, header_dict)
-
-        if area_type:
-            area.ui_type = area_type
 
         get_prefs().enable_window_kmis()
 
