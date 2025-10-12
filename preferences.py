@@ -1199,9 +1199,10 @@ class WM_UL_pm_list(bpy.types.UIList):
                 lh.row(layout, alignment='RIGHT')
             elif use_split:
                 lh.row(layout)
-            km_name, _, rest = pm.km_name.partition(",")
-            if rest:
-                km_name += ",.."
+            names = [s.strip() for s in pm.km_name.split(CC.KEYMAP_SPLITTER) if s.strip()]
+            km_name = names[0] if names else ""
+            if len(names) > 1:
+                km_name += f" +{len(names) - 1}"
             lh.label(km_name)
             col += 1
 
@@ -1381,7 +1382,7 @@ class PME_UL_pm_tree(bpy.types.UIList):
                 else:
                     groups[CC.UNTAGGED].append(pm)
             elif pr.group_by == 'KEYMAP':
-                kms = pm.km_name.split(", ")
+                kms = [s.strip() for s in pm.km_name.split(CC.KEYMAP_SPLITTER) if s.strip()]
                 for km in kms:
                     if km not in groups:
                         groups[km] = []
@@ -1680,9 +1681,10 @@ class PME_UL_pm_tree(bpy.types.UIList):
                     lh.row(layout, alignment='RIGHT')
                 elif use_split:
                     lh.row(layout)
-                km_name, _, rest = pm.km_name.partition(",")
-                if rest:
-                    km_name += ",.."
+                names = [s.strip() for s in pm.km_name.split(CC.KEYMAP_SPLITTER) if s.strip()]
+                km_name = names[0] if names else ""
+                if len(names) > 1:
+                    km_name += f" +{len(names) - 1}"
                 lh.label(km_name)
                 col += 1
 

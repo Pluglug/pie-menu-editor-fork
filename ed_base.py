@@ -2380,7 +2380,7 @@ class EditorBase:
 
     def draw_keymap(self, layout, data):
         row = layout.row(align=True)
-        if ',' in data.km_name:
+        if CC.KEYMAP_SPLITTER in data.km_name:
             row.prop(data, "km_name", text="", icon=ic('MOUSE_MMB'))
         else:
             row.prop_search(
@@ -2390,6 +2390,7 @@ class EditorBase:
                 "keymaps",
                 text="",
                 icon=ic('MOUSE_MMB'),
+                results_are_suggestions=True,
             )
         row.operator(PME_OT_keymap_add.bl_idname, text="", icon=ic('ADD'))
 
