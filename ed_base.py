@@ -2452,6 +2452,9 @@ class EditorBase:
             subrow.prop(data, "oskey", text="OSkey", toggle=True)
         subrow.prop(data, "key_mod", text="", event=True)
 
+        if data.open_mode == 'CLICK_DRAG':
+            subrow.prop(data, "drag_dir", text="")
+
         subcol = row.column(align=True)
         subcol.scale_y = 2
         subcol.operator(PME_OT_pm_hotkey_remove.bl_idname, icon=ic('X'))

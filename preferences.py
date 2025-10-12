@@ -305,6 +305,11 @@ class WM_OT_pm_import(bpy.types.Operator, ImportHelper):
                 pm.tag = menu[8]
             if n > 9:
                 pm.enabled = bool(menu[9])
+            if n > 10 and pm.open_mode == 'CLICK_DRAG':
+                try:
+                    pm.drag_dir = menu[10] or 'ANY'
+                except:
+                    pm.drag_dir = 'ANY'
 
             if self.tags:
                 tags = self.tags.split(",")
@@ -3651,6 +3656,7 @@ class PMEPreferences(bpy.types.AddonPreferences):
                 "" if pm.poll_cmd == CC.DEFAULT_POLL else pm.poll_cmd,
                 pm.tag if export_tags else "",
                 pm.enabled,
+                getattr(pm, 'drag_dir', 'ANY') if pm.open_mode == 'CLICK_DRAG' else "",
             )
             menus.append(menu)
 

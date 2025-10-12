@@ -540,6 +540,13 @@ def to_ui_hotkey(data):
             hotkey += "%s*" % key_names[data.key]
         elif data.open_mode == 'CLICK_DRAG':
             hotkey += "{%s}*" % key_names[data.key]
+            dir = getattr(data, 'drag_dir', 'ANY')
+            if dir and dir != 'ANY':
+                short = {
+                    'NORTH': 'N', 'NORTH_EAST': 'NE', 'EAST': 'E', 'SOUTH_EAST': 'SE',
+                    'SOUTH': 'S', 'SOUTH_WEST': 'SW', 'WEST': 'W', 'NORTH_WEST': 'NW',
+                }.get(dir, dir)
+                hotkey += " " + short
     else:
         hotkey += key_names[data.key]
 

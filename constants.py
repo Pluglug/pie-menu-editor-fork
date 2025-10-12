@@ -238,6 +238,19 @@ OPEN_MODE_ITEMS = (
 )
 
 
+DRAG_DIR_ITEMS = (
+    ('ANY', "Any", "Any direction", '', 0),
+    ('NORTH', "N", "North", '', 1),
+    ('NORTH_EAST', "NE", "North-East", '', 2),
+    ('EAST', "E", "East", '', 3),
+    ('SOUTH_EAST', "SE", "South-East", '', 4),
+    ('SOUTH', "S", "South", '', 5),
+    ('SOUTH_WEST', "SW", "South-West", '', 6),
+    ('WEST', "W", "West", '', 7),
+    ('NORTH_WEST', "NW", "North-West", '', 8),
+)
+
+
 def header_action_enum_items():
     yield ('DEFAULT', "Default", "", '', 0)
     yield ('TOP', "Top", "", '', 1)

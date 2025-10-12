@@ -352,6 +352,8 @@ class PMItem(bpy.types.PropertyGroup):
                     kmi.oskey = self.oskey
 
                 kmi.key_modifier = self.key_mod
+                if hasattr(kmi, "direction"):
+                    kmi.direction = self.drag_dir if self.open_mode == 'CLICK_DRAG' else 'ANY'
                 kmi.value = {
                     'DOUBLE_CLICK': 'DOUBLE_CLICK',
                     'CLICK': 'CLICK',
@@ -412,6 +414,15 @@ class PMItem(bpy.types.PropertyGroup):
     )
     oskey: bpy.props.BoolProperty(
         description="Operating system key pressed", update=update_keymap_item
+    )
+
+    # CLICK_DRAG: direction filter
+    drag_dir: bpy.props.EnumProperty(
+        items=CC.DRAG_DIR_ITEMS,
+        name="Direction",
+        description="Direction filter for Click Drag",
+        default='ANY',
+        update=update_keymap_item,
     )
 
     def get_pm_key_mod(self):
@@ -773,6 +784,9 @@ class PMItem(bpy.types.PropertyGroup):
                     kmi.properties.invoke_mode = 'HOTKEY'
                     kmi.properties.keymap = km_name
 
+                    # Blender 4.x: direction for CLICK_DRAG
+                    if hasattr(kmi, "direction"):
+                        kmi.direction = self.drag_dir if self.open_mode == 'CLICK_DRAG' else 'ANY'
                     kmi.value = {
                         'DOUBLE_CLICK': 'DOUBLE_CLICK',
                         'CLICK': 'CLICK',
