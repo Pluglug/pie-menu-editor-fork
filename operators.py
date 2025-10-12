@@ -2045,7 +2045,7 @@ class WM_OT_pme_user_pie_menu_call(bpy.types.Operator):
     def _parse_open_mode(self, pm):
         if pm.open_mode == 'HOLD':
             self.pm_hold = pm
-        elif pm.open_mode == 'PRESS':
+        elif pm.open_mode in {'PRESS', 'CLICK'}:
             self.pm_press = pm
         elif pm.open_mode == 'CHORDS':
             self.pm_chord = pm
@@ -2065,7 +2065,7 @@ class WM_OT_pme_user_pie_menu_call(bpy.types.Operator):
                 ):
                     self.chord_pms.append(v)
 
-        elif pm.open_mode == 'TWEAK' and self.invoke_mode == 'HOTKEY':
+        elif pm.open_mode in {'TWEAK', 'CLICK_DRAG'} and self.invoke_mode == 'HOTKEY':
             self.pm_tweak = pm
 
     def invoke(self, context, event):

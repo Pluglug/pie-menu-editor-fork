@@ -233,6 +233,8 @@ OPEN_MODE_ITEMS = (
         3,
     ),
     ('CHORDS', "Key Chords", "Click sequence of 2 keys", ph.get_icon("pChord"), 4),
+    ('CLICK', "Click (Experimental)", "Click the key", ph.get_icon("pClick"), 5),
+    ('CLICK_DRAG', "Click Drag (Experimental)", "Click and drag the key", ph.get_icon("pDrag"), 6),
 )
 
 

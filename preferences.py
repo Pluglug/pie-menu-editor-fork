@@ -2347,6 +2347,11 @@ class PMEPreferences(bpy.types.AddonPreferences):
     show_advanced_settings: bpy.props.BoolProperty(
         default=False, description="Advanced settings"
     )
+    show_experimental_open_modes: bpy.props.BoolProperty(
+        name="Show Experimental Hotkey Modes",
+        description="Reveal experimental Click/Click Drag modes in Hotkey Mode picker",
+        default=False,
+    )
     show_list: bpy.props.BoolProperty(default=True, description="Show the list")
     show_sidepanel_prefs: bpy.props.BoolProperty(
         name="Show PME Preferences in 3DView's N-panel",
@@ -3272,6 +3277,7 @@ class PMEPreferences(bpy.types.AddonPreferences):
             col = row.column()
             subcol = col.column(align=True)
             self._draw_hprop(subcol, pr, "show_sidepanel_prefs")
+            self._draw_hprop(subcol, pr, "show_experimental_open_modes")
             self._draw_hprop(
                 subcol,
                 pr,

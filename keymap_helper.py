@@ -536,6 +536,10 @@ def to_ui_hotkey(data):
             hotkey += "%sx2" % key_names[data.key]
         elif data.open_mode == 'CHORDS':
             hotkey += "%s, %s" % (key_names[data.key], key_names[data.chord])
+        elif data.open_mode == 'CLICK':
+            hotkey += "%s*" % key_names[data.key]
+        elif data.open_mode == 'CLICK_DRAG':
+            hotkey += "{%s}*" % key_names[data.key]
     else:
         hotkey += key_names[data.key]
 

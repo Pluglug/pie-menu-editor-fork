@@ -1915,15 +1915,27 @@ class PME_OT_pm_open_mode_select(bpy.types.Operator):
     bl_label = "Hotkey Mode"
     bl_description = "Select hotkey mode"
 
-    def _draw(self, menu, context):
-        layout = menu.layout
-        pm = get_prefs().selected_pm
-        layout.prop(pm, "open_mode", expand=True)
+    def draw(self, context):
+        layout = self.layout
+        pr = get_prefs()
+        pm = pr.selected_pm
+        col = layout.column(align=True)
+        col.label(text="Hotkey Mode:")
+        col.separator(type='LINE')
+        visible = {'PRESS', 'HOLD', 'DOUBLE_CLICK', 'TWEAK', 'CHORDS'}
+        if getattr(pr, "show_experimental_open_modes", False) or pm.open_mode in {'CLICK', 'CLICK_DRAG'}:
+            visible |= {'CLICK', 'CLICK_DRAG'}
+        pd = pm.__annotations__["open_mode"]
+        pkeywords = pd.keywords if hasattr(pd, "keywords") else pd[1]
+        for ident, name, desc, icon, _ in pkeywords['items']:
+            if ident in visible:
+                row = col.row(align=True)
+                row.prop_enum(pm, "open_mode", ident, text=name)
+
+    def invoke(self, context, event):
+        return context.window_manager.invoke_popup(self, width=150)
 
     def execute(self, context):
-        context.window_manager.popup_menu(
-            self._draw, title=PME_OT_pm_open_mode_select.bl_label
-        )
         return {'FINISHED'}
 
 
