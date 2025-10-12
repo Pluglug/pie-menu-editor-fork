@@ -509,6 +509,18 @@ class WM_OT_pm_export(bpy.types.Operator, ExportHelper):
         default=True,
         options={'SKIP_SAVE'},
     )
+    compat_json: bpy.props.BoolProperty(
+        name="Export Compatible JSON",
+        description="Export without PME-F extensions (no enabled/drag_dir; CLICK->PRESS, CLICK_DRAG->TWEAK)",
+        default=False,
+        options={'SKIP_SAVE'},
+    ) # Compat
+    mark_schema: bpy.props.BoolProperty(
+        name="Mark Schema (PME-F)",
+        description="Add 'schema': 'PME-F' to top-level JSON when not compatible",
+        default=True,
+        options={'SKIP_SAVE'},
+    ) # Compat
 
     def _draw(self, menu, context):
         lh.lt(menu.layout, operator_context='INVOKE_DEFAULT')
@@ -557,6 +569,10 @@ class WM_OT_pm_export(bpy.types.Operator, ExportHelper):
     def draw(self, context):
         layout = self.layout
         layout.prop(self, "export_tags")
+        layout.prop(self, "compat_json")
+        row = layout.row(align=True)
+        row.active = not self.compat_json
+        row.prop(self, "mark_schema")
 
     def execute(self, context):
         global export_filepath
@@ -568,7 +584,8 @@ class WM_OT_pm_export(bpy.types.Operator, ExportHelper):
             self.filepath += ".json"
 
         data = get_prefs().get_export_data(
-            export_tags=self.export_tags, mode=self.mode, tag=self.tag
+            export_tags=self.export_tags, mode=self.mode, tag=self.tag,
+            compat=self.compat_json, mark_schema=self.mark_schema
         )
         data = json.dumps(data, indent=2, separators=(", ", ": "))
         try:
@@ -3582,7 +3599,7 @@ class PMEPreferences(bpy.types.AddonPreferences):
                     title="Backup Menus", message="New backup: " + new_backup_filepath
                 )
 
-    def get_export_data(self, export_tags=True, mode='ALL', tag=""):
+    def get_export_data(self, export_tags=True, mode='ALL', tag="", compat=False, mark_schema=True):
         pr = self
         tpr = temp_prefs()
         menus = []
@@ -3645,22 +3662,38 @@ class PMEPreferences(bpy.types.AddonPreferences):
                     item = (pmi.name, pmi.mode, pmi.icon, pmi.text, pmi.flags())
                 items.append(item)
 
-            menu = (
+            # Compatible JSON
+            open_mode = pm.open_mode
+            drag_dir = getattr(pm, 'drag_dir', 'ANY') if open_mode == 'CLICK_DRAG' else ""
+            if compat:
+                # Normalize experimental modes to vanilla equivalents
+                if open_mode == 'CLICK':
+                    open_mode = 'PRESS'
+                elif open_mode == 'CLICK_DRAG':
+                    open_mode = 'TWEAK'
+                drag_dir = ""
+
+            base = [
                 pm.name,
                 pm.km_name,
                 pm.to_hotkey(),
                 items,
                 pm.mode,
                 pm.data,
-                pm.open_mode,
+                open_mode,  # Compat
                 "" if pm.poll_cmd == CC.DEFAULT_POLL else pm.poll_cmd,
                 pm.tag if export_tags else "",
-                pm.enabled,
-                getattr(pm, 'drag_dir', 'ANY') if pm.open_mode == 'CLICK_DRAG' else "",
-            )
-            menus.append(menu)
+            ]
+            if not compat:
+                base.append(pm.enabled)
+                base.append(drag_dir)
+            menus.append(tuple(base))
 
-        return dict(version=".".join(str(i) for i in addon.VERSION), menus=menus)
+        data = dict(version=".".join(str(i) for i in addon.VERSION), menus=menus)
+        # Mark Schema
+        if not compat and mark_schema:
+            data["schema"] = "PME-F"
+        return data
 
     def ed(self, id):
         return self.editors[id]
