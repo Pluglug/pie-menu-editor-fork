@@ -204,3 +204,5 @@ Thumbs.db
 
 .personal/
 *.dat
+data/
+debug/
