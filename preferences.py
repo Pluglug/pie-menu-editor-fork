@@ -303,6 +303,8 @@ class WM_OT_pm_import(bpy.types.Operator, ImportHelper):
                 pm.poll_cmd = menu[7] or CC.DEFAULT_POLL
             if n > 8:
                 pm.tag = menu[8]
+            if n > 9:
+                pm.enabled = bool(menu[9])
 
             if self.tags:
                 tags = self.tags.split(",")
@@ -3648,6 +3650,7 @@ class PMEPreferences(bpy.types.AddonPreferences):
                 pm.open_mode,
                 "" if pm.poll_cmd == CC.DEFAULT_POLL else pm.poll_cmd,
                 pm.tag if export_tags else "",
+                pm.enabled,
             )
             menus.append(menu)
 
