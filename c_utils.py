@@ -737,13 +737,24 @@ def swap_spaces(from_area, to_area, to_area_space_type):
 
 def resize_area(area, width, direction='RIGHT'):
     area_p = c_area(area)
-    dx = width - area.width
-    if direction == 'LEFT':
-        area_p.v1.contents.vec.x -= dx
-        area_p.v2.contents.vec.x -= dx
-    elif direction == 'RIGHT':
-        area_p.v3.contents.vec.x += dx
-        area_p.v4.contents.vec.x += dx
+    if direction in ('LEFT', 'RIGHT'):
+        dx = width - area.width
+        if direction == 'LEFT':
+            area_p.v1.contents.vec.x -= dx
+            area_p.v2.contents.vec.x -= dx
+        elif direction == 'RIGHT':
+            area_p.v3.contents.vec.x += dx
+            area_p.v4.contents.vec.x += dx
+    elif direction in ('TOP', 'BOTTOM'):
+        dy = width - area.height
+        if direction == 'TOP':
+            # Move the top edge (v2, v3)
+            area_p.v2.contents.vec.y += dy
+            area_p.v3.contents.vec.y += dy
+        elif direction == 'BOTTOM':
+            # Move the bottom edge (v1, v4)
+            area_p.v1.contents.vec.y -= dy
+            area_p.v4.contents.vec.y -= dy
 
 
 def move_modal_handler(window, operator):

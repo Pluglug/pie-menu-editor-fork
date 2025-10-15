@@ -598,6 +598,8 @@ class PME_OT_sidearea_toggle(bpy.types.Operator):
         items=(
             ("LEFT", "Left", "", "TRIA_LEFT_BAR", 0),
             ("RIGHT", "Right", "", "TRIA_RIGHT_BAR", 1),
+            ("TOP", "Top", "", "TRIA_UP_BAR", 2),
+            ("BOTTOM", "Bottom", "", "TRIA_DOWN_BAR", 3),
         ),
         options={"SKIP_SAVE"},
     )
@@ -647,8 +649,8 @@ class PME_OT_sidearea_toggle(bpy.types.Operator):
         }
 
     @classmethod
-    def _learn_gap_patterns(cls, areas):
-        """Learn gap patterns from current area layout."""
+    def _learn_gap_patterns_horizontal(cls, areas):
+        """Learn horizontal gap patterns from current area layout."""
         if len(areas) < 2:
             return None
 
@@ -685,6 +687,44 @@ class PME_OT_sidearea_toggle(bpy.types.Operator):
         return None
 
     @classmethod
+    def _learn_gap_patterns_vertical(cls, areas):
+        """Learn vertical gap patterns from current area layout."""
+        if len(areas) < 2:
+            return None
+
+        vertical_gaps = []
+
+        for i, area_a in enumerate(areas):
+            for j, area_b in enumerate(areas):
+                if i >= j:
+                    continue
+
+                width_match = abs(area_a.width - area_b.width) <= 5
+                x_match = abs(area_a.x - area_b.x) <= 5
+
+                if width_match and x_match:
+                    if area_a.y < area_b.y:
+                        gap = area_b.y - (area_a.y + area_a.height)
+                    else:
+                        gap = area_a.y - (area_b.y + area_b.height)
+
+                    if 0 < gap < 50:
+                        vertical_gaps.append(gap)
+
+        if vertical_gaps:
+            v_gaps = sorted(vertical_gaps)
+            return {
+                "gaps": v_gaps,
+                "median": v_gaps[len(v_gaps) // 2],
+                "mean": sum(v_gaps) / len(v_gaps),
+                "min": min(v_gaps),
+                "max": max(v_gaps),
+                "count": len(v_gaps),
+            }
+
+        return None
+
+    @classmethod
     def _get_cached_tolerance(cls):
         """Fallback tolerance calculation."""
         try:
@@ -698,9 +738,9 @@ class PME_OT_sidearea_toggle(bpy.types.Operator):
             return {"tolerance": 2.0, "expected_gap": 2.0}
 
     @classmethod
-    def _get_adaptive_tolerance(cls, areas):
-        """Calculate adaptive tolerance based on learned gap patterns."""
-        gap_pattern = cls._learn_gap_patterns(areas)
+    def _get_adaptive_tolerance_horizontal(cls, areas):
+        """Calculate adaptive tolerance based on learned horizontal gap patterns."""
+        gap_pattern = cls._learn_gap_patterns_horizontal(areas)
 
         if not gap_pattern:
             cached = cls._get_cached_tolerance()
@@ -727,10 +767,40 @@ class PME_OT_sidearea_toggle(bpy.types.Operator):
             "method": "adaptive_learning",
         }
 
-    def get_side_areas(self, area):
-        """Detect adjacent side areas using adaptive gap learning."""
+    @classmethod
+    def _get_adaptive_tolerance_vertical(cls, areas):
+        """Calculate adaptive tolerance based on learned vertical gap patterns."""
+        gap_pattern = cls._learn_gap_patterns_vertical(areas)
+
+        if not gap_pattern:
+            cached = cls._get_cached_tolerance()
+            return {
+                "tolerance": cached["tolerance"],
+                "expected_gap": cached["expected_gap"],
+                "method": "fallback",
+            }
+
+        expected_gap = gap_pattern["median"]
+        gap_range = gap_pattern["max"] - gap_pattern["min"]
+        if gap_range > 0:
+            adaptive_tolerance = gap_range * 0.5 + 1.0
+        else:
+            adaptive_tolerance = expected_gap * 0.5 + 1.0
+        min_tolerance = 0.5
+        max_tolerance = expected_gap * 2.0
+        final_tolerance = max(min_tolerance, min(adaptive_tolerance, max_tolerance))
+
+        return {
+            "tolerance": final_tolerance,
+            "expected_gap": expected_gap,
+            "gap_pattern": gap_pattern,
+            "method": "adaptive_learning",
+        }
+
+    def get_horizontal_areas(self, area):
+        """Detect adjacent left/right areas using adaptive horizontal gap learning."""
         all_areas = list(bpy.context.screen.areas)
-        tol_info = self._get_adaptive_tolerance(all_areas)
+        tol_info = self._get_adaptive_tolerance_horizontal(all_areas)
         expected_gap = tol_info["expected_gap"]
         tolerance = tol_info["tolerance"]
         max_search_gap = expected_gap * 3
@@ -779,6 +849,61 @@ class PME_OT_sidearea_toggle(bpy.types.Operator):
             right_area = best_right
 
         return left_area, right_area
+
+    def get_vertical_areas(self, area):
+        """Detect adjacent top/bottom areas using adaptive vertical gap learning."""
+        all_areas = list(bpy.context.screen.areas)
+        tol_info = self._get_adaptive_tolerance_vertical(all_areas)
+        expected_gap = tol_info["expected_gap"]
+        tolerance = tol_info["tolerance"]
+        max_search_gap = expected_gap * 3
+
+        top_area = None
+        bottom_area = None
+        best_top = None
+        best_top_gap = float("inf")
+        best_bottom = None
+        best_bottom_gap = float("inf")
+
+        for candidate_area in all_areas:
+            if candidate_area == area or candidate_area.ui_type in self.ia:
+                continue
+
+            width_match = abs(candidate_area.width - area.width) <= 5
+            x_match = abs(candidate_area.x - area.x) <= 5
+
+            if width_match and x_match:
+                bottom_gap = area.y - (candidate_area.y + candidate_area.height)
+                if not bottom_area and abs(bottom_gap - expected_gap) <= tolerance:
+                    bottom_area = candidate_area
+                elif (
+                    not bottom_area
+                    and 0 < bottom_gap <= max_search_gap
+                    and bottom_gap < best_bottom_gap
+                ):
+                    best_bottom = candidate_area
+                    best_bottom_gap = bottom_gap
+
+                top_gap = candidate_area.y - (area.y + area.height)
+                if not top_area and abs(top_gap - expected_gap) <= tolerance:
+                    top_area = candidate_area
+                elif (
+                    not top_area
+                    and 0 < top_gap <= max_search_gap
+                    and top_gap < best_top_gap
+                ):
+                    best_top = candidate_area
+                    best_top_gap = top_gap
+
+            if top_area and bottom_area:
+                break
+
+        if not bottom_area and best_bottom:
+            bottom_area = best_bottom
+        if not top_area and best_top:
+            top_area = best_top
+
+        return top_area, bottom_area
 
     def add_space(self, area, space_type):
         a_type = area.ui_type
@@ -865,7 +990,8 @@ class PME_OT_sidearea_toggle(bpy.types.Operator):
             self.report({"WARNING"}, "Main area not found")
             return {"CANCELLED"}
 
-        l, r = self.get_side_areas(a)
+        l, r = self.get_horizontal_areas(a)
+        t, b = self.get_vertical_areas(a)
 
         if (
             l
@@ -918,6 +1044,56 @@ class PME_OT_sidearea_toggle(bpy.types.Operator):
             SU.redraw_screen()
 
         elif (
+            t
+            and self.side == "TOP"
+            and self.action in ("TOGGLE", "SHOW")
+            and t.ui_type != self.area
+        ):
+            self.save_sidebars(t)
+            CTU.swap_spaces(t, a, t.ui_type)
+            self.add_space(a, self.area)
+            t.ui_type = self.area
+            CTU.swap_spaces(t, a, self.area)
+
+            if t.height != self.width:
+                CTU.resize_area(t, self.width, direction="BOTTOM")
+                SU.redraw_screen()
+
+            self.restore_sidebars(t)
+            self.move_header(t)
+            self.fix_area(t)
+
+        elif (
+            b
+            and self.side == "BOTTOM"
+            and self.action in ("TOGGLE", "SHOW")
+            and b.ui_type != self.area
+        ):
+            self.save_sidebars(b)
+            CTU.swap_spaces(b, a, b.ui_type)
+            self.add_space(a, self.area)
+            b.ui_type = self.area
+            CTU.swap_spaces(b, a, self.area)
+
+            if b.height != self.width:
+                CTU.resize_area(b, self.width, direction="TOP")
+                SU.redraw_screen()
+
+            self.restore_sidebars(b)
+            self.move_header(b)
+            self.fix_area(b)
+
+        elif t and self.side == "TOP" and self.action in ("TOGGLE", "HIDE"):
+            self.save_sidebars(t)
+            self.close_area(context, a, t)
+            SU.redraw_screen()
+
+        elif b and self.side == "BOTTOM" and self.action in ("TOGGLE", "HIDE"):
+            self.save_sidebars(b)
+            self.close_area(context, a, b)
+            SU.redraw_screen()
+
+        elif (
             (self.side == "LEFT" and not l) or (self.side == "RIGHT" and not r)
         ) and self.action in ("TOGGLE", "SHOW"):
             if self.width > a.width >> 1:
@@ -941,6 +1117,39 @@ class PME_OT_sidearea_toggle(bpy.types.Operator):
 
             with context.temp_override(area=a):
                 bpy.ops.screen.area_split(direction="VERTICAL", factor=factor, **mouse)
+
+            new_area = context.screen.areas[-1]
+            new_area.ui_type = self.area
+            CTU.swap_spaces(new_area, a, self.area)
+
+            self.restore_sidebars(new_area)
+            self.move_header(new_area)
+            self.fix_area(new_area)
+
+        elif (
+            (self.side == "TOP" and not t) or (self.side == "BOTTOM" and not b)
+        ) and self.action in ("TOGGLE", "SHOW"):
+            if self.width > a.height >> 1:
+                self.width = a.height >> 1
+
+            factor = (self.width - 1) / a.height
+            if self.side == "TOP":
+                factor = 1 - factor
+
+            self.add_space(a, self.area)
+            mouse = {}
+            area_split_props = operator_utils.get_rna_type(
+                bpy.ops.screen.area_split
+            ).properties
+
+            if "cursor" in area_split_props:
+                mouse["cursor"] = [a.x + 1, a.y + 1]
+            else:
+                mouse["mouse_x"] = a.x + 1
+                mouse["mouse_y"] = a.y + 1
+
+            with context.temp_override(area=a):
+                bpy.ops.screen.area_split(direction="HORIZONTAL", factor=factor, **mouse)
 
             new_area = context.screen.areas[-1]
             new_area.ui_type = self.area
