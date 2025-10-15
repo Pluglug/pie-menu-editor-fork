@@ -422,7 +422,7 @@ class PME_OT_panel_hide_by(bpy.types.Operator):
 
         for tp in self.panel_types:
             if (
-                tp.bl_space_type != CC.UPREFS
+                tp.bl_space_type != 'PREFERENCES'
                 and (self.space == 'ANY' or tp.bl_space_type == self.space)
                 and (self.region == 'ANY' or tp.bl_region_type == self.region)
                 and (

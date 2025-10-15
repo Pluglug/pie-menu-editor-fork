@@ -17,11 +17,6 @@ re_prop_set = re.compile(r"^([^\s]*?)([^.\s]+\.[^.\s]+)(\s*=\s*(.*))?$")
 re_name_idx = re.compile(r"^(.*)\.(\d+)$")
 re_icon = re.compile(r"^([A-Z]*_).*")
 
-uprefs_path = "C.user_preferences"
-if not hasattr(bpy.context, "user_preferences"):
-    uprefs_path = "C.preferences"
-    uprefs_cls = "Preferences"
-
 CTX_PATHS = {
     "Scene": "C.scene",
     "World": "C.scene.world",
@@ -35,11 +30,11 @@ CTX_PATHS = {
     "GPUDOFSettings": "C.space_data.fx_settings.dof",
     "DopeSheet": "C.space_data.dopesheet",
     "FileSelectParams": "C.space_data.params",
-    CC.UPREFS_CLS + "Input": "C.%s.inputs" % CC.UPREFS_ID,
-    CC.UPREFS_CLS + "Edit": "C.%s.edit" % CC.UPREFS_ID,
-    CC.UPREFS_CLS + "FilePaths": "C.%s.filepaths" % CC.UPREFS_ID,
-    CC.UPREFS_CLS + "System": "C.%s.system" % CC.UPREFS_ID,
-    CC.UPREFS_CLS + "View": "C.%s.view" % CC.UPREFS_ID,
+    "PreferencesInput": "C.preferences.inputs",
+    "PreferencesEdit": "C.preferences.edit",
+    "PreferencesFilePaths": "C.preferences.filepaths",
+    "PreferencesSystem": "C.preferences.system",
+    "PreferencesView": "C.preferences.view",
 }
 CTX_FULLPATHS = dict(
     CompositorNodeComposite="C.active_node",
@@ -173,13 +168,8 @@ class BlContext:
 
         texture_context = self.texture_context
 
-        if attr == "user_preferences":
-            return getattr(_bpy.context, "user_preferences", None) or \
-                getattr(_bpy.context, "preferences", None)
-
-        elif attr == "preferences":
-            return getattr(_bpy.context, "preferences", None) or \
-                getattr(_bpy.context, "user_preferences", None)
+        if attr == "preferences":
+            return getattr(_bpy.context, "preferences", None)
 
         elif attr == "space_data":
             if self.areas:

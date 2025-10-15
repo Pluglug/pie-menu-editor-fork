@@ -2231,7 +2231,7 @@ class PMEPreferences(bpy.types.AddonPreferences):
                     tp.remove(PME_OT_interactive_panels_toggle._draw_menu)
 
         for tp in bl_panel_types():
-            if getattr(tp, "bl_space_type", None) == CC.UPREFS:
+            if getattr(tp, "bl_space_type", None) == 'PREFERENCES':
                 continue
 
             if tp.__name__ == "PROPERTIES_PT_navigation_bar":

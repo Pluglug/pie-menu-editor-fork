@@ -83,7 +83,7 @@ def tag_redraw(all=False):
     if all:
         tag_redraw_windows()
     else:
-        tag_redraw_windows(CC.UPREFS, 'WINDOW')
+        tag_redraw_windows('PREFERENCES', 'WINDOW')
 
 
 def tag_redraw_windows(area=None, region=None):
@@ -93,7 +93,7 @@ def tag_redraw_windows(area=None, region=None):
 
     for w in wm.windows:
         for a in w.screen.areas:
-            if area is None or a.type == area or area == CC.UPREFS and not a.type:
+            if area is None or a.type == area or area == 'PREFERENCES' and not a.type:
                 for r in a.regions:
                     if region is None or r.type == region:
                         r.tag_redraw()
@@ -134,7 +134,7 @@ class PME_OT_userpref_show(bpy.types.Operator):
     addon: bpy.props.StringProperty(options={'SKIP_SAVE'})
 
     def execute(self, context):
-        if context.area.type != CC.UPREFS:
+        if context.area.type != 'PREFERENCES':
             bpy.ops.screen.userpref_show('INVOKE_DEFAULT')
 
         if self.addon:

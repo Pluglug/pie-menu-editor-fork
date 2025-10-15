@@ -27,13 +27,6 @@ WINDOW_MARGIN = 32
 WINDOW_MIN_WIDTH = 320
 WINDOW_MIN_HEIGHT = 240
 
-UPREFS = 'USER_PREFERENCES'
-UPREFS_CLS = "UserPreferences"
-UPREFS_ID = "user_preferences"
-if 'USER_PREFERENCES' not in bpy.types.Area.bl_rna.properties['type'].enum_items:
-    UPREFS = 'PREFERENCES'
-    UPREFS_CLS = "Preferences"
-    UPREFS_ID = "preferences"
 
 ED_DATA = (
     ('PMENU', "Pie Menu", 'MOD_SUBSURF'),
@@ -206,7 +199,7 @@ SPACE_ITEMS = (
     ('CONSOLE', "Python Console", "", 'CONSOLE', 11),
     ('TEXT_EDITOR', "Text Editor", "", 'TEXT', 12),
     ('TIMELINE', "Timeline", "", 'TIME', 13),
-    (UPREFS, "User Preferences", "", 'PREFERENCES', 14),
+    ('PREFERENCES', "Preferences", "", 'PREFERENCES', 14),
     ('IMAGE_EDITOR', "Image/UV Editor", "", 'IMAGE', 15),
     ('SEQUENCE_EDITOR', "Video Sequencer", "", 'SEQUENCE', 16),
     ('SPREADSHEET', "Spreadsheet", "", 'SPREADSHEET', 17),
@@ -302,7 +295,7 @@ def area_type_enum_items(current=True, none=False):
     ei.add_item('TEXT_EDITOR', "Text Editor", 'TEXT')
     ei.add_item('PROPERTIES', "Properties", 'PROPERTIES')
     ei.add_item('OUTLINER', "Outliner", 'OUTLINER')
-    ei.add_item(UPREFS, "User Preferences", 'PREFERENCES')
+    ei.add_item('PREFERENCES', "Preferences", 'PREFERENCES')
     ei.add_item('INFO', "Info", 'INFO')
     ei.add_item('FILE_BROWSER', "File Browser", 'FILEBROWSER')
     ei.add_item('ASSETS', "Asset Browser", 'ASSET_MANAGER')

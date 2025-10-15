@@ -1484,7 +1484,7 @@ class WM_OT_pmi_data_edit(bpy.types.Operator):
     def invoke(self, context, event):
         if self.hotkey and (
             not context.area
-            or context.area.type != CC.UPREFS
+            or context.area.type != 'PREFERENCES'
             or get_prefs().mode != 'PMI'
         ):
             return {'PASS_THROUGH'}
@@ -1593,7 +1593,7 @@ class WM_OT_pmi_icon_select(bpy.types.Operator):
     def invoke(self, context, event):
         if self.hotkey and (
             not context.area
-            or context.area.type != CC.UPREFS
+            or context.area.type != 'PREFERENCES'
             or get_prefs().mode != 'ICONS'
         ):
             return {'PASS_THROUGH'}
