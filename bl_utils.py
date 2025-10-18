@@ -892,10 +892,9 @@ def popup_area(area, width=320, height=400, x=None, y=None):
                 new_window = list(new_windows)[0]
                 actual_width = new_window.width
                 actual_height = new_window.height
-                print(f"Popup area size: requested {width}x{height}, actual {actual_width}x{actual_height}")
 
                 if actual_width != width or actual_height != height:
-                    print(f"Size difference detected - this may be due to DPI scaling or window manager constraints")
+                    logw("Size difference detected - this may be due to DPI scaling or window manager constraints")
 
         finally:
             # Always restore original area dimensions

@@ -1304,23 +1304,24 @@ class PME_OT_popup_area(bpy.types.Operator):
             new_window = context.window_manager.windows[-1]
 
         if new_window:
-            target_area = new_window.screen.areas[0] if new_window.screen.areas else None
-            target_area.ui_type = self.area
-
-            if screen_name in bpy.data.screens:
+            reused = screen_name in bpy.data.screens
+            if reused:
                 new_window.screen = bpy.data.screens[screen_name]
             else:
                 new_window.screen.name = screen_name
                 new_window.screen.user_clear()
 
-                # FIXME: Screen reuse not implemented - commands only execute on first creation
-                if self.cmd:
-                    SU.exec_with_override(
-                        cmd=self.cmd,
-                        window=new_window,
-                        screen=new_window.screen,
-                        area=target_area,
-                    )
+            target_area = new_window.screen.areas[0] if new_window.screen.areas else None
+            if target_area:
+                target_area.ui_type = self.area
+
+            if (not reused) and self.cmd:
+                SU.exec_with_override(
+                    cmd=self.cmd,
+                    window=new_window,
+                    screen=new_window.screen,
+                    area=target_area,
+                )
 
         self.update_header(context, header_on_top, header_visible, header_dict)
 
