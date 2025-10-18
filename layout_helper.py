@@ -305,7 +305,7 @@ class LayoutHelper:
     def parse_icon(self, icon):
         icon_value = 0
         if not icon:
-            return icon, icon_value
+            return 'NONE', icon_value
         icon_id = icon
         if isinstance(icon, str) and icon.startswith(F_CUSTOM_ICON):
             icon_id = 'CANCEL'
