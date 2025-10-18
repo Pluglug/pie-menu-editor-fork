@@ -575,21 +575,21 @@ class PME_OT_sidearea_toggle(bpy.types.Operator):
         name="Main Area Type",
         description="Main area type",
         items=CC.AreaEnumHelper.gen_items,
-        # default="VIEW_3D",  # TODO: area_items icon is now icon_value. Check the corresponding value
+        default=0, # VIEW_3D
         options={"SKIP_SAVE"},
     )
     area: bpy.props.EnumProperty(
         name="Side Area Type",
         description="Side area type",
         items=CC.AreaEnumHelper.gen_items,
-        # default="OUTLINER",
+        default=1, # IMAGE_EDITOR
         options={"SKIP_SAVE"},
     )
     ignore_area: bpy.props.EnumProperty(
         name="Ignore Area Type",
         description="Area type to ignore",
         items=CC.AreaEnumHelper.gen_items_with_none,
-        # default="NONE",
+        default=0, # NONE
         options={"SKIP_SAVE"},
     )
     side: bpy.props.EnumProperty(
