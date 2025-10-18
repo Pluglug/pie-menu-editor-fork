@@ -203,4 +203,8 @@ Thumbs.db
 .idea/
 
 .personal/
+
 *.dat
+
+data/
+debug/
