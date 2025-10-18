@@ -688,7 +688,7 @@ class PME_OT_timeout(bpy.types.Operator):
     )
     # area: bpy.props.EnumProperty(
     #     name="Area",
-    #     items=CC.area_type_enum_items(),
+    #     items=CC.AreaEnumHelper.gen_items_with_current(),
     #     options={'SKIP_SAVE'})
 
     def modal(self, context, event):
@@ -2738,18 +2738,19 @@ class PME_OT_pmi_area_search(bpy.types.Operator):
     bl_description = "Open/toggle area"
     bl_options = {'INTERNAL'}
 
-    area: bpy.props.EnumProperty(items=CC.area_type_enum_items(), options={'SKIP_SAVE'})
+    area: bpy.props.EnumProperty(items=CC.AreaEnumHelper.gen_items_with_current, options={'SKIP_SAVE'})
     cmd: bpy.props.StringProperty(
         default="bpy.ops.pme.popup_area(area='%s')", options={'SKIP_SAVE'}
     )
 
     def draw_pmi_area_search(self, menu, context):
-        for item in CC.area_type_enum_items(current=False):
+        for item in CC.AreaEnumHelper.gen_items(context=context):
             operator(
                 menu.layout,
                 self.bl_idname,
-                item[1],
-                item[3],
+                text=item[1],
+                icon='NONE',
+                icon_value=item[3],
                 area=item[0],
                 cmd=self.cmd,
             )
@@ -2757,7 +2758,7 @@ class PME_OT_pmi_area_search(bpy.types.Operator):
     def execute(self, context):
         pr = get_prefs()
 
-        for item in CC.area_type_enum_items():
+        for item in CC.AreaEnumHelper.gen_items_with_current():
             if item[0] == self.area:
                 break
 

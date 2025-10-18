@@ -315,7 +315,7 @@ class PME_OT_popup_panel(PopupOperator, bpy.types.Operator):
     area: bpy.props.EnumProperty(
         name="Area Type",
         description="Area type",
-        items=CC.area_type_enum_items(),
+        items=CC.AreaEnumHelper.gen_items_with_current,
         options={'SKIP_SAVE'},
     )
     width: bpy.props.IntProperty(
@@ -477,7 +477,7 @@ class PME_OT_area_move(bpy.types.Operator):
     area: bpy.props.EnumProperty(
         name="Area Type",
         description="Area type",
-        items=CC.area_type_enum_items(),
+        items=CC.AreaEnumHelper.gen_items_with_current,
         options={'SKIP_SAVE'},
     )
     edge: bpy.props.EnumProperty(
@@ -574,22 +574,22 @@ class PME_OT_sidearea_toggle(bpy.types.Operator):
     main_area: bpy.props.EnumProperty(
         name="Main Area Type",
         description="Main area type",
-        items=CC.area_type_enum_items(current=False),
-        default="VIEW_3D",
+        items=CC.AreaEnumHelper.gen_items,
+        # default="VIEW_3D",  # TODO: area_items icon is now icon_value. Check the corresponding value
         options={"SKIP_SAVE"},
     )
     area: bpy.props.EnumProperty(
         name="Side Area Type",
         description="Side area type",
-        items=CC.area_type_enum_items(current=False),
-        default="OUTLINER",
+        items=CC.AreaEnumHelper.gen_items,
+        # default="OUTLINER",
         options={"SKIP_SAVE"},
     )
     ignore_area: bpy.props.EnumProperty(
         name="Ignore Area Type",
         description="Area type to ignore",
-        items=CC.area_type_enum_items(current=False, none=True),
-        default="NONE",
+        items=CC.AreaEnumHelper.gen_items_with_none,
+        # default="NONE",
         options={"SKIP_SAVE"},
     )
     side: bpy.props.EnumProperty(
@@ -1192,7 +1192,7 @@ class PME_OT_popup_area(bpy.types.Operator):
     area: bpy.props.EnumProperty(
         name="Area",
         description="Area",
-        items=CC.area_type_enum_items(),
+        items=CC.AreaEnumHelper.gen_items_with_current,
         options={'SKIP_SAVE'},
     )
     auto_close: bpy.props.BoolProperty(
@@ -1248,7 +1248,7 @@ class PME_OT_popup_area(bpy.types.Operator):
             self.area = context.area.ui_type
 
         # Setup Screen Name
-        area_name = next((item[1] for item in CC.area_type_enum_items() if item[0] == self.area), "")
+        area_name = next((item[1] for item in CC.AreaEnumHelper.gen_items_with_current() if item[0] == self.area), "")
         screen_name = PME_TEMP_SCREEN if self.auto_close else PME_SCREEN
         screen_name += area_name
 

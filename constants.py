@@ -1,4 +1,5 @@
 import bpy
+import re
 from .addon import ic
 from .previews_helper import ph
 
@@ -252,54 +253,137 @@ def header_action_enum_items():
     yield ('BOTTOM_HIDE', "Bottom Hidden", "", '', 4)
 
 
-class EnumItems:
-    def __init__(self):
-        self._items = []
+# class EnumItems:
+#     def __init__(self):
+#         self._items = []
 
-    def add_item(self, id, name, icon, desc=""):
-        self._items.append((id, name, desc, ic(icon), len(self._items)))
+#     def add_item(self, id, name, icon, desc=""):
+#         self._items.append((id, name, desc, ic(icon), len(self._items)))
 
-    def retrieve_items(self):
-        if self._items is None:
-            raise ValueError("Items are already retrieved")
+#     def retrieve_items(self):
+#         if self._items is None:
+#             raise ValueError("Items are already retrieved")
 
-        ret = self._items
-        self._items = None
+#         ret = self._items
+#         self._items = None
 
-        return ret
+#         return ret
 
 
-def area_type_enum_items(current=True, none=False):
-    ei = EnumItems()
+# def area_type_enum_items(current=True, none=False):
+#     ei = EnumItems()
 
-    if current:
-        ei.add_item('CURRENT', "Current", 'BLENDER')
+#     if current:
+#         ei.add_item('CURRENT', "Current", 'BLENDER')
 
-    if none:
-        ei.add_item('NONE', "None", 'HANDLETYPE_FREE_VEC')
+#     if none:
+#         ei.add_item('NONE', "None", 'HANDLETYPE_FREE_VEC')
 
-    ei.add_item('VIEW_3D', "3D View", 'VIEW3D')
-    ei.add_item('TIMELINE', "Timeline", 'TIME')
-    ei.add_item('FCURVES', "Graph Editor", 'GRAPH')
-    ei.add_item('DRIVERS', "Drivers", 'DRIVER')
-    ei.add_item('DOPESHEET', "Dope Sheet", 'ACTION')
-    ei.add_item('NLA_EDITOR', "NLA Editor", 'NLA')
-    ei.add_item('VIEW', "Image Editor", 'IMAGE')
-    ei.add_item('UV', "UV Editor", 'UV')
-    ei.add_item('CLIP_EDITOR', "Movie Clip Editor", 'TRACKER')
-    ei.add_item('SEQUENCE_EDITOR', "Video Sequence Editor", 'SEQUENCE')
-    ei.add_item('ShaderNodeTree', "Shader Editor", 'NODE_MATERIAL')
-    ei.add_item('CompositorNodeTree', "Compositing", 'NODE_COMPOSITING')
-    ei.add_item('TextureNodeTree', "Texture Node Editor", 'NODE_TEXTURE')
-    ei.add_item('GeometryNodeTree', "Geometry Node Editor", 'NODETREE')
-    ei.add_item('TEXT_EDITOR', "Text Editor", 'TEXT')
-    ei.add_item('PROPERTIES', "Properties", 'PROPERTIES')
-    ei.add_item('OUTLINER', "Outliner", 'OUTLINER')
-    ei.add_item('PREFERENCES', "Preferences", 'PREFERENCES')
-    ei.add_item('INFO', "Info", 'INFO')
-    ei.add_item('FILE_BROWSER', "File Browser", 'FILEBROWSER')
-    ei.add_item('ASSETS', "Asset Browser", 'ASSET_MANAGER')
-    ei.add_item('SPREADSHEET', "Spreadsheet", 'SPREADSHEET')
-    ei.add_item('CONSOLE', "Python Console", 'CONSOLE')
+#     ei.add_item('VIEW_3D', "3D View", 'VIEW3D')
+#     ei.add_item('TIMELINE', "Timeline", 'TIME')
+#     ei.add_item('FCURVES', "Graph Editor", 'GRAPH')
+#     ei.add_item('DRIVERS', "Drivers", 'DRIVER')
+#     ei.add_item('DOPESHEET', "Dope Sheet", 'ACTION')
+#     ei.add_item('NLA_EDITOR', "NLA Editor", 'NLA')
+#     ei.add_item('VIEW', "Image Editor", 'IMAGE')
+#     ei.add_item('UV', "UV Editor", 'UV')
+#     ei.add_item('CLIP_EDITOR', "Movie Clip Editor", 'TRACKER')
+#     ei.add_item('SEQUENCE_EDITOR', "Video Sequence Editor", 'SEQUENCE')
+#     ei.add_item('ShaderNodeTree', "Shader Editor", 'NODE_MATERIAL')
+#     ei.add_item('CompositorNodeTree', "Compositing", 'NODE_COMPOSITING')
+#     ei.add_item('TextureNodeTree', "Texture Node Editor", 'NODE_TEXTURE')
+#     ei.add_item('GeometryNodeTree', "Geometry Node Editor", 'NODETREE')
+#     ei.add_item('TEXT_EDITOR', "Text Editor", 'TEXT')
+#     ei.add_item('PROPERTIES', "Properties", 'PROPERTIES')
+#     ei.add_item('OUTLINER', "Outliner", 'OUTLINER')
+#     ei.add_item('PREFERENCES', "Preferences", 'PREFERENCES')
+#     ei.add_item('INFO', "Info", 'INFO')
+#     ei.add_item('FILE_BROWSER', "File Browser", 'FILEBROWSER')
+#     ei.add_item('ASSETS', "Asset Browser", 'ASSET_MANAGER')
+#     ei.add_item('SPREADSHEET', "Spreadsheet", 'SPREADSHEET')
+#     ei.add_item('CONSOLE', "Python Console", 'CONSOLE')
 
-    return ei.retrieve_items()
+#     return ei.retrieve_items()
+
+
+class AreaEnumHelper:
+    """Area type enum generator for Blender EnumProperty (uses dynamic detection + caching)."""
+
+    _cache = {}
+
+    @staticmethod
+    def _build_dynamic_items(current=True, none=False):
+        """Build area type enum items from Blender's runtime (no cache)."""
+        items = []
+
+        if current:
+            items.append(('CURRENT', 'Current', '', ic('BLENDER'), len(items)))
+        if none:
+            items.append(('NONE', 'None', '', ic('HANDLETYPE_FREE_VEC'), len(items)))
+
+        # Get available area types by triggering TypeError with invalid value
+        enums = []
+        area = None
+        try:
+            wm = bpy.context.window_manager
+            if wm and wm.windows:
+                wnd = wm.windows[0]
+                if wnd and wnd.screen and wnd.screen.areas:
+                    area = wnd.screen.areas[0]
+                    try:
+                        area.ui_type = ''  # Intentionally trigger TypeError
+                    except TypeError as e:
+                        # Parse enum options from error message: "not found in ('VIEW_3D', 'UV', ...)"
+                        m = re.search(r"not found in \((.*)\)", str(e))
+                        if m:
+                            enums = [s.strip("'") for s in m.group(1).split(', ')]
+        except (AttributeError, RuntimeError):
+            # AttributeError: context/window_manager not available
+            # RuntimeError: Blender context issues
+            return None
+
+        if not area or not enums:
+            return None
+
+        # Build enum items with proper names, descriptions, and icons
+        for enum_id in enums:
+            try:
+                name = bpy.types.UILayout.enum_item_name(area, 'ui_type', enum_id)
+                desc = bpy.types.UILayout.enum_item_description(area, 'ui_type', enum_id)
+                icon_val = bpy.types.UILayout.enum_item_icon(area, 'ui_type', enum_id)
+                items.append((enum_id, name, desc, icon_val, len(items)))
+            except (AttributeError, RuntimeError):
+                # Fallback if UILayout methods fail
+                items.append((enum_id, enum_id, '', ic('INFO'), len(items)))
+
+        return tuple(items)
+
+    @classmethod
+    def _get_items(cls, with_current: bool, with_none: bool):
+        """Get area type enum items with caching."""
+        key = (with_current, with_none)
+        if key in cls._cache:
+            return cls._cache[key]
+
+        items = cls._build_dynamic_items(current=with_current, none=with_none)
+        if items:
+            cls._cache[key] = items
+            return items
+
+        # Dynamic generation failed; return empty fallback
+        return ()
+
+    @staticmethod
+    def gen_items(self=None, context=None): # pylint: disable=unused-argument, bad-staticmethod-argument
+        """EnumProperty callback: area types only."""
+        return AreaEnumHelper._get_items(with_current=False, with_none=False)
+
+    @staticmethod
+    def gen_items_with_current(self=None, context=None): # pylint: disable=unused-argument, bad-staticmethod-argument
+        """EnumProperty callback: area types + 'CURRENT'."""
+        return AreaEnumHelper._get_items(with_current=True, with_none=False)
+
+    @staticmethod
+    def gen_items_with_none(self=None, context=None): # pylint: disable=unused-argument, bad-staticmethod-argument
+        """EnumProperty callback: area types + 'NONE'."""
+        return AreaEnumHelper._get_items(with_current=False, with_none=True)
