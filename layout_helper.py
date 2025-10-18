@@ -250,14 +250,13 @@ class LayoutHelper:
         if self.icon_only:
             txt = ""
 
-        if txt is None:
-            pr = self.layout.operator(
-                idname, icon=ic(icon_id), icon_value=icon_value, emboss=emboss
-            )
-        else:
-            pr = self.layout.operator(
-                idname, text=txt, icon=ic(icon_id), icon_value=icon_value, emboss=emboss
-            )
+        kwargs = dict(icon=ic(icon_id), icon_value=icon_value, emboss=emboss)
+        if txt is not None:
+            kwargs['text'] = txt
+        if icon_value and icon_value > 0:
+            kwargs.pop('icon', None)
+
+        pr = self.layout.operator(idname, **kwargs)
         if props:
             for p in props.keys():
                 setattr(pr, p, props[p])
@@ -305,8 +304,10 @@ class LayoutHelper:
 
     def parse_icon(self, icon):
         icon_value = 0
+        if not icon:
+            return icon, icon_value
         icon_id = icon
-        if icon.startswith(F_CUSTOM_ICON):
+        if isinstance(icon, str) and icon.startswith(F_CUSTOM_ICON):
             icon_id = 'CANCEL'
             if self.ph:
                 icon = icon[1:]
@@ -1064,12 +1065,12 @@ def operator(
     **kwargs
 ):
     d = dict(icon=ic(icon), icon_value=icon_value, emboss=emboss)
-
     if text is not None:
-        d["text"] = text
-
+        d['text'] = text
     if depress is not None:
-        d["depress"] = depress
+        d['depress'] = depress
+    if icon_value and icon_value > 0:
+        d.pop('icon', None)
 
     properties = layout.operator(idname, **d)
 
