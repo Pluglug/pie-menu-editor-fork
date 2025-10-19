@@ -79,7 +79,7 @@ def hor_exp_set(self, value):
 
 
 def save_get(self):
-    return notget_prefs().selected_pm.get_data("save")
+    return not get_prefs().selected_pm.get_data("save")
 
 
 def save_set(self, value):

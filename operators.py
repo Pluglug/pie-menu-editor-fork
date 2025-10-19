@@ -422,7 +422,7 @@ class PME_OT_panel_hide_by(bpy.types.Operator):
 
         for tp in self.panel_types:
             if (
-                tp.bl_space_type != CC.UPREFS
+                tp.bl_space_type != 'PREFERENCES'
                 and (self.space == 'ANY' or tp.bl_space_type == self.space)
                 and (self.region == 'ANY' or tp.bl_region_type == self.region)
                 and (
@@ -688,7 +688,7 @@ class PME_OT_timeout(bpy.types.Operator):
     )
     # area: bpy.props.EnumProperty(
     #     name="Area",
-    #     items=CC.area_type_enum_items(),
+    #     items=CC.AreaEnumHelper.gen_items_with_current(),
     #     options={'SKIP_SAVE'})
 
     def modal(self, context, event):
@@ -2045,7 +2045,7 @@ class WM_OT_pme_user_pie_menu_call(bpy.types.Operator):
     def _parse_open_mode(self, pm):
         if pm.open_mode == 'HOLD':
             self.pm_hold = pm
-        elif pm.open_mode == 'PRESS':
+        elif pm.open_mode in {'PRESS', 'CLICK'}:
             self.pm_press = pm
         elif pm.open_mode == 'CHORDS':
             self.pm_chord = pm
@@ -2065,7 +2065,7 @@ class WM_OT_pme_user_pie_menu_call(bpy.types.Operator):
                 ):
                     self.chord_pms.append(v)
 
-        elif pm.open_mode == 'TWEAK' and self.invoke_mode == 'HOTKEY':
+        elif pm.open_mode in {'TWEAK', 'CLICK_DRAG'} and self.invoke_mode == 'HOTKEY':
             self.pm_tweak = pm
 
     def invoke(self, context, event):
@@ -2738,18 +2738,19 @@ class PME_OT_pmi_area_search(bpy.types.Operator):
     bl_description = "Open/toggle area"
     bl_options = {'INTERNAL'}
 
-    area: bpy.props.EnumProperty(items=CC.area_type_enum_items(), options={'SKIP_SAVE'})
+    area: bpy.props.EnumProperty(items=CC.AreaEnumHelper.gen_items_with_current, options={'SKIP_SAVE'})
     cmd: bpy.props.StringProperty(
         default="bpy.ops.pme.popup_area(area='%s')", options={'SKIP_SAVE'}
     )
 
     def draw_pmi_area_search(self, menu, context):
-        for item in CC.area_type_enum_items(current=False):
+        for item in CC.AreaEnumHelper.gen_items(context=context):
             operator(
                 menu.layout,
                 self.bl_idname,
-                item[1],
-                item[3],
+                text=item[1],
+                icon='NONE',
+                icon_value=item[3],
                 area=item[0],
                 cmd=self.cmd,
             )
@@ -2757,7 +2758,7 @@ class PME_OT_pmi_area_search(bpy.types.Operator):
     def execute(self, context):
         pr = get_prefs()
 
-        for item in CC.area_type_enum_items():
+        for item in CC.AreaEnumHelper.gen_items_with_current():
             if item[0] == self.area:
                 break
 

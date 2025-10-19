@@ -352,9 +352,13 @@ class PMItem(bpy.types.PropertyGroup):
                     kmi.oskey = self.oskey
 
                 kmi.key_modifier = self.key_mod
-                kmi.value = (
-                    'DOUBLE_CLICK' if self.open_mode == 'DOUBLE_CLICK' else 'PRESS'
-                )
+                if hasattr(kmi, "direction"):
+                    kmi.direction = self.drag_dir if self.open_mode == 'CLICK_DRAG' else 'ANY'
+                kmi.value = {
+                    'DOUBLE_CLICK': 'DOUBLE_CLICK',
+                    'CLICK': 'CLICK',
+                    'CLICK_DRAG': 'CLICK_DRAG',
+                }.get(self.open_mode, 'PRESS')
 
                 if self.key == 'NONE' or not self.enabled:
                     if pr.kh.available():
@@ -410,6 +414,15 @@ class PMItem(bpy.types.PropertyGroup):
     )
     oskey: bpy.props.BoolProperty(
         description="Operating system key pressed", update=update_keymap_item
+    )
+
+    # CLICK_DRAG: direction filter
+    drag_dir: bpy.props.EnumProperty(
+        items=CC.DRAG_DIR_ITEMS,
+        name="Direction",
+        description="Direction filter for Click Drag",
+        default='ANY',
+        update=update_keymap_item,
     )
 
     def get_pm_key_mod(self):
@@ -771,9 +784,14 @@ class PMItem(bpy.types.PropertyGroup):
                     kmi.properties.invoke_mode = 'HOTKEY'
                     kmi.properties.keymap = km_name
 
-                    kmi.value = (
-                        'DOUBLE_CLICK' if self.open_mode == 'DOUBLE_CLICK' else 'PRESS'
-                    )
+                    # Blender 4.x: direction for CLICK_DRAG
+                    if hasattr(kmi, "direction"):
+                        kmi.direction = self.drag_dir if self.open_mode == 'CLICK_DRAG' else 'ANY'
+                    kmi.value = {
+                        'DOUBLE_CLICK': 'DOUBLE_CLICK',
+                        'CLICK': 'CLICK',
+                        'CLICK_DRAG': 'CLICK_DRAG',
+                    }.get(self.open_mode, 'PRESS')
 
                     if self.kmis_map[self.name]:
                         self.kmis_map[self.name][km_name] = kmi

@@ -310,6 +310,13 @@ class WM_OT_pm_import(bpy.types.Operator, ImportHelper):
                 pm.poll_cmd = menu[7] or CC.DEFAULT_POLL
             if n > 8:
                 pm.tag = menu[8]
+            if n > 9:
+                pm.enabled = bool(menu[9])
+            if n > 10 and pm.open_mode == 'CLICK_DRAG':
+                try:
+                    pm.drag_dir = menu[10] or 'ANY'
+                except:
+                    pm.drag_dir = 'ANY'
 
             if self.tags:
                 tags = self.tags.split(",")
@@ -454,10 +461,15 @@ class WM_OT_pm_import(bpy.types.Operator, ImportHelper):
 
         self.refresh_icons_flag = False
         try:
-            for f in self.files:
-                filepath = os.path.join(self.directory, f.name)
-                if os.path.isfile(filepath):
-                    self.import_file(filepath)
+            # From direct file path
+            if not self.files and self.filepath and os.path.isfile(self.filepath):
+                self.import_file(self.filepath)
+            else:
+                # From file selection dialog
+                for f in self.files:
+                    filepath = os.path.join(self.directory, f.name)
+                    if os.path.isfile(filepath):
+                        self.import_file(filepath)
         except:
             raise
         finally:
@@ -504,6 +516,18 @@ class WM_OT_pm_export(bpy.types.Operator, ExportHelper):
         default=True,
         options={'SKIP_SAVE'},
     )
+    compat_json: bpy.props.BoolProperty(
+        name="Export Compatible JSON",
+        description="Export without PME-F extensions (no enabled/drag_dir; CLICK->PRESS, CLICK_DRAG->TWEAK)",
+        default=False,
+        options={'SKIP_SAVE'},
+    ) # Compat
+    mark_schema: bpy.props.BoolProperty(
+        name="Mark Schema (PME-F)",
+        description="Add 'schema': 'PME-F' to top-level JSON when not compatible",
+        default=True,
+        options={'SKIP_SAVE'},
+    ) # Compat
 
     def _draw(self, menu, context):
         lh.lt(menu.layout, operator_context='INVOKE_DEFAULT')
@@ -552,6 +576,10 @@ class WM_OT_pm_export(bpy.types.Operator, ExportHelper):
     def draw(self, context):
         layout = self.layout
         layout.prop(self, "export_tags")
+        layout.prop(self, "compat_json")
+        row = layout.row(align=True)
+        row.active = not self.compat_json
+        row.prop(self, "mark_schema")
 
     def execute(self, context):
         global export_filepath
@@ -563,7 +591,8 @@ class WM_OT_pm_export(bpy.types.Operator, ExportHelper):
             self.filepath += ".json"
 
         data = get_prefs().get_export_data(
-            export_tags=self.export_tags, mode=self.mode, tag=self.tag
+            export_tags=self.export_tags, mode=self.mode, tag=self.tag,
+            compat=self.compat_json, mark_schema=self.mark_schema
         )
         data = json.dumps(data, indent=2, separators=(", ", ": "))
         try:
@@ -617,7 +646,8 @@ class WM_OT_pm_duplicate(bpy.types.Operator):
 
         pm.ed.on_pm_duplicate(apm, pm)
 
-        PME_UL_pm_tree.update_tree()
+        Tag.filter()
+        pr.update_tree()
 
         return {'FINISHED'}
 
@@ -1210,9 +1240,10 @@ class WM_UL_pm_list(bpy.types.UIList):
                 lh.row(layout, alignment='RIGHT')
             elif use_split:
                 lh.row(layout)
-            km_name, _, rest = pm.km_name.partition(",")
-            if rest:
-                km_name += ",.."
+            names = [s.strip() for s in pm.km_name.split(CC.KEYMAP_SPLITTER) if s.strip()]
+            km_name = names[0] if names else ""
+            if len(names) > 1:
+                km_name += f" +{len(names) - 1}"
             lh.label(km_name)
             col += 1
 
@@ -1392,7 +1423,7 @@ class PME_UL_pm_tree(bpy.types.UIList):
                 else:
                     groups[CC.UNTAGGED].append(pm)
             elif pr.group_by == 'KEYMAP':
-                kms = pm.km_name.split(", ")
+                kms = [s.strip() for s in pm.km_name.split(CC.KEYMAP_SPLITTER) if s.strip()]
                 for km in kms:
                     if km not in groups:
                         groups[km] = []
@@ -1691,9 +1722,10 @@ class PME_UL_pm_tree(bpy.types.UIList):
                     lh.row(layout, alignment='RIGHT')
                 elif use_split:
                     lh.row(layout)
-                km_name, _, rest = pm.km_name.partition(",")
-                if rest:
-                    km_name += ",.."
+                names = [s.strip() for s in pm.km_name.split(CC.KEYMAP_SPLITTER) if s.strip()]
+                km_name = names[0] if names else ""
+                if len(names) > 1:
+                    km_name += f" +{len(names) - 1}"
                 lh.label(km_name)
                 col += 1
 
@@ -2221,7 +2253,7 @@ class PMEPreferences(bpy.types.AddonPreferences):
                     tp.remove(PME_OT_interactive_panels_toggle._draw_menu)
 
         for tp in bl_panel_types():
-            if getattr(tp, "bl_space_type", None) == CC.UPREFS:
+            if getattr(tp, "bl_space_type", None) == 'PREFERENCES':
                 continue
 
             if tp.__name__ == "PROPERTIES_PT_navigation_bar":
@@ -2361,6 +2393,11 @@ class PMEPreferences(bpy.types.AddonPreferences):
     show_advanced_settings: bpy.props.BoolProperty(
         default=False, description="Advanced settings"
     )
+    show_experimental_open_modes: bpy.props.BoolProperty(
+        name="Show Experimental Hotkey Modes",
+        description="Reveal experimental Click/Click Drag modes in Hotkey Mode picker",
+        default=False,
+    )
     show_list: bpy.props.BoolProperty(default=True, description="Show the list")
     show_sidepanel_prefs: bpy.props.BoolProperty(
         name="Show PME Preferences in 3DView's N-panel",
@@ -2376,6 +2413,11 @@ class PMEPreferences(bpy.types.AddonPreferences):
         update=update_tree,
     )
     tag_filter: bpy.props.StringProperty(update=update_tree)
+    auto_tag_on_add: bpy.props.BoolProperty(
+        name="Tag New Menus with Active Filter",
+        default=False,
+        description="When a tag filter is active, automatically assign that tag to newly created menus",
+    )
     show_only_new_pms: bpy.props.BoolProperty(
         description="Show only new menus", update=update_tree
     )
@@ -2646,6 +2688,10 @@ class PMEPreferences(bpy.types.AddonPreferences):
 
         else:
             pm.ed.on_pm_add(pm)
+
+            if self.auto_tag_on_add and self.tag_filter and self.tag_filter != CC.UNTAGGED:
+                pm.add_tag(self.tag_filter)
+                Tag.filter()
 
         pm.register_hotkey()
 
@@ -3277,6 +3323,7 @@ class PMEPreferences(bpy.types.AddonPreferences):
             col = row.column()
             subcol = col.column(align=True)
             self._draw_hprop(subcol, pr, "show_sidepanel_prefs")
+            self._draw_hprop(subcol, pr, "show_experimental_open_modes")
             self._draw_hprop(
                 subcol,
                 pr,
@@ -3292,6 +3339,7 @@ class PMEPreferences(bpy.types.AddonPreferences):
             )
             self._draw_hprop(subcol, pr, "cache_scripts")
             self._draw_hprop(subcol, pr, "save_tree")
+            self._draw_hprop(subcol, pr, "auto_tag_on_add")
             self._draw_hprop(subcol, pr, "auto_backup")
             self._draw_hprop(subcol, pr, "show_error_trace")
             subcol.separator()
@@ -3573,7 +3621,7 @@ class PMEPreferences(bpy.types.AddonPreferences):
                     title="Backup Menus", message="New backup: " + new_backup_filepath
                 )
 
-    def get_export_data(self, export_tags=True, mode='ALL', tag=""):
+    def get_export_data(self, export_tags=True, mode='ALL', tag="", compat=False, mark_schema=True):
         pr = self
         tpr = temp_prefs()
         menus = []
@@ -3636,20 +3684,38 @@ class PMEPreferences(bpy.types.AddonPreferences):
                     item = (pmi.name, pmi.mode, pmi.icon, pmi.text, pmi.flags())
                 items.append(item)
 
-            menu = (
+            # Compatible JSON
+            open_mode = pm.open_mode
+            drag_dir = getattr(pm, 'drag_dir', 'ANY') if open_mode == 'CLICK_DRAG' else ""
+            if compat:
+                # Normalize experimental modes to vanilla equivalents
+                if open_mode == 'CLICK':
+                    open_mode = 'PRESS'
+                elif open_mode == 'CLICK_DRAG':
+                    open_mode = 'TWEAK'
+                drag_dir = ""
+
+            base = [
                 pm.name,
                 pm.km_name,
                 pm.to_hotkey(),
                 items,
                 pm.mode,
                 pm.data,
-                pm.open_mode,
+                open_mode,  # Compat
                 "" if pm.poll_cmd == CC.DEFAULT_POLL else pm.poll_cmd,
                 pm.tag if export_tags else "",
-            )
-            menus.append(menu)
+            ]
+            if not compat:
+                base.append(pm.enabled)
+                base.append(drag_dir)
+            menus.append(tuple(base))
 
-        return dict(version=".".join(str(i) for i in addon.VERSION), menus=menus)
+        data = dict(version=".".join(str(i) for i in addon.VERSION), menus=menus)
+        # Mark Schema
+        if not compat and mark_schema:
+            data["schema"] = "PME-F"
+        return data
 
     def ed(self, id):
         return self.editors[id]

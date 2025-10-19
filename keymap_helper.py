@@ -49,7 +49,7 @@ _keymap_names = {
     "Logic Editor": ('LOGIC_EDITOR', 'WINDOW'),
     "Property Editor": ('PROPERTIES', 'WINDOW'),
     "Outliner": ('OUTLINER', 'WINDOW'),
-    "User Preferences": (CC.UPREFS, 'WINDOW'),
+    "User Preferences": ('PREFERENCES', 'WINDOW'),
     "Info": ('INFO', 'WINDOW'),
     "File Browser": ('FILE_BROWSER', 'WINDOW'),
     "Console": ('CONSOLE', 'WINDOW'),
@@ -252,7 +252,7 @@ _km_lists = {
     ),
     "PROPERTIES": _KMList(window=["Frames", "View2D Buttons List", "Property Editor"]),
     "OUTLINER": _KMList(window=["View2D", "Frames", "Outliner"]),
-    CC.UPREFS: _KMList(window=["View2D Buttons List"], header=["View2D", "Header"]),
+    'PREFERENCES': _KMList(window=["View2D Buttons List"], header=["View2D", "Header"]),
     "INFO": _KMList(window=["View2D", "Frames", "Info"]),
     "FILE_BROWSER": _KMList(
         window=["View2D", "File Browser", "File Browser Main"],
@@ -536,6 +536,17 @@ def to_ui_hotkey(data):
             hotkey += "%sx2" % key_names[data.key]
         elif data.open_mode == 'CHORDS':
             hotkey += "%s, %s" % (key_names[data.key], key_names[data.chord])
+        elif data.open_mode == 'CLICK':
+            hotkey += "%s*" % key_names[data.key]
+        elif data.open_mode == 'CLICK_DRAG':
+            hotkey += "{%s}*" % key_names[data.key]
+            dir = getattr(data, 'drag_dir', 'ANY')
+            if dir and dir != 'ANY':
+                short = {
+                    'NORTH': 'N', 'NORTH_EAST': 'NE', 'EAST': 'E', 'SOUTH_EAST': 'SE',
+                    'SOUTH': 'S', 'SOUTH_WEST': 'SW', 'WEST': 'W', 'NORTH_WEST': 'NW',
+                }.get(dir, dir)
+                hotkey += " " + short
     else:
         hotkey += key_names[data.key]
 

@@ -76,7 +76,7 @@ add_space_group("PROPERTIES", "SpaceProperties")
 add_space_group("SEQUENCE_EDITOR", "SpaceSequenceEditor")
 add_space_group("TEXT_EDITOR", "SpaceTextEditor")
 add_space_group("TIMELINE", "SpaceTimeline")
-add_space_group(CC.UPREFS, "Space" + CC.UPREFS_CLS)
+add_space_group('PREFERENCES', "SpacePreferences")
 add_space_group("VIEW_3D", "SpaceView3D")
 
 del add_space_group

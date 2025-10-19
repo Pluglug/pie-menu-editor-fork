@@ -944,7 +944,7 @@ def draw_callback_view():
 
     for window in bpy.context.window_manager.windows:
         for area in window.screen.areas:
-            if area.type == CC.UPREFS:
+            if area.type == 'PREFERENCES':
                 area.tag_redraw()
 
 

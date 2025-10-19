@@ -89,7 +89,7 @@ class PME_OT_toolbar_menu(bpy.types.Operator):
 
 class PME_PT_toolbar(bpy.types.Panel):
     bl_label = "PME Toolbar"
-    bl_space_type = CC.UPREFS
+    bl_space_type = 'PREFERENCES'
     bl_region_type = 'WINDOW'
     bl_options = {'HIDE_HEADER'}
 

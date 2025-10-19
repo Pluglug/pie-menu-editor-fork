@@ -38,7 +38,7 @@ def localview(mode='TOGGLE'):
         for region in regions
     ]
 
-    upr = getattr(context, "user_preferences", context.preferences)
+    upr = context.preferences
     smooth_view = upr.view.smooth_view
     upr.view.smooth_view = 0
 
