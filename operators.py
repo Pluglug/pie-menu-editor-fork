@@ -131,8 +131,7 @@ class WM_OT_pm_select(bpy.types.Operator):
                         tpr.links_idx = idx
                         break
                 else:
-                    tpr["links_idx"] = -1
-
+                    tpr.links_idx = -1
                 if pm:
                     pr.tree.expand_km(pm.km_name)
 

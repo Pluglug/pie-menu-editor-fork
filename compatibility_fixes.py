@@ -1,8 +1,28 @@
 import re
+from bpy.app import version as BL_VERSION
 from . import addon
 from .addon import get_prefs
 from .debug_utils import *
 from . import constants as CC
+
+
+def set_sys_props_adapter(obj, attr, value):
+    """Write adapter for Blender 5.0+ system props with pre-5.0 fallback."""
+    if BL_VERSION >= (5, 0, 0):
+        sp = obj.bl_system_properties_get(do_create=True)
+        if sp is not None:
+            sp[attr] = value
+    else:
+        obj[attr] = value
+
+
+def get_sys_prop(obj, attr, default=None):
+    """Read adapter for Blender 5.0+ system props with pre-5.0 fallback."""
+    if BL_VERSION >= (5, 0, 0):
+        sp = obj.bl_system_properties_get()
+        return sp.get(attr, default) if sp else default
+    else:
+        return obj.get(attr, default)
 
 
 def fix(pms=None, version=None):

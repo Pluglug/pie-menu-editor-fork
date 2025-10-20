@@ -91,13 +91,6 @@ import_filepath = os.path.join(ADDON_PATH, "examples", "examples.json")
 export_filepath = os.path.join(ADDON_PATH, "examples", "my_pie_menus.json")
 
 
-def set_sys_props_adapter(obj: object, attr: str, value: any):
-    if bpy.app.version >= (5, 0, 0):
-        sys_props = obj.bl_system_properties_get()
-        sys_props[attr] = value
-    else:
-        obj[attr] = value
-
 def update_pmi_data(self, context, reset_prop_data=True):
     pr = get_prefs()
     pm = pr.selected_pm
@@ -297,7 +290,7 @@ class WM_OT_pm_import(bpy.types.Operator, ImportHelper):
             # pm = pr.add_pm(mode, menu[0], True)
             pm = pr.pie_menus.add()
             pm.mode = mode
-            compatibility_fixes.fix_json(pm, menu, version)
+            fix_json(pm, menu, version)
             pm.name = pr.unique_pm_name(menu[0] or pm.ed.default_name)
             pm.km_name = menu[1]
 
@@ -383,7 +376,7 @@ class WM_OT_pm_import(bpy.types.Operator, ImportHelper):
 
         pms = [pr.pie_menus[menu[0]] for menu in menus]
 
-        compatibility_fixes.fix(pms, version)
+        fix(pms, version)
 
         for pm in pms:
             pm.ed.init_pm(pm)
@@ -976,24 +969,20 @@ class PMEData(bpy.types.PropertyGroup):
 
     ed_props: bpy.props.PointerProperty(type=EdProperties)
 
-    def get_links_idx(self):
-        if bpy.app.version >= (5,0,0):
-            sys_props = self.bl_system_properties_get()
-            return sys_props.get("links_idx", 0)
-        else:
-            return self["links_idx"] if "links_idx" in self else 0
-
-    def set_links_idx(self, value):
-        pr = get_prefs()
-        tpr = temp_prefs()
-
-        if value < 0 or value >= len(tpr.links):
+    def update_links_idx(self, context):
+        if PMEData.update_lock:
             return
-        link = tpr.links[value]
-
-        set_sys_props_adapter(self, "links_idx", value)
-        if link.pm_name:
-            pr.active_pie_menu_idx = pr.pie_menus.find(link.pm_name)
+        PMEData.update_lock = True
+        try:
+            idx = self.links_idx
+            if idx < 0 or idx >= len(self.links):
+                return
+            link = self.links[idx]
+            if link.pm_name:
+                pr = get_prefs()
+                pr.active_pie_menu_idx = pr.pie_menus.find(link.pm_name)
+        finally:
+            PMEData.update_lock = False
 
     def update_modal_item_hk(self, context):
         pmi_data = get_prefs().pmi_data
@@ -1030,7 +1019,7 @@ class PMEData(bpy.types.PropertyGroup):
 
     tags: bpy.props.CollectionProperty(type=Tag)
     links: bpy.props.CollectionProperty(type=PMLink)
-    links_idx: bpy.props.IntProperty(get=get_links_idx, set=set_links_idx)
+    links_idx: bpy.props.IntProperty(default=0, update=update_links_idx)
     hidden_panels_idx: bpy.props.IntProperty()
     pie_menus: bpy.props.CollectionProperty(type=BaseCollectionItem)
     # modal_item_hk: bpy.props.EnumProperty(
@@ -1623,7 +1612,7 @@ class PME_UL_pm_tree(bpy.types.UIList):
                     aidx = i
                     break
 
-            set_sys_props_adapter(tpr, "links_idx", aidx)
+            tpr.links_idx = aidx
             if len(tpr.links):
                 sel_link = tpr.links[tpr.links_idx]
                 if sel_link.pm_name:
@@ -2726,7 +2715,7 @@ class PMEPreferences(bpy.types.AddonPreferences):
                     break
                 link = tpr.links[i]
                 if not link.label and not link.path and link.pm_name != apm.name:
-                    set_sys_props_adapter(tpr, "links_idx", i)
+                    tpr.links_idx = i
                     new_idx = self.pie_menus.find(link.pm_name)
                     break
                 i += d
