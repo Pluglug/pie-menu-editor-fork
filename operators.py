@@ -3276,12 +3276,12 @@ class PME_OT_pm_hotkey_remove(bpy.types.Operator):
 
     def execute(self, context):
         pm = get_prefs().selected_pm
-        pm["key"] = 0
-        pm["ctrl"] = False
-        pm["shift"] = False
-        pm["alt"] = False
-        pm["oskey"] = False
-        pm["key_mod"] = 0
+        pm.key = 'NONE'
+        pm.ctrl = False
+        pm.shift = False
+        pm.alt = False
+        pm.oskey = False
+        pm.key_mod = 'NONE'
         pm.update_keymap_item(context)
 
         return {'FINISHED'}

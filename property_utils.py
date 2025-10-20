@@ -229,7 +229,14 @@ def from_dict(obj, dct):
                 from_dict(col.add(), item)
 
         else:
-            obj[k] = value
+            anns = getattr(obj.__class__, "__annotations__", None)
+            if isinstance(anns, dict) and k in anns:
+                try:
+                    setattr(obj, k, value)
+                except (TypeError, ValueError, AttributeError) as e:
+                    print_exc(
+                        f"from_dict: failed to set {obj.__class__.__name__}.{k} = {repr(value)}: {e}"
+                    )
 
 
 def to_py_value(data, key, value):

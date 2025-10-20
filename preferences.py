@@ -53,6 +53,7 @@ from . import addon
 from . import keymap_helper
 from . import pme
 from . import operator_utils
+from .compatibility_fixes import set_sys_props_adapter, get_sys_prop, fix_json, fix
 from .keymap_helper import (
     KeymapHelper,
     MOUSE_BUTTONS,
@@ -1320,7 +1321,7 @@ class PME_UL_pm_tree(bpy.types.UIList):
                     data["group_by"], None
                 )
                 if item:
-                    pr["group_by"] = item.value
+                    pr.group_by = item.identifier
                     pr.tree.update()
 
             existing_groups = set(PME_UL_pm_tree.groups)

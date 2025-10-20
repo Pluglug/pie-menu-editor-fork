@@ -246,6 +246,9 @@ class PMIItem(bpy.types.PropertyGroup):
 class PMItem(bpy.types.PropertyGroup):
     poll_methods = {}
     kmis_map = {}
+    _km_name_update_lock = False
+    _prev_key_mod_map = {}
+
 
     @property
     def selected_pmi(self):
@@ -277,35 +280,27 @@ class PMItem(bpy.types.PropertyGroup):
     def parse_keymap(self, exists=True, splitter=None):
         return PMItem._parse_keymap(self.km_name, exists, splitter)
 
-    def get_pm_km_name(self):
-        if "km_name" not in self:
-            self["km_name"] = "Window"
-        return self["km_name"]
-
-    def set_pm_km_name(self, value):
-        if not self.ed.has_hotkey:
-            self["km_name"] = value
+    def update_pm_km_name(self, context):
+        if PMItem._km_name_update_lock:
             return
-
-        if not value:
-            value = "Window"
-        else:
-            value = (CC.KEYMAP_SPLITTER + " ").join(PMItem._parse_keymap(value))
-
-        if "km_name" not in self or self["km_name"] != value:
-            if "km_name" in self:
-                self.unregister_hotkey()
-
-            self["km_name"] = value
+        value = self.km_name or "Window"
+        value = (CC.KEYMAP_SPLITTER + " ").join(PMItem._parse_keymap(value))
+        PMItem._km_name_update_lock = True
+        try:
+            if self.km_name != value:
+                self.km_name = value
+            if not self.ed.has_hotkey:
+                return
+            self.unregister_hotkey()
             self.register_hotkey()
-
-        get_prefs().update_tree()
+            get_prefs().update_tree()
+        finally:
+            PMItem._km_name_update_lock = False
 
     km_name: bpy.props.StringProperty(
         default="Window",
         description="Keymap names",
-        get=get_pm_km_name,
-        set=set_pm_km_name,
+        update=update_pm_km_name,
     )
 
     def get_pm_name(self):
@@ -370,20 +365,6 @@ class PMItem(bpy.types.PropertyGroup):
         else:
             self.register_hotkey()
 
-    def get_key(self):
-        return self.get("key", 0)
-
-    def set_key(self, value):
-        if self.get("key", 0) == value:
-            return
-
-        self["key"] = value
-        self.update_keymap_item(bpy.context)
-
-        pr = get_prefs()
-        if pr.group_by == 'KEY':
-            pr.tree.update()
-
     def update_open_mode(self, context):
         if self.open_mode == 'CHORDS' and self.chord == 'NONE':
             self.chord = 'A'
@@ -395,8 +376,18 @@ class PMItem(bpy.types.PropertyGroup):
     open_mode: bpy.props.EnumProperty(
         name="Hotkey Mode", items=CC.OPEN_MODE_ITEMS, update=update_open_mode
     )
+
+    def update_pm_key(self, context):
+        self.update_keymap_item(context)
+        pr = get_prefs()
+        if pr.group_by == 'KEY':
+            pr.tree.update()
+
     key: bpy.props.EnumProperty(
-        items=KH.key_items, description="Key pressed", get=get_key, set=set_key
+        items=KH.key_items,
+        description="Key pressed",
+        update=update_pm_key,
+        default='NONE',
     )
 
     chord: bpy.props.EnumProperty(items=KH.key_items, description="Chord pressed")
@@ -416,7 +407,6 @@ class PMItem(bpy.types.PropertyGroup):
         description="Operating system key pressed", update=update_keymap_item
     )
 
-    # CLICK_DRAG: direction filter
     drag_dir: bpy.props.EnumProperty(
         items=CC.DRAG_DIR_ITEMS,
         name="Direction",
@@ -425,52 +415,40 @@ class PMItem(bpy.types.PropertyGroup):
         update=update_keymap_item,
     )
 
-    def get_pm_key_mod(self):
-        return self["key_mod"] if "key_mod" in self else 0
-
-    def set_pm_key_mod(self, value):
+    def update_pm_key_mod(self, context):
         pr = get_prefs()
-        prev_value = self.key_mod
-        self["key_mod"] = value
-        value = self.key_mod
-
-        if prev_value == value or not self.enabled:
+        prev = PMItem._prev_key_mod_map.get(self.name, 'NONE')
+        curr = self.key_mod
+        if prev == curr or not self.enabled:
+            PMItem._prev_key_mod_map[self.name] = curr
             return
 
         kms = self.parse_keymap()
-        if prev_value != 'NONE' and prev_value in KH.MOUSE_BUTTONS:
+        if prev != 'NONE' and prev in KH.MOUSE_BUTTONS:
             for km in kms:
-                KH.remove_mouse_button(prev_value, pr.kh, km)
+                KH.remove_mouse_button(prev, pr.kh, km)
 
-        if value != 'NONE' and value in KH.MOUSE_BUTTONS:
+        if curr != 'NONE' and curr in KH.MOUSE_BUTTONS:
             for km in kms:
-                KH.add_mouse_button(value, pr.kh, km)
+                KH.add_mouse_button(curr, pr.kh, km)
+
+        PMItem._prev_key_mod_map[self.name] = curr
 
     key_mod: bpy.props.EnumProperty(
         items=KH.key_items,
         description="Regular key pressed as a modifier",
-        get=get_pm_key_mod,
-        set=set_pm_key_mod,
+        update=update_pm_key_mod,
+        default='NONE',
     )
 
-    def get_pm_enabled(self):
-        if "enabled" not in self:
-            self["enabled"] = True
-        return self["enabled"]
-
-    def set_pm_enabled(self, value):
-        if "enabled" in self and self["enabled"] == value:
-            return
-
-        self["enabled"] = value
-
-        self.ed.on_pm_enabled(self, value)
+    def update_pm_enabled(self, context):
+        self.ed.on_pm_enabled(self, self.enabled)
+        self.update_keymap_item(context)
 
     enabled: bpy.props.BoolProperty(
         description="Enable or disable the menu",
         default=True,
-        get=get_pm_enabled,
-        set=set_pm_enabled,
+        update=update_pm_enabled,
     )
 
     def update_poll_cmd(self, context):
@@ -784,7 +762,6 @@ class PMItem(bpy.types.PropertyGroup):
                     kmi.properties.invoke_mode = 'HOTKEY'
                     kmi.properties.keymap = km_name
 
-                    # Blender 4.x: direction for CLICK_DRAG
                     if hasattr(kmi, "direction"):
                         kmi.direction = self.drag_dir if self.open_mode == 'CLICK_DRAG' else 'ANY'
                     kmi.value = {
