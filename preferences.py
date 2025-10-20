@@ -1406,8 +1406,10 @@ class PME_UL_pm_tree(bpy.types.UIList):
         for pm in pms:
             if pr.group_by == 'TAG':
                 if pm.tag:
-                    tags = pm.tag.split(", ")
+                    tags = [s.strip() for s in pm.tag.split(",") if s.strip()]
                     for t in tags:
+                        if t not in groups:
+                            groups[t] = []
                         groups[t].append(pm)
                 else:
                     groups[CC.UNTAGGED].append(pm)
