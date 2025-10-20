@@ -48,12 +48,11 @@ from .panel_utils import (
 )
 from .macro_utils import add_macro, remove_macro, update_macro
 from .modal_utils import encode_modal_data
-from . import compatibility_fixes
 from . import addon
 from . import keymap_helper
 from . import pme
 from . import operator_utils
-from .compatibility_fixes import set_sys_props_adapter, get_sys_prop, fix_json, fix
+from .compatibility_fixes import fix_json, fix
 from .keymap_helper import (
     KeymapHelper,
     MOUSE_BUTTONS,
@@ -476,7 +475,7 @@ class WM_OT_pm_import(bpy.types.Operator, ImportHelper):
 
         if select_pm_flag:
             idx = pr.active_pie_menu_idx
-            set_sys_props_adapter(pr,"active_pie_menu_idx",-1)
+            pr.active_pie_menu_idx = -1
             pr.active_pie_menu_idx = idx
 
         if self.refresh_icons_flag:
@@ -1047,15 +1046,11 @@ class PMEData(bpy.types.PropertyGroup):
     modal_item_prop_max: bpy.props.FloatProperty(name="Max Value", step=100)
 
     def set_modal_item_prop_step(self, value):
-        set_sys_props_adapter(self,"modal_item_prop_step",value)
         self.modal_item_prop_step_is_set = True
 
     def get_modal_item_prop_step(self):
-        if bpy.app.version >= (5, 0, 0):
-            sys_props = self.bl_system_properties_get()
-            return sys_props.get("modal_item_prop_step", 1)
-        else:
-            return self.get("modal_item_prop_step", 1),
+        return 1
+
     modal_item_prop_step: bpy.props.FloatProperty(
         name="Step",
         min=0,
@@ -2183,26 +2178,14 @@ class PMEPreferences(bpy.types.AddonPreferences):
     pie_menus: bpy.props.CollectionProperty(type=PMItem)
     props: bpy.props.PointerProperty(type=UserProperties)
 
-    def pie_menu_idx_get(self):
-        if bpy.app.version >= (5, 0, 0):
-            sys_props = self.bl_system_properties_get()
-            return sys_props.get("active_pie_menu_idx", 0)
-        else:
-            return self.get("active_pie_menu_idx", 0)
-
-    def pie_menu_idx_set(self, value):
-        current_value = self.pie_menu_idx_get()
-        if current_value == value:
-            return
-
-        set_sys_props_adapter(self, "active_pie_menu_idx", value)
+    def update_active_pie_menu_idx(self, context):
         self.pmi_data.info()
         temp_prefs().hidden_panels_idx = 0
-        if value >= 0:
+        if 0 <= self.active_pie_menu_idx < len(self.pie_menus):
             self.selected_pm.ed.on_pm_select(self.selected_pm)
 
     active_pie_menu_idx: bpy.props.IntProperty(
-        get=pie_menu_idx_get, set=pie_menu_idx_set
+        default=0, update=update_active_pie_menu_idx
     )
 
     overlay: bpy.props.PointerProperty(type=OverlayPrefs)
@@ -2307,7 +2290,7 @@ class PMEPreferences(bpy.types.AddonPreferences):
 
     def update_show_names(self, context):
         if not self.show_names and not self.show_hotkeys:
-            set_sys_props_adapter(self, "show_hotkeys", True)
+            self.show_hotkeys = True
 
     show_names: bpy.props.BoolProperty(
         default=True, description="Show names", update=update_show_names
@@ -2315,7 +2298,7 @@ class PMEPreferences(bpy.types.AddonPreferences):
 
     def update_show_hotkeys(self, context):
         if not self.show_hotkeys and not self.show_names:
-            set_sys_props_adapter(self, "show_names", True)
+            self.show_names = True
 
     show_hotkeys: bpy.props.BoolProperty(
         default=True, description="Show hotkeys", update=update_show_hotkeys
@@ -2634,12 +2617,12 @@ class PMEPreferences(bpy.types.AddonPreferences):
         tpr = temp_prefs()
 
         if not getattr(self,"active_pie_menu_idx"):
-            set_sys_props_adapter(self, "active_pie_menu_idx", 0)
+            self.active_pie_menu_idx = 0
 
         if self.tree_mode and len(tpr.links):
             link = tpr.links[tpr.links_idx]
             if link.path:
-                set_sys_props_adapter(self, "active_pie_menu_idx", self.pie_menus.find(link.path[0]))
+                self.active_pie_menu_idx = self.pie_menus.find(link.path[0])
 
         tpr.links_idx = -1
 
