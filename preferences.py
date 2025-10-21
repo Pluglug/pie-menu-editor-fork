@@ -673,8 +673,8 @@ class PME_OT_pm_remove(ConfirmBoxHandler, bpy.types.Operator):
         if self.mode == 'ACTIVE':
             pr.remove_pm()
         elif self.mode == 'ALL':
-            for i in range(len(pr.pie_menus)):
-                pr.remove_pm()
+            while len(pr.pie_menus):
+                pr.remove_pm(pm=pr.pie_menus[0])
         elif self.mode in {'ENABLED', 'DISABLED'}:
             i = 0
             while i < len(pr.pie_menus):
@@ -1474,7 +1474,8 @@ class PME_UL_pm_tree(bpy.types.UIList):
 
         idx = 0
         aidx = -1
-        apm_name = len(pr.pie_menus) and pr.selected_pm.name
+        apm = pr.selected_pm
+        apm_name = apm.name if apm else None
 
         groups_to_remove = []
         for k, v in groups.items():
@@ -1611,15 +1612,14 @@ class PME_UL_pm_tree(bpy.types.UIList):
                     break
 
             tpr.links_idx = aidx
-            if len(tpr.links):
-                sel_link = tpr.links[tpr.links_idx]
+            if 0 <= aidx < len(tpr.links):
+                sel_link = tpr.links[aidx]
                 if sel_link.pm_name:
                     pm = pr.selected_pm
-                    if (
-                        pr.group_by == 'KEYMAP'
-                        and pm.km_name in PME_UL_pm_tree.collapsed_groups
-                    ):
+                    if pm and pr.group_by == 'KEYMAP' and pm.km_name in PME_UL_pm_tree.collapsed_groups:
                         PME_UL_pm_tree.collapsed_groups.remove(pm.km_name)
+            else:
+                tpr.links_idx = -1
 
             tag_redraw()
 
@@ -2181,7 +2181,9 @@ class PMEPreferences(bpy.types.AddonPreferences):
     def update_active_pie_menu_idx(self, context):
         self.pmi_data.info()
         temp_prefs().hidden_panels_idx = 0
+        # Ignore invalid/empty selection
         if 0 <= self.active_pie_menu_idx < len(self.pie_menus):
+            # Valid index only
             self.selected_pm.ed.on_pm_select(self.selected_pm)
 
     active_pie_menu_idx: bpy.props.IntProperty(
@@ -2616,7 +2618,7 @@ class PMEPreferences(bpy.types.AddonPreferences):
         pr = get_prefs()
         tpr = temp_prefs()
 
-        if not getattr(self,"active_pie_menu_idx"):
+        if self.active_pie_menu_idx < 0:
             self.active_pie_menu_idx = 0
 
         if self.tree_mode and len(tpr.links):
@@ -2689,7 +2691,7 @@ class PMEPreferences(bpy.types.AddonPreferences):
         apm = self.pie_menus[idx]
         new_idx = -1
         num_links = len(tpr.links)
-        if self.tree_mode and num_links:
+        if pm is None and self.tree_mode and num_links:
             d = 1
             i = tpr.links_idx + d
             while True:
@@ -2705,6 +2707,11 @@ class PMEPreferences(bpy.types.AddonPreferences):
                     new_idx = self.pie_menus.find(link.pm_name)
                     break
                 i += d
+        elif pm is not None:
+            if idx + 1 < len(self.pie_menus):
+                new_idx = idx + 1
+            else:
+                new_idx = idx
 
         apm.key_mod = 'NONE'
 
