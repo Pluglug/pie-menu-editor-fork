@@ -6,9 +6,6 @@ from math import pi as PI
 from .addon import get_prefs, temp_prefs, print_exc
 from . import operator_utils
 
-bpy.context.window_manager["pme_temp"] = dict()
-IDPropertyGroup = type(bpy.context.window_manager["pme_temp"])
-del bpy.context.window_manager["pme_temp"]
 
 bpy.types.WindowManager.pme_temp = bpy.props.BoolVectorProperty(size=3)
 BPyPropArray = type(bpy.context.window_manager.pme_temp)
