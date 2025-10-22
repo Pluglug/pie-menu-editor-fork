@@ -1,5 +1,6 @@
 import bpy
 from .addon import get_prefs, temp_prefs, print_exc
+from .debug_utils import logw
 
 
 class UserData:
@@ -184,7 +185,13 @@ class PMEProps:
         if text not in self.parsed_data:
             self.parsed_data[text] = ParsedData(text)
 
-        return self.parsed_data[text]
+        pd = self.parsed_data[text]
+        for k, prop in self.prop_map.items():
+            if prop.type == pd.type and not hasattr(pd, k):
+                setattr(pd, k, prop.default)
+                logw("PME: defaulted missing prop", f"type={pd.type}", f"prop={k}")
+
+        return pd
 
     def encode(self, text, prop, value):
         tp, _, data = text.partition("?")
@@ -267,8 +274,13 @@ class ParsedData:
                 break
 
     def value(self, name):
-        for item in props.get(name).items:
-            if getattr(self, name) == item[0]:
+        prop = props.get(name)
+        has_attr = hasattr(self, name)
+        current_value = getattr(self, name, prop.default)
+        if not has_attr:
+            logw("PME: value() defaulted missing prop", f"type={self.type}", f"prop={name}")
+        for item in prop.items:
+            if current_value == item[0]:
                 return item[2]
 
         return 0
