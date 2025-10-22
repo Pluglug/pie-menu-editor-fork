@@ -275,11 +275,20 @@ class ParsedData:
 
     def value(self, name):
         prop = props.get(name)
+        if not prop:
+            logw("PME: value() missing prop in map", f"type={self.type}", f"prop={name}")
+            return 0
+
         has_attr = hasattr(self, name)
         current_value = getattr(self, name, prop.default)
         if not has_attr:
             logw("PME: value() defaulted missing prop", f"type={self.type}", f"prop={name}")
-        for item in prop.items:
+
+        items = getattr(prop, "items", None)
+        if not items:
+            return 0
+
+        for item in items:
             if current_value == item[0]:
                 return item[2]
 
