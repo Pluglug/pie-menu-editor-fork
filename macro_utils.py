@@ -231,13 +231,40 @@ def _fill_props(props, pm, idx=1):
 
 def execute_macro(pm):
     if pm.name not in _macros:
-        return
+        # Macro class not built yet (e.g., right after json import); build now
+        try:
+            add_macro(pm)
+            print("Macro built successfully")
+        except:
+            print_exc()
+            return
 
     tp = _macros[pm.name]
     op = eval("bpy.ops." + tp.bl_idname)
-    props = {}
-    _fill_props(props, pm)
-    op('INVOKE_DEFAULT', True, **props)
+
+    def _do_call():
+        props = {}
+        _fill_props(props, pm)
+        return op('INVOKE_DEFAULT', True, **props)
+
+    try:
+        _do_call()
+    except TypeError as e:
+        print("Type error: ", e)
+        # Handle timing/registration mismatch right after creation/import
+        # Example: "keyword 'PME_OT_macro_exec1' unrecognized" or "WM_OT_call_menu"
+        msg = str(e)
+        if "unrecognized" in msg and ("PME_OT_" in msg or "_OT_" in msg):
+            try:
+                update_macro(pm)
+                _do_call()
+                print("Macro updated and executed successfully")
+                return
+            except Exception:
+                print_exc()
+                return
+        # Not our case; re-raise
+        raise
 
 
 def rename_macro(old_name, name):
