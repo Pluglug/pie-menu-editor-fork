@@ -131,8 +131,7 @@ class WM_OT_pm_select(bpy.types.Operator):
                         tpr.links_idx = idx
                         break
                 else:
-                    tpr["links_idx"] = -1
-
+                    tpr.links_idx = -1
                 if pm:
                     pr.tree.expand_km(pm.km_name)
 
@@ -3277,12 +3276,12 @@ class PME_OT_pm_hotkey_remove(bpy.types.Operator):
 
     def execute(self, context):
         pm = get_prefs().selected_pm
-        pm["key"] = 0
-        pm["ctrl"] = False
-        pm["shift"] = False
-        pm["alt"] = False
-        pm["oskey"] = False
-        pm["key_mod"] = 0
+        pm.key = 'NONE'
+        pm.ctrl = False
+        pm.shift = False
+        pm.alt = False
+        pm.oskey = False
+        pm.key_mod = 'NONE'
         pm.update_keymap_item(context)
 
         return {'FINISHED'}

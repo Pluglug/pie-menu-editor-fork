@@ -72,17 +72,17 @@ def decode_modal_data(pmi, prop_data=None, tpr=None):
             if n > 4:
                 custom = data[4]
                 if tpr:
-                    tpr["modal_item_custom"] = custom
+                    setattr(tpr, "modal_item_custom", custom)
                 prop_data and setattr(prop_data, "custom", custom)
     else:
         tpr and tpr.modal_item_hk.clear()
 
     if tpr and not cmd:
         if tpr.modal_item_hk.key in {'WHEELUPMOUSE', 'WHEELDOWNMOUSE'}:
-            tpr["modal_item_prop_mode"] = 2
+            tpr.modal_item_prop_mode = 'WHEEL'
         elif tpr.modal_item_hk.key == 'MOUSEMOVE':
-            tpr["modal_item_prop_mode"] = 1
+            tpr.modal_item_prop_mode = 'MOVE'
         else:
-            tpr["modal_item_prop_mode"] = 0
+            tpr.modal_item_prop_mode = 'KEY'
 
     return hk, min_value, max_value, step, custom

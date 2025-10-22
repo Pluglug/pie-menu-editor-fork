@@ -48,11 +48,11 @@ from .panel_utils import (
 )
 from .macro_utils import add_macro, remove_macro, update_macro
 from .modal_utils import encode_modal_data
-from . import compatibility_fixes
 from . import addon
 from . import keymap_helper
 from . import pme
 from . import operator_utils
+from .compatibility_fixes import fix_json, fix
 from .keymap_helper import (
     KeymapHelper,
     MOUSE_BUTTONS,
@@ -90,13 +90,6 @@ pp = pme.props
 import_filepath = os.path.join(ADDON_PATH, "examples", "examples.json")
 export_filepath = os.path.join(ADDON_PATH, "examples", "my_pie_menus.json")
 
-
-def set_sys_props_adapter(obj: object, attr: str, value: any):
-    if bpy.app.version >= (5, 0, 0):
-        sys_props = obj.bl_system_properties_get()
-        sys_props[attr] = value
-    else:
-        obj[attr] = value
 
 def update_pmi_data(self, context, reset_prop_data=True):
     pr = get_prefs()
@@ -297,7 +290,7 @@ class WM_OT_pm_import(bpy.types.Operator, ImportHelper):
             # pm = pr.add_pm(mode, menu[0], True)
             pm = pr.pie_menus.add()
             pm.mode = mode
-            compatibility_fixes.fix_json(pm, menu, version)
+            fix_json(pm, menu, version)
             pm.name = pr.unique_pm_name(menu[0] or pm.ed.default_name)
             pm.km_name = menu[1]
 
@@ -383,7 +376,7 @@ class WM_OT_pm_import(bpy.types.Operator, ImportHelper):
 
         pms = [pr.pie_menus[menu[0]] for menu in menus]
 
-        compatibility_fixes.fix(pms, version)
+        fix(pms, version)
 
         for pm in pms:
             pm.ed.init_pm(pm)
@@ -482,7 +475,7 @@ class WM_OT_pm_import(bpy.types.Operator, ImportHelper):
 
         if select_pm_flag:
             idx = pr.active_pie_menu_idx
-            set_sys_props_adapter(pr,"active_pie_menu_idx",-1)
+            pr.active_pie_menu_idx = -1
             pr.active_pie_menu_idx = idx
 
         if self.refresh_icons_flag:
@@ -680,8 +673,8 @@ class PME_OT_pm_remove(ConfirmBoxHandler, bpy.types.Operator):
         if self.mode == 'ACTIVE':
             pr.remove_pm()
         elif self.mode == 'ALL':
-            for i in range(len(pr.pie_menus)):
-                pr.remove_pm()
+            while len(pr.pie_menus):
+                pr.remove_pm(pm=pr.pie_menus[0])
         elif self.mode in {'ENABLED', 'DISABLED'}:
             i = 0
             while i < len(pr.pie_menus):
@@ -976,24 +969,20 @@ class PMEData(bpy.types.PropertyGroup):
 
     ed_props: bpy.props.PointerProperty(type=EdProperties)
 
-    def get_links_idx(self):
-        if bpy.app.version >= (5,0,0):
-            sys_props = self.bl_system_properties_get()
-            return sys_props.get("links_idx", 0)
-        else:
-            return self["links_idx"] if "links_idx" in self else 0
-
-    def set_links_idx(self, value):
-        pr = get_prefs()
-        tpr = temp_prefs()
-
-        if value < 0 or value >= len(tpr.links):
+    def update_links_idx(self, context):
+        if PMEData.update_lock:
             return
-        link = tpr.links[value]
-
-        set_sys_props_adapter(self, "links_idx", value)
-        if link.pm_name:
-            pr.active_pie_menu_idx = pr.pie_menus.find(link.pm_name)
+        PMEData.update_lock = True
+        try:
+            idx = self.links_idx
+            if idx < 0 or idx >= len(self.links):
+                return
+            link = self.links[idx]
+            if link.pm_name:
+                pr = get_prefs()
+                pr.active_pie_menu_idx = pr.pie_menus.find(link.pm_name)
+        finally:
+            PMEData.update_lock = False
 
     def update_modal_item_hk(self, context):
         pmi_data = get_prefs().pmi_data
@@ -1030,7 +1019,7 @@ class PMEData(bpy.types.PropertyGroup):
 
     tags: bpy.props.CollectionProperty(type=Tag)
     links: bpy.props.CollectionProperty(type=PMLink)
-    links_idx: bpy.props.IntProperty(get=get_links_idx, set=set_links_idx)
+    links_idx: bpy.props.IntProperty(default=0, update=update_links_idx)
     hidden_panels_idx: bpy.props.IntProperty()
     pie_menus: bpy.props.CollectionProperty(type=BaseCollectionItem)
     # modal_item_hk: bpy.props.EnumProperty(
@@ -1057,15 +1046,11 @@ class PMEData(bpy.types.PropertyGroup):
     modal_item_prop_max: bpy.props.FloatProperty(name="Max Value", step=100)
 
     def set_modal_item_prop_step(self, value):
-        set_sys_props_adapter(self,"modal_item_prop_step",value)
         self.modal_item_prop_step_is_set = True
 
     def get_modal_item_prop_step(self):
-        if bpy.app.version >= (5, 0, 0):
-            sys_props = self.bl_system_properties_get()
-            return sys_props.get("modal_item_prop_step", 1)
-        else:
-            return self.get("modal_item_prop_step", 1),
+        return 1
+
     modal_item_prop_step: bpy.props.FloatProperty(
         name="Step",
         min=0,
@@ -1331,7 +1316,7 @@ class PME_UL_pm_tree(bpy.types.UIList):
                     data["group_by"], None
                 )
                 if item:
-                    pr["group_by"] = item.value
+                    pr.group_by = item.identifier
                     pr.tree.update()
 
             existing_groups = set(PME_UL_pm_tree.groups)
@@ -1417,8 +1402,10 @@ class PME_UL_pm_tree(bpy.types.UIList):
         for pm in pms:
             if pr.group_by == 'TAG':
                 if pm.tag:
-                    tags = pm.tag.split(", ")
+                    tags = [s.strip() for s in pm.tag.split(",") if s.strip()]
                     for t in tags:
+                        if t not in groups:
+                            groups[t] = []
                         groups[t].append(pm)
                 else:
                     groups[CC.UNTAGGED].append(pm)
@@ -1487,7 +1474,8 @@ class PME_UL_pm_tree(bpy.types.UIList):
 
         idx = 0
         aidx = -1
-        apm_name = len(pr.pie_menus) and pr.selected_pm.name
+        apm = pr.selected_pm
+        apm_name = apm.name if apm else None
 
         groups_to_remove = []
         for k, v in groups.items():
@@ -1623,16 +1611,15 @@ class PME_UL_pm_tree(bpy.types.UIList):
                     aidx = i
                     break
 
-            set_sys_props_adapter(tpr, "links_idx", aidx)
-            if len(tpr.links):
-                sel_link = tpr.links[tpr.links_idx]
+            tpr.links_idx = aidx
+            if 0 <= aidx < len(tpr.links):
+                sel_link = tpr.links[aidx]
                 if sel_link.pm_name:
                     pm = pr.selected_pm
-                    if (
-                        pr.group_by == 'KEYMAP'
-                        and pm.km_name in PME_UL_pm_tree.collapsed_groups
-                    ):
+                    if pm and pr.group_by == 'KEYMAP' and pm.km_name in PME_UL_pm_tree.collapsed_groups:
                         PME_UL_pm_tree.collapsed_groups.remove(pm.km_name)
+            else:
+                tpr.links_idx = -1
 
             tag_redraw()
 
@@ -2191,26 +2178,16 @@ class PMEPreferences(bpy.types.AddonPreferences):
     pie_menus: bpy.props.CollectionProperty(type=PMItem)
     props: bpy.props.PointerProperty(type=UserProperties)
 
-    def pie_menu_idx_get(self):
-        if bpy.app.version >= (5, 0, 0):
-            sys_props = self.bl_system_properties_get()
-            return sys_props.get("active_pie_menu_idx", 0)
-        else:
-            return self.get("active_pie_menu_idx", 0)
-
-    def pie_menu_idx_set(self, value):
-        current_value = self.pie_menu_idx_get()
-        if current_value == value:
-            return
-
-        set_sys_props_adapter(self, "active_pie_menu_idx", value)
+    def update_active_pie_menu_idx(self, context):
         self.pmi_data.info()
         temp_prefs().hidden_panels_idx = 0
-        if value >= 0:
+        # Ignore invalid/empty selection
+        if 0 <= self.active_pie_menu_idx < len(self.pie_menus):
+            # Valid index only
             self.selected_pm.ed.on_pm_select(self.selected_pm)
 
     active_pie_menu_idx: bpy.props.IntProperty(
-        get=pie_menu_idx_get, set=pie_menu_idx_set
+        default=0, update=update_active_pie_menu_idx
     )
 
     overlay: bpy.props.PointerProperty(type=OverlayPrefs)
@@ -2315,7 +2292,7 @@ class PMEPreferences(bpy.types.AddonPreferences):
 
     def update_show_names(self, context):
         if not self.show_names and not self.show_hotkeys:
-            set_sys_props_adapter(self, "show_hotkeys", True)
+            self.show_hotkeys = True
 
     show_names: bpy.props.BoolProperty(
         default=True, description="Show names", update=update_show_names
@@ -2323,7 +2300,7 @@ class PMEPreferences(bpy.types.AddonPreferences):
 
     def update_show_hotkeys(self, context):
         if not self.show_hotkeys and not self.show_names:
-            set_sys_props_adapter(self, "show_names", True)
+            self.show_names = True
 
     show_hotkeys: bpy.props.BoolProperty(
         default=True, description="Show hotkeys", update=update_show_hotkeys
@@ -2641,13 +2618,13 @@ class PMEPreferences(bpy.types.AddonPreferences):
         pr = get_prefs()
         tpr = temp_prefs()
 
-        if not getattr(self,"active_pie_menu_idx"):
-            set_sys_props_adapter(self, "active_pie_menu_idx", 0)
+        if self.active_pie_menu_idx < 0:
+            self.active_pie_menu_idx = 0
 
         if self.tree_mode and len(tpr.links):
             link = tpr.links[tpr.links_idx]
             if link.path:
-                set_sys_props_adapter(self, "active_pie_menu_idx", self.pie_menus.find(link.path[0]))
+                self.active_pie_menu_idx = self.pie_menus.find(link.path[0])
 
         tpr.links_idx = -1
 
@@ -2714,7 +2691,7 @@ class PMEPreferences(bpy.types.AddonPreferences):
         apm = self.pie_menus[idx]
         new_idx = -1
         num_links = len(tpr.links)
-        if self.tree_mode and num_links:
+        if pm is None and self.tree_mode and num_links:
             d = 1
             i = tpr.links_idx + d
             while True:
@@ -2726,10 +2703,15 @@ class PMEPreferences(bpy.types.AddonPreferences):
                     break
                 link = tpr.links[i]
                 if not link.label and not link.path and link.pm_name != apm.name:
-                    set_sys_props_adapter(tpr, "links_idx", i)
+                    tpr.links_idx = i
                     new_idx = self.pie_menus.find(link.pm_name)
                     break
                 i += d
+        elif pm is not None:
+            if idx + 1 < len(self.pie_menus):
+                new_idx = idx + 1
+            else:
+                new_idx = idx
 
         apm.key_mod = 'NONE'
 

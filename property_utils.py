@@ -6,9 +6,6 @@ from math import pi as PI
 from .addon import get_prefs, temp_prefs, print_exc
 from . import operator_utils
 
-bpy.context.window_manager["pme_temp"] = dict()
-IDPropertyGroup = type(bpy.context.window_manager["pme_temp"])
-del bpy.context.window_manager["pme_temp"]
 
 bpy.types.WindowManager.pme_temp = bpy.props.BoolVectorProperty(size=3)
 BPyPropArray = type(bpy.context.window_manager.pme_temp)
@@ -229,7 +226,14 @@ def from_dict(obj, dct):
                 from_dict(col.add(), item)
 
         else:
-            obj[k] = value
+            anns = getattr(obj.__class__, "__annotations__", None)
+            if isinstance(anns, dict) and k in anns:
+                try:
+                    setattr(obj, k, value)
+                except (TypeError, ValueError, AttributeError) as e:
+                    print_exc(
+                        f"from_dict: failed to set {obj.__class__.__name__}.{k} = {repr(value)}: {e}"
+                    )
 
 
 def to_py_value(data, key, value):
