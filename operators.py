@@ -1862,7 +1862,29 @@ class WM_OT_pme_user_pie_menu_call(bpy.types.Operator):
                 if pr.use_chord_hint:
                     area_header_text_set()
 
-                return self.modal_stop()
+                # CHORDSタイムアウト時にpm_pressメニューを呼び出す
+                # invoke_mode='CHORDS'は「CHORDSコンテキストからの呼び出し」を示す
+                if self.pm_press and not self.cancelled:
+                    DBG_PM and logi("CHORDS - TIMEOUT, calling PRESS menu:", self.pm_press.name)
+                    self.modal_stop()
+                    self.executed = True
+                    
+                    if self.pm_press.mode == 'SCRIPT':
+                        StackKey.next(self.pm_press)
+                    elif self.pm_press.mode == 'STICKY':
+                        # Stickyモードの場合は何もしない
+                        pass
+                    elif self.pm_press.mode == 'MACRO':
+                        execute_macro(self.pm_press)
+                    else:
+                        bpy.ops.wm.pme_user_pie_menu_call(
+                            'INVOKE_DEFAULT',
+                            pie_menu_name=self.pm_press.name,
+                            invoke_mode='CHORDS'
+                        )
+                    return {'CANCELLED'}
+                else:
+                    return self.modal_stop()
 
             if self.hold_timer and (
                 self.hold_timer.finished() or self.hold_timer.update()
@@ -2220,6 +2242,10 @@ class WM_OT_pme_user_pie_menu_call(bpy.types.Operator):
         elif self.pm_tweak and cpm.open_mode == 'PRESS':
             cpm = self.pm_tweak
             self.pie_menu_name = self.pm_tweak.name
+
+        elif self.pm_chord and cpm.open_mode == 'PRESS':
+            cpm = self.pm_chord
+            self.pie_menu_name = self.pm_chord.name
 
         if self.invoke_mode == 'HOTKEY':
             if self.pie_menu_name in self.__class__.active_ops:
