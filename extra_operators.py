@@ -1,5 +1,6 @@
 import bpy
 import addon_utils
+from bpy.app import version as BL_VERSION
 from bpy.app.handlers import persistent
 from .addon import ADDON_ID, get_prefs, get_uprefs
 from .bl_utils import PopupOperator, popup_area, ctx_dict, area_header_text_set
@@ -946,36 +947,60 @@ class PME_OT_sidearea_toggle(bpy.types.Operator):
         if state[1] > 1:
             SU.toggle_sidebar(area, False, True)
 
-    def close_area(self, context, main, area):
-        CTU.swap_spaces(area, main, self.area)
-        try:
-            with context.temp_override(area=area):
-                bpy.ops.screen.area_close()
-            return
-        except:
-            pass
+    def close_area(self, context, main, area, direction="HORIZONTAL"):
+        # area_join() can only join areas of the same type
+        area.ui_type = main.ui_type
+        
+        # Redraw to ensure area state is stable before joining
+        # This prevents crashes with some editor types
+        SU.redraw_screen()
+        
+        use_new_api = BL_VERSION >= (4, 3, 0)
+        
+        # For Blender 4.2 and earlier, try area_close() first
+        if not use_new_api:
+            try:
+                with context.temp_override(area=area):
+                    bpy.ops.screen.area_close()
+                return
+            except:
+                pass  # Fallback to area_join()
 
-        if area.x < main.x:
-            try:
-                bpy.ops.screen.area_join(
-                    min_x=area.x + 2,
-                    min_y=area.y + 2,
-                    max_x=area.x - 2,
-                    max_y=area.y + 2,
-                )
-            except:
-                bpy.ops.screen.area_join(cursor=(area.x, area.y + 2))
+        if direction == "HORIZONTAL":
+            if area.x < main.x:
+                # Closing left area
+                if use_new_api:
+                    source = (area.x + area.width // 2, area.y + area.height // 2)
+                    target = (main.x + main.width // 2, main.y + main.height // 2)
+                    bpy.ops.screen.area_join(source_xy=source, target_xy=target)
+                else:
+                    bpy.ops.screen.area_join(cursor=(area.x + area.width, area.y + 2))
+            else:
+                # Closing right area
+                if use_new_api:
+                    source = (area.x + area.width // 2, area.y + area.height // 2)
+                    target = (main.x + main.width // 2, main.y + main.height // 2)
+                    bpy.ops.screen.area_join(source_xy=source, target_xy=target)
+                else:
+                    bpy.ops.screen.area_join(cursor=(area.x, area.y + 2))
         else:
-            try:
-                bpy.ops.screen.area_join(
-                    min_x=area.x + area.width - 2,
-                    min_y=area.y + area.height - 2,
-                    max_x=area.x + area.width + 2,
-                    max_y=area.y + area.height - 2,
-                )
-            except:
-                bpy.ops.screen.area_swap(cursor=(area.x + area.width - 2, area.y + 2))
-                bpy.ops.screen.area_join(cursor=(area.x + area.width - 2, area.y + 2))
+            # VERTICAL direction
+            if area.y < main.y:
+                # Closing bottom area
+                if use_new_api:
+                    source = (area.x + area.width // 2, area.y + area.height // 2)
+                    target = (main.x + main.width // 2, main.y + main.height // 2)
+                    bpy.ops.screen.area_join(source_xy=source, target_xy=target)
+                else:
+                    bpy.ops.screen.area_join(cursor=(area.x + 2, area.y + area.height))
+            else:
+                # Closing top area
+                if use_new_api:
+                    source = (area.x + area.width // 2, area.y + area.height // 2)
+                    target = (main.x + main.width // 2, main.y + main.height // 2)
+                    bpy.ops.screen.area_join(source_xy=source, target_xy=target)
+                else:
+                    bpy.ops.screen.area_join(cursor=(area.x + 2, area.y))
 
     def execute(self, context):
         self.ia = set(a.strip() for a in self.ignore_areas.split(","))
@@ -1035,12 +1060,12 @@ class PME_OT_sidearea_toggle(bpy.types.Operator):
 
         elif l and self.side == "LEFT" and self.action in ("TOGGLE", "HIDE"):
             self.save_sidebars(l)
-            self.close_area(context, a, l)
+            self.close_area(context, a, l, direction="HORIZONTAL")
             SU.redraw_screen()
 
         elif r and self.side == "RIGHT" and self.action in ("TOGGLE", "HIDE"):
             self.save_sidebars(r)
-            self.close_area(context, a, r)
+            self.close_area(context, a, r, direction="HORIZONTAL")
             SU.redraw_screen()
 
         elif (
@@ -1085,12 +1110,12 @@ class PME_OT_sidearea_toggle(bpy.types.Operator):
 
         elif t and self.side == "TOP" and self.action in ("TOGGLE", "HIDE"):
             self.save_sidebars(t)
-            self.close_area(context, a, t)
+            self.close_area(context, a, t, direction="VERTICAL")
             SU.redraw_screen()
 
         elif b and self.side == "BOTTOM" and self.action in ("TOGGLE", "HIDE"):
             self.save_sidebars(b)
-            self.close_area(context, a, b)
+            self.close_area(context, a, b, direction="VERTICAL")
             SU.redraw_screen()
 
         elif (
