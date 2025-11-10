@@ -209,7 +209,12 @@ def remove_panel(name, idx):
     if name not in _panels or idx >= len(_panels[name]):
         return
 
-    bpy.utils.unregister_class(_panels[name][idx])
+    panel = _panels[name][idx]
+    try:
+        bpy.utils.unregister_class(panel)
+    except RuntimeError as e:
+        logw(f"PME: Warning: Failed to unregister panel {panel}: {e}")
+
     _panels[name].pop(idx)
 
 
@@ -218,7 +223,10 @@ def remove_panel_group(name):
         return
 
     for panel in _panels[name]:
-        bpy.utils.unregister_class(panel)
+        try:
+            bpy.utils.unregister_class(panel)
+        except RuntimeError as e:
+            logw(f"PME: Warning: Failed to unregister panel {panel}: {e}")
 
     del _panels[name]
 
@@ -228,10 +236,16 @@ def refresh_panel_group(name):
         return
 
     for panel in _panels[name]:
-        bpy.utils.unregister_class(panel)
+        try:
+            bpy.utils.unregister_class(panel)
+        except RuntimeError as e:
+            logw(f"PME: Warning: Failed to unregister panel {panel}: {e}")
 
     for panel in _panels[name]:
-        bpy.utils.register_class(panel)
+        try:
+            bpy.utils.register_class(panel)
+        except RuntimeError as e:
+            logw(f"PME: Warning: Failed to register panel {panel}: {e}")
 
 
 def rename_panel_group(old_name, name):
@@ -999,7 +1013,10 @@ def unregister():
 
     for panels in _panels.values():
         for panel in panels:
-            bpy.utils.unregister_class(panel)
+            try:
+                bpy.utils.unregister_class(panel)
+            except RuntimeError as e:
+                logw(f"PME: Warning: Failed to unregister panel {panel}: {e}")
 
     _panels.clear()
 
