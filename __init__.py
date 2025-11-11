@@ -161,7 +161,7 @@ if not bpy.app.background:
     from . import compatibility_fixes
     from . import addon
 
-    addon.VERSION = bl_info["version"]
+    addon.VERSION = bl_info["version"][:3]
     addon.BL_VERSION = bl_info["blender"]
 
 
