@@ -1,4 +1,4 @@
-from bpy.app import version as bl_version
+from bpy.app import version as APP_VERSION
 from bpy.props import StringProperty
 import re
 from itertools import islice
@@ -61,7 +61,7 @@ def gen_fields(*args):
 
     for a in args:
         if isinstance(a, tuple):
-            if (a[0] and bl_version < a[1]) or (not a[0] and bl_version >= a[1]):
+            if (a[0] and APP_VERSION < a[1]) or (not a[0] and APP_VERSION >= a[1]):
                 continue
 
             cur_tp = a[2]
@@ -274,21 +274,21 @@ uiLayout._fields_ = gen_fields(
     uiItem, "item",
     uiLayoutRoot, "*root",
     c_void_p, "*context",
-    (True, (2, 91, 0), uiLayout, "*parent"),
+    uiLayout, "*parent",
     ListBase, "items",
-    (True, (2, 91, 0), c_char * UI_MAX_NAME_STR, "heading"),
-    (True, (2, 80, 0), uiLayout, "*child_items_layout"),
+    c_char * UI_MAX_NAME_STR, "heading",
+    uiLayout, "*child_items_layout",
     c_int, "x", "y", "w", "h",
     c_float, "scale[2]",
     c_short, "space",
     c_bool, "align",
     c_bool, "active",
-    (True, (2, 91, 0), c_bool, "active_default"),
-    (True, (2, 91, 0), c_bool, "active_init"),
+    c_bool, "active_default",
+    c_bool, "active_init",
     c_bool, "enabled",
     c_bool, "redalert",
     c_bool, "keepaspect",
-    (True, (2, 80, 0), c_bool, "variable_size"),
+    c_bool, "variable_size",
     c_char, "alignment",
 )
 
@@ -296,8 +296,6 @@ uiLayoutRoot._fields_ = gen_fields(
     uiLayoutRoot, "*next", "*prev",
     c_int, "type",
     c_int, "opcontext",
-    # (True, (2, 91, 0), c_bool, "search_only"),
-    # (True, (2, 91, 0), ListBase, "button_groups"),
     c_int, "emw", "emh",
     c_int, "padding",
     c_void_p, "handlefunc",
@@ -385,12 +383,12 @@ uiBlock._fields_ = gen_fields(
 bContext_wm._fields_ = gen_fields(
     c_void_p, "*manager",
     c_void_p, "*window",
-    (True, (2, 80, 0), c_void_p, "*workspace"),
+    c_void_p, "*workspace",
     c_void_p, "*screen",
     ScrArea, "*area",
     ARegion, "*region",
     c_void_p, "*menu",
-    (True, (2, 80, 0), c_void_p, "*gizmo_group"),
+    c_void_p, "*gizmo_group",
     c_void_p, "*store",
     c_char_p, "*operator_poll_msg",
 )
@@ -529,17 +527,14 @@ wmEvent._fields_ = gen_fields(
 wmWindow._fields_ = gen_fields(
     wmWindow, "*next", "*prev",
     c_void_p, "*ghostwin",
-    (True, (2, 80, 0), c_void_p, "*gpuctx"),
-    (True, (2, 80, 0), wmWindow, "*parent"),
-    (False, (2, 80, 0), bScreen, "*screen"),
-    (False, (2, 80, 0), bScreen, "*newscreen"),
-    (True, (2, 80, 0), c_void_p, "*scene"),
-    (True, (2, 80, 0), c_void_p, "*new_scene"),
-    (True, (2, 80, 0), c_char, "view_layer_name[64]"),
-    (False, (2, 80, 0), c_char, "screenname[64]"),
-    (True, (2, 80, 0), c_void_p, "*workspace_hook"),
-    (True, (2, 80, 0), ScrAreaMap, "global_areas"),
-    (True, (2, 80, 0), bScreen, "*screen"),
+    c_void_p, "*gpuctx",
+    wmWindow, "*parent",
+    c_void_p, "*scene",
+    c_void_p, "*new_scene",
+    c_char, "view_layer_name[64]",
+    c_void_p, "*workspace_hook",
+    ScrAreaMap, "global_areas",
+    bScreen, "*screen",
     c_short, "posx", "posy", "sizex", "sizey",
     c_short, "windowstate",
     c_short, "monitor",
@@ -549,18 +544,13 @@ wmWindow._fields_ = gen_fields(
     c_short, "modalcursor",
     c_short, "grabcursor",
     c_short, "addmousemove",
-    (False, (2, 80, 0), c_short, "multisamples"),
-    (False, (2, 80, 0), c_short, "pad[3]"),
-    (True, (2, 80, 0), c_short, "pad[4]"),
+    c_short, "pad[4]",
     c_int, "winid",
     c_short, "lock_pie_event",
     c_short, "last_pie_event",
     c_void_p, "*eventstate",
-    (False, (2, 80, 0), c_void_p, "*curswin"),
     c_void_p, "*tweak",
     c_void_p, "*ime_data",
-    (False, (2, 80, 0), c_int, "drawmethod", "drawfail"),
-    (False, (2, 80, 0), ListBase, "drawdata"),
     ListBase, "queue",
     ListBase, "handlers",
     ListBase, "modalhandlers",
@@ -577,8 +567,8 @@ wmEventHandler._fields_ = gen_fields(
     c_char, "flag",
     c_void_p, "*keymap",
     c_void_p, "*bblocal", "*bbwin",
-    (True, (2, 80, 0), wmEventHandler_KeymapFn, "keymap_callback"),
-    (True, (2, 80, 0), c_void_p, "*keymap_tool"),
+    wmEventHandler_KeymapFn, "keymap_callback",
+    c_void_p, "*keymap_tool",
     wmOperator, "*op",
 )
 

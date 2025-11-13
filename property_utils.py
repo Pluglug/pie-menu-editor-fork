@@ -1,5 +1,5 @@
 import bpy
-from bpy.app import version as BL_VERSION
+from bpy.app import version as APP_VERSION
 from types import BuiltinFunctionType
 from mathutils import Euler
 from math import pi as PI
@@ -227,7 +227,7 @@ def from_dict(obj, dct):
                 from_dict(col.add(), item)
 
         else:
-            if BL_VERSION >= (5, 0, 0):
+            if APP_VERSION >= (5, 0, 0):
                 sp = obj.bl_system_properties_get(do_create=True)
                 if sp is not None:
                     sp[k] = value

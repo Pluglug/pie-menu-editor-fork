@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import bpy
+from bpy.app import version as APP_VERSION
 import os
 import sys
 import traceback
@@ -84,10 +85,7 @@ def temp_prefs():
 
 def check_bl_version(version=None):
     version = version or BL_VERSION
-    if version >= (2, 80, 0) and bpy.app.version < (2, 80, 0):
-        return True
-
-    return bpy.app.version >= version
+    return APP_VERSION >= version
 
 
 def check_context():

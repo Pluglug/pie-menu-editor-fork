@@ -1,6 +1,6 @@
 import bpy
 import addon_utils
-from bpy.app import version as BL_VERSION
+from bpy.app import version as APP_VERSION
 from bpy.app.handlers import persistent
 from .addon import ADDON_ID, get_prefs, get_uprefs
 from .bl_utils import PopupOperator, popup_area, ctx_dict, area_header_text_set
@@ -955,7 +955,7 @@ class PME_OT_sidearea_toggle(bpy.types.Operator):
         # This prevents crashes with some editor types
         SU.redraw_screen()
         
-        use_new_api = BL_VERSION >= (4, 3, 0)
+        use_new_api = APP_VERSION >= (4, 3, 0)
         
         # For Blender 4.2 and earlier, try area_close() first
         if not use_new_api:

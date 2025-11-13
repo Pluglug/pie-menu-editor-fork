@@ -1081,11 +1081,6 @@ def operator(
 
 
 def split(layout, factor=None, align=True):
-    if bpy.app.version < (2, 80, 0):
-        return (
-            layout.split(align=align) if factor is None else layout.split(factor, align)
-        )
-
     return (
         layout.split(align=align)
         if factor is None
