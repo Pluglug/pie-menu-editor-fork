@@ -464,7 +464,7 @@ class WM_OT_pm_import(bpy.types.Operator, ImportHelper):
 
         if select_pm_flag:
             idx = pr.active_pie_menu_idx
-            pr["active_pie_menu_idx"] = -1
+            pr.active_pie_menu_idx_internal = -1
             pr.active_pie_menu_idx = idx
 
         if self.refresh_icons_flag:
@@ -939,9 +939,12 @@ class PMEData(bpy.types.PropertyGroup):
     prop_data = PropertyData()
 
     ed_props: bpy.props.PointerProperty(type=EdProperties)
+    
+    # Internal storage for links_idx (Blender 5.0 compatibility - no IDProperties on PropertyGroup)
+    links_idx_internal: bpy.props.IntProperty(default=0, options={'HIDDEN', 'SKIP_SAVE'})
 
     def get_links_idx(self):
-        return self["links_idx"] if "links_idx" in self else 0
+        return self.links_idx_internal
 
     def set_links_idx(self, value):
         pr = get_prefs()
@@ -951,7 +954,7 @@ class PMEData(bpy.types.PropertyGroup):
             return
         link = tpr.links[value]
 
-        self["links_idx"] = value
+        self.links_idx_internal = value
         if link.pm_name:
             pr.active_pie_menu_idx = pr.pie_menus.find(link.pm_name)
 
@@ -1015,16 +1018,19 @@ class PMEData(bpy.types.PropertyGroup):
     )
     modal_item_prop_min: bpy.props.FloatProperty(name="Min Value", step=100)
     modal_item_prop_max: bpy.props.FloatProperty(name="Max Value", step=100)
+    
+    # Internal storage for modal_item_prop_step (Blender 5.0 compatibility - no IDProperties on PropertyGroup)
+    modal_item_prop_step_internal: bpy.props.FloatProperty(default=1.0, options={'HIDDEN', 'SKIP_SAVE'})
 
     def set_modal_item_prop_step(self, value):
-        self["modal_item_prop_step"] = value
+        self.modal_item_prop_step_internal = value
         self.modal_item_prop_step_is_set = True
 
     modal_item_prop_step: bpy.props.FloatProperty(
         name="Step",
         min=0,
         step=100,
-        get=lambda s: s.get("modal_item_prop_step", 1),
+        get=lambda s: s.modal_item_prop_step_internal,
         set=set_modal_item_prop_step,
     )
     modal_item_prop_step_is_set: bpy.props.BoolProperty()
@@ -1293,7 +1299,7 @@ class PME_UL_pm_tree(bpy.types.UIList):
                     data["group_by"], None
                 )
                 if item:
-                    pr["group_by"] = item.value
+                    pr.group_by = item.value
                     pr.tree.update()
 
             existing_groups = set(PME_UL_pm_tree.groups)
@@ -1585,7 +1591,7 @@ class PME_UL_pm_tree(bpy.types.UIList):
                     aidx = i
                     break
 
-            tpr["links_idx"] = aidx
+            tpr.links_idx = aidx
             if len(tpr.links):
                 sel_link = tpr.links[tpr.links_idx]
                 if sel_link.pm_name:
@@ -1982,7 +1988,7 @@ class PMIData(bpy.types.PropertyGroup):
         tpr = temp_prefs()
         if get_prefs().selected_pm.mode == 'MODAL':
             if self.mode == 'COMMAND' and tpr.modal_item_prop_mode != 'KEY':
-                tpr["modal_item_prop_mode"] = 0
+                tpr.modal_item_prop_mode = 'KEY'
                 tpr.modal_item_hk.key = 'NONE'
 
         self.check_pmi_errors(context)
@@ -2160,18 +2166,21 @@ class PMEPreferences(bpy.types.AddonPreferences):
     version: bpy.props.IntVectorProperty(size=3)
     pie_menus: bpy.props.CollectionProperty(type=PMItem)
     props: bpy.props.PointerProperty(type=UserProperties)
+    
+    # Internal storage for active_pie_menu_idx (Blender 5.0 compatibility - no IDProperties on AddonPreferences)
+    active_pie_menu_idx_internal: bpy.props.IntProperty(default=0, options={'HIDDEN', 'SKIP_SAVE'})
 
     def pie_menu_idx_get(self):
-        return self.get("active_pie_menu_idx", 0)
+        return self.active_pie_menu_idx_internal
 
     def pie_menu_idx_set(self, value):
-        if self.active_pie_menu_idx == value:
+        if self.active_pie_menu_idx_internal == value:
             return
 
-        self["active_pie_menu_idx"] = value
+        self.active_pie_menu_idx_internal = value
         self.pmi_data.info()
         temp_prefs().hidden_panels_idx = 0
-        if self.active_pie_menu_idx >= 0:
+        if self.active_pie_menu_idx_internal >= 0:
             self.selected_pm.ed.on_pm_select(self.selected_pm)
 
     active_pie_menu_idx: bpy.props.IntProperty(
@@ -2280,7 +2289,8 @@ class PMEPreferences(bpy.types.AddonPreferences):
 
     def update_show_names(self, context):
         if not self.show_names and not self.show_hotkeys:
-            self["show_hotkeys"] = True
+            # Use property access - the condition prevents infinite recursion
+            self.show_hotkeys = True
 
     show_names: bpy.props.BoolProperty(
         default=True, description="Show names", update=update_show_names
@@ -2288,7 +2298,8 @@ class PMEPreferences(bpy.types.AddonPreferences):
 
     def update_show_hotkeys(self, context):
         if not self.show_hotkeys and not self.show_names:
-            self["show_names"] = True
+            # Use property access - the condition prevents infinite recursion
+            self.show_names = True
 
     show_hotkeys: bpy.props.BoolProperty(
         default=True, description="Show hotkeys", update=update_show_hotkeys
@@ -2596,20 +2607,20 @@ class PMEPreferences(bpy.types.AddonPreferences):
         pr = get_prefs()
         tpr = temp_prefs()
 
-        if "active_pie_menu_idx" not in self:
-            self["active_pie_menu_idx"] = 0
+        if self.active_pie_menu_idx_internal == -1:
+            self.active_pie_menu_idx_internal = 0
 
         if self.tree_mode and len(tpr.links):
             link = tpr.links[tpr.links_idx]
             if link.path:
-                self["active_pie_menu_idx"] = self.pie_menus.find(link.path[0])
+                self.active_pie_menu_idx_internal = self.pie_menus.find(link.path[0])
 
         tpr.links_idx = -1
 
         self.pie_menus.add()
-        if self["active_pie_menu_idx"] < len(self.pie_menus) - 1:
-            self["active_pie_menu_idx"] += 1
-        self.pie_menus.move(len(self.pie_menus) - 1, self["active_pie_menu_idx"])
+        if self.active_pie_menu_idx_internal < len(self.pie_menus) - 1:
+            self.active_pie_menu_idx_internal += 1
+        self.pie_menus.move(len(self.pie_menus) - 1, self.active_pie_menu_idx_internal)
         pm = self.selected_pm
 
         pm.mode = mode
@@ -2677,7 +2688,7 @@ class PMEPreferences(bpy.types.AddonPreferences):
                     break
                 link = tpr.links[i]
                 if not link.label and not link.path and link.pm_name != apm.name:
-                    tpr["links_idx"] = i
+                    tpr.links_idx = i
                     new_idx = self.pie_menus.find(link.pm_name)
                     break
                 i += d
@@ -3831,7 +3842,7 @@ def register():
     pr.maximize_prefs = False
     pr.show_advanced_settings = False
     pr.mode_filter = CC.PM_ITEMS_M_DEFAULT
-    pr["tag_filter"] = ""
+    pr.tag_filter = ""
     Tag.filter()
 
     h = pr.hotkey
@@ -3884,9 +3895,15 @@ def register():
 
 
 def unregister():
-    pr = get_prefs()
-    pr.kh.unregister()
-    pr.window_kmis.clear()
+    try:
+        pr = get_prefs()
+        if pr is not None and hasattr(pr, 'kh') and pr.kh is not None:
+            pr.kh.unregister()
+        if pr is not None and hasattr(pr, 'window_kmis'):
+            pr.window_kmis.clear()
+    except (KeyError, AttributeError):
+        # Preferences may not be available during unregister
+        pass
 
     PMIData._kmi = None
 
