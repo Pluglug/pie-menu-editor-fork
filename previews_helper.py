@@ -38,6 +38,13 @@ class PreviewsHelper:
         return self.preview is not None and name in self.preview
 
     def refresh(self):
+        # NOTE:
+        # - This currently initializes previews only once per session.
+        # - Enum-based icons (e.g. OPEN_MODE_ITEMS in constants.py) cache their
+        #   icon_value at class definition time, so calling this again will NOT
+        #   update those enums. A true "icon refresh" would require either
+        #   re-registering the affected classes or switching to a dynamic
+        #   draw-time lookup instead of static enum icon_values.
         if self.preview is not None:
             return
 
