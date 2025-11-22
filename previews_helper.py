@@ -38,8 +38,8 @@ class PreviewsHelper:
         return self.preview is not None and name in self.preview
 
     def refresh(self):
-        if self.preview:
-            self.unregister()
+        if self.preview is not None:
+            return
 
         self.preview = bpy.utils.previews.new()
         for f in os.listdir(self.path):
@@ -70,7 +70,3 @@ ph.refresh()
 
 def register():
     pme.context.add_global("custom_icon", custom_icon)
-
-
-def unregister():
-    ph.unregister()

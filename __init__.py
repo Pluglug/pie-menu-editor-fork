@@ -245,12 +245,14 @@ def on_context():
     register_module()
 
     pr = get_prefs()
-    global re_enable_data
-    if re_enable_data is not None:
-        if len(pr.pie_menus) == 0 and re_enable_data:
-            property_utils.from_dict(pr, re_enable_data)
-        re_enable_data.clear()
-        re_enable_data = None
+
+    if APP_VERSION < (5, 0, 0):
+        global re_enable_data
+        if re_enable_data is not None:
+            if len(pr.pie_menus) == 0 and re_enable_data:
+                property_utils.from_dict(pr, re_enable_data)
+            re_enable_data.clear()
+            re_enable_data = None
 
     for mod in MODULES:
         m = sys.modules["%s.%s" % (__name__, mod)]
@@ -463,8 +465,9 @@ def unregister():
         timer = None
         return
 
-    global re_enable_data
-    re_enable_data = property_utils.to_dict(get_prefs())
+    if APP_VERSION < (5, 0, 0):
+        global re_enable_data
+        re_enable_data = property_utils.to_dict(get_prefs())
 
     for mod in reversed(MODULES):
         m = sys.modules["%s.%s" % (__name__, mod)]

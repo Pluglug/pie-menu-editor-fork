@@ -188,7 +188,11 @@ class PMIItem(bpy.types.PropertyGroup):
                     ):
                         text = ""
 
-            if icon[0] != CC.F_EXPAND and icon not in CC.BL_ICONS:
+            if (
+                icon[0] != CC.F_EXPAND
+                and not icon.startswith(CC.F_CUSTOM_ICON)
+                and icon not in CC.BL_ICONS
+            ):
                 icon = 'CANCEL'
 
         return text, icon, oicon, icon_only, hidden, use_cb
@@ -216,7 +220,11 @@ class PMIItem(bpy.types.PropertyGroup):
         if not icon:
             return default_icon
 
-        if icon[0] != CC.F_EXPAND and icon not in CC.BL_ICONS:
+        if (
+            icon[0] != CC.F_EXPAND
+            and not icon.startswith(CC.F_CUSTOM_ICON)
+            and icon not in CC.BL_ICONS
+        ):
             return 'CANCEL'
 
         if icon == 'NONE':
