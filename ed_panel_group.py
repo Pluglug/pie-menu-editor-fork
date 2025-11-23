@@ -2,7 +2,7 @@ import bpy
 from . import constants as CC
 from .collection_utils import MoveItemOperator
 from .ed_base import EditorBase, PME_OT_pm_edit, PME_OT_pm_add
-from .addon import get_prefs, get_uprefs, ic, ic_cb
+from .addon import get_prefs, ic, ic_cb
 from .layout_helper import lh, operator, draw_pme_layout
 from .ui import utitle, tag_redraw
 from .ui_utils import draw_menu
@@ -20,7 +20,6 @@ from .panel_utils import (
     PLayout,
 )
 from . import pme
-from . import c_utils
 
 
 class PME_OT_panel_sub_toggle(bpy.types.Operator):
@@ -122,17 +121,6 @@ class PME_PT_toolbar(bpy.types.Panel):
 
     def draw(self, context):
         lh.lt(self.layout)
-
-        c_layout = c_utils.c_layout(self.layout)
-
-        # Set top and bottom margins
-        top_bottom_margin = round(4 * get_uprefs().view.ui_scale)
-        c_layout.y += top_bottom_margin
-
-        # Adjust width and position if the area is vertical
-        if self.is_area_vertical(context):
-            c_layout.w += 2 * top_bottom_margin
-            c_layout.x -= top_bottom_margin
 
         # Create names
         base_name = "Toolbar"

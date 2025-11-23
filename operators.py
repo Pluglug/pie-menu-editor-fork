@@ -1755,6 +1755,8 @@ class WM_OT_pme_user_pie_menu_call(bpy.types.Operator):
             ret = {'PASS_THROUGH'}
         else:
             ret = {'RUNNING_MODAL'}
+        
+        DBG_PM and event.type == 'TIMER' and logi("MODAL TIMER, id:", id(self), "cancelled:", self.cancelled)
 
         if event.type != 'TIMER' and (
             event.value == 'PRESS' or event.value == 'NOTHING'
@@ -1766,13 +1768,24 @@ class WM_OT_pme_user_pie_menu_call(bpy.types.Operator):
             ):
                 for v in self.chord_pms:
                     if v.chord == event.type:
+                        DBG_PM and logh("=== CHORD MATCHED ===")
+                        DBG_PM and logi("Stopping modal for:", self.pie_menu_name)
+                        DBG_PM and logi("Calling menu:", v.name)
+                        DBG_PM and logi("Active ops before:", list(self.__class__.active_ops.keys()))
+                        
                         self.modal_stop()
                         if pr.use_chord_hint:
                             area_header_text_set()
 
-                        bpy.ops.wm.pme_user_pie_menu_call(
-                            'INVOKE_DEFAULT', pie_menu_name=v.name, invoke_mode='CHORDS'
+                        DBG_PM and logi("Scheduling delayed execution via timeout")
+                        menu_name_escaped = v.name.replace("\\", "\\\\").replace("'", "\\'")
+                        bpy.ops.pme.timeout(
+                            'INVOKE_DEFAULT',
+                            delay=0.0001,
+                            cmd=f"bpy.ops.wm.pme_user_pie_menu_call('INVOKE_DEFAULT', pie_menu_name='{menu_name_escaped}')"
                         )
+                        DBG_PM and logi("After scheduling, active ops:", list(self.__class__.active_ops.keys()))
+                        DBG_PM and logi("=== RETURNING CANCELLED ===")
                         return {'CANCELLED'}
                 else:
                     self.cancelled = True
@@ -1849,7 +1862,29 @@ class WM_OT_pme_user_pie_menu_call(bpy.types.Operator):
                 if pr.use_chord_hint:
                     area_header_text_set()
 
-                return self.modal_stop()
+                # CHORDSタイムアウト時にpm_pressメニューを呼び出す
+                # invoke_mode='CHORDS'は「CHORDSコンテキストからの呼び出し」を示す
+                if self.pm_press and not self.cancelled:
+                    DBG_PM and logi("CHORDS - TIMEOUT, calling PRESS menu:", self.pm_press.name)
+                    self.modal_stop()
+                    self.executed = True
+                    
+                    if self.pm_press.mode == 'SCRIPT':
+                        StackKey.next(self.pm_press)
+                    elif self.pm_press.mode == 'STICKY':
+                        # Stickyモードの場合は何もしない
+                        pass
+                    elif self.pm_press.mode == 'MACRO':
+                        execute_macro(self.pm_press)
+                    else:
+                        bpy.ops.wm.pme_user_pie_menu_call(
+                            'INVOKE_DEFAULT',
+                            pie_menu_name=self.pm_press.name,
+                            invoke_mode='CHORDS'
+                        )
+                    return {'CANCELLED'}
+                else:
+                    return self.modal_stop()
 
             if self.hold_timer and (
                 self.hold_timer.finished() or self.hold_timer.update()
@@ -1907,22 +1942,31 @@ class WM_OT_pme_user_pie_menu_call(bpy.types.Operator):
         if add_timer:
             self.bl_timer = wm.event_timer_add(0.05, window=bpy.context.window)
         wm.modal_handler_add(self)
-        DBG_PM and logi("START", self)
+        DBG_PM and logi("START", self, "id:", id(self))
         if self.pie_menu_name in self.__class__.active_ops:
-            self.__class__.active_ops[self.pie_menu_name].cancelled = True
+            old_instance = self.__class__.active_ops[self.pie_menu_name]
+            DBG_PM and logw("  Found existing instance, id:", id(old_instance), "- setting cancelled=True")
+            old_instance.cancelled = True
+        DBG_PM and logi("  Adding self to active_ops, id:", id(self))
         self.__class__.active_ops[self.pie_menu_name] = self
         return {'RUNNING_MODAL'}
 
     def modal_stop(self):
-        DBG_PM and logi("STOP", self)
+        DBG_PM and logi("STOP, id:", id(self))
+        DBG_PM and logi("  Timer:", self.bl_timer)
+        DBG_PM and logi("  Active ops:", list(self.__class__.active_ops.keys()))
         if self.bl_timer:
             bpy.context.window_manager.event_timer_remove(self.bl_timer)
         self.bl_timer = None
-        if (
-            self.pie_menu_name in self.__class__.active_ops
-            and self.__class__.active_ops[self.pie_menu_name] == self
-        ):
-            del self.__class__.active_ops[self.pie_menu_name]
+        if self.pie_menu_name in self.__class__.active_ops:
+            current_instance = self.__class__.active_ops[self.pie_menu_name]
+            DBG_PM and logi("  Current instance in active_ops, id:", id(current_instance))
+            if current_instance == self:
+                del self.__class__.active_ops[self.pie_menu_name]
+                DBG_PM and logi("  Removed from active_ops (was me)")
+            else:
+                DBG_PM and logw("  NOT removing - different instance! (self:", id(self), "vs current:", id(current_instance), ")")
+        DBG_PM and logi("  After cleanup:", list(self.__class__.active_ops.keys()))
         return {'CANCELLED'}
 
     def stop(self):
@@ -1939,7 +1983,9 @@ class WM_OT_pme_user_pie_menu_call(bpy.types.Operator):
         wm = context.window_manager
         pr = get_prefs()
         pm = pr.pie_menus[self.pie_menu_name]
-        DBG_PM and logi("EXE_MENU", pm)
+        DBG_PM and logh("=== EXECUTE_MENU: " + pm.name + " ===")
+        DBG_PM and logi("pm.mode:", pm.mode)
+        DBG_PM and logi("invoke_mode:", self.invoke_mode)
 
         if pm.mode == 'PMENU':
             flick = pme.props.parse(pm.data).pm_flick
@@ -2027,7 +2073,9 @@ class WM_OT_pme_user_pie_menu_call(bpy.types.Operator):
             bpy.ops.pme.sticky_key('INVOKE_DEFAULT', pm_name=pm.name)
 
         elif pm.mode == 'MACRO':
+            DBG_PM and logi("Executing MACRO:", pm.name)
             execute_macro(pm)
+            DBG_PM and logi("MACRO execution completed")
 
         elif pm.mode == 'MODAL':
             prop = pme.props.parse(pm.data)
@@ -2072,7 +2120,9 @@ class WM_OT_pme_user_pie_menu_call(bpy.types.Operator):
         pme.context.last_operator = self
         pme.context.event = event
 
-        DBG_PM and logh(self.pie_menu_name)
+        DBG_PM and logh("=== INVOKE: " + self.pie_menu_name + " ===")
+        DBG_PM and logi("invoke_mode:", self.invoke_mode)
+        DBG_PM and logi("event.type:", event.type, "value:", event.value)
 
         if self.pie_menu_name not in pr.pie_menus:
             DBG_PM and loge("!PM")
@@ -2193,13 +2243,19 @@ class WM_OT_pme_user_pie_menu_call(bpy.types.Operator):
             cpm = self.pm_tweak
             self.pie_menu_name = self.pm_tweak.name
 
+        elif self.pm_chord and cpm.open_mode == 'PRESS':
+            cpm = self.pm_chord
+            self.pie_menu_name = self.pm_chord.name
+
         if self.invoke_mode == 'HOTKEY':
             if self.pie_menu_name in self.__class__.active_ops:
                 return {'PASS_THROUGH'}
 
         DBG_PM and logi("INVOKE", self, cpm.open_mode)
+        DBG_PM and logi("About to check invoke_mode conditions")
 
         if self.invoke_mode == 'RELEASE':
+            DBG_PM and logi("Mode: RELEASE")
             if self.pie_menu_name in self.__class__.active_ops:
                 self.__class__.active_ops[self.pie_menu_name].cancelled = True
 
@@ -2215,6 +2271,7 @@ class WM_OT_pme_user_pie_menu_call(bpy.types.Operator):
         self.y = event.mouse_y
 
         if self.invoke_mode == 'HOTKEY':
+            DBG_PM and logi("Mode: HOTKEY, open_mode:", cpm.open_mode)
             if cpm.open_mode == 'HOLD':
                 self.hold_timer = Timer(pr.hold_time / 1000)
                 self.__class__.hold_inst = self
@@ -2224,6 +2281,7 @@ class WM_OT_pme_user_pie_menu_call(bpy.types.Operator):
                 return self.modal_start(False)
 
             elif cpm.open_mode == 'CHORDS':
+                DBG_PM and logi("Starting CHORDS modal, waiting for:", [keymap_helper.key_names[v.chord] for v in self.chord_pms])
                 self.chord_timer = Timer(pr.chord_time / 1000)
                 if pr.use_chord_hint:
                     area_header_text_set(
@@ -2238,7 +2296,8 @@ class WM_OT_pme_user_pie_menu_call(bpy.types.Operator):
                         )
                     )
                 return self.modal_start()
-
+        
+        DBG_PM and logi("Mode:", self.invoke_mode, "- Calling execute_menu directly")
         return self.execute_menu(context, event)
 
 

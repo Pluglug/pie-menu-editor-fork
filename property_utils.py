@@ -1,4 +1,5 @@
 import bpy
+from bpy.app import version as APP_VERSION
 from types import BuiltinFunctionType
 from mathutils import Euler
 from math import pi as PI
@@ -226,14 +227,23 @@ def from_dict(obj, dct):
                 from_dict(col.add(), item)
 
         else:
-            anns = getattr(obj.__class__, "__annotations__", None)
-            if isinstance(anns, dict) and k in anns:
-                try:
-                    setattr(obj, k, value)
-                except (TypeError, ValueError, AttributeError) as e:
-                    print_exc(
-                        f"from_dict: failed to set {obj.__class__.__name__}.{k} = {repr(value)}: {e}"
-                    )
+            if APP_VERSION >= (5, 0, 0):
+                sp = obj.bl_system_properties_get(do_create=True)
+                if sp is not None:
+                    sp[k] = value
+            else:
+                obj[k] = value
+
+            # FIXME: Tried to delete the dictionary access for 5.0 compatibility,
+            # but I encountered a problem with complex serialization, so I reverted it.
+            # anns = getattr(obj.__class__, "__annotations__", None)
+            # if isinstance(anns, dict) and k in anns:
+            #     try:
+            #         setattr(obj, k, value)
+            #     except (TypeError, ValueError, AttributeError) as e:
+            #         print_exc(
+            #             f"from_dict: failed to set {obj.__class__.__name__}.{k} = {repr(value)}: {e}"
+            #         )
 
 
 def to_py_value(data, key, value):

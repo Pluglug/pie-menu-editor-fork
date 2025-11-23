@@ -1045,18 +1045,14 @@ class PMEData(bpy.types.PropertyGroup):
     modal_item_prop_min: bpy.props.FloatProperty(name="Min Value", step=100)
     modal_item_prop_max: bpy.props.FloatProperty(name="Max Value", step=100)
 
-    def set_modal_item_prop_step(self, value):
+    def update_modal_item_prop_step(self, context):
         self.modal_item_prop_step_is_set = True
-
-    def get_modal_item_prop_step(self):
-        return 1
 
     modal_item_prop_step: bpy.props.FloatProperty(
         name="Step",
         min=0,
         step=100,
-        get=get_modal_item_prop_step,
-        set=set_modal_item_prop_step,
+        update=update_modal_item_prop_step,
     )
     modal_item_prop_step_is_set: bpy.props.BoolProperty()
     # modal_item_custom_use: bpy.props.BoolProperty(

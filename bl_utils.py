@@ -808,8 +808,8 @@ def area_header_text_set(text=None, area=None):
     for area in areas:
         if text:
             area.header_text_set(text=text)
-        area.header_text_set(text=None)
-
+        else:
+            area.header_text_set(text=None)
 
 
 def _find_areas_with_header_text_support(context):

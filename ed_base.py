@@ -59,8 +59,15 @@ def gen_header_draw(pm_name):
         is_right_region = context.region.alignment == 'RIGHT'
         _, is_right_pm, _ = U.extract_str_flags_b(pm_name, CC.F_RIGHT, CC.F_PRE)
         if is_right_region and is_right_pm or not is_right_region and not is_right_pm:
+            try:
+                pm = get_prefs().pie_menus[pm_name]
+            except Exception:
+                # During app template / homefile reload PME prefs may be
+                # temporarily unavailable; skip drawing instead of raising.
+                return
+
             draw_pme_layout(
-                get_prefs().pie_menus[pm_name],
+                pm,
                 self.layout.column(align=True),
                 WM_OT_pme_user_pie_menu_call._draw_item,
                 icon_btn_scale_x=1,
@@ -71,17 +78,25 @@ def gen_header_draw(pm_name):
 
 def gen_menu_draw(pm_name):
     def _draw(self, context):
-        WM_OT_pme_user_pie_menu_call.draw_rm(
-            get_prefs().pie_menus[pm_name], self.layout
-        )
+        try:
+            pm = get_prefs().pie_menus[pm_name]
+        except Exception:
+            return
+
+        WM_OT_pme_user_pie_menu_call.draw_rm(pm, self.layout)
 
     return _draw
 
 
 def gen_panel_draw(pm_name):
     def _draw(self, context):
+        try:
+            pm = get_prefs().pie_menus[pm_name]
+        except Exception:
+            return
+
         draw_pme_layout(
-            get_prefs().pie_menus[pm_name],
+            pm,
             self.layout.column(align=True),
             WM_OT_pme_user_pie_menu_call._draw_item,
         )

@@ -1,9 +1,9 @@
 bl_info = {
     "name": "Pie Menu Editor Fork",
     "author": "roaoao, pluglug",
-    "version": (1, 19, 0),
+    "version": (1, 19, 1, "beta", 2),
     "blender": (3, 2, 0),
-    "warning": "",
+    "warning": "This is a beta version. Please report bugs to BlenderArtists forum",
     "tracker_url": "http://blenderartists.org/forum/showthread.php?392910",
     # "wiki_url": (
     #     "https://archive.blender.org/wiki/2015/index.php/User:Raa/Addons/Pie_Menu_Editor/"),
@@ -14,6 +14,7 @@ bl_info = {
 import bpy
 import _bpy
 from bpy.app.handlers import persistent
+from bpy.app import version as APP_VERSION
 import sys
 import inspect
 from .debug_utils import *
@@ -161,7 +162,7 @@ if not bpy.app.background:
     from . import compatibility_fixes
     from . import addon
 
-    addon.VERSION = bl_info["version"]
+    addon.VERSION = bl_info["version"][:3]
     addon.BL_VERSION = bl_info["blender"]
 
 
@@ -176,8 +177,14 @@ timer = None
 def load_pre_handler(_):
     DBG_INIT and logh("Load Pre (%s)" % bpy.data.filepath)
 
-    global tmp_data
-    tmp_data = property_utils.to_dict(get_prefs())
+    # FIXME: Use tmp_data only for legacy (<5.0.0).
+    # Reason:
+    # - to_dict/from_dict based restore caused data drift on 5.x
+    # - In modern Blender, prefs usually persist across load; this path is likely unnecessary
+    # - Keep 5.0+ path off and observe for a while
+    if APP_VERSION < (5, 0, 0):
+        global tmp_data
+        tmp_data = property_utils.to_dict(get_prefs())
 
     global tmp_filepath
     tmp_filepath = bpy.data.filepath
@@ -189,16 +196,18 @@ def load_pre_handler(_):
 def load_post_handler(filepath):
     DBG_INIT and logh("Load Post (%s)" % filepath)
 
-    global tmp_data
-    if tmp_data is None:
-        DBG_INIT and logw("Skip")
-        return
-
     pr = get_prefs()
-    if not bpy.data.filepath:
-        property_utils.from_dict(pr, tmp_data)
 
-    tmp_data = None
+    # FIXME: Legacy tmp_data restore (<5.0.0) is kept; 5.0+ path stays disabled.
+    # Reason: to_dict/from_dict can introduce drift on 5.x; we'll observe for now.
+    if APP_VERSION < (5, 0, 0):
+        global tmp_data
+        if tmp_data is None:
+            DBG_INIT and logw("Skip")
+            return
+        if not bpy.data.filepath:
+            property_utils.from_dict(pr, tmp_data)
+        tmp_data = None
 
     if pr.missing_kms:
         logw(f"Missing Keymaps: {pr.missing_kms}")
@@ -236,12 +245,14 @@ def on_context():
     register_module()
 
     pr = get_prefs()
-    global re_enable_data
-    if re_enable_data is not None:
-        if len(pr.pie_menus) == 0 and re_enable_data:
-            property_utils.from_dict(pr, re_enable_data)
-        re_enable_data.clear()
-        re_enable_data = None
+
+    if APP_VERSION < (5, 0, 0):
+        global re_enable_data
+        if re_enable_data is not None:
+            if len(pr.pie_menus) == 0 and re_enable_data:
+                property_utils.from_dict(pr, re_enable_data)
+            re_enable_data.clear()
+            re_enable_data = None
 
     for mod in MODULES:
         m = sys.modules["%s.%s" % (__name__, mod)]
@@ -454,8 +465,9 @@ def unregister():
         timer = None
         return
 
-    global re_enable_data
-    re_enable_data = property_utils.to_dict(get_prefs())
+    if APP_VERSION < (5, 0, 0):
+        global re_enable_data
+        re_enable_data = property_utils.to_dict(get_prefs())
 
     for mod in reversed(MODULES):
         m = sys.modules["%s.%s" % (__name__, mod)]
