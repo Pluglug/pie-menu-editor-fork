@@ -1002,18 +1002,78 @@ class PME_OT_sidearea_toggle(bpy.types.Operator):
                 else:
                     bpy.ops.screen.area_join(cursor=(area.x + 2, area.y))
 
+    def _try_close_from_side_area(self, context) -> bool:
+        """If the active context is in the side area, try closing it by
+        joining it back into an adjacent main area.
+
+        Returns True if the side area was closed and the operator can finish.
+        """
+        area = context.area
+        if not (
+            area
+            and area.ui_type == self.area
+            and self.action in ("TOGGLE", "HIDE")
+        ):
+            return False
+
+        # Detect the main area that is actually adjacent to this side area.
+        # This ensures we only close when the configured main/side pair are neighbors.
+        l_side, r_side = self.get_horizontal_areas(area)
+        t_side, b_side = self.get_vertical_areas(area)
+
+        main = None
+        direction = None
+
+        if self.side == "LEFT":
+            cand = r_side
+            if cand and cand.ui_type == self.main_area:
+                main = cand
+                direction = "HORIZONTAL"
+        elif self.side == "RIGHT":
+            cand = l_side
+            if cand and cand.ui_type == self.main_area:
+                main = cand
+                direction = "HORIZONTAL"
+        elif self.side == "TOP":
+            cand = b_side
+            if cand and cand.ui_type == self.main_area:
+                main = cand
+                direction = "VERTICAL"
+        elif self.side == "BOTTOM":
+            cand = t_side
+            if cand and cand.ui_type == self.main_area:
+                main = cand
+                direction = "VERTICAL"
+
+        if not (main and direction):
+            return False
+
+        self.save_sidebars(area)
+        self.close_area(context, main, area, direction=direction)
+        SU.redraw_screen()
+        return True
+
     def execute(self, context):
         self.ia = set(a.strip() for a in self.ignore_areas.split(","))
         self.ia.add(self.ignore_area)
         if self.area in self.ia:
             self.ia.remove(self.area)
 
-        for a in context.screen.areas:
-            if a.ui_type == self.main_area:
-                break
+        # If we are currently inside the side area, try handling the "close" case
+        # directly from there (main/side must be actually adjacent).
+        if self._try_close_from_side_area(context):
+            return {"FINISHED"}
+
+        a = None
+        if context.area and context.area.ui_type == self.main_area:
+            a = context.area
         else:
-            self.report({"WARNING"}, "Main area not found")
-            return {"CANCELLED"}
+            for a in context.screen.areas:
+                if a.ui_type == self.main_area:
+                    break
+            else:
+                self.report({"WARNING"}, "Main area not found")
+                return {"CANCELLED"}
 
         l, r = self.get_horizontal_areas(a)
         t, b = self.get_vertical_areas(a)
