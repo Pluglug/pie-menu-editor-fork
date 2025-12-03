@@ -208,3 +208,5 @@ Thumbs.db
 
 data/
 debug/
+
+.claude/

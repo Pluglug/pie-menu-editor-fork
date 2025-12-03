@@ -1,0 +1,1340 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PME Architecture Deep Dive - PME2設計のための内部理解</title>
+    <style>
+        :root {
+            --bg-primary: #0d1117;
+            --bg-secondary: #161b22;
+            --bg-slide: #21262d;
+            --text-primary: #c9d1d9;
+            --text-secondary: #8b949e;
+            --accent-blue: #58a6ff;
+            --accent-green: #3fb950;
+            --accent-orange: #d29922;
+            --accent-red: #f85149;
+            --accent-purple: #a371f7;
+            --border-color: #30363d;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Segoe UI', 'Hiragino Sans', 'Yu Gothic UI', sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.7;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+
+        .slide {
+            background: var(--bg-slide);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 40px;
+            margin-bottom: 30px;
+            page-break-inside: avoid;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+        }
+
+        .slide-number {
+            display: inline-block;
+            background: var(--accent-blue);
+            color: var(--bg-primary);
+            font-weight: bold;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            margin-bottom: 15px;
+        }
+
+        h1 {
+            font-size: 2.2em;
+            color: var(--accent-blue);
+            margin-bottom: 20px;
+            border-bottom: 2px solid var(--accent-blue);
+            padding-bottom: 10px;
+        }
+
+        h2 {
+            font-size: 1.6em;
+            color: var(--text-primary);
+            margin-bottom: 20px;
+        }
+
+        h3 {
+            font-size: 1.2em;
+            color: var(--accent-green);
+            margin: 20px 0 10px 0;
+        }
+
+        p {
+            margin-bottom: 15px;
+            color: var(--text-secondary);
+        }
+
+        ul, ol {
+            margin-left: 25px;
+            margin-bottom: 15px;
+        }
+
+        li {
+            margin-bottom: 8px;
+            color: var(--text-secondary);
+        }
+
+        li strong {
+            color: var(--text-primary);
+        }
+
+        .highlight {
+            background: var(--bg-secondary);
+            border-left: 4px solid var(--accent-orange);
+            padding: 15px 20px;
+            margin: 20px 0;
+            border-radius: 0 8px 8px 0;
+        }
+
+        .highlight.info {
+            border-left-color: var(--accent-blue);
+        }
+
+        .highlight.warning {
+            border-left-color: var(--accent-red);
+        }
+
+        .highlight.success {
+            border-left-color: var(--accent-green);
+        }
+
+        code {
+            background: var(--bg-secondary);
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 0.9em;
+            color: var(--accent-orange);
+        }
+
+        pre {
+            background: var(--bg-secondary);
+            padding: 20px;
+            border-radius: 8px;
+            overflow-x: auto;
+            margin: 15px 0;
+            border: 1px solid var(--border-color);
+        }
+
+        pre code {
+            background: none;
+            padding: 0;
+            color: var(--text-primary);
+        }
+
+        .mermaid-container {
+            background: #1a1a2e;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0;
+        }
+
+        th, td {
+            border: 1px solid var(--border-color);
+            padding: 12px;
+            text-align: left;
+        }
+
+        th {
+            background: var(--bg-secondary);
+            color: var(--accent-blue);
+        }
+
+        td {
+            color: var(--text-secondary);
+        }
+
+        .tag {
+            display: inline-block;
+            padding: 3px 10px;
+            border-radius: 15px;
+            font-size: 0.8em;
+            margin-right: 5px;
+        }
+
+        .tag.preserve { background: var(--accent-green); color: var(--bg-primary); }
+        .tag.redesign { background: var(--accent-orange); color: var(--bg-primary); }
+        .tag.remove { background: var(--accent-red); color: white; }
+        .tag.abstract { background: var(--accent-purple); color: white; }
+
+        .two-column {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        @media (max-width: 768px) {
+            .two-column {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .ascii-diagram {
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 0.85em;
+            line-height: 1.4;
+            white-space: pre;
+            overflow-x: auto;
+        }
+
+        @media print {
+            body {
+                background: white;
+                color: black;
+            }
+            .slide {
+                background: white;
+                border: 1px solid #ccc;
+                page-break-inside: avoid;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+
+        <!-- Slide 1: Title -->
+        <div class="slide">
+            <span class="slide-number">Slide 1</span>
+            <h1>PME Architecture Deep Dive</h1>
+            <h2>PME2設計のための内部理解ガイド</h2>
+            <p style="font-size: 1.1em; color: var(--text-primary);">
+                このドキュメントでは、Pie Menu Editor (PME) の内部アーキテクチャを
+                「なぜこうなっているのか」という設計意図から解説します。
+            </p>
+            <div class="highlight info">
+                <strong>目標:</strong> PME2を再設計できるレベルの理解を得る
+            </div>
+            <h3>目次</h3>
+            <ol>
+                <li>PMEとは何か？ - ハイレベル概念</li>
+                <li>メンタルモデル - PMEの「世界観」</li>
+                <li>データモデル - メニューの構造</li>
+                <li>実行パイプライン - 呼び出しから実行まで</li>
+                <li>エディターアーキテクチャ - EditorBaseパターン</li>
+                <li>状態管理 - どこに何があるか</li>
+                <li>結合点と脆弱性</li>
+                <li>PME2への提言</li>
+            </ol>
+        </div>
+
+        <!-- Slide 2: What is PME -->
+        <div class="slide">
+            <span class="slide-number">Slide 2</span>
+            <h1>PMEとは何か？</h1>
+            <h2>本質的な役割を理解する</h2>
+
+            <h3>一言で言うと</h3>
+            <p style="font-size: 1.2em; color: var(--accent-green);">
+                <strong>「BlenderのUIを動的に生成・登録するフレームワーク」</strong>
+            </p>
+
+            <div class="highlight">
+                <strong>重要な認識:</strong> PMEは単なる「パイメニューエディター」ではない。<br>
+                <ul style="margin-top: 10px;">
+                    <li>パイメニュー、通常メニュー、ポップアップ、パネル</li>
+                    <li>マクロオペレーター、モーダルオペレーター</li>
+                    <li>スティッキーキー、スタックキー</li>
+                    <li>カスタムプロパティ</li>
+                </ul>
+                これら全てを<strong>統一的なデータモデル</strong>で管理し、
+                <strong>ホットキーと連動</strong>させて動的に登録する。
+            </div>
+
+            <h3>PMEが解決している問題</h3>
+            <table>
+                <tr>
+                    <th>問題</th>
+                    <th>PMEの解決策</th>
+                </tr>
+                <tr>
+                    <td>Blender APIでUI作成は面倒</td>
+                    <td>GUIエディターで視覚的に作成</td>
+                </tr>
+                <tr>
+                    <td>ホットキー管理が複雑</td>
+                    <td>メニューとホットキーを一体管理</td>
+                </tr>
+                <tr>
+                    <td>Pythonコードが必要</td>
+                    <td>ドラッグ&ドロップでコマンド追加</td>
+                </tr>
+                <tr>
+                    <td>設定の保存・共有が難しい</td>
+                    <td>JSON形式でエクスポート/インポート</td>
+                </tr>
+            </table>
+        </div>
+
+        <!-- Slide 3: Mental Model -->
+        <div class="slide">
+            <span class="slide-number">Slide 3</span>
+            <h1>PMEのメンタルモデル</h1>
+            <h2>設計者の「世界観」を理解する</h2>
+
+            <h3>中心的な概念: 「全てはメニューである」</h3>
+            <p>
+                PMEでは、パイメニューもスタックキーもマクロも、全て <code>PMItem</code> という
+                同じデータ構造で表現されます。これが良くも悪くもPMEの特徴です。
+            </p>
+
+            <div class="ascii-diagram">
+┌─────────────────────────────────────────────────────────────────┐
+│                        PMEPreferences                           │
+│  (AddonPreferences - Blenderに永続化される)                      │
+│                                                                 │
+│  ┌─────────────────────────────────────────────────────────┐   │
+│  │              pie_menus: Collection[PMItem]               │   │
+│  │                                                          │   │
+│  │  ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐   │   │
+│  │  │ PMItem   │ │ PMItem   │ │ PMItem   │ │ PMItem   │   │   │
+│  │  │ mode=    │ │ mode=    │ │ mode=    │ │ mode=    │   │   │
+│  │  │ PMENU    │ │ RMENU    │ │ MACRO    │ │ STICKY   │   │   │
+│  │  │          │ │          │ │          │ │          │   │   │
+│  │  │ pmis:    │ │ pmis:    │ │ pmis:    │ │ pmis:    │   │   │
+│  │  │ [8+2個]  │ │ [可変]   │ │ [可変]   │ │ [2個]    │   │   │
+│  │  └──────────┘ └──────────┘ └──────────┘ └──────────┘   │   │
+│  └─────────────────────────────────────────────────────────┘   │
+└─────────────────────────────────────────────────────────────────┘
+            </div>
+
+            <div class="highlight warning">
+                <strong>設計上のトレードオフ:</strong><br>
+                この「統一モデル」は柔軟性をもたらすが、同時に複雑さも生む。<br>
+                例: パイメニューは固定8+2スロット、通常メニューは可変。<br>
+                同じ <code>PMItem</code> で表現するため、エディターごとに解釈が異なる。
+            </div>
+        </div>
+
+        <!-- Slide 4: Data Model Overview -->
+        <div class="slide">
+            <span class="slide-number">Slide 4</span>
+            <h1>データモデル概要</h1>
+            <h2>types.py の核心を理解する</h2>
+
+            <h3>3つの主要なPropertyGroup</h3>
+
+            <div class="two-column">
+                <div>
+                    <h3 style="color: var(--accent-blue);">PMItem (メニュー定義)</h3>
+                    <pre><code>class PMItem(PropertyGroup):
+    name: str        # メニュー名 (ユニーク)
+    mode: str        # PMENU, RMENU, MACRO...
+    km_name: str     # キーマップ名
+    key: str         # ホットキー
+    ctrl/shift/alt   # 修飾キー
+    pmis: Collection # アイテムのリスト
+    data: str        # URL形式の追加設定
+    poll_cmd: str    # 表示条件</code></pre>
+                </div>
+                <div>
+                    <h3 style="color: var(--accent-blue);">PMIItem (アイテム定義)</h3>
+                    <pre><code>class PMIItem(PropertyGroup):
+    name: str      # 表示名
+    mode: str      # COMMAND, PROP, MENU...
+    text: str      # コマンド/プロパティパス
+    icon: str      # アイコン名 + フラグ
+    enabled: bool  # 有効/無効</code></pre>
+                </div>
+            </div>
+
+            <h3 style="color: var(--accent-blue);">PMLink (ツリービュー用)</h3>
+            <p>エディターUIのツリー表示のためのリンク構造。フォルダ階層を表現。</p>
+
+            <div class="highlight info">
+                <strong>ポイント:</strong> PMItemの <code>mode</code> プロパティが
+                「このデータをどのエディターが解釈するか」を決定する。<br>
+                mode = 'PMENU' → ed_pie_menu.py が処理<br>
+                mode = 'MACRO' → ed_macro.py が処理
+            </div>
+        </div>
+
+        <!-- Slide 5: Data Encoding -->
+        <div class="slide">
+            <span class="slide-number">Slide 5</span>
+            <h1>データエンコーディング</h1>
+            <h2>URL形式の設定保存パターン</h2>
+
+            <h3>PMItem.data の構造</h3>
+            <p>追加設定は URL クエリパラメータ形式で格納されます:</p>
+
+            <pre><code># 例: パイメニューの追加設定
+"pm?pm_radius=150&pm_threshold=20&pm_flick=True"
+
+# 例: ポップアップダイアログの設定
+"pd?pd_title=True&pd_box=False&pd_width=300"</code></pre>
+
+            <h3>解析の仕組み (pme.py)</h3>
+            <pre><code>class ParsedData:
+    def __init__(self, text):
+        self.type, _, data = text.partition("?")  # "pm" と残り
+
+        for prop in data.split("&"):              # 各パラメータ
+            k, v = prop.split("=")
+            setattr(self, k, decode(v))           # 動的に属性設定
+
+# 使用例
+prop = pme.props.parse(pm.data)
+radius = prop.pm_radius  # 150</code></pre>
+
+            <div class="highlight warning">
+                <strong>脆弱性ポイント:</strong><br>
+                この形式は柔軟だが、以下の問題がある:
+                <ul style="margin-top: 10px;">
+                    <li>型安全性がない (全て文字列から変換)</li>
+                    <li>スキーマが明示されていない (props_mapで管理)</li>
+                    <li>バージョン間の互換性維持が手動</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Slide 6: PMIItem Modes -->
+        <div class="slide">
+            <span class="slide-number">Slide 6</span>
+            <h1>アイテムモード (EMODE_ITEMS)</h1>
+            <h2>PMIItemが取りうる振る舞い</h2>
+
+            <p>メニューの各アイテムは <code>mode</code> によって実行時の振る舞いが決まります:</p>
+
+            <table>
+                <tr>
+                    <th>Mode</th>
+                    <th>説明</th>
+                    <th>textフィールドの内容</th>
+                </tr>
+                <tr>
+                    <td><code>COMMAND</code></td>
+                    <td>Pythonコード実行</td>
+                    <td><code>bpy.ops.mesh.primitive_cube_add()</code></td>
+                </tr>
+                <tr>
+                    <td><code>PROP</code></td>
+                    <td>プロパティウィジェット表示</td>
+                    <td><code>C.scene.render.engine</code></td>
+                </tr>
+                <tr>
+                    <td><code>MENU</code></td>
+                    <td>サブメニュー/PMEメニュー参照</td>
+                    <td><code>MySubMenu</code> or <code>@MySubMenu</code></td>
+                </tr>
+                <tr>
+                    <td><code>HOTKEY</code></td>
+                    <td>ホットキーに紐づくオペレーター実行</td>
+                    <td><code>Ctrl+Z</code></td>
+                </tr>
+                <tr>
+                    <td><code>CUSTOM</code></td>
+                    <td>カスタムレイアウトコード</td>
+                    <td><code>L.prop(C.object, "name")</code></td>
+                </tr>
+                <tr>
+                    <td><code>EMPTY</code></td>
+                    <td>セパレーター/空スロット</td>
+                    <td><code>""</code> or <code>"column"</code></td>
+                </tr>
+            </table>
+
+            <div class="highlight">
+                <strong>@フラグ (F_EXPAND):</strong><br>
+                <code>@MenuName</code> の形式は「展開して表示」を意味する。<br>
+                サブメニューをボタンではなく、その場に展開表示する。
+            </div>
+        </div>
+
+        <!-- Slide 7: Execution Pipeline Overview -->
+        <div class="slide">
+            <span class="slide-number">Slide 7</span>
+            <h1>実行パイプライン</h1>
+            <h2>ホットキーからアクション実行まで</h2>
+
+            <div class="ascii-diagram">
+ユーザーがホットキーを押す
+        │
+        ▼
+┌───────────────────────────────────────────────────────────────────┐
+│ 1. Blender Keymap                                                  │
+│    KeymapItem → WM_OT_pme_user_pie_menu_call                      │
+│    (keymap_helper.py で登録済み)                                   │
+└───────────────────────────────────────────────────────────────────┘
+        │
+        ▼
+┌───────────────────────────────────────────────────────────────────┐
+│ 2. WM_OT_pme_user_pie_menu_call.invoke()                          │
+│    - pie_menu_name からPMItemを取得                                │
+│    - pm.poll() で表示条件チェック                                  │
+│    - pm.mode に応じて描画メソッド選択                              │
+└───────────────────────────────────────────────────────────────────┘
+        │
+        ├─── mode='PMENU' ──▶ popup_menu_pie() → _draw_pm()
+        ├─── mode='RMENU' ──▶ popup_menu() → _draw_rm()
+        ├─── mode='DIALOG' ─▶ popup_menu_pie() → _draw_popup_dialog()
+        ├─── mode='STICKY' ─▶ PME_OT_sticky_key を起動
+        └─── mode='MACRO' ──▶ execute_macro()
+        │
+        ▼
+┌───────────────────────────────────────────────────────────────────┐
+│ 3. 描画ループ (_draw_item)                                         │
+│    for pmi in pm.pmis:                                             │
+│        pmi.mode に応じてUI要素を生成                               │
+│        - COMMAND → operator button                                 │
+│        - PROP → property widget                                    │
+│        - CUSTOM → exec(pmi.text, globals)                         │
+└───────────────────────────────────────────────────────────────────┘
+        │
+        ▼
+┌───────────────────────────────────────────────────────────────────┐
+│ 4. ユーザーがアイテムをクリック                                    │
+│    - Blenderが対応するオペレーターを実行                           │
+│    - または WM_OT_pme_user_command_exec が exec() を実行          │
+└───────────────────────────────────────────────────────────────────┘
+            </div>
+        </div>
+
+        <!-- Slide 8: PMEContext -->
+        <div class="slide">
+            <span class="slide-number">Slide 8</span>
+            <h1>PMEContext - 実行時コンテキスト</h1>
+            <h2>pme.py の心臓部</h2>
+
+            <h3>PMEContextの役割</h3>
+            <p>
+                メニュー描画・コマンド実行時に必要な情報を保持するシングルトン。<br>
+                <code>pme.context</code> としてグローバルにアクセス可能。
+            </p>
+
+            <pre><code>class PMEContext:
+    def __init__(self):
+        self._globals = dict(
+            bpy=bpy,
+            D=bpy.data,      # ショートカット
+            T=bpy.types,
+            O=bpy.ops,
+            P=bpy.props,
+            # ... 便利な変数群
+        )
+
+        # 現在処理中のメニュー/アイテム
+        self.pm = None       # 現在のPMItem
+        self.pmi = None      # 現在のPMIItem
+        self.index = None    # アイテムインデックス
+
+        # 描画時の一時情報
+        self._layout = None  # UILayout (L でアクセス)
+        self._event = None   # Event (E でアクセス)
+
+    def gen_globals(self):
+        """exec/eval用のグローバル辞書を生成"""
+        return dict(
+            text=self.text,
+            icon=self.icon,
+            PME=temp_prefs(),
+            PREFS=get_prefs(),
+            **self.globals
+        )</code></pre>
+
+            <div class="highlight success">
+                <strong>設計意図:</strong><br>
+                ユーザーが書くコマンド内で <code>L.prop(...)</code> や <code>C.object</code> の
+                ような短縮形を使えるようにするため。<br>
+                これによりPMEのコマンドは非常に簡潔に書ける。
+            </div>
+        </div>
+
+        <!-- Slide 9: Editor Architecture -->
+        <div class="slide">
+            <span class="slide-number">Slide 9</span>
+            <h1>エディターアーキテクチャ</h1>
+            <h2>EditorBaseパターン</h2>
+
+            <h3>核心的な設計</h3>
+            <p>
+                各メニュータイプには専用の「エディター」クラスがあり、
+                <code>EditorBase</code> を継承しています。
+            </p>
+
+            <div class="ascii-diagram">
+                              EditorBase (ed_base.py)
+                                    │
+        ┌───────────────┬──────────┼──────────┬───────────────┐
+        │               │          │          │               │
+   EdPieMenu      EdMenu     EdPopup    EdMacro    EdStickyKey
+  (ed_pie_menu)  (ed_menu)  (ed_popup) (ed_macro) (ed_sticky_key)
+        │
+        └─ 独自のUI描画ロジック
+        └─ 独自の初期化ロジック
+        └─ 独自のアイテム処理
+            </div>
+
+            <h3>EditorBaseの主要メソッド</h3>
+            <table>
+                <tr>
+                    <th>メソッド</th>
+                    <th>役割</th>
+                </tr>
+                <tr>
+                    <td><code>on_pm_add(pm)</code></td>
+                    <td>新規メニュー作成時の初期化</td>
+                </tr>
+                <tr>
+                    <td><code>on_pm_rename(pm, new_name)</code></td>
+                    <td>リネーム時の追加処理</td>
+                </tr>
+                <tr>
+                    <td><code>on_pmi_edit(pm, pmi)</code></td>
+                    <td>アイテム編集後の処理</td>
+                </tr>
+                <tr>
+                    <td><code>draw_items(layout, pm)</code></td>
+                    <td>エディターUIの描画</td>
+                </tr>
+                <tr>
+                    <td><code>init_pm(pm)</code></td>
+                    <td>メニューの登録処理</td>
+                </tr>
+            </table>
+        </div>
+
+        <!-- Slide 10: Editor Registration -->
+        <div class="slide">
+            <span class="slide-number">Slide 10</span>
+            <h1>エディター登録の仕組み</h1>
+            <h2>Editor()関数パターン</h2>
+
+            <h3>各エディターモジュールのregister()</h3>
+            <pre><code># ed_pie_menu.py の例
+class Editor(EditorBase):
+    id = 'PMENU'
+    icon = 'NONE'
+    default_name = "Pie Menu"
+    has_hotkey = True
+    supported_slot_modes = {'COMMAND', 'PROP', 'MENU', ...}
+
+    def on_pm_add(self, pm):
+        # パイメニューは常に10個のスロットを持つ
+        for i in range(10):
+            pm.pmis.add()
+
+    def draw_items(self, layout, pm):
+        # パイメニュー用のスロット配置UI
+
+def register():
+    Editor()  # ← これで PMEPreferences.editors に登録される</code></pre>
+
+            <h3>preferences.py での利用</h3>
+            <pre><code>class PMEPreferences(AddonPreferences):
+    editors = {}  # mode → Editor インスタンス
+
+    def ed(self, mode):
+        """mode からエディターを取得"""
+        return self.editors.get(mode)
+
+    def add_pm(self, mode, name=None):
+        ed = self.ed(mode)
+        pm = self.pie_menus.add()
+        pm.mode = mode
+        pm.name = name or ed.default_name
+        ed.on_pm_add(pm)  # エディター固有の初期化
+        return pm</code></pre>
+
+            <div class="highlight info">
+                <strong>この設計の利点:</strong><br>
+                新しいメニュータイプを追加する場合、<code>ed_*.py</code> を作成して
+                <code>MODULES</code> に追加するだけで良い。プラグイン的な拡張性。
+            </div>
+        </div>
+
+        <!-- Slide 11: State Management -->
+        <div class="slide">
+            <span class="slide-number">Slide 11</span>
+            <h1>状態管理</h1>
+            <h2>「どこに何があるか」の地図</h2>
+
+            <div class="ascii-diagram">
+┌─────────────────────────────────────────────────────────────────────┐
+│                         永続的な状態                                 │
+│  ┌─────────────────────────────────────────────────────────────┐   │
+│  │ PMEPreferences (bpy.context.preferences.addons['pme'].prefs) │   │
+│  │   ├─ pie_menus: Collection[PMItem]  ← 全メニューデータ       │   │
+│  │   ├─ editors: dict[mode, Editor]    ← エディターインスタンス │   │
+│  │   └─ various settings               ← ユーザー設定          │   │
+│  └─────────────────────────────────────────────────────────────┘   │
+└─────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────┐
+│                      セッション状態 (temp)                           │
+│  ┌─────────────────────────────────────────────────────────────┐   │
+│  │ WindowManager.pme (temp_prefs())                            │   │
+│  │   ├─ links: Collection[PMLink]      ← ツリービュー用        │   │
+│  │   ├─ tags: Collection[Tag]          ← タグ一覧              │   │
+│  │   └─ pmi_data: PMIData              ← 編集中アイテム        │   │
+│  └─────────────────────────────────────────────────────────────┘   │
+└─────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────┐
+│                     実行時状態 (runtime)                             │
+│  ┌─────────────────────────────────────────────────────────────┐   │
+│  │ pme.context (PMEContext singleton)                          │   │
+│  │   ├─ pm, pmi, index                 ← 現在処理中の対象      │   │
+│  │   ├─ layout, event                  ← Blenderコンテキスト   │   │
+│  │   └─ _globals                       ← exec用グローバル辞書  │   │
+│  └─────────────────────────────────────────────────────────────┘   │
+│                                                                      │
+│  ┌─────────────────────────────────────────────────────────────┐   │
+│  │ PMItem.kmis_map (class variable)                            │   │
+│  │   └─ {pm_name: {km_name: KeymapItem}}  ← ホットキー登録状態 │   │
+│  └─────────────────────────────────────────────────────────────┘   │
+└─────────────────────────────────────────────────────────────────────┘
+            </div>
+        </div>
+
+        <!-- Slide 12: Keymap Management -->
+        <div class="slide">
+            <span class="slide-number">Slide 12</span>
+            <h1>ホットキー管理</h1>
+            <h2>keymap_helper.py の仕組み</h2>
+
+            <h3>ホットキー登録の流れ</h3>
+            <pre><code># PMItem.register_hotkey() の概要
+def register_hotkey(self, km_names=None):
+    pr = get_prefs()
+
+    for km_name in km_names:
+        pr.kh.keymap(km_name)  # キーマップを選択
+        kmi = pr.kh.operator(
+            WM_OT_pme_user_pie_menu_call,
+            None,
+            self.key,           # 'A', 'SPACE', etc.
+            self.ctrl,
+            self.shift,
+            self.alt,
+            self.oskey,
+            self.key_mod,
+            self.any,
+        )
+        kmi.properties.pie_menu_name = self.name
+
+        # 登録状態を記録
+        self.kmis_map[self.name] = {km_name: kmi}</code></pre>
+
+            <div class="highlight warning">
+                <strong>脆弱性ポイント: キーマップ待機問題</strong><br>
+                Blender起動時、全てのキーマップがすぐに利用可能ではない。<br>
+                <code>PME_OT_wait_keymaps</code> オペレーターでタイマー監視して、
+                キーマップが利用可能になったら登録を試みる。<br>
+                これが <code>missing_kms</code> の管理につながっている。
+            </div>
+        </div>
+
+        <!-- Slide 13: Session Restore -->
+        <div class="slide">
+            <span class="slide-number">Slide 13</span>
+            <h1>セッション復元</h1>
+            <h2>__init__.py のハンドラー</h2>
+
+            <h3>問題: Blenderファイル読み込み時のプリファレンス消失</h3>
+            <p>
+                Blenderは新しいファイルを開くとき、一時的にAddonPreferencesが
+                リセットされることがある。PMEはこれに対処する必要がある。
+            </p>
+
+            <pre><code># load_pre_handler: ファイル読み込み前
+@persistent
+def load_pre_handler(_):
+    global tmp_data
+    # 現在の設定を辞書形式でバックアップ
+    tmp_data = property_utils.to_dict(get_prefs())
+
+# load_post_handler: ファイル読み込み後
+@persistent
+def load_post_handler(filepath):
+    global tmp_data
+    if not bpy.data.filepath:  # 新規ファイルの場合
+        # バックアップから復元
+        property_utils.from_dict(get_prefs(), tmp_data)
+    tmp_data = None</code></pre>
+
+            <div class="highlight warning">
+                <strong>Blender 5.0以降の変更:</strong><br>
+                このコードはBlender 5.0未満でのみ動作。5.0以降はプリファレンスの
+                永続化方式が変わり、このハックは不要になった（はず）。<br>
+                ただし、完全に検証されていない脆弱性ポイント。
+            </div>
+        </div>
+
+        <!-- Slide 14: Dynamic Class Generation -->
+        <div class="slide">
+            <span class="slide-number">Slide 14</span>
+            <h1>動的クラス生成</h1>
+            <h2>メニュー・パネルの動的登録</h2>
+
+            <h3>通常メニュー (RMENU) の例</h3>
+            <pre><code># ui_utils.py
+def get_pme_menu_class(pm_name):
+    """PMEメニュー用のMenuクラスを動的生成"""
+    class_name = "PME_MT_" + re.sub(r'\W', '_', pm_name)
+
+    if class_name in pme_menu_classes:
+        return class_name
+
+    # 動的にクラスを生成
+    cls = type(
+        class_name,
+        (bpy.types.Menu,),
+        {
+            'bl_label': pm_name,
+            'bl_idname': class_name,
+            'draw': gen_draw_func(pm_name),  # draw関数も動的生成
+        }
+    )
+
+    bpy.utils.register_class(cls)
+    pme_menu_classes[class_name] = cls
+    return class_name</code></pre>
+
+            <h3>パネル拡張 (既存パネルへの追加)</h3>
+            <pre><code># ed_base.py - extend_panel()
+def extend_panel(pm):
+    tp = getattr(bpy.types, panel_name, None)
+    if tp and issubclass(tp, bpy.types.Panel):
+        draw_func = gen_panel_draw(pm.name)
+        tp.append(draw_func)  # 既存パネルに描画関数を追加
+        EXTENDED_PANELS[pm.name] = draw_func</code></pre>
+
+            <div class="highlight">
+                <strong>設計意図:</strong><br>
+                Blender APIでは Panel/Menu クラスを事前に定義する必要があるが、
+                PMEはユーザーが任意の数のメニューを作れる。<br>
+                この矛盾を解決するため、クラスを実行時に動的生成している。
+            </div>
+        </div>
+
+        <!-- Slide 15: Fragility Points -->
+        <div class="slide">
+            <span class="slide-number">Slide 15</span>
+            <h1>脆弱性ポイント一覧</h1>
+            <h2>注意が必要な領域</h2>
+
+            <table>
+                <tr>
+                    <th>領域</th>
+                    <th>脆弱性</th>
+                    <th>影響</th>
+                </tr>
+                <tr>
+                    <td>セッション復元</td>
+                    <td>to_dict/from_dict によるデータドリフト</td>
+                    <td>設定消失、データ破損</td>
+                </tr>
+                <tr>
+                    <td>キーマップ登録</td>
+                    <td>タイミング依存、missing_kms管理</td>
+                    <td>ホットキー動作せず</td>
+                </tr>
+                <tr>
+                    <td>URL形式data</td>
+                    <td>スキーマなし、型安全性なし</td>
+                    <td>パース失敗、デフォルト適用漏れ</td>
+                </tr>
+                <tr>
+                    <td>動的クラス生成</td>
+                    <td>名前衝突、アンレジスト漏れ</td>
+                    <td>Blenderクラッシュ</td>
+                </tr>
+                <tr>
+                    <td>exec/eval</td>
+                    <td>ユーザーコードの例外処理</td>
+                    <td>UIフリーズ、エラー表示</td>
+                </tr>
+                <tr>
+                    <td>Poll関数</td>
+                    <td>動的コンパイル、キャッシュ管理</td>
+                    <td>パフォーマンス、メモリリーク</td>
+                </tr>
+            </table>
+
+            <div class="highlight warning">
+                <strong>最も危険な箇所:</strong><br>
+                <code>PMItem.poll_methods</code> - poll関数をコンパイルしてキャッシュするが、
+                メニュー削除時にクリーンアップされない可能性がある。
+            </div>
+        </div>
+
+        <!-- Slide 16: Design Philosophy -->
+        <div class="slide">
+            <span class="slide-number">Slide 16</span>
+            <h1>暗黙の設計哲学</h1>
+            <h2>オリジナル作者から継承されたもの</h2>
+
+            <h3>1. 「とにかく動かす」優先</h3>
+            <p>
+                型チェックや厳密なバリデーションより、柔軟性と即時動作を優先。<br>
+                <code>try/except</code> で囲んで <code>print_exc()</code> するパターンが多い。
+            </p>
+
+            <h3>2. グローバル状態の活用</h3>
+            <p>
+                <code>pme.context</code>, <code>lh</code> (LayoutHelper), クラス変数など、
+                グローバルにアクセス可能な状態を多用。これは短いコードを書けるが、
+                テスタビリティを下げる。
+            </p>
+
+            <h3>3. Blender APIへの密結合</h3>
+            <p>
+                抽象化レイヤーなしでBlender APIを直接使用。<br>
+                これはパフォーマンスには良いが、Blenderバージョン変更に脆弱。
+            </p>
+
+            <h3>4. 「一つのデータ構造で全て表現」</h3>
+            <p>
+                PMItem/PMIItem で10種類以上の異なる概念を表現。<br>
+                シンプルだが、各タイプ固有の制約を表現しにくい。
+            </p>
+
+            <div class="highlight">
+                <strong>これらは「悪い設計」ではない:</strong><br>
+                単独開発者が機能を素早く追加するには合理的。<br>
+                ただし、チーム開発やメンテナンスフェーズでは課題になる。
+            </div>
+        </div>
+
+        <!-- Slide 17: Module Dependencies -->
+        <div class="slide">
+            <span class="slide-number">Slide 17</span>
+            <h1>モジュール依存関係</h1>
+            <h2>MODULES順序の意味</h2>
+
+            <div class="ascii-diagram">
+インポート順序 (依存方向は下→上)
+═══════════════════════════════════════════════════════════════════
+
+[Core Layer]
+addon ─────────────────────── 基本設定、get_prefs(), temp_prefs()
+   │
+pme ───────────────────────── PMEContext, props (データパーサー)
+   │
+constants ─────────────────── 定数、ENUMアイテム
+
+[Utility Layer]
+utils, bl_utils ───────────── 汎用ユーティリティ
+   │
+layout_helper ─────────────── lh シングルトン (UI構築ヘルパー)
+   │
+keymap_helper ─────────────── KeymapHelper, ホットキー管理
+
+[Data Layer]
+types ─────────────────────── PMItem, PMIItem, Tag, PMLink
+   │
+operators ─────────────────── 主要オペレーター群
+
+[Editor Layer]
+ed_base ───────────────────── EditorBase 基底クラス
+   │
+ed_pie_menu, ed_menu, ...  ── 各エディター実装
+
+[UI Layer]
+preferences ───────────────── PMEPreferences, 設定UI
+            </div>
+
+            <div class="highlight info">
+                <strong>循環参照の回避:</strong><br>
+                この順序は循環インポートを避けるために重要。<br>
+                例: <code>operators.py</code> は <code>types.py</code> より後なので、
+                <code>types.py</code> で operators を import できない。
+            </div>
+        </div>
+
+        <!-- Slide 18: PME2 Recommendations - Preserve -->
+        <div class="slide">
+            <span class="slide-number">Slide 18</span>
+            <h1>PME2への提言</h1>
+            <h2>保持すべきもの <span class="tag preserve">PRESERVE</span></h2>
+
+            <h3>1. 統一データモデルのコンセプト</h3>
+            <p>
+                PMItem/PMIItem の「全てはメニューアイテム」という抽象化は強力。<br>
+                ただし、型レベルでの制約は追加すべき。
+            </p>
+
+            <h3>2. PMEContextによるグローバル変数提供</h3>
+            <p>
+                <code>L</code>, <code>C</code>, <code>D</code> などの短縮形はUXとして優秀。<br>
+                ユーザーコードの簡潔さを維持すべき。
+            </p>
+
+            <h3>3. EditorBaseパターン</h3>
+            <p>
+                各メニュータイプごとにエディターを分離する設計は良い。<br>
+                プロトコル(インターフェース)として明示化するとさらに良い。
+            </p>
+
+            <h3>4. JSON形式のエクスポート/インポート</h3>
+            <p>
+                ポータビリティの確保は重要。<br>
+                スキーマバージョン管理を追加すべき。
+            </p>
+
+            <h3>5. LayoutHelper (lh) のアプローチ</h3>
+            <p>
+                Blender UILayoutのラッパーは便利。<br>
+                ただし、より型安全にすべき。
+            </p>
+        </div>
+
+        <!-- Slide 19: PME2 Recommendations - Redesign -->
+        <div class="slide">
+            <span class="slide-number">Slide 19</span>
+            <h1>PME2への提言</h1>
+            <h2>再設計すべきもの <span class="tag redesign">REDESIGN</span></h2>
+
+            <h3>1. データエンコーディング</h3>
+            <div class="two-column">
+                <div>
+                    <strong>現在:</strong>
+                    <pre><code>"pm?pm_radius=150&..."</code></pre>
+                </div>
+                <div>
+                    <strong>提案:</strong>
+                    <pre><code>@dataclass
+class PieMenuData:
+    radius: int = 150
+    threshold: int = 20</code></pre>
+                </div>
+            </div>
+
+            <h3>2. 状態管理</h3>
+            <p>
+                グローバルシングルトンを減らし、明示的な依存性注入へ。<br>
+                特に <code>PMItem.kmis_map</code> のようなクラス変数は危険。
+            </p>
+
+            <h3>3. セッション復元</h3>
+            <p>
+                <code>to_dict/from_dict</code> パターンは脆弱。<br>
+                Blender 5.0+の新しいプリファレンス永続化を活用すべき。
+            </p>
+
+            <h3>4. エラーハンドリング</h3>
+            <p>
+                <code>try/except/print_exc()</code> の乱用を減らす。<br>
+                Result型やOptional型で明示的なエラー伝播を。
+            </p>
+
+            <h3>5. Poll関数のコンパイル</h3>
+            <p>
+                動的な <code>compile()</code> は避け、<br>
+                宣言的なコンテキスト条件システムを検討。
+            </p>
+        </div>
+
+        <!-- Slide 20: PME2 Recommendations - Remove -->
+        <div class="slide">
+            <span class="slide-number">Slide 20</span>
+            <h1>PME2への提言</h1>
+            <h2>削除を検討すべきもの <span class="tag remove">REMOVE</span></h2>
+
+            <h3>1. c_utils.py (Cython/ctypes操作)</h3>
+            <p>
+                Blender内部構造体へのアクセスは非常に脆弱。<br>
+                Blenderバージョンごとにオフセットが変わる可能性がある。
+            </p>
+
+            <h3>2. 過度なレガシー互換性コード</h3>
+            <p>
+                <code>compatibility_fixes.py</code> の古いバージョン対応。<br>
+                PME2では最低サポートバージョンを上げ、クリーンスタート。
+            </p>
+
+            <h3>3. 複雑なセッション復元ロジック</h3>
+            <p>
+                Blender 5.0未満のハックは不要になる可能性が高い。
+            </p>
+
+            <h3>4. 使用頻度の低い機能</h3>
+            <p>
+                ユーザー調査を行い、ほとんど使われていない機能を特定して削除検討。<br>
+                例: 特殊なモーダル操作、複雑なマクロ機能など。
+            </p>
+
+            <div class="highlight warning">
+                <strong>注意:</strong> 削除は慎重に。<br>
+                既存ユーザーの設定との互換性を考慮したマイグレーションパスが必要。
+            </div>
+        </div>
+
+        <!-- Slide 21: PME2 Recommendations - Abstract -->
+        <div class="slide">
+            <span class="slide-number">Slide 21</span>
+            <h1>PME2への提言</h1>
+            <h2>抽象化すべきもの <span class="tag abstract">ABSTRACT</span></h2>
+
+            <h3>1. Blender API ラッパー</h3>
+            <pre><code># 現在: 直接呼び出し
+bpy.context.window_manager.keyconfigs.user.keymaps
+
+# 提案: 抽象化レイヤー
+class BlenderKeymapService:
+    def get_keymap(self, name: str) -> Optional[Keymap]:
+        ...
+    def register_hotkey(self, config: HotkeyConfig) -> Result[KeymapItem]:
+        ...</code></pre>
+
+            <h3>2. UI描画システム</h3>
+            <pre><code># 提案: 宣言的UI定義
+@menu_definition
+class MyPieMenu:
+    slots = [
+        Slot(icon="CUBE", command="bpy.ops.mesh.primitive_cube_add()"),
+        Slot(icon="SPHERE", submenu=MySphereMenu),
+        EmptySlot(),
+        ...
+    ]</code></pre>
+
+            <h3>3. データシリアライズ</h3>
+            <pre><code># 提案: プラグイン可能なシリアライザー
+class MenuSerializer(Protocol):
+    def serialize(self, menu: PMItem) -> dict: ...
+    def deserialize(self, data: dict) -> PMItem: ...
+
+# JSON, YAML, Binary など差し替え可能</code></pre>
+
+            <h3>4. イベントシステム</h3>
+            <p>
+                メニュー追加/削除/編集時のフックを明示的なイベントシステムに。<br>
+                現在は <code>on_pm_add</code> などの直接コールバック。
+            </p>
+        </div>
+
+        <!-- Slide 22: Architecture Proposal -->
+        <div class="slide">
+            <span class="slide-number">Slide 22</span>
+            <h1>PME2 アーキテクチャ提案</h1>
+            <h2>レイヤード設計</h2>
+
+            <div class="ascii-diagram">
+┌─────────────────────────────────────────────────────────────────────┐
+│                         Presentation Layer                          │
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐                 │
+│  │ EditorViews │  │ MenuRenderer│  │ PrefsPanel  │                 │
+│  └─────────────┘  └─────────────┘  └─────────────┘                 │
+└─────────────────────────────────────────────────────────────────────┘
+                              │ uses
+                              ▼
+┌─────────────────────────────────────────────────────────────────────┐
+│                        Application Layer                            │
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐                 │
+│  │ MenuService │  │KeymapService│  │ExportService│                 │
+│  └─────────────┘  └─────────────┘  └─────────────┘                 │
+└─────────────────────────────────────────────────────────────────────┘
+                              │ uses
+                              ▼
+┌─────────────────────────────────────────────────────────────────────┐
+│                          Domain Layer                               │
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐                 │
+│  │ Menu Entity │  │ Item Entity │  │ Domain Evts │                 │
+│  └─────────────┘  └─────────────┘  └─────────────┘                 │
+└─────────────────────────────────────────────────────────────────────┘
+                              │ uses
+                              ▼
+┌─────────────────────────────────────────────────────────────────────┐
+│                      Infrastructure Layer                           │
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐                 │
+│  │BlenderPrefs │  │BlenderKeymap│  │ FileStorage │                 │
+│  │  Adapter    │  │   Adapter   │  │   Adapter   │                 │
+│  └─────────────┘  └─────────────┘  └─────────────┘                 │
+└─────────────────────────────────────────────────────────────────────┘
+            </div>
+
+            <div class="highlight success">
+                <strong>メリット:</strong>
+                <ul>
+                    <li>Blender API変更の影響を Infrastructure Layer に局所化</li>
+                    <li>テスト可能: Domain/Application LayerはBlenderなしでテスト可能</li>
+                    <li>保守性: 責務が明確</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Slide 23: Migration Strategy -->
+        <div class="slide">
+            <span class="slide-number">Slide 23</span>
+            <h1>移行戦略</h1>
+            <h2>PME → PME2 への段階的移行</h2>
+
+            <h3>Phase 1: 準備 (現在のPMEで)</h3>
+            <ol>
+                <li>テストの追加 (特にデータモデル周り)</li>
+                <li>型アノテーションの追加</li>
+                <li>ドキュメントの整備</li>
+            </ol>
+
+            <h3>Phase 2: 基盤構築</h3>
+            <ol>
+                <li>新しいデータモデル定義 (dataclass/Protocol)</li>
+                <li>Blender API 抽象化レイヤー</li>
+                <li>新旧データ変換ロジック</li>
+            </ol>
+
+            <h3>Phase 3: 機能移植</h3>
+            <ol>
+                <li>パイメニュー (最も基本的な機能)</li>
+                <li>通常メニュー</li>
+                <li>ポップアップダイアログ</li>
+                <li>その他の機能</li>
+            </ol>
+
+            <h3>Phase 4: 移行ツール</h3>
+            <ol>
+                <li>PME設定 → PME2設定 コンバーター</li>
+                <li>互換性レイヤー (旧フォーマット読み込み)</li>
+            </ol>
+
+            <div class="highlight info">
+                <strong>推奨:</strong> 最初から全機能を再実装しようとしない。<br>
+                コア機能 (パイメニュー) をしっかり作り、順次拡張する。
+            </div>
+        </div>
+
+        <!-- Slide 24: Summary -->
+        <div class="slide">
+            <span class="slide-number">Slide 24</span>
+            <h1>まとめ</h1>
+            <h2>PMEアーキテクチャ理解のキーポイント</h2>
+
+            <div class="two-column">
+                <div>
+                    <h3>データ構造</h3>
+                    <ul>
+                        <li><code>PMItem</code> = メニュー定義</li>
+                        <li><code>PMIItem</code> = アイテム定義</li>
+                        <li><code>mode</code> で振る舞いを決定</li>
+                        <li>URL形式のdata拡張</li>
+                    </ul>
+
+                    <h3>実行フロー</h3>
+                    <ul>
+                        <li>Keymap → Operator → Draw → Exec</li>
+                        <li><code>pme.context</code> で状態共有</li>
+                        <li>動的クラス生成でUI登録</li>
+                    </ul>
+                </div>
+                <div>
+                    <h3>設計パターン</h3>
+                    <ul>
+                        <li>EditorBase継承パターン</li>
+                        <li>グローバルシングルトン多用</li>
+                        <li>try/except防御的プログラミング</li>
+                    </ul>
+
+                    <h3>脆弱性</h3>
+                    <ul>
+                        <li>セッション復元</li>
+                        <li>キーマップタイミング</li>
+                        <li>型安全性の欠如</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="highlight success" style="margin-top: 30px;">
+                <strong>最終メッセージ:</strong><br>
+                PMEは「動くことが正義」の時代に作られた素晴らしいツール。<br>
+                PME2ではその精神を継承しつつ、モダンな設計原則を取り入れることで、<br>
+                <strong>より保守しやすく、拡張しやすく、テストしやすい</strong>コードベースを目指そう。
+            </div>
+        </div>
+
+        <!-- Slide 25: References -->
+        <div class="slide">
+            <span class="slide-number">Slide 25</span>
+            <h1>参照ファイル一覧</h1>
+            <h2>さらに深く理解するために</h2>
+
+            <table>
+                <tr>
+                    <th>ファイル</th>
+                    <th>主要な内容</th>
+                    <th>重要度</th>
+                </tr>
+                <tr>
+                    <td><code>pme.py</code></td>
+                    <td>PMEContext, PMEProps, ParsedData</td>
+                    <td>★★★</td>
+                </tr>
+                <tr>
+                    <td><code>types.py</code></td>
+                    <td>PMItem, PMIItem, PMLink, Tag</td>
+                    <td>★★★</td>
+                </tr>
+                <tr>
+                    <td><code>operators.py</code></td>
+                    <td>WM_OT_pme_user_pie_menu_call</td>
+                    <td>★★★</td>
+                </tr>
+                <tr>
+                    <td><code>ed_base.py</code></td>
+                    <td>EditorBase, 共通オペレーター</td>
+                    <td>★★☆</td>
+                </tr>
+                <tr>
+                    <td><code>preferences.py</code></td>
+                    <td>PMEPreferences, Import/Export</td>
+                    <td>★★☆</td>
+                </tr>
+                <tr>
+                    <td><code>keymap_helper.py</code></td>
+                    <td>KeymapHelper, ホットキー管理</td>
+                    <td>★★☆</td>
+                </tr>
+                <tr>
+                    <td><code>layout_helper.py</code></td>
+                    <td>LayoutHelper (lh), UI構築ヘルパー</td>
+                    <td>★☆☆</td>
+                </tr>
+                <tr>
+                    <td><code>__init__.py</code></td>
+                    <td>モジュール読み込み順、セッション復元</td>
+                    <td>★☆☆</td>
+                </tr>
+            </table>
+
+            <div class="highlight">
+                <strong>読む順序のおすすめ:</strong><br>
+                <code>types.py</code> → <code>pme.py</code> → <code>operators.py</code> →
+                <code>ed_base.py</code> → 任意のエディター
+            </div>
+        </div>
+
+    </div>
+
+    <footer style="text-align: center; padding: 40px; color: var(--text-secondary);">
+        <p>PME Architecture Deep Dive - Created for PME2 Design Reference</p>
+        <p style="font-size: 0.9em;">Generated: <script>document.write(new Date().toLocaleDateString('ja-JP'))</script></p>
+    </footer>
+</body>
+</html>
