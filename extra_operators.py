@@ -798,6 +798,17 @@ class PME_OT_sidearea_toggle(bpy.types.Operator):
             "method": "adaptive_learning",
         }
 
+    def _clamp_side_width(self, context, main_area):
+        """Clamp requested side width to a safe range to avoid layout corruption."""
+        window = getattr(context, "window", None)
+        if window and getattr(window, "width", 0):
+            max_width = min(main_area.width, window.width) // 2
+        else:
+            max_width = main_area.width // 2
+
+        max_width = max(32, int(max_width))
+        return max(32, min(int(self.width), max_width))
+
     def get_horizontal_areas(self, area):
         """Detect adjacent left/right areas using adaptive horizontal gap learning."""
         all_areas = list(bpy.context.screen.areas)
@@ -1084,14 +1095,15 @@ class PME_OT_sidearea_toggle(bpy.types.Operator):
             and self.action in ("TOGGLE", "SHOW")
             and l.ui_type != self.area
         ):
+            target_width = self._clamp_side_width(context, a)
             self.save_sidebars(l)
             CTU.swap_spaces(l, a, l.ui_type)
             self.add_space(a, self.area)
             l.ui_type = self.area
             CTU.swap_spaces(l, a, self.area)
 
-            if l.width != self.width:
-                CTU.resize_area(l, self.width, direction="RIGHT")
+            if l.width != target_width:
+                CTU.resize_area(l, target_width, direction="RIGHT")
                 SU.redraw_screen()
 
             self.restore_sidebars(l)
@@ -1104,14 +1116,15 @@ class PME_OT_sidearea_toggle(bpy.types.Operator):
             and self.action in ("TOGGLE", "SHOW")
             and r.ui_type != self.area
         ):
+            target_width = self._clamp_side_width(context, a)
             self.save_sidebars(r)
             CTU.swap_spaces(r, a, r.ui_type)
             self.add_space(a, self.area)
             r.ui_type = self.area
             CTU.swap_spaces(r, a, self.area)
 
-            if r.width != self.width:
-                CTU.resize_area(r, self.width, direction="LEFT")
+            if r.width != target_width:
+                CTU.resize_area(r, target_width, direction="LEFT")
                 SU.redraw_screen()
 
             self.restore_sidebars(r)

@@ -1,3 +1,4 @@
+import bpy
 from bpy.app import version as APP_VERSION
 from bpy.props import StringProperty
 import re
@@ -726,7 +727,25 @@ def swap_spaces(from_area, to_area, to_area_space_type):
 
 
 def resize_area(area, width, direction='RIGHT'):
+    # Clamp incoming sizes to avoid corrupting the screen layout when callers
+    # request widths that exceed the window (can happen with custom operators).
     area_p = c_area(area)
+
+    min_size = 32
+    window = getattr(bpy.context, "window", None)
+    max_size = None
+
+    if window:
+        if direction in ('LEFT', 'RIGHT'):
+            max_size = max(min_size, int(window.width * 0.95))
+        elif direction in ('TOP', 'BOTTOM'):
+            max_size = max(min_size, int(window.height * 0.95))
+
+    if max_size is not None:
+        width = max(min_size, min(int(width), max_size))
+    else:
+        width = max(min_size, int(width))
+
     if direction in ('LEFT', 'RIGHT'):
         dx = width - area.width
         if direction == 'LEFT':
