@@ -1,0 +1,7 @@
+blank_issues_enabled: false
+
+contact_links:
+  - name: Bug Report
+    url: https://github.com/Pluglug/pie-menu-editor-fork/issues/new?template=bug-report.md
+    about: Please use this template to report bugs.
+
