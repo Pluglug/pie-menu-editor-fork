@@ -1,16 +1,27 @@
 name: Bug Report
-description: Report bugs in Pie Menu Editor (PME)
-title: "[Bug] <Brief description>"
+description: Report issues in Pie Menu Editor (PME)
+title: "[Bug] <Short description>"
 labels: ["bug"]
 assignees:
   - Pluglug
+
 body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for taking the time to report a bug!  
+        Your feedback is genuinely helpful — even small clues or partial information
+        can point to problems I wouldn’t otherwise notice.
+
+        The questions below simply make it easier for me to investigate.
+        Please fill in whatever you can; if something is unclear, feel free to skip it.
+
   - type: input
     id: summary
     attributes:
       label: Summary
-      description: Brief explanation of the issue.
-      placeholder: "PME fails to load keymaps in Blender 5.0 when..."
+      description: "A short explanation of what went wrong."
+      placeholder: "Example: PME does not restore menus when switching sessions."
     validations:
       required: true
 
@@ -18,7 +29,7 @@ body:
     id: steps
     attributes:
       label: Steps to Reproduce
-      description: "List the exact steps leading to the bug."
+      description: "What actions seem to trigger the issue? Even partial steps are useful."
       placeholder: |
         1. Open Blender 5.0
         2. Enable PME-F 1.19.1
@@ -31,6 +42,16 @@ body:
     attributes:
       label: Expected Behavior
       description: "What did you expect to happen instead?"
+      placeholder: "The pie menu opens normally with all items."
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual Behavior
+      description: "What happens instead when you follow the steps?"
+      placeholder: "The menu is empty / an error appears / nothing happens."
     validations:
       required: true
 
@@ -38,7 +59,7 @@ body:
     id: blender_version
     attributes:
       label: Blender Version
-      placeholder: "5.0.0"
+      placeholder: "5.0.0, 4.2.3, etc."
     validations:
       required: true
 
@@ -46,14 +67,52 @@ body:
     id: pme_version
     attributes:
       label: PME-F Version
-      placeholder: "1.19.1"
+      placeholder: "1.19.1, 1.19.1-beta.2, etc."
+    validations:
+      required: true
+
+  - type: dropdown
+    id: os
+    attributes:
+      label: Operating System
+      options:
+        - "Windows 10"
+        - "Windows 11"
+        - "macOS (Intel)"
+        - "macOS (Apple Silicon)"
+        - "Linux"
+        - "Other"
     validations:
       required: true
 
   - type: textarea
+    id: logs
+    attributes:
+      label: System Console Output (optional)
+      description: "If Blender printed any errors or warnings, paste them here. If not, you can skip this."
+      placeholder: |
+        Python: Traceback (most recent call last):
+          File "...", line ...
+          ...
+    validations:
+      required: false
+
+  - type: textarea
+    id: setup_json
+    attributes:
+      label: PME Setup JSON (optional)
+      description: |
+        If you exported your PME setup, attaching the file can help me reproduce the issue.
+        This is especially helpful for menu or keymap-related problems.
+      placeholder: "Attached: pme-setup.json"
+    validations:
+      required: false
+
+  - type: textarea
     id: extra
     attributes:
-      label: Additional Information / Logs
-      description: "Console output, screenshots, or any other info."
+      label: Additional Notes (optional)
+      description: "Screenshots, videos, or any context you feel might be useful."
+      placeholder: "Happens only after switching between .blend files, etc."
     validations:
       required: false
