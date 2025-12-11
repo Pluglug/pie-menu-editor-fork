@@ -1,0 +1,59 @@
+name: Bug Report
+description: Report bugs in Pie Menu Editor (PME)
+title: "[Bug] <Brief description>"
+labels: ["bug"]
+assignees:
+  - Pluglug
+body:
+  - type: input
+    id: summary
+    attributes:
+      label: Summary
+      description: Brief explanation of the issue.
+      placeholder: "PME fails to load keymaps in Blender 5.0 when..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to Reproduce
+      description: "List the exact steps leading to the bug."
+      placeholder: |
+        1. Open Blender 5.0
+        2. Enable PME-F 1.19.1
+        3. ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected Behavior
+      description: "What did you expect to happen instead?"
+    validations:
+      required: true
+
+  - type: input
+    id: blender_version
+    attributes:
+      label: Blender Version
+      placeholder: "5.0.0"
+    validations:
+      required: true
+
+  - type: input
+    id: pme_version
+    attributes:
+      label: PME-F Version
+      placeholder: "1.19.1"
+    validations:
+      required: true
+
+  - type: textarea
+    id: extra
+    attributes:
+      label: Additional Information / Logs
+      description: "Console output, screenshots, or any other info."
+    validations:
+      required: false
