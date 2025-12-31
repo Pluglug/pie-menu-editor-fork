@@ -42,7 +42,7 @@ MODULES = (
     "operators",
     "extra_operators",
     "ui_utils",
-    "types",
+    "pme_types",
     "ed_base",
     "ed_pie_menu",
     "ed_menu",

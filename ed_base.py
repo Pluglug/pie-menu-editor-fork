@@ -34,7 +34,7 @@ from . import screen_utils as SU
 from .ui_utils import get_pme_menu_class, toggle_menu, pme_menu_classes
 from .layout_helper import lh, operator, split, draw_pme_layout, L_SEP, L_LABEL
 from .property_utils import to_py_value
-from .types import Tag, PMItem, PMIItem
+from .pme_types import Tag, PMItem, PMIItem
 from . import keymap_helper
 from . import pme
 from . import operator_utils

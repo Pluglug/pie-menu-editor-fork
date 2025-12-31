@@ -67,7 +67,7 @@ from .ui import tag_redraw, draw_addons_maximized, is_userpref_maximized
 from .ui_utils import get_pme_menu_class, execute_script
 from . import utils as U
 from .property_utils import PropertyData, to_py_value
-from .types import Tag, PMItem, PMIItem, PMLink, EdProperties, UserProperties
+from .pme_types import Tag, PMItem, PMIItem, PMLink, EdProperties, UserProperties
 from .ed_base import (
     WM_OT_pmi_icon_select,
     WM_OT_pmi_data_edit,
