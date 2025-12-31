@@ -1,0 +1,78 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Get version from tag
+        id: version
+        run: |
+          # Extract version from tag (v1.19.2 -> 1.19.2)
+          VERSION=${GITHUB_REF#refs/tags/v}
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+          # Generate random string (20 chars) - using head -c to avoid pipe hang
+          RANDOM_STR=$(head -c 100 /dev/urandom | base64 | tr -dc 'a-zA-Z0-9' | head -c 20)
+          echo "random=$RANDOM_STR" >> $GITHUB_OUTPUT
+
+          # Create filename
+          FILENAME="pme${VERSION}_${RANDOM_STR}.zip"
+          echo "filename=$FILENAME" >> $GITHUB_OUTPUT
+
+      - name: Create addon zip
+        run: |
+          # Create temp directory with correct addon name
+          mkdir -p build/pie_menu_editor
+
+          # Copy addon files (exclude dev files)
+          rsync -av --exclude='.git' \
+                    --exclude='.github' \
+                    --exclude='.claude' \
+                    --exclude='__pycache__' \
+                    --exclude='*.pyc' \
+                    --exclude='*.pyo' \
+                    --exclude='.venv' \
+                    --exclude='.vscode' \
+                    --exclude='.personal' \
+                    --exclude='debug' \
+                    --exclude='data' \
+                    --exclude='examples' \
+                    --exclude='scripts' \
+                    --exclude='CLAUDE.md' \
+                    --exclude='.gitignore' \
+                    --exclude='.pylintrc' \
+                    --exclude='.DS_Store' \
+                    --exclude='Thumbs.db' \
+                    --exclude='build' \
+                    ./ build/pie_menu_editor/
+
+          # Create zip
+          cd build
+          zip -r "../${{ steps.version.outputs.filename }}" pie_menu_editor
+          cd ..
+
+          # Show contents for verification
+          echo "=== Zip contents ==="
+          unzip -l "${{ steps.version.outputs.filename }}"
+
+      - name: Create Release Draft
+        uses: softprops/action-gh-release@v2
+        with:
+          draft: true
+          name: "Pie Menu Editor Fork v${{ steps.version.outputs.version }}"
+          files: ${{ steps.version.outputs.filename }}
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
