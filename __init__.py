@@ -1,7 +1,7 @@
 bl_info = {
     "name": "Pie Menu Editor Fork",
     "author": "roaoao, pluglug",
-    "version": (1, 19, 2, "beta", 0),
+    "version": (1, 19, 3, "beta", 0),
     "blender": (3, 2, 0),
     "warning": "This is a beta version. Please report bugs to BlenderArtists forum",
     "tracker_url": "http://blenderartists.org/forum/showthread.php?392910",
