@@ -48,8 +48,6 @@ jobs:
                     --exclude='.personal' \
                     --exclude='debug' \
                     --exclude='data' \
-                    --exclude='examples' \
-                    --exclude='scripts' \
                     --exclude='CLAUDE.md' \
                     --exclude='.gitignore' \
                     --exclude='.pylintrc' \
