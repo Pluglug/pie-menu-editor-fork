@@ -208,3 +208,10 @@ Thumbs.db
 
 data/
 debug/
+
+# ----------------------------------------------------------------------------------------
+# Claude Code
+# ----------------------------------------------------------------------------------------
+
+# Local settings (may contain sensitive information)
+.claude/settings.local.json
