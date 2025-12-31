@@ -1,11 +1,10 @@
 bl_info = {
-    "name": "Pie Menu Editor Fork",
-    "author": "roaoao, pluglug",
-    "version": (1, 19, 2),
-    "blender": (3, 2, 0),
-    "tracker_url": "http://blenderartists.org/forum/showthread.php?392910",
-    # "wiki_url": (
-    #     "https://archive.blender.org/wiki/2015/index.php/User:Raa/Addons/Pie_Menu_Editor/"),
+    "name": "Pie Menu Editor Fork (PME2 Experimental)",
+    "author": "pluglug (maintainer), original author: roaoao",
+    "version": (2, 0, 0, 0),
+    "blender": (4, 5, 0),
+    "warning": "Alpha build. Use in separate portable Blender. May break PME prefs.",
+    "tracker_url": "https://github.com/Pluglug/pie-menu-editor-fork/issues",
     "doc_url": "https://pluglug.github.io/pme-docs",
     "category": "User Interface",
 }
