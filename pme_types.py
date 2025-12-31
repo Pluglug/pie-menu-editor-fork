@@ -1,3 +1,10 @@
+# pme_types.py - Core data models (Tag, PMItem, PMIItem, PMLink, etc.)
+# LAYER = "core"
+#
+# Contains the primary PropertyGroup definitions for PME's data structures.
+
+LAYER = "core"
+
 import bpy
 from . import bl_utils as BU
 from . import constants as CC

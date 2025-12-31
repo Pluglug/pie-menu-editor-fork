@@ -301,12 +301,41 @@ _LAYER_ORDER = {
 }
 
 
-def resolve_layer(module_name: str, addon_id: Optional[str] = None) -> Optional[str]:
+def resolve_layer(
+    module_name: str,
+    addon_id: Optional[str] = None,
+    *,
+    module: Optional[Any] = None,
+) -> Optional[str]:
     """
-    モジュール名からレイヤを推定する簡易ルール。
+    モジュールのレイヤを判定する。判定優先順位:
+
+    1. module オブジェクトが渡された場合、その LAYER 定数を最優先で使用
+    2. sys.modules にモジュールがある場合、その LAYER 定数を使用
+    3. パスパターン（core./ui./infra./...）から推定
+    4. 上記すべて該当しない場合は "legacy"
+
     例: pie_menu_editor.core.foo -> core
+        pie_menu_editor.bl_utils (LAYER="infra") -> infra
     """
+    import sys
+
     addon_prefix = addon_id or _DEFAULT_ADDON_ID
+
+    # 1. 明示的に渡された module オブジェクトから LAYER を取得
+    if module is not None:
+        layer = getattr(module, "LAYER", None)
+        if layer and layer in _LAYER_ORDER:
+            return layer
+
+    # 2. sys.modules から LAYER 定数を取得（既にインポート済みの場合）
+    if module_name in sys.modules:
+        mod = sys.modules[module_name]
+        layer = getattr(mod, "LAYER", None)
+        if layer and layer in _LAYER_ORDER:
+            return layer
+
+    # 3. パスパターンから推定
     if module_name == addon_prefix:
         return "root"
 
@@ -315,7 +344,10 @@ def resolve_layer(module_name: str, addon_id: Optional[str] = None) -> Optional[
         head = module_name[len(prefix) :].split(".", 1)[0]
         if head in _LAYER_ORDER:
             return head
+        # パスで判定できない → legacy
         return "legacy"
+
+    # addon 外のモジュール
     return None
 
 

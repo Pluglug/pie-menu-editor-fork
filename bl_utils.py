@@ -1,3 +1,11 @@
+# bl_utils.py - Blender API utilities and wrappers
+# LAYER = "infra"
+#
+# Low-level Blender API helpers: context management, property path parsing,
+# popup utilities, and other Blender-specific infrastructure.
+
+LAYER = "infra"
+
 import bpy
 import _bpy
 import re

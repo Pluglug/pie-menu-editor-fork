@@ -1,3 +1,11 @@
+# compatibility_fixes.py - Data migration and version compatibility fixes
+# LAYER = "infra"
+#
+# Handles automatic migration of PME data when upgrading from older versions.
+# Similar to database migrations - modifies saved data to match new format.
+
+LAYER = "infra"
+
 import re
 from . import addon
 from .addon import get_prefs

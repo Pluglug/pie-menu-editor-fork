@@ -12,8 +12,10 @@ from .. import constants as CC
 from ..debug_utils import *
 from .. import operator_utils
 from .. import pme
-from ..bl_utils import bp, ctx_dict
 from ..addon import get_uprefs, ic
+
+# Note: bp imported lazily in gen_prop_name() to avoid circular import
+# (bl_utils -> screen_utils -> ui/__init__ -> bl_utils)
 
 uilayout_getattribute = bpy.types.UILayout.__getattribute__
 draw_addons_default = None
@@ -76,6 +78,8 @@ def gen_prop_name(mo, is_prop=False, strict=False):
     if is_prop and prop_path[-1] == "]":
         prop_path, _, _ = prop_path.rpartition("[")
 
+    # Lazy import to avoid circular dependency
+    from ..bl_utils import bp
     prop = bp.get(prop_path)
 
     if prop:
