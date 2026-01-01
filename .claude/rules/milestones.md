@@ -109,7 +109,7 @@ PME2 開発のマイルストーンとフェーズ定義。
 
 | 対象 | 移動先 | 状態 | リスク |
 |------|--------|------|--------|
-| `Overlay`, `Painter`, `Text`, etc. | `infra/overlay.py` | 未着手 | 低 |
+| `Overlay`, `Painter`, `Text`, etc. | `infra/overlay.py` | ✅ 完了 | 低 |
 | 旧 `ed_*.py` のラッパー整理 | - | 未着手 | 低 |
 | `from ..operators import *` の明示化 | - | 未着手 | 低 |
 
@@ -130,7 +130,7 @@ PME2 開発のマイルストーンとフェーズ定義。
 ### 受け入れ基準
 
 - [x] Reload Scripts でクラッシュしない ✅
-- [ ] `infra/overlay.py` が作成されている
+- [x] `infra/overlay.py` が作成されている ✅
 - [ ] Low risk なレイヤ違反が 3〜5 件削減されている
 
 ---
