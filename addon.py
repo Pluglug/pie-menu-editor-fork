@@ -487,21 +487,72 @@ def unregister_modules() -> None:
     if bpy.app.background:
         return
 
+    if DBG_DEPS:
+        print_section_header("PME2 Addon Unregister")
+
+    success = True
+    module_success_count = 0
+    module_fail_count = 0
+
+    # Count modules with unregister
+    modules_with_unregister = [
+        mod_name for mod_name in MODULE_NAMES
+        if hasattr(sys.modules.get(mod_name), "unregister")
+    ]
+
+    if DBG_DEPS:
+        print_subsection_header(f"Uninitializing {len(modules_with_unregister)} modules")
+
     # Unregister modules (reverse order)
-    for mod_name in reversed(MODULE_NAMES):
-        try:
-            mod = sys.modules[mod_name]
-            if hasattr(mod, "unregister"):
-                mod.unregister()
-        except Exception as e:
-            print_failure(f"Module unregister: {_short_name(mod_name)} - {str(e)}")
+    with dbg_scope("profile", "unregister_modules.uninit", location="addon.unregister_modules"):
+        for mod_name in reversed(MODULE_NAMES):
+            try:
+                mod = sys.modules.get(mod_name)
+                if mod and hasattr(mod, "unregister"):
+                    mod.unregister()
+                    module_success_count += 1
+                    dbg_log("deps", f"Uninitialized: {_short_name(mod_name)}", location="addon.unregister_modules")
+            except Exception as e:
+                success = False
+                module_fail_count += 1
+                print_failure(f"Module unregister: {_short_name(mod_name)} - {str(e)}")
+
+    if DBG_DEPS:
+        if module_fail_count == 0:
+            print_success(f"All {module_success_count} modules uninitialized")
+        else:
+            print_failure(f"{module_fail_count}/{len(modules_with_unregister)} modules failed")
+
+    # Get classes before unregistering
+    classes = _get_classes()
+    class_success_count = 0
+    class_fail_count = 0
+
+    if DBG_DEPS:
+        print_subsection_header(f"Unregistering {len(classes)} classes")
 
     # Unregister classes (reverse order)
-    for cls in reversed(_get_classes()):
-        try:
-            bpy.utils.unregister_class(cls)
-        except Exception as e:
-            print_failure(f"Class unregister: {cls.__name__} - {str(e)}")
+    with dbg_scope("profile", "unregister_modules.classes", location="addon.unregister_modules"):
+        for cls in reversed(classes):
+            try:
+                bpy.utils.unregister_class(cls)
+                class_success_count += 1
+                dbg_log("deps", f"Unregistered: {cls.__name__}", location="addon.unregister_modules")
+            except Exception as e:
+                success = False
+                class_fail_count += 1
+                print_failure(f"Class unregister: {cls.__name__} - {str(e)}")
+
+    if DBG_DEPS:
+        if class_fail_count == 0:
+            print_success(f"All {class_success_count} classes unregistered")
+        else:
+            print_failure(f"{class_fail_count}/{len(classes)} classes failed")
+
+        if success:
+            print_success("PME2 Addon unregistered successfully")
+        else:
+            print_failure("Some components failed to unregister")
 
 
 # ======================================================

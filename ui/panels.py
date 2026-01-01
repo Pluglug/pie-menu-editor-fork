@@ -117,7 +117,13 @@ def get_hidden_panels():
 
 def bar_panel_poll(poll=None):
     def func(cls, context):
-        pr = get_prefs()
+        # Guard against addon being unregistered (KeyError from get_prefs())
+        # This can happen when Blender evaluates poll during unregister sequence
+        try:
+            pr = get_prefs()
+        except (KeyError, AttributeError):
+            # Addon is being unregistered, fall back to original poll or True
+            return poll(context) if poll else True
         return (
             context.area.width > pr.toolbar_width
             and context.area.height > pr.toolbar_height
@@ -307,11 +313,16 @@ def panel_context_items(self, context):
             contexts.add(tp.bl_context)
 
         idx = 1
-        ic_items = get_prefs().rna_type.properties["panel_info_visibility"].enum_items
+        # Guard against addon being unregistered
+        try:
+            ic_items = get_prefs().rna_type.properties["panel_info_visibility"].enum_items
+        except (KeyError, AttributeError):
+            ic_items = None
 
         for ctx in sorted(contexts):
+            icon = ic_items['CTX'].icon if ic_items else 'NONE'
             _context_items.append(
-                (ctx, ctx.replace("_", " ").title(), "", ic_items['CTX'].icon, idx)
+                (ctx, ctx.replace("_", " ").title(), "", icon, idx)
             )
             idx += 1
 
@@ -483,7 +494,11 @@ class PLayout:
         bpy.types.UILayout.__getattribute__ = PLayout.getattribute
         PLayout.real_operator = layout.operator
         PLayout.idx = 0
-        PLayout.interactive_panels = get_prefs().interactive_panels
+        # Guard against addon being unregistered
+        try:
+            PLayout.interactive_panels = get_prefs().interactive_panels
+        except (KeyError, AttributeError):
+            PLayout.interactive_panels = False
 
     @staticmethod
     def restore():
@@ -1011,11 +1026,30 @@ def register():
     for tp in types:
         bpy.utils.register_class(tp)
 
-    global handle_view
+    # Cleanup stale handlers (defensive - detect unexpected reloads)
+    global handle_view, handle_props
+    if handle_view is not None:
+        logw("PME: Stale view handler detected in register() - possible unexpected reload")
+        try:
+            bpy.types.SpaceView3D.draw_handler_remove(handle_view, 'WINDOW')
+            logi("PME: Stale view handler removed successfully")
+        except (ValueError, RuntimeError) as e:
+            logw(f"PME: Stale view handler was already invalid: {e}")
+        handle_view = None
+
+    if handle_props is not None:
+        logw("PME: Stale props handler detected in register() - possible unexpected reload")
+        try:
+            bpy.types.SpaceProperties.draw_handler_remove(handle_props, 'WINDOW')
+            logi("PME: Stale props handler removed successfully")
+        except (ValueError, RuntimeError) as e:
+            logw(f"PME: Stale props handler was already invalid: {e}")
+        handle_props = None
+
+    # Register new handlers
     handle_view = bpy.types.SpaceView3D.draw_handler_add(
         draw_callback_view, (), 'WINDOW', 'POST_VIEW'
     )
-    # global handle_props
     # handle_props = bpy.types.SpaceProperties.draw_handler_add(
     #     draw_callback_props, (), 'WINDOW', 'POST_VIEW')
 
@@ -1051,7 +1085,18 @@ def unregister():
     for tp in types:
         bpy.utils.register_class(tp)
 
+    # Guard against handler already removed (can happen during Reload Scripts)
+    global handle_view, handle_props
     if handle_view:
-        bpy.types.SpaceView3D.draw_handler_remove(handle_view, 'WINDOW')
+        try:
+            bpy.types.SpaceView3D.draw_handler_remove(handle_view, 'WINDOW')
+        except (ValueError, RuntimeError) as e:
+            # This is expected during Reload Scripts - handler was already invalidated
+            pass
+        handle_view = None
     if handle_props:
-        bpy.types.SpaceProperties.draw_handler_remove(handle_props, 'WINDOW')
+        try:
+            bpy.types.SpaceProperties.draw_handler_remove(handle_props, 'WINDOW')
+        except (ValueError, RuntimeError) as e:
+            pass
+        handle_props = None
