@@ -13,7 +13,7 @@ from pathlib import Path
 from typing import Any, Dict, Iterable, Optional, Tuple
 
 DBG = False
-DBG_INIT = False
+DBG_INIT = True
 DBG_LAYOUT = False
 DBG_TREE = False
 DBG_CMD_EDITOR = False
@@ -26,10 +26,10 @@ DBG_PROP = False
 DBG_PROP_PATH = False
 
 # 新規カテゴリ（後方互換を維持しつつ段階的に使用する）
-DBG_DEPS = False      # init_addon の依存解析・ロード順
-DBG_PROFILE = False   # 軽量な処理時間計測
-DBG_RUNTIME = False   # ランタイム挙動観測（挙動変更はしない）
-DBG_STRUCTURED = False  # NDJSON への構造化ログ出力（明示的にオンにする）
+DBG_DEPS = True      # init_addon の依存解析・ロード順
+DBG_PROFILE = True   # 軽量な処理時間計測
+DBG_RUNTIME = True   # ランタイム挙動観測（挙動変更はしない）
+DBG_STRUCTURED = True  # NDJSON への構造化ログ出力（明示的にオンにする）
 
 # NDJSON 出力先。既定は .cursor/debug.log（存在しない場合は自動作成）
 DEBUG_LOG_PATH = Path(__file__).parent.parent / ".cursor" / "debug.log"

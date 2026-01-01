@@ -1,8 +1,8 @@
 import bpy
 from . import pme
-from .constants import MODAL_CMD_MODES, W_PMI_HOTKEY, I_MODAL_PROP_MOVE, W_PMI_EXPR
+from .core.constants import MODAL_CMD_MODES, W_PMI_HOTKEY, I_MODAL_PROP_MOVE, W_PMI_EXPR
 from .bl_utils import uname
-from .ed_base import EditorBase
+from .editors.base import EditorBase
 from .addon import temp_prefs
 from .modal_utils import encode_modal_data, decode_modal_data
 

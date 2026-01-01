@@ -14,15 +14,15 @@ from .base import (
     PME_OT_pmi_move,
     WM_OT_pmi_data_edit,
 )
-from ..debug_utils import *
+from ..infra.debug import *
 from ..addon import get_prefs, temp_prefs
-from ..layout_helper import lh
+from ..ui.layout import lh
 from ..ui import tag_redraw, shorten_str
 from ..bl_utils import uname
 from ..extra_operators import PME_OT_popup_property
-from ..collection_utils import MoveItemOperator
+from ..infra.collections import MoveItemOperator
 from .. import operator_utils
-from .. import constants as CC
+from ..core import constants as CC
 
 PROP_GETTERS = dict()
 PROP_SETTERS = dict()

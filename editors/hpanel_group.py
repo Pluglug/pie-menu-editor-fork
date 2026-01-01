@@ -8,8 +8,8 @@ LAYER = "editors"
 import bpy
 from .base import EditorBase
 from ..addon import get_prefs, temp_prefs, SAFE_MODE
-from ..layout_helper import lh
-from .. import panel_utils as PAU
+from ..ui.layout import lh
+from ..ui import panels as PAU
 from ..ui import tag_redraw
 from ..operators import *
 

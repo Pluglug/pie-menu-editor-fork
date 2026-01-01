@@ -4,18 +4,18 @@ from bpy.app import version as APP_VERSION
 from bpy.app.handlers import persistent
 from .addon import ADDON_ID, get_prefs, get_uprefs
 from .bl_utils import PopupOperator, popup_area, ctx_dict, area_header_text_set
-from .panel_utils import panel, panel_label, bl_panel_enum_items
-from .constants import (
+from .ui.panels import panel, panel_label, bl_panel_enum_items
+from .core.constants import (
     PME_TEMP_SCREEN,
     PME_SCREEN,
     MAX_STR_LEN,
     WINDOW_MIN_WIDTH,
     WINDOW_MIN_HEIGHT,
 )
-from . import constants as CC
+from .core import constants as CC
 from . import c_utils as CTU
-from . import screen_utils as SU
-from .layout_helper import lh, split
+from .ui import screen as SU
+from .ui.layout import lh, split
 from . import pme
 from . import operator_utils
 

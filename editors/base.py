@@ -6,11 +6,11 @@
 LAYER = "editors"
 
 import bpy
-from .. import constants as CC
+from ..core import constants as CC
 from .. import keymap_helper as KH
 from ..addon import get_prefs, temp_prefs, ic_rb, ic_cb, ic_eye, ic_fb, ic
-from ..constants import MAX_STR_LEN, EMODE_ITEMS
-from ..debug_utils import *
+from ..core.constants import MAX_STR_LEN, EMODE_ITEMS
+from ..infra.debug import *
 from ..bl_utils import (
     find_context,
     re_operator,
@@ -22,7 +22,7 @@ from ..bl_utils import (
     ConfirmBoxHandler,
     PME_OT_message_box,
 )
-from ..collection_utils import (
+from ..infra.collections import (
     sort_collection,
     AddItemOperator,
     MoveItemOperator,
@@ -37,9 +37,9 @@ from ..ui import (
     utitle,
 )
 from .. import utils as U
-from .. import screen_utils as SU
-from ..ui_utils import get_pme_menu_class, toggle_menu, pme_menu_classes
-from ..layout_helper import lh, operator, split, draw_pme_layout, L_SEP, L_LABEL
+from ..ui import screen as SU
+from ..ui.utils import get_pme_menu_class, toggle_menu, pme_menu_classes
+from ..ui.layout import lh, operator, split, draw_pme_layout, L_SEP, L_LABEL
 from ..property_utils import to_py_value
 from ..pme_types import Tag, PMItem, PMIItem
 from .. import keymap_helper

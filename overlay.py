@@ -3,9 +3,9 @@ import blf
 from time import time
 from .addon import ADDON_ID, get_prefs, get_uprefs, ic
 from .utils import multiton
-from .layout_helper import split
+from .ui.layout import split
 from . import pme
-from . import constants as CC
+from .core import constants as CC
 
 OVERLAY_ALIGNMENT_ITEMS = (
     ('TOP', "Top", ""),

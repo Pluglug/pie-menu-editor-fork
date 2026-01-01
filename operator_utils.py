@@ -17,7 +17,7 @@ from tokenize import (
 )
 from .addon import print_exc
 from . import pme
-from .constants import OP_CTX_ITEMS
+from .core.constants import OP_CTX_ITEMS
 
 
 class _XUntokenizer(Untokenizer):

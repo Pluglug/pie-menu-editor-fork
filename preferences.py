@@ -20,7 +20,7 @@ from .addon import (
     ic_cb,
     ic_eye,
 )
-from . import constants as CC
+from .core import constants as CC
 from . import operators as OPS
 from . import extra_operators as EOPS
 from .bl_utils import (
@@ -31,10 +31,10 @@ from .bl_utils import (
     ConfirmBoxHandler,
     message_box,
 )
-from .collection_utils import BaseCollectionItem, sort_collection
-from .layout_helper import lh, operator, split
-from .debug_utils import *
-from .panel_utils import (
+from .infra.collections import BaseCollectionItem, sort_collection
+from .ui.layout import lh, operator, split
+from .infra.debug import *
+from .ui.panels import (
     hide_panel,
     unhide_panel,
     add_panel,
@@ -64,11 +64,11 @@ from .keymap_helper import (
 from .previews_helper import ph
 from .overlay import OverlayPrefs
 from .ui import tag_redraw, draw_addons_maximized, is_userpref_maximized
-from .ui_utils import get_pme_menu_class, execute_script
+from .ui.utils import get_pme_menu_class, execute_script
 from . import utils as U
 from .property_utils import PropertyData, to_py_value
 from .pme_types import Tag, PMItem, PMIItem, PMLink, EdProperties, UserProperties
-from .ed_base import (
+from .editors.base import (
     WM_OT_pmi_icon_select,
     WM_OT_pmi_data_edit,
     PME_OT_pm_edit,

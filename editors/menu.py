@@ -19,9 +19,9 @@ from .base import (
 )
 from ..bl_utils import PME_OT_input_box
 from ..addon import get_prefs, ic_eye
-from ..layout_helper import lh, Col
+from ..ui.layout import lh, Col
 from ..ui import tag_redraw, shorten_str
-from ..constants import SPACER_SCALE_Y, SEPARATOR_SCALE_Y
+from ..core.constants import SPACER_SCALE_Y, SEPARATOR_SCALE_Y
 from .. import pme
 
 

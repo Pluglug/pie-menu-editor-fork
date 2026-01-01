@@ -169,7 +169,7 @@ import re
 from collections import defaultdict
 from typing import Dict, List, Pattern, Set
 
-from .debug_utils import (
+from .infra.debug import (
     DBG_DEPS,
     dbg_log,
     dbg_scope,

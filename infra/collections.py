@@ -13,7 +13,7 @@ LAYER = "infra"
 
 import bpy
 from .. import pme
-from ..layout_helper import lh
+from ..ui.layout import lh
 from ..bl_utils import ConfirmBoxHandler
 
 

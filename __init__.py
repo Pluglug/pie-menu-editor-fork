@@ -15,7 +15,7 @@ from bpy.app.handlers import persistent
 from bpy.app import version as APP_VERSION
 import sys
 import inspect
-from .debug_utils import *
+from .infra.debug import *
 
 MODULES = (
     "addon",

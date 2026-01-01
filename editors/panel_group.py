@@ -6,13 +6,13 @@
 LAYER = "editors"
 
 import bpy
-from .. import constants as CC
-from ..collection_utils import MoveItemOperator
+from ..core import constants as CC
+from ..infra.collections import MoveItemOperator
 from .base import EditorBase, PME_OT_pm_edit, PME_OT_pm_add
 from ..addon import get_prefs, ic, ic_cb
-from ..layout_helper import lh, operator, draw_pme_layout
+from ..ui.layout import lh, operator, draw_pme_layout
 from ..ui import utitle, tag_redraw
-from ..ui_utils import draw_menu
+from ..ui.utils import draw_menu
 from ..bl_utils import bl_context
 from ..operators import (
     WM_OT_pm_select,
@@ -21,8 +21,8 @@ from ..operators import (
     PME_OT_pm_search_and_select,
 )
 from ..extra_operators import PME_OT_clipboard_copy
-from .. import panel_utils as PAU
-from ..panel_utils import (
+from ..ui import panels as PAU
+from ..ui.panels import (
     panel,
     PLayout,
 )

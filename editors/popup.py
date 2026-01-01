@@ -19,11 +19,11 @@ from .base import (
     unextend_panel,
 )
 from ..addon import get_prefs, ic, ic_cb, ic_eye
-from .. import constants as CC
-from ..layout_helper import lh, draw_pme_layout, Row
+from ..core import constants as CC
+from ..ui.layout import lh, draw_pme_layout, Row
 from ..ui import tag_redraw, shorten_str
-from ..collection_utils import MoveItemOperator, move_item, remove_item
-from ..debug_utils import *
+from ..infra.collections import MoveItemOperator, move_item, remove_item
+from ..infra.debug import *
 from ..bl_utils import PME_OT_message_box, ConfirmBoxHandler, enum_item_idx
 from ..operators import popup_dialog_pie, WM_OT_pme_user_pie_menu_call
 from ..keymap_helper import CTRL, SHIFT, ALT, OSKEY, test_mods

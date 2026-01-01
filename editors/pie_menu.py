@@ -6,10 +6,10 @@
 LAYER = "editors"
 
 from .base import EditorBase
-from ..constants import ARROW_ICONS
+from ..core.constants import ARROW_ICONS
 from .. import pme
 from ..addon import ic, get_prefs
-from ..layout_helper import lh
+from ..ui.layout import lh
 
 
 pme.props.IntProperty("pm", "pm_radius", -1)

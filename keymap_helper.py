@@ -1,8 +1,8 @@
 import bpy
-from . import constants as CC
+from .core import constants as CC
 from .addon import get_uprefs, print_exc
 from .property_utils import DynamicPG, to_py_value
-from .debug_utils import *
+from .infra.debug import *
 from . import c_utils as CTU
 from . import operator_utils as OU
 from . import (

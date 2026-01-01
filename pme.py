@@ -1,6 +1,6 @@
 import bpy
 from .addon import get_prefs, temp_prefs, print_exc
-from .debug_utils import logw
+from .infra.debug import logw
 
 
 class UserData:
