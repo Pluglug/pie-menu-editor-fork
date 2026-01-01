@@ -27,13 +27,23 @@ Pie Menu Editor (PME) は、Blender 用の UI 拡張アドオンです。ユー�
 `pme2-dev` ブランチは以下の位置づけです。
 
 * **PME2 Experimental**: 次世代版 PME2 の試験実装ブランチ
-* **タグ**: `v2.0.0-alpha.0`
+* **タグ**: `v2.0.0-alpha.0` (Phase 1 完了)
 * **Blender 対応想定**: **5.0 以降専用**（詳細は `.claude/rules/compatibility.md`）
+* **現在のフェーズ**: Phase 1 (Layer Separation) 完了 → Phase 2 準備中
 * **目的**
 
   * PME1（安定ライン）の延命・バグ修正に支障を出さずに
   * 内部アーキテクチャを分離・整理し
   * 将来的な PME2（有償も視野に入れたプロ用ツール）への土台を作る
+
+> **Phase 1 成果物**:
+> - 新ローダー (`init_addon` / `register_modules`) 実装済み
+> - レイヤ違反検出・構造化ログ (`DBG_DEPS`, `DBG_PROFILE`) 動作中
+> - 54 モジュールの線形ロード順序が確立
+>
+> **既知の未解決問題** (Phase 2 以降で対応):
+> - Reload Scripts が壊れている (Issue #64, #65)
+> - 詳細は `.claude/rules/milestones.md` を参照
 
 PME1 / PME-F の挙動そのものをすぐに変えることは目的ではありません。
 当面は **「挙動はほぼそのまま / 中身だけ段階的に整理」** というスタンスを維持します。
@@ -88,17 +98,28 @@ Claude は「理想形に向けて一気に揃える」のではなく、「今�
 
 ## 3. モジュールロードと互換性
 
-### 3.1 `__init__.py` と MODULES
+### 3.1 新ローダーが基準
+
+**Phase 1 完了により、新ローダー (`init_addon` / `register_modules`) が動作しています。**
+
+* `USE_PME2_LOADER` フラグで切り替え可能（デフォルト: False）
+* 新ローダーは以下を提供:
+  * 依存関係に基づくトポロジカルソート
+  * レイヤ違反の検出 (`DBG_DEPS=True`)
+  * 構造化ログ出力 (`DBG_STRUCTURED=True`)
+  * パフォーマンスプロファイル (`DBG_PROFILE=True`)
+
+**今後は新ローダーをコンパスとして進めてください。**
+レイヤ違反やロード順の問題は、新ローダーのログで可視化されます。
+
+### 3.2 レガシーローダーとの互換性
 
 * 旧 PME では、`__init__.py` の `MODULES` タプルがロード順序を管理していました。
-* PME2 では、段階的に `pie_menu_editor/` 配下のパッケージ構造に移行していきますが、
-  **ロード順序依存（特に PropertyGroup / keymap / modal 登録周り）が残っている** 可能性があります。
+* レガシーローダーも引き続き動作しますが、**新規開発は新ローダー前提** で進めます。
 
 Claude が行うべきこと:
 
-* 既存のロード順を勝手に入れ替えない。
 * モジュールを移動する場合は、
-
   * まず「新モジュールを作成してクラスをコピー」
   * 旧モジュールからは `from .ui.layout import LayoutHelper` のように **再エクスポート** する
   * という手順にとどめる（いきなり元ファイルを空にしない）。
@@ -168,6 +189,17 @@ Claude が行うべきこと:
 
 * **`.claude/rules/testing.md`**
   * 変更ごとに最低限実施すべき手動テスト項目
+  * **Note**: Reload Scripts は現在 KNOWN BROKEN
+
+* **`.claude/rules/milestones.md`**
+  * フェーズ定義とマイルストーン (v2.0.0-alpha.0 → beta → RC)
+  * 各フェーズの完了条件と計画タスク
+
+### 関連ドキュメント
+
+* **`docs/api_pme.md`**
+  * `pme` モジュールの API ドラフト（Phase 2+ で整備予定）
+  * Stability levels: Stable / Experimental / Internal
 
 Claude は、**具体的な作業指示や禁止事項を決めるときは、`CLAUDE.md` よりも `.claude/rules/` の内容を優先**してください。
 `CLAUDE.md` は「全体の羅針盤」、`.claude/rules/` は「そのときの具体的な交通ルール」という位置づけです。

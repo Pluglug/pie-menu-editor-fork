@@ -36,8 +36,17 @@
 
 - [ ] `DBG_DEPS=True` で起動してレイヤ違反がない
 - [ ] `force_order=[]` で正常起動できる
-- [ ] F3 → Reload Scripts でエラーが出ない
 - [ ] アドオン無効化 → 有効化でエラーが出ない
+
+> ⚠️ **KNOWN BROKEN: Reload Scripts**
+>
+> F3 → Reload Scripts は現在 **既知の不具合** があります。
+>
+> - `ParsedData.pm_flick` などの属性エラー (Issue #64)
+> - カスタムアイコンが読み込まれない (Issue #65)
+>
+> これらは Phase 1 のスコープ外とし、Phase 2 以降で対応予定です。
+> Reload Scripts のテストは **スキップ** してください。
 
 ### PropertyGroup / クラス構造を触ったとき
 

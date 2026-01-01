@@ -55,37 +55,46 @@ core      → (なし)
 - `debug_utils.py` の `detect_layer_violations()` で自動検出
 - `DBG_DEPS=True` で起動時にレイヤ違反を警告表示
 
-## 3. モジュールローダー移行
+## 3. モジュールローダー（Phase 1 完了）
 
-### 現状（PME1 方式）
+### ✅ 新ローダー実装済み
 
-```python
-# __init__.py
-MODULES = ("addon", "pme", "c_utils", ...)  # 手動順序
-get_classes()  # PropertyGroup 依存を解決
-```
-
-### 目標（PME2 方式）
+Phase 1 で新ローダーが実装され、動作しています。
 
 ```python
-# __init__.py
+# __init__.py (USE_PME2_LOADER=True の場合)
 from . import addon
 
-def register():
+def on_context():
     addon.init_addon(
-        module_patterns=["core.*", "infra.*", "ui.*", "editors.*", "operators.*", "prefs.*"],
-        use_reload="pie_menu_editor" in sys.modules,
+        module_patterns=PME2_MODULE_PATTERNS,
+        use_reload=False,
     )
     addon.register_modules()
 ```
 
 ### `init_addon()` の処理フロー
 
-1. `module_patterns` に基づいてモジュールを収集
-2. 各モジュールをロード（必要に応じてリロード）
-3. import 文と PropertyGroup 依存を解析
-4. トポロジカルソートでロード順序を決定
-5. `MODULE_NAMES` に格納
+1. `collect_modules()`: module_patterns に基づいてモジュールを収集
+2. `load_modules()`: 各モジュールをロード（必要に応じてリロード）
+3. `sort_modules()`: import 文と PropertyGroup 依存を解析 → トポロジカルソート
+4. `MODULE_NAMES` に格納
+
+### デバッグフラグ
+
+| フラグ | 出力内容 |
+|--------|---------|
+| `DBG_DEPS=True` | レイヤ違反一覧、Mermaid 形式の依存グラフ |
+| `DBG_PROFILE=True` | 各フェーズの所要時間 |
+| `DBG_STRUCTURED=True` | NDJSON 形式のログ |
+
+### レガシーローダー（互換用）
+
+```python
+# __init__.py (USE_PME2_LOADER=False の場合)
+MODULES = ("addon", "pme", "c_utils", ...)  # 手動順序
+get_classes()  # PropertyGroup 依存を解決
+```
 
 ### `force_order` の扱い
 
@@ -95,20 +104,32 @@ def register():
 
 ## 4. 現状のフラット構造からの移行
 
-### Phase 1: 安全なファイルから移動
+### Phase 1: 安全なファイルから移動 ✅ 完了
 
-| 対象 | 移動先 | リスク |
-|------|--------|--------|
-| `overlay.py` | `infra/overlay.py` | 低（描画のみ、依存少） |
-| `layout_helper.py` | `ui/layout.py` | 低（レイアウトヘルパー） |
-| `ed_*.py` | `editors/` | 中（EditorBase との依存） |
+| 対象 | 移動先 | 状態 |
+|------|--------|------|
+| `constants.py` | `core/constants.py` | ✅ 完了 |
+| `debug_utils.py` | `infra/debug.py` | ✅ 完了 |
+| `layout_helper.py` | `ui/layout.py` | ✅ 完了 |
+| `ui.py` (一部) | `ui/lists.py`, `ui/panels.py` | ✅ 完了 |
+| `ed_*.py` | `editors/` | ✅ 完了 |
 
-### Phase 2: 依存の多いファイル
+### Phase 2: UI & Editor 基盤の整理（次フェーズ）
 
-| 対象 | 移動先 | リスク |
-|------|--------|--------|
-| `operators.py` | `operators/` | 高（巨大、依存多） |
-| `preferences.py` | `prefs/` | 高（全体のハブ） |
+| 対象 | 作業内容 | リスク |
+|------|----------|--------|
+| `WM_UL_pm_list`, `PME_UL_pm_tree` | 責務分離 | 中 |
+| `EditorBase` | ui 層依存の削減 | 中 |
+| `pme.props` / `ParsedData` | core 寄せ検討 | 中 |
+
+### Phase 3: Runtime Lifecycle（将来）
+
+| 対象 | 作業内容 | リスク |
+|------|----------|--------|
+| `operators/` (runtime 系) | Reload 対応 | 高 |
+| `preferences.py` | 依存削減 | 高 |
+
+詳細は `.claude/rules/milestones.md` を参照。
 
 ### 移動手順
 
