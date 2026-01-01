@@ -131,6 +131,25 @@ def get_user_backup_dir(create: bool = False) -> str:
     return backup_dir
 
 
+def get_user_exports_dir(create: bool = False) -> str:
+    """
+    Get user exports directory.
+
+    Location: {user_config}/exports/
+
+    This is the default location for user-exported menu files.
+
+    Args:
+        create: If True, create the directory if it doesn't exist.
+    """
+    exports_dir = os.path.join(get_user_config_dir(create=create), "exports")
+
+    if create and not os.path.exists(exports_dir):
+        os.makedirs(exports_dir, exist_ok=True)
+
+    return exports_dir
+
+
 # -----------------------------------------------------------------------------
 # System Resource Paths (Addon directory, read-only)
 # -----------------------------------------------------------------------------

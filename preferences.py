@@ -63,6 +63,7 @@ from .infra.io import (
     write_export_file,
     parse_json_data,
     BackupManager,
+    get_user_exports_dir,
 )
 from .keymap_helper import (
     KeymapHelper,
@@ -98,8 +99,10 @@ from .ed_sticky_key import PME_OT_sticky_key_edit
 from .ed_modal import PME_OT_prop_data_reset
 
 pp = pme.props
+# Import starts from bundled examples (read-only)
 import_filepath = os.path.join(ADDON_PATH, "examples", "examples.json")
-export_filepath = os.path.join(ADDON_PATH, "examples", "my_pie_menus.json")
+# Export starts from user directory (initialized lazily to avoid bpy dependency at module load)
+export_filepath = None  # Will be set to get_user_exports_dir() on first use
 
 
 def update_pmi_data(self, context, reset_prop_data=True):
@@ -495,6 +498,13 @@ class WM_OT_pm_export(bpy.types.Operator, ExportHelper):
     ) # Compat
 
     def _draw(self, menu, context):
+        global export_filepath
+        # Initialize export_filepath lazily (first time only)
+        if export_filepath is None:
+            export_filepath = os.path.join(
+                get_user_exports_dir(create=True), "my_pie_menus.json"
+            )
+
         lh.lt(menu.layout, operator_context='INVOKE_DEFAULT')
 
         lh.operator(
