@@ -193,7 +193,7 @@ prefs = PMEPreferences.get()  # 直接参照は避ける
 | Phase 3 (beta) | `editors` / `operators` を順次移行 |
 | RC | 直接依存を削除 or 許容範囲として文書化 |
 
-詳細は `rules/pme_api_plan.md` を参照。
+詳細は `rules/api/pme_api_plan.md` を参照。
 
 ## 6. pme モジュールの位置づけ
 
@@ -220,4 +220,4 @@ prefs = PMEPreferences.get()  # 直接参照は避ける
 
 3. **API の安定化**
    - Stable / Experimental / Internal のラベリング
-   - 詳細は `rules/pme_api_plan.md` を参照
+   - 詳細は `rules/api/pme_api_plan.md` を参照

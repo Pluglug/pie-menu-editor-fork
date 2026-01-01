@@ -5,7 +5,7 @@
 このドキュメントは、現状の `pme` モジュールが外部・内部からどう使われているかを記録する **観測ドキュメント** です。
 
 Phase 2-B (alpha.2) で、各シンボルに **Stability level** を付与しました。
-詳細な設計は `rules/pme_api_plan.md` を参照してください。
+詳細な設計は `rules/api/pme_api_plan.md` を参照してください。
 
 ---
 
@@ -96,7 +96,7 @@ Phase 2-B (alpha.2) で、各シンボルに **Stability level** を付与しま
 ### グローバル名前空間のデフォルト変数
 
 `gen_globals()` によって生成される辞書には以下が含まれる。
-詳細は `rules/pme_standard_namespace.md` を参照。
+詳細は `rules/api/pme_standard_namespace.md` を参照。
 
 > **注意**: v2.0.0 では全て Experimental。Stable は v2.1.0 以降で検討。
 
@@ -243,7 +243,7 @@ Phase 2-A の観測結果を踏まえ、以下が決定されました：
 - `pme.context.pm` / `pme.context.pmi` の生オブジェクト — 副作用リスク
 - `PME`, `PREFS` 変数 — 内部設定への直接アクセス
 
-詳細は `rules/pme_api_plan.md` を参照。
+詳細は `rules/api/pme_api_plan.md` を参照。
 
 ---
 
@@ -358,6 +358,6 @@ result = context.eval(expression, globals=globals_dict)
 
 - `pme.py`: 実装ファイル
 - `addon.py`: `get_prefs()`, `temp_prefs()`, `print_exc()` の実装
-- `rules/pme_api_plan.md`: API 設計案（Phase 2-B で更新）
-- `rules/pme_standard_namespace.md`: 標準名前空間の定義
+- `rules/api/pme_api_plan.md`: API 設計案（Phase 2-B で更新）
+- `rules/api/pme_standard_namespace.md`: 標準名前空間の定義
 - `docs/api_pme.md`: API ドキュメント（Phase 2+ で整備予定）

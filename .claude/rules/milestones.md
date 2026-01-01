@@ -74,7 +74,7 @@ PME2 開発のマイルストーンとフェーズ定義。
 #### pme API の観測
 
 - [x] `pme.props` / `PMEProps` / `ParsedData` / `pme.context` の **現状 API と使用箇所のインベントリ作成** ✅
-  - 観測結果は `rules/pme_api_current.md` にまとめた
+  - 観測結果は `rules/api/pme_api_current.md` にまとめた
 - [x] 「どのシンボルが、どのモジュールから呼ばれているか」のマップ作成 ✅
 
 ### ゴール ✅ 達成
@@ -85,7 +85,7 @@ PME2 開発のマイルストーンとフェーズ定義。
 
 ### 成果物
 
-- `rules/pme_api_current.md` — pme モジュールの現状インベントリ ✅
+- `rules/api/pme_api_current.md` — pme モジュールの現状インベントリ ✅
 - `rules/ui_list_analysis.md` — UI リストの責務分析 ✅
 - `rules/editor_dependency_map.md` — Editor の依存関係マップ ✅
 
@@ -124,8 +124,8 @@ PME2 開発のマイルストーンとフェーズ定義。
 
 #### pme API 仕様確定 ✅ 完了
 
-- [x] `rules/pme_api_current.md` の観測結果を確認 ✅ (Phase 2-A で完了)
-- [x] `rules/pme_api_plan.md` で Stability level を最終確定 ✅
+- [x] `rules/api/pme_api_current.md` の観測結果を確認 ✅ (Phase 2-A で完了)
+- [x] `rules/api/pme_api_plan.md` で Stability level を最終確定 ✅
 - [x] 外部スクリプトからの利用シナリオを文書化 ✅
 
 **v2.0.0 での方針**:
@@ -137,7 +137,7 @@ PME2 開発のマイルストーンとフェーズ定義。
 
 Executor API (`pme.execute()`, `pme.evaluate()`) について:
 
-- [ ] API シグネチャを `rules/pme_api_plan.md` に確定（既存の Draft を確認）
+- [ ] API シグネチャを `rules/api/pme_api_plan.md` に確定（既存の Draft を確認）
 - [ ] エラーハンドリング方針を決定（例外 vs Result オブジェクト）
 - [ ] **実装は検討のみ**: 内部利用 + 実験レベルに留め、外部公開は Phase 3 以降
 
@@ -156,7 +156,7 @@ Executor API (`pme.execute()`, `pme.evaluate()`) について:
 - [x] F3 → Reload Scripts 実行時に、Prefs 画面と基本的な Pie 呼び出しがエラーなしで動作する ✅
   - ライフサイクルの完全設計は Phase 3 で行う
   - この時点では「死なない」が最低ライン → **達成**
-- [x] `pme` の public surface と Stability level が `rules/pme_api_plan.md` に明文化されている ✅
+- [x] `pme` の public surface と Stability level が `rules/api/pme_api_plan.md` に明文化されている ✅
 - [ ] Low risk なレイヤ違反が 3〜5 件削減されている (Phase 2-B 残タスク)
 
 ---

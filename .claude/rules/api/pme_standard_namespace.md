@@ -273,5 +273,5 @@ Phase 3 で永続化 API (`pme.user_data.get/set`) を検討する際、`U` と�
 ## 参照
 
 - `pme.py`: `PMEContext.__init__`, `gen_globals()` の実装
-- `rules/pme_api_plan.md`: API 設計案
-- `rules/pme_api_current.md`: 現状のインベントリ
+- `rules/api/pme_api_plan.md`: API 設計案
+- `rules/api/pme_api_current.md`: 現状のインベントリ
