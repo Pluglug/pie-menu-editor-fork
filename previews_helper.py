@@ -78,8 +78,15 @@ def custom_icon(icon):
     return ph.get_icon(icon)
 
 
-if "ph" in globals():
-    ph.unregister()
+# HOTFIX (Phase 2-B): Reload Scripts のサイクルで unregister() を呼ぶと
+# bpy.utils.previews の内部状態が壊れて警告がスパムする問題を回避。
+# Reload 後に古い ph インスタンスが残っていても、新しい ph.refresh() が
+# 「既に self.preview がある」とみなして再初期化しない（line 49 の early return）。
+# アイコンは一度目のロードで登録され、Reload しても維持される。
+# Phase 3 でライフサイクルを正しく再設計する予定。
+#
+# if "ph" in globals():
+#     ph.unregister()
 
 ph = PreviewsHelper()
 ph.refresh()
