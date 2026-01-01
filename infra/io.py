@@ -22,17 +22,157 @@ if TYPE_CHECKING:
 # Path Helpers
 # =============================================================================
 
+from ..addon import ADDON_ID
+
+
 def _get_addon_id_from_path(addon_path: str) -> str:
     """Extract addon ID from the addon path (directory name)."""
     return os.path.basename(addon_path)
 
 
+# -----------------------------------------------------------------------------
+# User Resource Paths (Blender standard location)
+# -----------------------------------------------------------------------------
+# These use bpy.utils.user_resource() for Blender-standard user data storage.
+# User resources are safe from addon updates/reinstalls.
+#
+# Directory structure under get_user_config_dir():
+#   scripts/
+#     autorun/      - Scripts run at addon startup
+#     register/     - Scripts run at register()
+#     unregister/   - Scripts run at unregister()
+#   icons/          - User custom icons
+#   backups/        - Backup files
+# -----------------------------------------------------------------------------
+
+def get_user_config_dir(create: bool = False) -> str:
+    """
+    Get PME's user config directory (Blender standard location).
+
+    Location: {blender_config}/addons/pie_menu_editor/
+
+    This is the base directory for all user-specific data that should
+    survive addon updates. Subdirectories include:
+      - scripts/         User scripts (autorun/, register/, unregister/)
+      - icons/           User custom icons
+      - backups/         Backup files
+
+    Args:
+        create: If True, create the directory if it doesn't exist.
+
+    Returns:
+        Path to the user config directory.
+    """
+    # Import here to avoid bpy dependency at module load time
+    from bpy.utils import user_resource
+
+    config_path = user_resource("CONFIG", path="addons", create=create)
+    user_dir = os.path.join(config_path, ADDON_ID)
+
+    if create and not os.path.exists(user_dir):
+        os.makedirs(user_dir, exist_ok=True)
+
+    return user_dir
+
+
+def get_user_scripts_dir(create: bool = False) -> str:
+    """
+    Get user scripts directory.
+
+    Location: {user_config}/scripts/
+
+    Subdirectories (implicit, same structure as system scripts):
+      - autorun/      Scripts run at addon startup
+      - register/     Scripts run at register()
+      - unregister/   Scripts run at unregister()
+
+    Args:
+        create: If True, create the directory if it doesn't exist.
+    """
+    scripts_dir = os.path.join(get_user_config_dir(create=create), "scripts")
+
+    if create and not os.path.exists(scripts_dir):
+        os.makedirs(scripts_dir, exist_ok=True)
+
+    return scripts_dir
+
+
+def get_user_icons_dir(create: bool = False) -> str:
+    """
+    Get user icons directory.
+
+    Location: {user_config}/icons/
+
+    Args:
+        create: If True, create the directory if it doesn't exist.
+    """
+    icons_dir = os.path.join(get_user_config_dir(create=create), "icons")
+
+    if create and not os.path.exists(icons_dir):
+        os.makedirs(icons_dir, exist_ok=True)
+
+    return icons_dir
+
+
+def get_user_backup_dir(create: bool = False) -> str:
+    """
+    Get user backup directory.
+
+    Location: {user_config}/backups/
+
+    Args:
+        create: If True, create the directory if it doesn't exist.
+    """
+    backup_dir = os.path.join(get_user_config_dir(create=create), "backups")
+
+    if create and not os.path.exists(backup_dir):
+        os.makedirs(backup_dir, exist_ok=True)
+
+    return backup_dir
+
+
+# -----------------------------------------------------------------------------
+# System Resource Paths (Addon directory, read-only)
+# -----------------------------------------------------------------------------
+# These are bundled with the addon and should not be modified by users.
+# -----------------------------------------------------------------------------
+
+def get_system_scripts_dir(addon_path: str) -> str:
+    """
+    Get PME system scripts directory.
+
+    Location: {addon_path}/scripts/
+
+    Contains:
+      - command_*.py    Command templates
+      - custom_*.py     Custom templates
+      - autorun/functions.py  PME system functions (DO NOT EDIT)
+    """
+    return os.path.join(addon_path, "scripts")
+
+
+def get_system_icons_dir(addon_path: str) -> str:
+    """
+    Get PME system icons directory.
+
+    Location: {addon_path}/icons/
+
+    Contains system icons (p*.png, brush.*.dat, etc.)
+    """
+    return os.path.join(addon_path, "icons")
+
+
+# -----------------------------------------------------------------------------
+# Legacy Paths (for backward compatibility, will be deprecated)
+# -----------------------------------------------------------------------------
+
 def get_addon_data_path(addon_path: str) -> str:
     """
     Get the addon data directory path.
 
+    DEPRECATED: Use get_user_config_dir() instead.
+
     Currently: {addon_path}/../{addon_id}_data/
-    Future: May change to user config directory.
     """
     addon_id = _get_addon_id_from_path(addon_path)
     return os.path.abspath(
@@ -41,7 +181,12 @@ def get_addon_data_path(addon_path: str) -> str:
 
 
 def get_backup_folder_path(addon_path: str) -> str:
-    """Get the backup folder path."""
+    """
+    Get the backup folder path.
+
+    DEPRECATED: Use get_user_backup_dir() instead.
+    Currently returns legacy path for backward compatibility.
+    """
     return os.path.join(get_addon_data_path(addon_path), "backups")
 
 
@@ -49,8 +194,8 @@ def get_user_icons_path(addon_path: str) -> str:
     """
     Get the user icons directory path.
 
-    Currently: {addon_path}/icons/
-    Future: May change to user data directory.
+    DEPRECATED: Use get_user_icons_dir() instead.
+    Currently returns legacy path (addon directory).
     """
     return os.path.join(addon_path, "icons")
 
