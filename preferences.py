@@ -4,7 +4,6 @@
 import bpy
 import os
 import json
-import datetime
 import re
 from types import MethodType
 from bpy_extras.io_utils import ExportHelper, ImportHelper
@@ -59,6 +58,12 @@ from . import keymap_helper
 from . import pme
 from . import operator_utils
 from .compatibility_fixes import fix_json, fix
+from .infra.io import (
+    read_import_file,
+    write_export_file,
+    parse_json_data,
+    BackupManager,
+)
 from .keymap_helper import (
     KeymapHelper,
     MOUSE_BUTTONS,
@@ -388,68 +393,29 @@ class WM_OT_pm_import(bpy.types.Operator, ImportHelper):
             pm.ed.init_pm(pm)
 
     def import_file(self, filepath):
-        from zipfile import ZipFile, is_zipfile
+        # Use infra.io for file reading
+        result = read_import_file(
+            filepath=filepath,
+            addon_path=ADDON_PATH,
+            password=self.password if self.password else None,
+            conflict_mode=self.mode,
+        )
 
-        if is_zipfile(filepath):
-            with ZipFile(filepath, "r") as f:
-                if self.password:
-                    f.setpassword(self.password.encode("utf-8"))
-
-                try:
-                    f.testzip()
-                except RuntimeError as e:
-                    message_box(str(e))
-                    return
-
-                for info in f.infolist():
-                    if info.is_dir():
-                        if info.filename == "icons/":
-                            self.refresh_icons_flag = True
-
-                        try:
-                            os.mkdir(os.path.join(ADDON_PATH, info.filename))
-                        except:
-                            pass
-
-                    elif info.filename.endswith(".json"):
-                        self.import_json(f.read(info.filename))
-
-                    else:
-                        if os.path.isfile(os.path.join(ADDON_PATH, info.filename)):
-                            if self.mode == 'SKIP':
-                                continue
-                            elif self.mode == 'RENAME':
-                                mo = re.search(r"(.+)\.(\d{3,})(\.\w+)", info.filename)
-                                if mo:
-                                    name, idx, ext = mo.groups()
-                                    idx = int(idx)
-
-                                else:
-                                    name, ext = os.path.splitext(info.filename)
-                                    idx = 0
-
-                                while True:
-                                    idx += 1
-                                    info.filename = "%s.%s%s" % (
-                                        name,
-                                        str(idx).zfill(3),
-                                        ext,
-                                    )
-                                    if not os.path.isfile(
-                                        os.path.join(ADDON_PATH, info.filename)
-                                    ):
-                                        break
-
-                        f.extract(info, path=ADDON_PATH)
-        else:
-            try:
-                with open(filepath, "r") as f:
-                    s = f.read()
-            except:
-                self.report({'WARNING'}, CC.W_FILE)
+        # Report errors
+        for error in result.errors:
+            if "password" in error.lower() or "runtime" in error.lower():
+                message_box(error)
                 return
+            else:
+                self.report({'WARNING'}, error)
 
-            self.import_json(s)
+        # Set icon refresh flag
+        if result.has_icons:
+            self.refresh_icons_flag = True
+
+        # Import each JSON file
+        for json_data in result.json_data_list:
+            self.import_json(json_data)
 
     def execute(self, context):
         global import_filepath
@@ -586,21 +552,21 @@ class WM_OT_pm_export(bpy.types.Operator, ExportHelper):
         if not self.filepath:
             return {'CANCELLED'}
 
-        if not self.filepath.endswith(".json"):
-            self.filepath += ".json"
-
         data = get_prefs().get_export_data(
             export_tags=self.export_tags, mode=self.mode, tag=self.tag,
             compat=self.compat_json, mark_schema=self.mark_schema
         )
-        data = json.dumps(data, indent=2, separators=(", ", ": "))
+
         try:
-            with open(self.filepath, 'w') as f:
-                f.write(data)
-        except:
+            # Use infra.io for file writing
+            write_export_file(self.filepath, data)
+        except Exception:
             print_exc()
             return {'CANCELLED'}
 
+        # Update filepath (write_export_file may have added .json extension)
+        if not self.filepath.endswith(".json"):
+            self.filepath += ".json"
         export_filepath = self.filepath
         return {'FINISHED'}
 
@@ -3546,64 +3512,31 @@ class PMEPreferences(bpy.types.AddonPreferences):
 
     def backup_menus(self, operator=None):
         DBG_INIT and logh("Backup")
-        # gen new filename
-        backup_folder_path = os.path.abspath(
-            os.path.join(ADDON_PATH, os.pardir, ADDON_ID + "_data", "backups")
-        )
-        new_backup_filepath = os.path.join(
-            backup_folder_path,
-            "backup_%s.json" % datetime.datetime.now().strftime("%Y.%m.%d_%H.%M.%S"),
-        )
-        if os.path.isfile(new_backup_filepath):
-            DBG_INIT and logi("Backup exists")
+
+        # Use BackupManager from infra.io
+        backup_mgr = BackupManager(ADDON_PATH)
+
+        # Get export data
+        data = self.get_export_data()
+
+        # Create backup
+        backup_path, message = backup_mgr.create_backup(data, check_changes=True)
+
+        if backup_path:
+            DBG_INIT and logi("New backup", backup_path)
             if operator:
                 bpy.ops.pme.message_box(
                     title="Backup Menus",
-                    message="Backup exists: " + new_backup_filepath,
+                    message="New backup: " + backup_path
                 )
-            return
-
-        # find backups
-        re_backup_filename = re.compile(
-            r"backup_\d{4}\.\d{2}\.\d{2}_\d{2}\.\d{2}\.\d{2}\.json"
-        )
-        if not os.path.exists(backup_folder_path):
-            os.makedirs(backup_folder_path)
-
-        MAX_NUM_BACKUPS = 20
-        backups = []
-        for filepath in sorted(os.listdir(backup_folder_path)):
-            if re_backup_filename.match(filepath):
-                backups.append(filepath)
-
-        # open last backup
-        last_data = None
-        if len(backups):
-            with open(os.path.join(backup_folder_path, backups[-1])) as f:
-                last_data = f.read()
-
-        data = self.get_export_data()
-        data = json.dumps(data, indent=2, separators=(", ", ": "))
-        if not data or last_data and last_data == data:
-            DBG_INIT and logi("No changes")
+        else:
+            # Determine reason for not creating backup
+            if "No changes" in message:
+                DBG_INIT and logi("No changes")
+            elif "already exists" in message:
+                DBG_INIT and logi("Backup exists")
             if operator:
-                bpy.ops.pme.message_box(title="Backup Menus", message="No changes")
-            return
-
-        # remove old backups
-        if len(backups) >= MAX_NUM_BACKUPS:
-            for i in range(len(backups) + 1 - MAX_NUM_BACKUPS):
-                DBG_INIT and logw("Remove backup", backups[i])
-                os.remove(os.path.join(backup_folder_path, backups[i]))
-
-        # save new backup
-        with open(new_backup_filepath, "w") as f:
-            f.write(data)
-            DBG_INIT and logi("New backup", new_backup_filepath)
-            if operator:
-                bpy.ops.pme.message_box(
-                    title="Backup Menus", message="New backup: " + new_backup_filepath
-                )
+                bpy.ops.pme.message_box(title="Backup Menus", message=message)
 
     def get_export_data(self, export_tags=True, mode='ALL', tag="", compat=False, mark_schema=True):
         pr = self
