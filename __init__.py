@@ -60,7 +60,12 @@ MODULES = (
 CLASSES = []
 
 
-def get_classes():
+# ======================================================
+# Legacy Loader (MODULES + get_classes)
+# ======================================================
+
+def legacy_get_classes():
+    """Get all bpy_struct classes from MODULES for legacy registration."""
     ret = set()
     bpy_struct = bpy.types.bpy_struct
     cprop = bpy.props.CollectionProperty
@@ -125,20 +130,111 @@ def get_classes():
     return ret
 
 
-def register_module():
+def legacy_register_module():
+    """Register all classes using legacy MODULES approach."""
     if hasattr(bpy.utils, "register_module"):
         bpy.utils.register_module(__name__)
     else:
-        for cls in get_classes():
+        for cls in legacy_get_classes():
             bpy.utils.register_class(cls)
 
 
-def unregister_module():
+def legacy_unregister_module():
+    """Unregister all classes using legacy MODULES approach."""
     if hasattr(bpy.utils, "unregister_module"):
         bpy.utils.unregister_module(__name__)
     else:
-        for cls in get_classes():
+        for cls in legacy_get_classes():
             bpy.utils.unregister_class(cls)
+
+
+# ======================================================
+# New Loader (init_addon + register_modules)
+# ======================================================
+
+# Module patterns for init_addon
+# These patterns define which modules are collected and loaded by the new loader.
+PME2_MODULE_PATTERNS = [
+    # Layer packages
+    "core",
+    "core.*",
+    "infra",
+    "infra.*",
+    "ui",
+    "ui.*",
+    "editors",
+    "editors.*",
+    # Core modules (without package)
+    "addon",
+    "pme",
+    "c_utils",
+    "utils",
+    "previews_helper",
+    "property_utils",
+    "overlay",
+    "modal_utils",
+    "macro_utils",
+    "selection_state",
+    "keymap_helper",
+    "operator_utils",
+    "compatibility_fixes",
+    "pme_types",
+    # Operators
+    "operators",
+    "operators.*",
+    "extra_operators",
+    # Preferences
+    "preferences",
+    # Legacy wrappers (for backward compat during transition)
+    "constants",
+    "debug_utils",
+    "bl_utils",
+    "layout_helper",
+    "screen_utils",
+    "collection_utils",
+    "panel_utils",
+    "ui_utils",
+    "ed_base",
+    "ed_pie_menu",
+    "ed_menu",
+    "ed_popup",
+    "ed_stack_key",
+    "ed_sticky_key",
+    "ed_macro",
+    "ed_modal",
+    "ed_panel_group",
+    "ed_hpanel_group",
+    "ed_property",
+]
+
+
+def new_register_modules():
+    """Register modules using init_addon approach."""
+    from .infra.debug import dbg_log, dbg_scope
+
+    dbg_log("deps", "Using init_addon loader", location="__init__.new_register_modules")
+
+    # Initialize addon module system
+    with dbg_scope("profile", "new_register_modules.init_addon", location="__init__"):
+        addon.init_addon(
+            module_patterns=PME2_MODULE_PATTERNS,
+            use_reload=False,
+        )
+
+    # Register all classes and call module register() functions
+    with dbg_scope("profile", "new_register_modules.register", location="__init__"):
+        addon.register_modules()
+
+
+def new_unregister_modules():
+    """Unregister modules using init_addon approach."""
+    addon.unregister_modules()
+
+
+# Backward compatibility aliases
+get_classes = legacy_get_classes
+register_module = legacy_register_module
+unregister_module = legacy_unregister_module
 
 
 if not bpy.app.background:
@@ -240,7 +336,20 @@ def on_context():
         if k.startswith("__"):
             pme.context.add_global(k, v)
 
-    register_module()
+    # Branch based on loader flag
+    if addon.USE_PME2_LOADER:
+        # New loader: init_addon handles class registration and module.register() calls
+        DBG_INIT and logi("Using PME2 Loader (init_addon)")
+        new_register_modules()
+    else:
+        # Legacy loader: manual class registration + module.register() loop
+        DBG_INIT and logi("Using Legacy Loader (MODULES)")
+        legacy_register_module()
+
+        for mod in MODULES:
+            m = sys.modules["%s.%s" % (__name__, mod)]
+            if hasattr(m, "register"):
+                m.register()
 
     pr = get_prefs()
 
@@ -251,11 +360,6 @@ def on_context():
                 property_utils.from_dict(pr, re_enable_data)
             re_enable_data.clear()
             re_enable_data = None
-
-    for mod in MODULES:
-        m = sys.modules["%s.%s" % (__name__, mod)]
-        if hasattr(m, "register"):
-            m.register()
 
     if pr.missing_kms:
         logw(f"Missing Keymaps: {pr.missing_kms}")
@@ -467,11 +571,21 @@ def unregister():
         global re_enable_data
         re_enable_data = property_utils.to_dict(get_prefs())
 
-    for mod in reversed(MODULES):
-        m = sys.modules["%s.%s" % (__name__, mod)]
-        if hasattr(m, "unregister"):
-            m.unregister()
+    # Branch based on loader flag
+    if addon.USE_PME2_LOADER:
+        # New loader: unregister_modules handles everything
+        DBG_INIT and logi("Unregistering with PME2 Loader")
+        new_unregister_modules()
+    else:
+        # Legacy loader: manual module.unregister() loop + class unregistration
+        DBG_INIT and logi("Unregistering with Legacy Loader")
+        for mod in reversed(MODULES):
+            m = sys.modules["%s.%s" % (__name__, mod)]
+            if hasattr(m, "unregister"):
+                m.unregister()
+        legacy_unregister_module()
 
+    # Common cleanup (regardless of loader)
     if hasattr(bpy.types.WindowManager, "pme"):
         delattr(bpy.types.WindowManager, "pme")
 
@@ -483,5 +597,3 @@ def unregister():
 
     if load_post_context in bpy.app.handlers.load_post:
         bpy.app.handlers.load_post.remove(load_post_context)
-
-    unregister_module()
