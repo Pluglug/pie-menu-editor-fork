@@ -99,7 +99,11 @@ core       (0) ← 最下位：Blender 非依存のロジック・データ構�
 
 1. ~~`editors/hpanel_group.py`: `from ..operators import *` → 明示的インポート~~ ✅ 完了
 2. ~~旧 `ed_*.py` ファイルの薄いラッパー整理~~ ✅ 確認済み (7/11 移行済み、残り4つは Phase 3)
-3. 不要になった compatibility shim の削除
+3. ~~不要になった compatibility shim の削除~~ → 調査完了（削除対象なし、下記参照）
+
+**Compatibility shim の調査結果**:
+- `re_enable_data` / `tmp_data` (`__init__.py`) — **保持**: Issue #63 でユーザー要望あり、将来復活予定
+- `compatibility_fixes.py` の `fix_*` 関数群 — **保持**: マイグレーションパス維持
 
 **やらないこと**:
 - `EditorBase` の構造変更
@@ -233,6 +237,43 @@ from ..operators import (
 | 旧パスからの再エクスポート | 後方互換性のため |
 | `TYPE_CHECKING` ブロック内の import | 型ヒントのみで実行時に影響なし |
 | `prefs` からの下位レイヤ参照 | `prefs` は全体のハブなので許容 |
+
+---
+
+## 長期目標（Post v2.0.0）
+
+### `import X as Y` パターンの削減
+
+**目標**: モジュールをコンポーネント単位で明確に分離するため、エイリアス import を明示的な cherry-pick import に置き換える。
+
+**現状の問題パターン**:
+```python
+# Before: エイリアス import（依存が不明確）
+from . import utils as U
+from .ui import panels as PAU
+from ..core import constants as CC
+
+# After: 明示的 import（依存が明確）
+from .utils import some_function, another_function
+from .ui.panels import hide_panel, unhide_panel
+from ..core.constants import MAX_STR_LEN, EMODE_ITEMS
+```
+
+**メリット**:
+- 依存関係が一目で分かる
+- 未使用の import を検出しやすい
+- IDE の自動補完・リファクタリングが効く
+- モジュール分割時の影響範囲が明確
+
+**対象候補**:
+| パターン | 使用箇所（概算） | 優先度 |
+|---------|-----------------|--------|
+| `from . import utils as U` | 多数 | 低 |
+| `from .ui import panels as PAU` | 5+ | 中 |
+| `from ..core import constants as CC` | 多数 | 低 |
+| `from . import keymap_helper as KH` | 多数 | 低 |
+
+**実施時期**: v2.0.0 リリース後、内部構造が安定してから段階的に実施。
 
 ---
 

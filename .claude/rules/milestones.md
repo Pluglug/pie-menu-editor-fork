@@ -244,6 +244,22 @@ v2.0.0 リリース後の計画。
 - PropertyGroup の遅延初期化
 - キャッシュ戦略の見直し
 
+### Import パターンの整理
+
+**目標**: `import X as Y` パターンを明示的な cherry-pick import に置き換え、モジュールをコンポーネント単位で明確に分離する。
+
+```python
+# Before
+from . import utils as U
+from ..core import constants as CC
+
+# After
+from .utils import specific_function
+from ..core.constants import MAX_STR_LEN, EMODE_ITEMS
+```
+
+詳細は `rules/dependency_cleanup_plan.md` の「長期目標」セクションを参照。
+
 ---
 
 ## フェーズ間の関係図
