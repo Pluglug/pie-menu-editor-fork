@@ -1,9 +1,12 @@
 # debug_utils.py - DEPRECATED: Thin wrapper for backward compatibility
+# LAYER = "infra"  (for layer violation detection)
 #
 # This file is scheduled for removal in a future PME2 release.
 # All functionality has been moved to: infra/debug.py
 #
 # Existing imports like `from .debug_utils import DBG_INIT` will continue to work.
+
+LAYER = "infra"
 
 from .infra.debug import (
     # Debug flags

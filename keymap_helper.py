@@ -1,4 +1,10 @@
+# keymap_helper.py - Keymap management utilities
+# LAYER = "infra"
+
 import bpy
+
+LAYER = "infra"
+
 from .core import constants as CC
 from .addon import get_uprefs, print_exc
 from .property_utils import DynamicPG, to_py_value

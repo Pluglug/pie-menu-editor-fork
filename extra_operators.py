@@ -1,7 +1,13 @@
+# extra_operators.py - Additional utility operators
+# LAYER = "operators"
+
 import bpy
 import addon_utils
 from bpy.app import version as APP_VERSION
 from bpy.app.handlers import persistent
+
+LAYER = "operators"
+
 from .addon import ADDON_ID, get_prefs, get_uprefs
 from .bl_utils import PopupOperator, popup_area, ctx_dict, area_header_text_set
 from .ui.panels import panel, panel_label, bl_panel_enum_items

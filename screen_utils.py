@@ -1,9 +1,12 @@
 # screen_utils.py - DEPRECATED: Thin wrapper for backward compatibility
+# LAYER = "ui"  (for layer violation detection)
 #
 # This file is scheduled for removal in a future PME2 release.
 # All functionality has been moved to: ui/screen.py
 #
 # Existing imports like `from .screen_utils import find_area` will continue to work.
+
+LAYER = "ui"
 
 from .ui.screen import (
     # Functions

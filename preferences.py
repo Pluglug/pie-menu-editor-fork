@@ -1,3 +1,6 @@
+# preferences.py - PMEPreferences and addon settings UI
+# LAYER = "prefs"
+
 import bpy
 import os
 import json
@@ -5,6 +8,9 @@ import datetime
 import re
 from types import MethodType
 from bpy_extras.io_utils import ExportHelper, ImportHelper
+
+LAYER = "prefs"
+
 from .addon import (
     ADDON_ID,
     ADDON_PATH,

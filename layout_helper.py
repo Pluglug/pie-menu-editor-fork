@@ -1,9 +1,12 @@
 # layout_helper.py - DEPRECATED: Thin wrapper for backward compatibility
+# LAYER = "ui"  (for layer violation detection)
 #
 # This file is scheduled for removal in a future PME2 release.
 # All functionality has been moved to: ui/layout.py
 #
 # Existing imports like `from .layout_helper import lh` will continue to work.
+
+LAYER = "ui"
 
 from .ui.layout import (
     # Constants

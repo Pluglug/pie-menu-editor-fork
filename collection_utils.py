@@ -1,9 +1,12 @@
 # collection_utils.py - DEPRECATED: Thin wrapper for backward compatibility
+# LAYER = "infra"  (for layer violation detection)
 #
 # This file is scheduled for removal in a future PME2 release.
 # All functionality has been moved to: infra/collections.py
 #
 # Existing imports like `from .collection_utils import AddItemOperator` will continue to work.
+
+LAYER = "infra"
 
 from .infra.collections import (
     # Functions

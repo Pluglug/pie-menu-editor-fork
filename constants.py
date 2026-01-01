@@ -1,9 +1,12 @@
 # constants.py - DEPRECATED: Thin wrapper for backward compatibility
+# LAYER = "core"  (for layer violation detection)
 #
 # This file is scheduled for removal in a future PME2 release.
 # All functionality has been moved to: core/constants.py
 #
 # Existing imports like `from .constants import ED_DATA` will continue to work.
+
+LAYER = "core"
 
 from .core.constants import (
     # Constants

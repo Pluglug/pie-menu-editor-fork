@@ -1,5 +1,11 @@
+# macro_utils.py - Macro operator utilities
+# LAYER = "infra"
+
 import bpy
 import re
+
+LAYER = "infra"
+
 from . import operator_utils
 from .infra.debug import *
 from .addon import get_prefs, print_exc

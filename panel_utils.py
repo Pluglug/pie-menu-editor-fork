@@ -1,9 +1,12 @@
 # panel_utils.py - DEPRECATED: Thin wrapper for backward compatibility
+# LAYER = "ui"  (for layer violation detection)
 #
 # This file is scheduled for removal in a future PME2 release.
 # All functionality has been moved to: ui/panels.py
 #
 # Existing imports like `from .panel_utils import panel` will continue to work.
+
+LAYER = "ui"
 
 from .ui.panels import (
     # Functions

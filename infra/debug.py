@@ -300,6 +300,21 @@ _LAYER_ORDER = {
     "legacy": 7,    # 旧構成（暫定で最下位に置く）
 }
 
+# Facade modules: Can be imported from any layer except core.
+# See architecture.md section 5.2 for details.
+# These modules don't have LAYER constants because they are cross-cutting.
+_FACADE_MODULES = {"addon"}
+
+
+def _is_facade_module(module_name: str, addon_id: Optional[str] = None) -> bool:
+    """Check if the module is a facade module (e.g., addon)."""
+    addon_prefix = addon_id or _DEFAULT_ADDON_ID
+    # Check for exact match: pie_menu_editor.addon
+    for facade in _FACADE_MODULES:
+        if module_name == f"{addon_prefix}.{facade}":
+            return True
+    return False
+
 
 def resolve_layer(
     module_name: str,
@@ -359,9 +374,19 @@ def detect_layer_violations(
     """
     依存方向がレイヤ規約（上位→下位 OK, 下位→上位 NG）に反していないかを検出。
     edges: (dependency, dependent) のタプル列。
+
+    特例:
+    - Facade modules (addon) は core 以外からインポート可能。
+      See architecture.md section 5.2.
     """
     violations = []
     for dep, mod in edges:
+        # Facade module exception: addon can be imported from any layer except core
+        if _is_facade_module(dep, addon_id):
+            l_mod = resolve_layer(mod, addon_id)
+            if l_mod != "core":
+                continue  # Allowed: non-core importing from facade
+
         l_dep = resolve_layer(dep, addon_id)
         l_mod = resolve_layer(mod, addon_id)
         if l_dep is None or l_mod is None:

@@ -1,4 +1,10 @@
+# pme.py - PME execution context and props
+# LAYER = "infra"
+
 import bpy
+
+LAYER = "infra"
+
 from .addon import get_prefs, temp_prefs, print_exc
 from .infra.debug import logw
 

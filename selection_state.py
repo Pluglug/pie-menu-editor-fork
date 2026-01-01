@@ -1,4 +1,9 @@
+# selection_state.py - Selection state tracking
+# LAYER = "infra"
+
 import bpy
+
+LAYER = "infra"
 
 
 def _get_area():

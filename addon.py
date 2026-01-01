@@ -1,4 +1,9 @@
 from __future__ import annotations
+# addon.py - Host integration layer (アドオンライフサイクル管理)
+#
+# NOTE: addon is a FACADE module - it can be imported from any layer except core.
+# It does NOT have a LAYER constant because it's cross-cutting.
+# See architecture.md section 5.2 for details.
 
 import bpy
 from bpy.app import version as APP_VERSION

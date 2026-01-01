@@ -1,7 +1,12 @@
+# utils.py - General utilities (threading, timing)
+# LAYER = "infra"
+
 from threading import Thread, Event, Lock, current_thread
 from time import time, sleep
 from sys import exc_info
 from traceback import format_exception_only
+
+LAYER = "infra"
 
 lock = Lock()
 lock2 = Lock()

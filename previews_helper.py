@@ -1,6 +1,12 @@
+# previews_helper.py - Icon and preview management
+# LAYER = "infra"
+
 import bpy
 import bpy.utils.previews
 import os
+
+LAYER = "infra"
+
 from . import pme
 from .infra.debug import logw
 

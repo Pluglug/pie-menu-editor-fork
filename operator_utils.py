@@ -1,4 +1,10 @@
+# operator_utils.py - Operator parsing and execution utilities
+# LAYER = "operators"
+
 import bpy
+
+LAYER = "operators"
+
 from io import BytesIO
 from itertools import chain
 from tokenize import (
