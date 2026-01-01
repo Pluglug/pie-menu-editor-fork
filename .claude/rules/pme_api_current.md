@@ -3,9 +3,19 @@
 ## 目的
 
 このドキュメントは、現状の `pme` モジュールが外部・内部からどう使われているかを記録する **観測ドキュメント** です。
-まだ「設計」として確定した仕様ではなく、Phase 2-A (alpha.1) の「観測」フェーズでの調査結果をまとめたものです。
 
-Phase 2-B (alpha.2) では、このインベントリをベースに `rules/pme_api_plan.md` で Stable / Experimental / Internal のラベリングを行います。
+Phase 2-B (alpha.2) で、各シンボルに **Stability level** を付与しました。
+詳細な設計は `rules/pme_api_plan.md` を参照してください。
+
+---
+
+## Stability Levels
+
+| レベル | 意味 |
+|--------|------|
+| **Stable** | v2.x 系で互換性維持。外部からの依存を想定 |
+| **Experimental** | 変更の可能性あり。フィードバック次第で Stable 昇格 or 削除 |
+| **Internal** | 外部からの利用は非推奨。予告なく変更される |
 
 ---
 
@@ -15,34 +25,36 @@ Phase 2-B (alpha.2) では、このインベントリをベースに `rules/pme_
 
 ### クラス
 
-| シンボル | 説明 | 用途 |
-|----------|------|------|
-| `UserData` | 汎用データコンテナ | `pme_context.U` として使用。ユーザースクリプトからのデータ保存用 |
-| `PMEContext` | 実行コンテキスト管理 | PM/PMI 実行時のグローバル変数・状態を管理 |
-| `PMEProp` | 単一プロパティ定義 | プロパティのメタデータ（型、デフォルト値、items）を保持 |
-| `PMEProps` | プロパティ管理 | `prop_map` でプロパティを登録し、テキストのパース・エンコードを担当 |
-| `ParsedData` | パース済みプロパティ | テキスト形式 (`TYPE?key=value&...`) をパースした結果 |
+| シンボル | 説明 | 用途 | Stability |
+|----------|------|------|-----------|
+| `UserData` | 汎用データコンテナ | `pme_context.U` として使用。ユーザースクリプトからのデータ保存用 | **Experimental** |
+| `PMEContext` | 実行コンテキスト管理 | PM/PMI 実行時のグローバル変数・状態を管理 | **Internal** |
+| `PMEProp` | 単一プロパティ定義 | プロパティのメタデータ（型、デフォルト値、items）を保持 | **Internal** |
+| `PMEProps` | プロパティ管理 | `prop_map` でプロパティを登録し、テキストのパース・エンコードを担当 | **Internal** |
+| `ParsedData` | パース済みプロパティ | テキスト形式 (`TYPE?key=value&...`) をパースした結果 | **Internal** |
 
 ### インスタンス
 
-| シンボル | 型 | 説明 |
-|----------|-----|------|
-| `context` | `PMEContext` | グローバルな実行コンテキストインスタンス |
-| `props` | `PMEProps` | グローバルなプロパティ管理インスタンス |
+| シンボル | 型 | 説明 | Stability |
+|----------|-----|------|-----------|
+| `context` | `PMEContext` | グローバルな実行コンテキストインスタンス | **Internal** |
+| `props` | `PMEProps` | グローバルなプロパティ管理インスタンス | **Internal** |
 
 ### 関数
 
-| シンボル | 説明 |
-|----------|------|
-| `register()` | `context` に `UserData` インスタンスを追加 |
+| シンボル | 説明 | Stability |
+|----------|------|-----------|
+| `register()` | `context` に `UserData` インスタンスを追加 | **Internal** |
 
 ### 再エクスポート（`addon` から）
 
 `pme.py` 自体は以下を `addon` からインポートしているが、現状 `pme` から直接公開はしていない:
 
-- `get_prefs()` — `PMEPreferences` インスタンスを取得
-- `temp_prefs()` — 一時的な設定オブジェクトを取得
-- `print_exc()` — 例外出力ヘルパー
+| シンボル | 説明 | Stability |
+|----------|------|-----------|
+| `get_prefs()` | `PMEPreferences` インスタンスを取得 | **Internal** — 外部からの直接アクセスは非推奨 |
+| `temp_prefs()` | 一時的な設定オブジェクトを取得 | **Internal** |
+| `print_exc()` | 例外出力ヘルパー | **Internal** |
 
 ---
 
@@ -50,76 +62,88 @@ Phase 2-B (alpha.2) では、このインベントリをベースに `rules/pme_
 
 `pme.context` インスタンスが提供するメソッドと属性:
 
+> **注意**: `PMEContext` 自体は **Internal** ですが、一部のメソッドは将来的に `pme.execute()` / `pme.evaluate()` のラッパーとして公開される予定です。
+
 ### メソッド
 
-| メソッド | シグネチャ | 説明 |
-|----------|-----------|------|
-| `add_global` | `(key, value)` | グローバル名前空間に変数を追加 |
-| `gen_globals` | `(**kwargs) → dict` | 実行用のグローバル辞書を生成 |
-| `eval` | `(expression, globals=None, menu=None, slot=None) → Any` | 式を評価 |
-| `exe` | `(data, globals=None, menu=None, slot=None, use_try=True) → bool` | コードを実行 |
-| `reset` | `()` | 状態をリセット |
-| `item_id` | `() → str` | 現在のアイテムの ID を生成 |
+| メソッド | シグネチャ | 説明 | Stability |
+|----------|-----------|------|-----------|
+| `add_global` | `(key, value)` | グローバル名前空間に変数を追加 | **Experimental** → `pme.add_global()` として公開予定 |
+| `gen_globals` | `(**kwargs) → dict` | 実行用のグローバル辞書を生成 | **Internal** |
+| `eval` | `(expression, globals=None, menu=None, slot=None) → Any` | 式を評価 | **Internal** → `pme.evaluate()` の内部実装 |
+| `exe` | `(data, globals=None, menu=None, slot=None, use_try=True) → bool` | コードを実行 | **Internal** → `pme.execute()` の内部実装 |
+| `reset` | `()` | 状態をリセット | **Internal** |
+| `item_id` | `() → str` | 現在のアイテムの ID を生成 | **Internal** |
 
 ### 属性
 
-| 属性 | 型 | 説明 |
-|------|-----|------|
-| `pm` | `PM` or `None` | 現在実行中の Pie Menu |
-| `pmi` | `PMI` or `None` | 現在実行中の Pie Menu Item |
-| `index` | `int` or `None` | 現在のアイテムインデックス |
-| `icon` | `str` or `None` | 現在のアイコン名 |
-| `icon_value` | `int` or `None` | 現在のアイコン値 |
-| `text` | `str` or `None` | 現在のテキスト |
-| `layout` | `UILayout` or `None` | 現在のレイアウト（プロパティ setter で `L` にも設定） |
-| `event` | `Event` or `None` | 現在のイベント（プロパティ setter で `E`, `delta` にも設定） |
-| `region` | `Region` or `None` | 現在のリージョン |
-| `is_first_draw` | `bool` | 初回描画かどうか |
-| `exec_globals` | `dict` or `None` | exec 用グローバル |
-| `exec_locals` | `dict` or `None` | exec 用ローカル |
-| `exec_user_locals` | `dict` | ユーザー定義ローカル変数 |
+| 属性 | 型 | 説明 | Stability |
+|------|-----|------|-----------|
+| `pm` | `PMItem` or `None` | 現在実行中の Pie Menu | **Internal** — 生オブジェクト。外部からの参照は非推奨 |
+| `pmi` | `PMIItem` or `None` | 現在実行中の Pie Menu Item | **Internal** — 生オブジェクト。外部からの参照は非推奨 |
+| `index` | `int` or `None` | 現在のアイテムインデックス | **Internal** |
+| `icon` | `str` or `None` | 現在のアイコン名 | **Internal** |
+| `icon_value` | `int` or `None` | 現在のアイコン値 | **Internal** |
+| `text` | `str` or `None` | 現在のテキスト | **Internal** |
+| `layout` | `UILayout` or `None` | 現在のレイアウト（プロパティ setter で `L` にも設定） | **Internal** |
+| `event` | `Event` or `None` | 現在のイベント（プロパティ setter で `E`, `delta` にも設定） | **Internal** |
+| `region` | `Region` or `None` | 現在のリージョン | **Internal** |
+| `is_first_draw` | `bool` | 初回描画かどうか | **Internal** |
+| `exec_globals` | `dict` or `None` | exec 用グローバル | **Internal** — 絶対に外部から触らせない |
+| `exec_locals` | `dict` or `None` | exec 用ローカル | **Internal** — 絶対に外部から触らせない |
+| `exec_user_locals` | `dict` | ユーザー定義ローカル変数 | **Internal** — 絶対に外部から触らせない |
 
 ### グローバル名前空間のデフォルト変数
 
-`gen_globals()` によって生成される辞書には以下が含まれる:
+`gen_globals()` によって生成される辞書には以下が含まれる。
+詳細は `rules/pme_standard_namespace.md` を参照。
 
-| 変数名 | 値 |
-|--------|-----|
-| `bpy` | `bpy` モジュール |
-| `pme_context` | `context` インスタンス自身 |
-| `C` | `bpy.context` |
-| `D` | `bpy.data` |
-| `L` | 現在の `layout` |
-| `E` | 現在の `event` |
-| `U` | `UserData` インスタンス |
-| `drag_x`, `drag_y` | ドラッグ座標 |
-| `delta` | マウスホイールのデルタ値 |
-| `text`, `icon`, `icon_value` | 現在のコンテキスト値 |
-| `PME` | `temp_prefs()` |
-| `PREFS` | `get_prefs()` |
+> **注意**: v2.0.0 では全て Experimental。Stable は v2.1.0 以降で検討。
+
+| 変数名 | 値 | Stability (v2.0) |
+|--------|-----|------------------|
+| `bpy` | `bpy` モジュール | **Experimental** |
+| `C` | `bpy.context` | **Experimental** |
+| `D` | `bpy.data` | **Experimental** |
+| `E` | 現在の `event` | **Experimental** |
+| `L` | 現在の `layout` | **Experimental** |
+| `U` | `UserData` インスタンス | **Experimental** |
+| `drag_x`, `drag_y` | ドラッグ座標 | **Experimental** |
+| `delta` | マウスホイールのデルタ値 | **Experimental** |
+| `text`, `icon`, `icon_value` | 現在のコンテキスト値 | **Experimental** |
+| `pme_context` | `context` インスタンス自身 | **Internal** |
+| `PME` | `temp_prefs()` | **Internal** |
+| `PREFS` | `get_prefs()` | **Internal** |
 
 ---
 
 ## PMEProps の主要 API
 
+> **⚠️ このセクション全体が Internal です**
+>
+> `pme.props` / `ParsedData` は **Reload Scripts の既知問題** があり、外部からの利用は非推奨です。
+> ライフサイクルの問題が解決されるまで、外部ツールはこれらに依存しないでください。
+
 `pme.props` インスタンスが提供するメソッド:
 
-| メソッド | シグネチャ | 説明 |
-|----------|-----------|------|
-| `IntProperty` | `(type, name, default=0)` | 整数プロパティを登録 |
-| `BoolProperty` | `(type, name, default=False)` | ブールプロパティを登録 |
-| `StringProperty` | `(type, name, default="")` | 文字列プロパティを登録 |
-| `EnumProperty` | `(type, name, default, items)` | 列挙型プロパティを登録 |
-| `get` | `(name) → PMEProp or None` | プロパティ定義を取得 |
-| `parse` | `(text) → ParsedData` | テキストをパースして `ParsedData` を返す（キャッシュあり） |
-| `encode` | `(text, prop, value) → str` | プロパティ値をテキストにエンコード |
-| `clear` | `(text, *args) → str` | 指定プロパティをクリア |
+| メソッド | シグネチャ | 説明 | Stability |
+|----------|-----------|------|-----------|
+| `IntProperty` | `(type, name, default=0)` | 整数プロパティを登録 | **Internal** |
+| `BoolProperty` | `(type, name, default=False)` | ブールプロパティを登録 | **Internal** |
+| `StringProperty` | `(type, name, default="")` | 文字列プロパティを登録 | **Internal** |
+| `EnumProperty` | `(type, name, default, items)` | 列挙型プロパティを登録 | **Internal** |
+| `get` | `(name) → PMEProp or None` | プロパティ定義を取得 | **Internal** |
+| `parse` | `(text) → ParsedData` | テキストをパースして `ParsedData` を返す（キャッシュあり） | **Internal** |
+| `encode` | `(text, prop, value) → str` | プロパティ値をテキストにエンコード | **Internal** |
+| `clear` | `(text, *args) → str` | 指定プロパティをクリア | **Internal** |
 
 ### プロパティ登録タイミングの問題（既知の問題）
 
 - プロパティは各エディタモジュール（`ed_*.py`）の `register()` で登録される
 - `ParsedData` は `parse()` 時点で `prop_map` を参照する
 - **Reload Scripts 後に `prop_map` が空になり、属性エラーが発生する**（Issue #64）
+
+**これが Internal としてマークされている主な理由です。** Phase 3 でライフサイクルを再設計するまで、外部からの依存は避けてください。
 
 ---
 
@@ -184,17 +208,57 @@ for k, prop in props.prop_map.items():  # ← prop_map が空だと何も設定�
 
 ---
 
-## TODO: Phase 2-A で追加調査が必要な項目
+## Phase 2-B での決定事項
+
+Phase 2-A の観測結果を踏まえ、以下が決定されました：
+
+### 重要な前提
+
+**v2.0.0 では全て Experimental。** Stable ラベルは v2.1.0 以降で、利用実績を見て付与する。
+
+### Phase 2-B で公開する最小セット（全て Experimental）
+
+**Executor:**
+- `pme.execute()` — `PMEContext.exe()` の薄いラッパー
+- `pme.evaluate()` — `PMEContext.eval()` の薄いラッパー（例外を投げる）
+
+**Menu Integration:**
+- `pme.find_pm()` — PM 検索 API
+- `pme.invoke_pm()` — PM 呼び出し API
+
+**標準名前空間:**
+- `C`, `D`, `bpy`, `E`, `L`, `U`, `delta`, etc. — 全て Experimental
+
+### Phase 3 以降に送るもの
+
+- `pme.evaluate_ex()` / 詳細な Result クラス
+- `pme.add_global()` — 本当に必要か要検証
+- `pme.list_pms()` — フィルタ条件の設計が必要
+- `PMHandle` のフィールド拡張
+
+### Internal として隠蔽するもの
+
+- `pme.props` / `ParsedData` 全体 — ライフサイクル問題
+- `pme.context.exec_*` 系 — 内部状態
+- `pme.context.pm` / `pme.context.pmi` の生オブジェクト — 副作用リスク
+- `PME`, `PREFS` 変数 — 内部設定への直接アクセス
+
+詳細は `rules/pme_api_plan.md` を参照。
+
+---
+
+## 残りの調査項目（Phase 3 以降）
 
 - [ ] `props.prop_map` への登録順序と、各エディタの `register()` 呼び出し順序の関係
 - [ ] `ParsedData` の属性一覧（どのエディタがどのプロパティを登録しているか）
 - [ ] `context` の `exec_globals` / `exec_locals` の使い分けパターン
-- [ ] 外部スクリプトから `pme.context` がどう呼ばれているかの実例収集
 
 ---
 
 ## 参照
 
-- `pme.py`: `E:\0187_Pie-Menu-Editor\MyScriptDir\addons\pie_menu_editor\pme.py`
+- `pme.py`: 実装ファイル
 - `addon.py`: `get_prefs()`, `temp_prefs()`, `print_exc()` の実装
-- `docs/api_pme.md`: API ドラフト（Phase 2+ で整備予定）
+- `rules/pme_api_plan.md`: API 設計案（Phase 2-B で更新）
+- `rules/pme_standard_namespace.md`: 標準名前空間の定義
+- `docs/api_pme.md`: API ドキュメント（Phase 2+ で整備予定）
