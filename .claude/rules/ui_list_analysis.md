@@ -148,46 +148,50 @@ def update(self)             # ツリー更新
 
 ## 依存関係図
 
+```mermaid
+graph TD
+    subgraph Prefs["prefs 層 (5)"]
+        PREFS["PMEPreferences<br/>├── pie_menus: Collection<br/>├── tree: TreeView<br/>└── 各種設定"]
+    end
+
+    subgraph UILists["UIList クラス群"]
+        UL1["WM_UL_pm_list<br/>(UI 描画)"]
+        UL2["WM_UL_panel_list<br/>(UI 描画)"]
+        UL3["PME_UL_pm_tree<br/>(UI 描画 + 状態管理 + 永続化)"]
+        TV["TreeView<br/>(薄いラッパー)"]
+    end
+
+    subgraph Layer2["ui 層 (2)"]
+        UI["lh (LayoutHelper)<br/>tag_redraw()"]
+    end
+
+    subgraph Layer1["infra 層 (1)"]
+        INFRA["hidden_panel()<br/>logh() (DBG_TREE)"]
+    end
+
+    subgraph Layer0["core 層 (0)"]
+        CORE["CC (constants)<br/>ADDON_PATH"]
+    end
+
+    UL1 -->|get_prefs| PREFS
+    UL2 -->|get_prefs| PREFS
+    UL3 -->|get_prefs| PREFS
+    UL3 -->|"⚠️ file I/O"| CORE
+    TV --> UL3
+
+    UL1 --> UI
+    UL2 --> UI
+    UL3 --> UI
+    UI --> INFRA
+    INFRA --> CORE
+
+    style UL3 fill:#f96,stroke:#333
+    style PREFS fill:#ffd,stroke:#333
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                          prefs 層                           │
-│  ┌──────────────────────────────────────────────────────┐  │
-│  │ PMEPreferences                                        │  │
-│  │   ├── pie_menus: Collection[PMItem]                   │  │
-│  │   ├── tree: TreeView                                  │  │
-│  │   └── 各種設定 (list_size, group_by, etc.)            │  │
-│  └──────────────────────────────────────────────────────┘  │
-│                              ▲                              │
-│                              │ get_prefs()                  │
-│  ┌──────────────────────────────────────────────────────┐  │
-│  │ WM_UL_pm_list      (UI 描画)                         │  │
-│  │ WM_UL_panel_list   (UI 描画)                         │  │
-│  │ PME_UL_pm_tree     (UI 描画 + 状態管理 + 永続化)     │  │
-│  │ TreeView           (薄いラッパー)                     │  │
-│  └──────────────────────────────────────────────────────┘  │
-└─────────────────────────────────────────────────────────────┘
-                               │
-                               ▼
-┌─────────────────────────────────────────────────────────────┐
-│                          ui 層                              │
-│  lh (LayoutHelper)                                          │
-│  tag_redraw()                                               │
-└─────────────────────────────────────────────────────────────┘
-                               │
-                               ▼
-┌─────────────────────────────────────────────────────────────┐
-│                         infra 層                            │
-│  hidden_panel()                                             │
-│  logh() (DBG_TREE)                                          │
-└─────────────────────────────────────────────────────────────┘
-                               │
-                               ▼
-┌─────────────────────────────────────────────────────────────┐
-│                          core 層                            │
-│  CC (constants)                                             │
-│  ADDON_PATH                                                 │
-└─────────────────────────────────────────────────────────────┘
-```
+
+**凡例**:
+- `⚠️ file I/O`: `PME_UL_pm_tree` が ui 層でファイル操作を行うレイヤ違反
+- オレンジ: 問題のあるクラス（状態管理 + 永続化が混在）
 
 ---
 

@@ -75,45 +75,53 @@ from ..operators import (
 
 ### 依存図
 
+```mermaid
+graph TD
+    subgraph Layer4["operators 層 (4)"]
+        OPS["popup_dialog_pie<br/>PME_OT_exec<br/>PME_OT_docs, etc."]
+    end
+
+    subgraph Layer3["editors 層 (3)"]
+        EB["EditorBase<br/>editors/base.py"]
+    end
+
+    subgraph Dependencies["EditorBase の依存先"]
+        subgraph Facade["addon ファサード"]
+            ADDON["get_prefs()<br/>temp_prefs()"]
+        end
+
+        subgraph Layer2["ui 層 (2)"]
+            UI["lh (LayoutHelper)<br/>utils, layout"]
+        end
+
+        subgraph PME["pme モジュール"]
+            PMEM["context<br/>props"]
+        end
+    end
+
+    subgraph Layer1["infra 層 (1)"]
+        INFRA["keymap_helper<br/>bl_utils<br/>collections<br/>debug"]
+    end
+
+    subgraph Layer0["core 層 (0)"]
+        CORE["constants (CC)<br/>pme_types"]
+    end
+
+    EB -->|"※許容"| OPS
+    EB --> ADDON
+    EB --> UI
+    EB --> PMEM
+    ADDON --> INFRA
+    UI --> INFRA
+    PMEM --> INFRA
+    INFRA --> CORE
+
+    style EB fill:#ffd,stroke:#333
+    style OPS fill:#f96,stroke:#333
 ```
-                    ┌─────────────────┐
-                    │  operators 層   │
-                    │  (popup_dialog_ │
-                    │   pie, etc.)    │
-                    └────────▲────────┘
-                             │
-┌────────────────────────────┼────────────────────────────┐
-│                            │                            │
-│         ┌──────────────────┴──────────────────┐         │
-│         │         EditorBase (editors)         │         │
-│         │   editors/base.py:2075               │         │
-│         └──────────────────┬──────────────────┘         │
-│                            │                            │
-│  ┌─────────────────────────┼─────────────────────────┐  │
-│  │                         ▼                         │  │
-│  │  ┌─────────┐  ┌─────────┐  ┌─────────┐           │  │
-│  │  │ prefs   │  │   ui    │  │  pme    │           │  │
-│  │  │(addon.py│  │         │  │         │           │  │
-│  │  │get_prefs│  │lh, utils│  │ context │           │  │
-│  │  │temp_pref│  │ layout  │  │  props  │           │  │
-│  │  └────┬────┘  └────┬────┘  └────┬────┘           │  │
-│  │       │            │            │                │  │
-│  │       ▼            ▼            ▼                │  │
-│  │  ┌─────────────────────────────────────────┐     │  │
-│  │  │              infra 層                    │     │  │
-│  │  │  keymap_helper, bl_utils, collections   │     │  │
-│  │  │  debug (DBG_*)                          │     │  │
-│  │  └─────────────────┬───────────────────────┘     │  │
-│  │                    │                             │  │
-│  │                    ▼                             │  │
-│  │  ┌─────────────────────────────────────────┐     │  │
-│  │  │              core 層                     │     │  │
-│  │  │  constants (CC)                         │     │  │
-│  │  │  pme_types (PMItem, PMIItem, Tag)       │     │  │
-│  │  └─────────────────────────────────────────┘     │  │
-│  └───────────────────────────────────────────────────┘  │
-└─────────────────────────────────────────────────────────┘
-```
+
+**凡例**:
+- `※許容`: `editors → operators` は現状許容（将来インターフェース分離を検討）
 
 ---
 

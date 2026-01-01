@@ -2,7 +2,34 @@
 
 PME2 開発のマイルストーンとフェーズ定義。
 
-「観測 → 設計 → 実装 → ライフサイクル」の時間軸に沿って構成し、各フェーズで混線なく作業を進められるようにする。
+---
+
+## 基本方針
+
+### PME1 と PME2 の関係
+
+| ブランチ | 目的 | 状態 |
+|----------|------|------|
+| `main` / `pme1-lts` | PME1 安定版 (Blender 4.x) | **安定済み・Hotfix のみ** |
+| `pme2-dev` | PME2 開発版 (Blender 5.0+) | **アクティブ開発中** |
+
+- **PME1 への還元は行わない**: pme2-dev の成果は PME2 専用
+- **リリース計画**: pme2-dev → プレリリース → ユーザーからの安定報告 → 正式リリース
+
+### 開発の焦点
+
+**物理的モジュール分割** を最優先とする。
+
+| 優先度 | 作業 | 状態 |
+|--------|------|------|
+| 🔴 最優先 | 物理的モジュール分割（`infra/`, `ui/`, etc.） | 進行中 |
+| 🟡 次点 | Reload Scripts の安定化 | Hotfix 済み、正式対応は Phase 3 |
+| 🟢 長期目標 | pme 外部 API 設計 | 設計文書のみ、実装は凍結 |
+
+**新ローダー (`init_addon` / `register_modules`) をコンパスとして使用**:
+- `DBG_DEPS=True` でレイヤ違反を可視化
+- 違反を削減しながらモジュールを分離していく
+- 詳細は `rules/cleanup_workflow.md` を参照
 
 ---
 
@@ -23,6 +50,11 @@ PME2 開発のマイルストーンとフェーズ定義。
 - [x] 旧モジュールからの薄いラッパー（後方互換性維持）
 - [x] インポートパスの正規化
 
+### 未完了（Phase 2 へ繰り越し）
+
+- [ ] `infra/overlay.py` の作成（初期計画にあったが漏れ）
+- [ ] `utils/helpers.py` の作成（PreviewsHelper 等は lifecycle 問題があり保留）
+
 ### ローダー構成
 
 現在、2 つのローダーが共存しています：
@@ -34,14 +66,6 @@ PME2 開発のマイルストーンとフェーズ定義。
 
 α 系列では両方を共存させながら、漸進的に新ローダーへ移行します。旧ローダーの削除は RC フェーズで実施予定。
 
-### 既知のリグレッション
-
-- ⚠️ **Reload Scripts が壊れている** (Issue #64, #65)
-  - `ParsedData.pm_flick` 属性エラー（props 登録タイミングの問題）
-  - カスタムアイコンが読み込まれない（previews ライフサイクルの問題）
-  - **Phase 1 のスコープ外として意図的に保留**
-  - **v2.0.0-alpha.2 までに「最低限死なない状態」に戻す予定**
-
 ### 成果物
 
 - レイヤ違反 49 件の可視化
@@ -50,150 +74,117 @@ PME2 開発のマイルストーンとフェーズ定義。
 
 ---
 
-## v2.0.0-alpha.1 (Phase 2-A: UI & Editor Observation)
+## v2.0.0-alpha.1 (Phase 2-A: Observation) ✅ COMPLETED
 
 **目標**: UI リスト・Editor 基盤・pme API の **現状を「観測」し、文書化する**
 
-このフェーズでは構造を大きく動かさず、「見る・書く」に徹する。
-
-### 計画タスク
-
-#### UI リストの観測
-
-- [x] `WM_UL_pm_list`, `PME_UL_pm_tree` の責務と依存先の洗い出し ✅
-  - どの関数が「UI 表示のみ」か
-  - どの部分が `prefs` や `pme_types` の実データに触れているか
-  - 観測結果は `rules/ui_list_analysis.md` にまとめた
-
-#### Editor 基盤の観測
-
-- [x] `EditorBase` と各 Editor (`editors/*.py`) の依存マップ作成 ✅
-  - `editors → ui` / `editors → pme` / `editors → operators` などの矢印を整理
-  - 観測結果は `rules/editor_dependency_map.md` にまとめた
-
-#### pme API の観測
-
-- [x] `pme.props` / `PMEProps` / `ParsedData` / `pme.context` の **現状 API と使用箇所のインベントリ作成** ✅
-  - 観測結果は `rules/api/pme_api_current.md` にまとめた
-- [x] 「どのシンボルが、どのモジュールから呼ばれているか」のマップ作成 ✅
-
-### ゴール ✅ 達成
-
-- Editor / UI / pme / props の依存関係が `rules/*.md` 上で文章と簡単な図で説明できること
-- **このフェーズでは「EditorBase が ui 層から完全に独立」などの大きな構造変更は行わない**
-- 「観測」と「設計メモ」の段階までに留める
-
 ### 成果物
 
-- `rules/api/pme_api_current.md` — pme モジュールの現状インベントリ ✅
 - `rules/ui_list_analysis.md` — UI リストの責務分析 ✅
 - `rules/editor_dependency_map.md` — Editor の依存関係マップ ✅
+- `rules/api/pme_api_current.md` — pme モジュールの現状インベントリ ✅
 
 ---
 
-## v2.0.0-alpha.2 (Phase 2-B: Reload Hotfix + pme API Specification)
+## v2.0.0-alpha.2 (Phase 2-B: Reload Hotfix + Module Separation) ⏳ IN PROGRESS
 
 **目標**:
-1. Reload Scripts の「即死級」問題をホットフィックスで抑え、開発ループに使えるレベルに戻す
-2. `pme` 外部 API の **仕様を確定**する（Stable / Experimental / Internal のラベリング）
-3. Executor Bundle (`pme.execute/evaluate`) の **設計検討**（実装は最小限 or 後ろへ送る）
+1. Reload Scripts の「即死級」問題をホットフィックスで抑える ✅
+2. **物理的モジュール分割を加速する**（本フェーズの主要作業）
+3. pme 外部 API の仕様を文書化する（実装は凍結）
 
-> **方針変更**: 「`editors` / `ui` が `pme` API 経由で動く構成」の実装は **Phase 3 以降に送る**。
-> α 段階では設計と仕様策定に徹し、大規模なコード変更は避ける。
-
-### 計画タスク
-
-#### Reload Scripts ホットフィックス（最優先） ✅ 完了
-
-**目標**: ライフサイクルの完全設計は Phase 3 で行う。ここでは「F3 → Reload で毎回クラッシュ」を止めるラインまで回復。
+### Reload Scripts ホットフィックス ✅ 完了
 
 **Issue #64 (ParsedData / props)** ✅:
-- [x] `ParsedData.__getattr__()` を追加し、`prop_map` が空でも既知のプロパティにはフォールバックデフォルト値を返す
-- [x] `_FALLBACK_DEFAULTS` 辞書で既知のプロパティのデフォルト値をハードコード
+- [x] `ParsedData.__getattr__()` でフォールバックデフォルト値を返す
 - [x] 警告ログで問題箇所を追跡可能にした
 
 **Issue #65 (previews / icons)** ✅:
 - [x] `refresh()` と `unregister()` に try-except ガードを追加
-- [x] `ph.unregister()` 呼び出しをコメントアウト（警告スパム対策）
-- [x] アイコンは Reload 後も維持される（一度目のロードが残る）
+- [x] `ph.unregister()` 呼び出しをコメントアウト
 
-**やらないこと（Phase 3 送り）**:
-- props 登録タイミングの再設計
-- ParsedData キャッシュのライフサイクル管理
-- previews の正しい再初期化フロー
+### 物理的モジュール分割（主要タスク） ⏳
 
-#### pme API 仕様確定 ✅ 完了
+**新ローダーをコンパスに使い、レイヤ違反を削減しながら分割を進める。**
 
-- [x] `rules/api/pme_api_current.md` の観測結果を確認 ✅ (Phase 2-A で完了)
-- [x] `rules/api/pme_api_plan.md` で Stability level を最終確定 ✅
-- [x] 外部スクリプトからの利用シナリオを文書化 ✅
+| 対象 | 移動先 | 状態 | リスク |
+|------|--------|------|--------|
+| `Overlay`, `Painter`, `Text`, etc. | `infra/overlay.py` | 未着手 | 低 |
+| 旧 `ed_*.py` のラッパー整理 | - | 未着手 | 低 |
+| `from ..operators import *` の明示化 | - | 未着手 | 低 |
 
-**v2.0.0 での方針**:
-- **全ての公開 API は Experimental** とする
-- Stable ラベルは v2.1.0 以降で、利用実績を見て付与
-- 今の段階で Stable を約束すると、将来のリファクタの自由度を失う
+**手順**:
+1. `DBG_DEPS=True` でレイヤ違反を確認
+2. Low risk な違反から対処
+3. テスト（有効化・基本操作・永続化）
+4. 詳細は `rules/cleanup_workflow.md` を参照
 
-#### Executor Bundle（設計のみ）
+### pme API 仕様文書化 ✅ 完了（実装は凍結）
 
-Executor API (`pme.execute()`, `pme.evaluate()`) について:
+- [x] `rules/api/pme_api_plan.md` で Stability level を文書化 ✅
+- [x] `rules/api/pme_standard_namespace.md` で名前空間を定義 ✅
 
-- [ ] API シグネチャを `rules/api/pme_api_plan.md` に確定（既存の Draft を確認）
-- [ ] エラーハンドリング方針を決定（例外 vs Result オブジェクト）
-- [ ] **実装は検討のみ**: 内部利用 + 実験レベルに留め、外部公開は Phase 3 以降
-
-**Phase 3 以降に送るもの（実装）**:
-- `editors` から `pme` API 経由でアクセスする導線の実装
-- Menu Integration API (`find_pm`, `invoke_pm`) の実装
-- `pme.add_global()` の外部公開
-
-#### 依存クリーンアップ（横串）
-
-- [ ] Low risk なレイヤ違反を 3〜5 件修正
-- [ ] 対象は `rules/dependency_cleanup_plan.md` に従う
+> **重要**: pme API の **実装は凍結**。内部構造が安定するまで設計文書のみを維持する。
+> 実装は Phase 3 以降で、内部リファクタリングが十分に進んだ後に検討。
 
 ### 受け入れ基準
 
-- [x] F3 → Reload Scripts 実行時に、Prefs 画面と基本的な Pie 呼び出しがエラーなしで動作する ✅
-  - ライフサイクルの完全設計は Phase 3 で行う
-  - この時点では「死なない」が最低ライン → **達成**
-- [x] `pme` の public surface と Stability level が `rules/api/pme_api_plan.md` に明文化されている ✅
-- [ ] Low risk なレイヤ違反が 3〜5 件削減されている (Phase 2-B 残タスク)
+- [x] Reload Scripts でクラッシュしない ✅
+- [ ] `infra/overlay.py` が作成されている
+- [ ] Low risk なレイヤ違反が 3〜5 件削減されている
+
+---
+
+## v2.0.0-alpha.3 (Phase 2-C: Module Separation Continuation)
+
+**目標**: 物理的モジュール分割の継続
+
+Phase 2-B で着手したモジュール分割を継続し、主要なレイヤ違反を解消する。
+
+### 計画タスク
+
+| 対象 | 作業内容 | リスク |
+|------|----------|--------|
+| `infra/io.py` | IO 系オペレーター（import/export/backup）の分離 | 低〜中 |
+| `operators/` の整理 | 編集系・検索系の分類 | 中 |
+| `pme_types.py` | `core/` への移動検討 | 中 |
+
+### 受け入れ基準
+
+- [ ] レイヤ違反が 40 件未満（Phase 1 時点: 49 件）
+- [ ] 主要な `infra/` モジュールが整理されている
 
 ---
 
 ## v2.0.0-beta.1 (Phase 3-A: Runtime Lifecycle – Props & ParsedData)
 
-**目標**: `pme.props`, `PMEProps`, `ParsedData` と PropertyGroup 登録タイミングを正面から再設計し、Reload 前後で一貫した状態になるようにする
+**目標**: Reload Scripts の正式対応（Hotfix からの卒業）
 
 ### 計画タスク
 
-- [ ] PropertyGroup / props 登録を「モジュール import 時」から切り離し、`register()` / `unregister()` に集約する設計検討と実装
-- [ ] `ParsedData` の生成とキャッシュが、Reload 前後で不整合を起こさないようにする
-- [ ] `pme.props` の `prop_map` が「未定義のまま parse に入る」パスを潰す
+- [ ] `pme.props.*Property()` をモジュールレベルから `register()` 内に移動
+- [ ] `ParsedData` キャッシュのライフサイクル管理
 - [ ] ライフサイクル設計を `rules/runtime_lifecycle.md` (新設) に文書化
 
 ### 受け入れ基準
 
 - [ ] Reload Scripts 実行後も、Pie データのパースと実行が一貫して動作する
-- [ ] `ParsedData` / `props` 周りの挙動が `rules/runtime_lifecycle.md` に文章化されている
 
 ---
 
 ## v2.0.0-beta.2 (Phase 3-B: Runtime Lifecycle – Previews & Handlers)
 
-**目標**: previews / icons / handlers / timers のライフサイクルを整理し、register / unregister / Reload 全てで矛盾が起きないようにする
+**目標**: previews / handlers / timers のライフサイクル整理
 
 ### 計画タスク
 
-- [ ] `previews_helper` の `ph.unregister()` を含む全ライフサイクルを定義し直す
-- [ ] ハンドラ / タイマー / modal オペレーターの登録・削除パターンを全て棚卸し
-- [ ] 「null handler で `callback_remove` が落ちる」パターンを構造的に潰す
+- [ ] `previews_helper` の正しい再初期化フロー
+- [ ] ハンドラ / タイマー登録パターンの統一
 - [ ] ライフサイクルポリシーを `rules/runtime_lifecycle.md` に追記
 
 ### 受け入れ基準
 
 - [ ] Reload 前後で handlers / timers / previews に関するエラーが出ない
-- [ ] ライフサイクルポリシーが `rules/runtime_lifecycle.md` で説明されている
 
 ---
 
@@ -209,42 +200,43 @@ Executor API (`pme.execute()`, `pme.evaluate()`) について:
 
 ### 計画タスク
 
-#### ローダーの整理
-
-- [ ] 旧ローダーの削除または完全封印
-  - `USE_PME2_LOADER` を常時 `True` に固定
-  - 旧コード (`MODULES` タプル、`get_classes()`) を削除
-
-#### レイヤ違反の最終整理
-
-- [ ] レイヤ違反の許容範囲を明文化
-  - 例: `legacy → 新レイヤ` は OK（後方互換ラッパー）
-  - 例: `core → operators` は禁止
-- [ ] 残存するレイヤ違反を修正またはドキュメント化
-
-#### テスト整備
-
+- [ ] 旧ローダー（`MODULES` タプル）の削除
+- [ ] レイヤ違反の許容リストを文書化
 - [ ] `core/` 層の最低限の自動テスト導入
-  - round-trip テスト（`to_dict` / `from_dict`）
-  - JSON パース / シリアライズテスト
-- [ ] `rules/testing.md` の更新
-
-#### ドキュメント
-
-- [ ] ドキュメント整備
 - [ ] マイグレーションガイド (PME1 → PME2)
+
+### リリースプロセス
+
+1. RC タグを作成
+2. プレリリースとして公開
+3. ユーザーからの安定報告を収集
+4. 重大な問題がなければ正式リリース
 
 ---
 
 ## Post v2.0.0 (将来計画)
 
-v2.0.0 リリース後の計画。API 仕様は v2 系列で既に確定している前提。
+v2.0.0 リリース後の計画。
 
-### pme API の外部公開
+### pme 外部 API の実装
 
-- `pme` を外部ファサードとして正式公開
-- v2.x 系での互換性維持を約束する Stable API の提供
-- ユーザースクリプトや他アドオンからの安全なアクセス
+> **注意**: 設計文書は Phase 2-B で完了済み。実装は v2.0.0 リリース後に検討。
+
+内部構造が安定した後に、以下を実装検討:
+
+- `pme.execute()` / `pme.evaluate()` の実装
+- `pme.find_pm()` / `pme.invoke_pm()` の実装
+- Stability level の Stable 昇格（v2.1.0 以降）
+
+詳細は `rules/api/pme_api_plan.md` を参照。
+
+### pme モジュールの再構成
+
+**目標**: `pme.py` を純粋な「外部向けファサード」に再構成する
+
+1. `PMEContext`, `PMEProps`, `ParsedData` を `core/` 層に移動
+2. `pme.py` を薄いファサードに変更
+3. 内部モジュールは `addon` 経由でアクセス
 
 ### パフォーマンス最適化
 
@@ -252,54 +244,73 @@ v2.0.0 リリース後の計画。API 仕様は v2 系列で既に確定して�
 - PropertyGroup の遅延初期化
 - キャッシュ戦略の見直し
 
-### 新機能
-
-- (未定義 - ユーザーフィードバック次第)
-
 ---
 
 ## フェーズ間の関係図
 
-```
-Phase 1 (alpha.0)    Phase 2-A (alpha.1)    Phase 2-B (alpha.2)    Phase 3-A (beta.1)    Phase 3-B (beta.2)    RC
-       │                    │                      │                      │                     │            │
-  レイヤ分離の ─→   UI/Editor/pme を ─→   Reload Hotfix + ─→   Props/ParsedData ─→   Previews/Handlers ─→   安定
-  土台作り            「観測」             API 仕様確定        のライフサイクル       のライフサイクル      リリース
-                                                                   再設計                 整理
-       │                    │                      │                      │                     │            │
-  ─────┴────────────────────┴──────────────────────┴──────────────────────┴─────────────────────┴────────────┤
-                                         Dependency Cleanup Track（横串）                                      │
-  ─────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
+```mermaid
+flowchart LR
+    subgraph Alpha["Alpha 系列"]
+        P1["Phase 1<br/>alpha.0 ✅<br/>レイヤ分離"]
+        P2A["Phase 2-A<br/>alpha.1 ✅<br/>観測・文書化"]
+        P2B["Phase 2-B<br/>alpha.2 ⏳<br/>Hotfix +<br/>分割開始"]
+        P2C["Phase 2-C<br/>alpha.3<br/>分割継続"]
+    end
+
+    subgraph Beta["Beta 系列"]
+        P3A["Phase 3-A<br/>beta.1<br/>Props<br/>Lifecycle"]
+        P3B["Phase 3-B<br/>beta.2<br/>Previews<br/>Lifecycle"]
+    end
+
+    RC["RC<br/>安定リリース"]
+
+    P1 --> P2A --> P2B --> P2C --> P3A --> P3B --> RC
+
+    subgraph Track["メイントラック"]
+        MT[/"物理的モジュール分割"/]
+    end
+
+    P2B -.-> MT
+    P2C -.-> MT
+    MT -.-> P3A
+
+    style P1 fill:#90EE90
+    style P2A fill:#90EE90
+    style P2B fill:#FFD700
+    style RC fill:#87CEEB
 ```
 
 ### フェーズの方針
 
-| フェーズ | 方針 | コード変更 | 依存クリーンアップ |
-|----------|------|-----------|-------------------|
-| alpha.1 | 観測に徹する | 最小限（文書化中心） | 分析のみ（違反クラスタリング） |
-| alpha.2 | 設計 + Hotfix | 小規模（Reload 修正 + 仕様確定） | Low risk 3〜5 件 |
-| beta.1 | 再設計 + 実装 | 中規模（props/ParsedData 周り） | props 周辺 5〜10 件 |
-| beta.2 | 再設計 + 実装 | 中規模（handlers/timers/previews） | handlers 周辺 5〜10 件 |
-| RC | 整理 + テスト | 削除・整理中心 | 残りを許容リストへ |
+| フェーズ | 方針 | 主要作業 |
+|----------|------|---------|
+| alpha.1 ✅ | 観測 | 文書化 |
+| alpha.2 ⏳ | 分割開始 | `infra/overlay.py` 作成、Low risk 違反修正 |
+| alpha.3 | 分割継続 | `infra/io.py`、`operators/` 整理 |
+| beta.1 | Lifecycle | props 登録タイミング修正 |
+| beta.2 | Lifecycle | previews/handlers 整理 |
+| RC | 整理 | 旧ローダー削除、テスト整備 |
 
 ---
 
-## Dependency Cleanup Track
+## 新ローダーをコンパスとして使う
 
-レイヤ違反を段階的に削減する横串プロセス。詳細は `rules/dependency_cleanup_plan.md` を参照。
+物理的モジュール分割の進捗は、新ローダーのレイヤ違反検出で測定する。
 
-### 概要
+### 使い方
 
-- `DBG_DEPS=True` で違反を可視化
-- 各フェーズで少量ずつ修正（一気に直さない）
-- Phase 1 完了時点: **49 件** の違反
+```bash
+# Blender 起動時に自動出力、または
+python .claude/scripts/analyze_deps_log.py
+```
 
-### 各フェーズの目標
+### 目標
 
-| フェーズ | 削減目標 | 対象 |
-|----------|---------|------|
-| alpha.1 | 0 件 | 分析のみ |
-| alpha.2 | 3〜5 件 | Low risk（明示的 import 等） |
-| beta.1 | 5〜10 件 | props/ParsedData 周辺 |
-| beta.2 | 5〜10 件 | handlers/previews 周辺 |
-| RC | 残りを整理 | 許容リストをドキュメント化 |
+| フェーズ | 違反数目標 | 備考 |
+|----------|-----------|------|
+| Phase 1 完了時 | 49 件 | 初期測定値 |
+| alpha.3 完了時 | < 40 件 | 10 件以上削減 |
+| beta 完了時 | < 30 件 | 主要違反を解消 |
+| RC | 許容リスト化 | 残りは文書化して許容 |
+
+詳細は `rules/cleanup_workflow.md` を参照。

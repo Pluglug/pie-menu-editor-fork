@@ -4,6 +4,15 @@
 
 ---
 
+## 目的
+
+**物理的モジュール分割** を進めながら、レイヤ違反を削減していく。
+
+新ローダー (`DBG_DEPS=True`) をコンパスとして使い、違反を可視化しながら作業する。
+詳細なワークフローは `rules/cleanup_workflow.md` を参照。
+
+---
+
 ## 基本方針
 
 ### 1. 一気に直さず、フェーズごとに少量ずつ削る
@@ -14,10 +23,9 @@
 
 ### 2. `DBG_DEPS` を「コンパス」として使う
 
-```python
-# Blender Python コンソールで
-from pie_menu_editor.debug_utils import set_debug_flag
-set_debug_flag("deps", True)
+```bash
+# ログ解析スクリプト
+python .claude/scripts/analyze_deps_log.py
 ```
 
 - 起動時にレイヤ違反一覧が出力される
@@ -79,9 +87,15 @@ core       (0) ← 最下位：Blender 非依存のロジック・データ構�
 - [x] 優先度付け（本ドキュメント）
 - 違反件数の記録: **49 件**（Phase 1 完了時点）
 
-### Phase 2-B (alpha.2): Low risk な違反 3〜5 件
+### Phase 2-B (alpha.2): モジュール分割 + Low risk な違反 3〜5 件 ⏳
 
-**対象候補**:
+**モジュール分割タスク**（最優先）:
+
+| タスク | 移動先 | リスク |
+|--------|--------|--------|
+| `Overlay`, `Painter`, `Text`, etc. | `infra/overlay.py` | 低 |
+
+**レイヤ違反修正タスク**:
 
 1. `editors/hpanel_group.py`: `from ..operators import *` → 明示的インポート
 2. 旧 `ed_*.py` ファイルの薄いラッパー整理
@@ -91,6 +105,21 @@ core       (0) ← 最下位：Blender 非依存のロジック・データ構�
 - `EditorBase` の構造変更
 - `PME_UL_pm_tree` の状態管理変更
 - `pme.props` 登録タイミングの変更
+- pme 外部 API の実装（設計文書のみ）
+
+### Phase 2-C (alpha.3): モジュール分割継続
+
+**モジュール分割タスク**:
+
+| タスク | 移動先 | リスク |
+|--------|--------|--------|
+| IO 系オペレーター | `infra/io.py` | 低〜中 |
+| `operators/` 整理 | 編集系・検索系に分類 | 中 |
+| `pme_types.py` | `core/` への移動検討 | 中 |
+
+**目標**: レイヤ違反 40 件未満（Phase 1 時点: 49 件）
+
+---
 
 ### Phase 3-A (beta.1): props/ParsedData 周辺 5〜10 件
 
