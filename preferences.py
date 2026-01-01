@@ -3513,8 +3513,8 @@ class PMEPreferences(bpy.types.AddonPreferences):
     def backup_menus(self, operator=None):
         DBG_INIT and logh("Backup")
 
-        # Use BackupManager from infra.io
-        backup_mgr = BackupManager(ADDON_PATH)
+        # Use BackupManager from infra.io (uses Blender standard user config path)
+        backup_mgr = BackupManager()
 
         # Get export data
         data = self.get_export_data()

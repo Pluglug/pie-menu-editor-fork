@@ -408,29 +408,30 @@ class BackupInfo:
 class BackupManager:
     """Manages backup files for PME data."""
 
-    def __init__(self, addon_path: str, max_backups: int = DEFAULT_MAX_BACKUPS):
+    def __init__(self, addon_path: str | None = None, max_backups: int = DEFAULT_MAX_BACKUPS):
         """
         Initialize the backup manager.
 
         Args:
-            addon_path: Path to the addon directory.
+            addon_path: Deprecated. Previously used for legacy path.
+                        Now uses Blender standard user config location.
             max_backups: Maximum number of backups to keep.
         """
-        self.addon_path = addon_path
+        # addon_path is kept for API compatibility but no longer used
         self.max_backups = max_backups
         self._backup_folder: str | None = None
 
     @property
     def backup_folder(self) -> str:
-        """Get the backup folder path, creating it if needed."""
+        """Get the backup folder path (Blender standard location)."""
         if self._backup_folder is None:
-            self._backup_folder = get_backup_folder_path(self.addon_path)
+            self._backup_folder = get_user_backup_dir(create=True)
         return self._backup_folder
 
     def ensure_backup_folder(self) -> None:
         """Create the backup folder if it doesn't exist."""
-        if not os.path.exists(self.backup_folder):
-            os.makedirs(self.backup_folder)
+        # get_user_backup_dir(create=True) already creates the folder
+        get_user_backup_dir(create=True)
 
     def list_backups(self) -> list[BackupInfo]:
         """
