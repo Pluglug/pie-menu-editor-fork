@@ -137,3 +137,87 @@ get_classes()  # PropertyGroup 依存を解決
 2. 対象クラス/関数を新ファイルにコピー
 3. 旧ファイルから `from .new_location import SomeClass` で再エクスポート
 4. テスト通過後、旧ファイルの実装を削除
+
+## 5. prefs / pme / addon の役割と依存関係
+
+### prefs の役割
+
+`prefs` レイヤ（`PMEPreferences`）は「Blender UI にぶら下がる設定保存場所」です。
+
+- Blender の `AddonPreferences` を継承
+- PM/PMI データ、ユーザー設定、UI 状態を保持
+- **下位レイヤから直接触るべき対象ではない**
+
+### pme / addon によるファサード
+
+`operators` や `editors` は、`PMEPreferences` を直に import するのではなく、**ファサード経由で設定を読む** 方針とします。
+
+```python
+# 推奨: ファサード経由
+from . import pme
+prefs = pme.get_prefs()  # 将来の候補
+
+from . import addon
+prefs = addon.get_prefs()  # 現状はこちら
+
+# 非推奨: 直接 import
+from .preferences import PMEPreferences
+prefs = PMEPreferences.get()  # 直接参照は避ける
+```
+
+### ファサードを使う理由
+
+1. **テスト容易性**: ファサードをモック可能にすることで、`prefs` なしで下位レイヤをテストできる
+2. **依存の局所化**: `prefs` の内部構造が変わっても、ファサードのインターフェースを維持すれば影響範囲を限定できる
+3. **レイヤ違反の防止**: 下位レイヤ → `prefs` の直接依存を禁止し、循環依存を防ぐ
+
+### レイヤルールとの整合
+
+| 依存パターン | 可否 | 備考 |
+|-------------|------|------|
+| `operators → prefs` 直接 | ❌ 禁止 | レイヤ違反 |
+| `operators → pme` / `operators → addon` | ✅ 許可 | ファサード経由 |
+| `pme` / `addon` → `prefs` | ✅ 許可 | ファサード実装のため |
+| `editors → prefs` 直接 | ⚠️ 段階的に禁止 | Phase 2-B で移行 |
+| `editors → pme` / `editors → addon` | ✅ 許可 | 推奨パターン |
+
+### 現状と移行計画
+
+現状、多くのモジュールが `preferences.py` を直接 import しています。
+これを段階的に `pme` / `addon` ファサード経由に移行します。
+
+| フェーズ | 作業 |
+|----------|------|
+| Phase 2-A (alpha.1) | 現状の依存パターンを観測・文書化 |
+| Phase 2-B (alpha.2) | ファサード API を設計、1-2 箇所で実験 |
+| Phase 3 (beta) | `editors` / `operators` を順次移行 |
+| RC | 直接依存を削除 or 許容範囲として文書化 |
+
+詳細は `rules/pme_api_plan.md` を参照。
+
+## 6. pme モジュールの位置づけ
+
+### 現状
+
+`pme` モジュールは以下を提供:
+
+- `PMEContext` / `context`: 実行コンテキスト
+- `PMEProps` / `props`: プロパティ管理
+- `ParsedData`: パース済みプロパティ
+
+レイヤ的には `infra` に近いが、`core` に近い責務（データモデル）も混在している。
+
+### 将来の方向性
+
+1. **ファサードとしての pme**
+   - 外部スクリプト・他アドオンから `pme` 経由でアクセス
+   - 内部構造（`preferences`, `pme_types` など）を隠蔽
+
+2. **責務の分離**
+   - 実行コンテキスト（`context`）: `infra` 寄り
+   - プロパティ定義（`props`, `ParsedData`）: `core` 寄り
+   - 将来的に `core/props.py` などに分離する可能性
+
+3. **API の安定化**
+   - Stable / Experimental / Internal のラベリング
+   - 詳細は `rules/pme_api_plan.md` を参照
