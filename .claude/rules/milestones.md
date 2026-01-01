@@ -60,34 +60,34 @@ PME2 開発のマイルストーンとフェーズ定義。
 
 #### UI リストの観測
 
-- [ ] `WM_UL_pm_list`, `PME_UL_pm_tree` の責務と依存先の洗い出し
+- [x] `WM_UL_pm_list`, `PME_UL_pm_tree` の責務と依存先の洗い出し ✅
   - どの関数が「UI 表示のみ」か
   - どの部分が `prefs` や `pme_types` の実データに触れているか
-  - 観測結果は `rules/ui_list_analysis.md` (新設) にまとめる
+  - 観測結果は `rules/ui_list_analysis.md` にまとめた
 
 #### Editor 基盤の観測
 
-- [ ] `EditorBase` と各 Editor (`editors/*.py`) の依存マップ作成
+- [x] `EditorBase` と各 Editor (`editors/*.py`) の依存マップ作成 ✅
   - `editors → ui` / `editors → pme` / `editors → operators` などの矢印を整理
-  - 観測結果は `rules/editor_dependency_map.md` (新設) にまとめる
+  - 観測結果は `rules/editor_dependency_map.md` にまとめた
 
 #### pme API の観測
 
-- [ ] `pme.props` / `PMEProps` / `ParsedData` / `pme.context` の **現状 API と使用箇所のインベントリ作成**
-  - 観測結果は `rules/pme_api_current.md` (本タスクで新設) にまとめる
-- [ ] 「どのシンボルが、どのモジュールから呼ばれているか」のマップ作成
+- [x] `pme.props` / `PMEProps` / `ParsedData` / `pme.context` の **現状 API と使用箇所のインベントリ作成** ✅
+  - 観測結果は `rules/pme_api_current.md` にまとめた
+- [x] 「どのシンボルが、どのモジュールから呼ばれているか」のマップ作成 ✅
 
-### ゴール
+### ゴール ✅ 達成
 
 - Editor / UI / pme / props の依存関係が `rules/*.md` 上で文章と簡単な図で説明できること
 - **このフェーズでは「EditorBase が ui 層から完全に独立」などの大きな構造変更は行わない**
 - 「観測」と「設計メモ」の段階までに留める
 
-### 成果物（予定）
+### 成果物
 
-- `rules/pme_api_current.md` — pme モジュールの現状インベントリ
-- `rules/ui_list_analysis.md` — UI リストの責務分析
-- `rules/editor_dependency_map.md` — Editor の依存関係マップ
+- `rules/pme_api_current.md` — pme モジュールの現状インベントリ ✅
+- `rules/ui_list_analysis.md` — UI リストの責務分析 ✅
+- `rules/editor_dependency_map.md` — Editor の依存関係マップ ✅
 
 ---
 
@@ -103,30 +103,30 @@ PME2 開発のマイルストーンとフェーズ定義。
 
 ### 計画タスク
 
-#### Reload Scripts ホットフィックス（最優先）
+#### Reload Scripts ホットフィックス（最優先） ✅ 完了
 
 **目標**: ライフサイクルの完全設計は Phase 3 で行う。ここでは「F3 → Reload で毎回クラッシュ」を止めるラインまで回復。
 
-**Issue #64 (ParsedData / props)**:
-- [ ] `ParsedData.__init__()` が `prop_map` 空で呼ばれたときに死なないガード追加
-- [ ] `props.parse()` で未登録 type を受けたときの fallback 処理
-- [ ] `pm_flick` などの属性アクセスが AttributeError で落ちる箇所に `getattr(..., default)` を入れる
+**Issue #64 (ParsedData / props)** ✅:
+- [x] `ParsedData.__getattr__()` を追加し、`prop_map` が空でも既知のプロパティにはフォールバックデフォルト値を返す
+- [x] `_FALLBACK_DEFAULTS` 辞書で既知のプロパティのデフォルト値をハードコード
+- [x] 警告ログで問題箇所を追跡可能にした
 
-**Issue #65 (previews / icons)**:
-- [ ] `previews_helper.unregister()` が null collection で落ちないガード
-- [ ] Reload 後に `preview_collections` が空のまま描画に入るパスの暫定対処
-- [ ] アイコンが出ない状態は許容、クラッシュだけを止める
+**Issue #65 (previews / icons)** ✅:
+- [x] `refresh()` と `unregister()` に try-except ガードを追加
+- [x] `ph.unregister()` 呼び出しをコメントアウト（警告スパム対策）
+- [x] アイコンは Reload 後も維持される（一度目のロードが残る）
 
 **やらないこと（Phase 3 送り）**:
 - props 登録タイミングの再設計
 - ParsedData キャッシュのライフサイクル管理
 - previews の正しい再初期化フロー
 
-#### pme API 仕様確定
+#### pme API 仕様確定 ✅ 完了
 
-- [ ] `rules/pme_api_current.md` の観測結果を確認（✅ Phase 2-A で完了）
-- [ ] `rules/pme_api_plan.md` で Stability level を最終確定
-- [ ] 外部スクリプトからの利用シナリオを文書化
+- [x] `rules/pme_api_current.md` の観測結果を確認 ✅ (Phase 2-A で完了)
+- [x] `rules/pme_api_plan.md` で Stability level を最終確定 ✅
+- [x] 外部スクリプトからの利用シナリオを文書化 ✅
 
 **v2.0.0 での方針**:
 - **全ての公開 API は Experimental** とする
@@ -153,11 +153,11 @@ Executor API (`pme.execute()`, `pme.evaluate()`) について:
 
 ### 受け入れ基準
 
-- [ ] F3 → Reload Scripts 実行時に、Prefs 画面と基本的な Pie 呼び出しがエラーなしで動作する
+- [x] F3 → Reload Scripts 実行時に、Prefs 画面と基本的な Pie 呼び出しがエラーなしで動作する ✅
   - ライフサイクルの完全設計は Phase 3 で行う
-  - この時点では「死なない」が最低ライン
-- [ ] `pme` の public surface と Stability level が `rules/pme_api_plan.md` に明文化されている
-- [ ] Low risk なレイヤ違反が 3〜5 件削減されている
+  - この時点では「死なない」が最低ライン → **達成**
+- [x] `pme` の public surface と Stability level が `rules/pme_api_plan.md` に明文化されている ✅
+- [ ] Low risk なレイヤ違反が 3〜5 件削減されている (Phase 2-B 残タスク)
 
 ---
 
