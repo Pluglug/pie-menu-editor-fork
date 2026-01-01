@@ -97,8 +97,8 @@ core       (0) ← 最下位：Blender 非依存のロジック・データ構�
 
 **レイヤ違反修正タスク**:
 
-1. `editors/hpanel_group.py`: `from ..operators import *` → 明示的インポート
-2. 旧 `ed_*.py` ファイルの薄いラッパー整理
+1. ~~`editors/hpanel_group.py`: `from ..operators import *` → 明示的インポート~~ ✅ 完了
+2. ~~旧 `ed_*.py` ファイルの薄いラッパー整理~~ ✅ 確認済み (7/11 移行済み、残り4つは Phase 3)
 3. 不要になった compatibility shim の削除
 
 **やらないこと**:

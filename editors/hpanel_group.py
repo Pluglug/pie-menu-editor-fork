@@ -11,7 +11,10 @@ from ..addon import get_prefs, temp_prefs, SAFE_MODE
 from ..ui.layout import lh
 from ..ui import panels as PAU
 from ..ui import tag_redraw
-from ..operators import *
+from ..operators import (
+    PME_OT_panel_hide,
+    PME_OT_panel_hide_by,
+)
 
 
 class PME_OT_hpanel_menu(bpy.types.Operator):
