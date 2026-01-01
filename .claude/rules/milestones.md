@@ -91,27 +91,19 @@ PME2 開発のマイルストーンとフェーズ定義。
 
 ---
 
-## v2.0.0-alpha.2 (Phase 2-B: pme API Design + Reload Hotfix)
+## v2.0.0-alpha.2 (Phase 2-B: Reload Hotfix + pme API Specification)
 
 **目標**:
-1. `pme` を「外部 API 候補」として設計し、Stable / Experimental / Internal のレベルを決める
-2. `editors` / `ui` の一部が `pme` API 経由で動く最小構成を作る
-3. Reload Scripts の「即死級」問題をホットフィックスで抑え、開発ループに使えるレベルに戻す
+1. Reload Scripts の「即死級」問題をホットフィックスで抑え、開発ループに使えるレベルに戻す
+2. `pme` 外部 API の **仕様を確定**する（Stable / Experimental / Internal のラベリング）
+3. Executor Bundle (`pme.execute/evaluate`) の **設計検討**（実装は最小限 or 後ろへ送る）
+
+> **方針変更**: 「`editors` / `ui` が `pme` API 経由で動く構成」の実装は **Phase 3 以降に送る**。
+> α 段階では設計と仕様策定に徹し、大規模なコード変更は避ける。
 
 ### 計画タスク
 
-#### pme API 設計
-
-- [ ] `rules/pme_api_current.md` をベースに、公開 API の設計案を策定
-- [ ] `rules/pme_api_plan.md` (本タスクで新設) で Stable / Experimental / Internal を定義
-- [ ] 外部スクリプトや他アドオンからの利用シナリオを文書化
-
-#### 最小限の統合実装
-
-- [ ] `editors` 側のごく一部から、`prefs` を直接舐めるのではなく `pme` API 経由でアクセスする実験的な導線を作る（規模は小さく）
-- [ ] 依存方向のルール (`operators → prefs` 禁止) の実践
-
-#### Reload Scripts ホットフィックス
+#### Reload Scripts ホットフィックス（最優先）
 
 **目標**: ライフサイクルの完全設計は Phase 3 で行う。ここでは「F3 → Reload で毎回クラッシュ」を止めるラインまで回復。
 
@@ -130,12 +122,42 @@ PME2 開発のマイルストーンとフェーズ定義。
 - ParsedData キャッシュのライフサイクル管理
 - previews の正しい再初期化フロー
 
+#### pme API 仕様確定
+
+- [ ] `rules/pme_api_current.md` の観測結果を確認（✅ Phase 2-A で完了）
+- [ ] `rules/pme_api_plan.md` で Stability level を最終確定
+- [ ] 外部スクリプトからの利用シナリオを文書化
+
+**v2.0.0 での方針**:
+- **全ての公開 API は Experimental** とする
+- Stable ラベルは v2.1.0 以降で、利用実績を見て付与
+- 今の段階で Stable を約束すると、将来のリファクタの自由度を失う
+
+#### Executor Bundle（設計のみ）
+
+Executor API (`pme.execute()`, `pme.evaluate()`) について:
+
+- [ ] API シグネチャを `rules/pme_api_plan.md` に確定（既存の Draft を確認）
+- [ ] エラーハンドリング方針を決定（例外 vs Result オブジェクト）
+- [ ] **実装は検討のみ**: 内部利用 + 実験レベルに留め、外部公開は Phase 3 以降
+
+**Phase 3 以降に送るもの（実装）**:
+- `editors` から `pme` API 経由でアクセスする導線の実装
+- Menu Integration API (`find_pm`, `invoke_pm`) の実装
+- `pme.add_global()` の外部公開
+
+#### 依存クリーンアップ（横串）
+
+- [ ] Low risk なレイヤ違反を 3〜5 件修正
+- [ ] 対象は `rules/dependency_cleanup_plan.md` に従う
+
 ### 受け入れ基準
 
-- [ ] `pme` の public surface が `rules/pme_api_plan.md` に明文化されている
 - [ ] F3 → Reload Scripts 実行時に、Prefs 画面と基本的な Pie 呼び出しがエラーなしで動作する
   - ライフサイクルの完全設計は Phase 3 で行う
   - この時点では「死なない」が最低ライン
+- [ ] `pme` の public surface と Stability level が `rules/pme_api_plan.md` に明文化されている
+- [ ] Low risk なレイヤ違反が 3〜5 件削減されている
 
 ---
 
@@ -241,17 +263,43 @@ v2.0.0 リリース後の計画。API 仕様は v2 系列で既に確定して�
 ```
 Phase 1 (alpha.0)    Phase 2-A (alpha.1)    Phase 2-B (alpha.2)    Phase 3-A (beta.1)    Phase 3-B (beta.2)    RC
        │                    │                      │                      │                     │            │
-  レイヤ分離の ─→   UI/Editor/pme を ─→   pme API 設計 + ─→   Props/ParsedData ─→   Previews/Handlers ─→   安定
-  土台作り            「観測」             Reload Hotfix       のライフサイクル       のライフサイクル      リリース
+  レイヤ分離の ─→   UI/Editor/pme を ─→   Reload Hotfix + ─→   Props/ParsedData ─→   Previews/Handlers ─→   安定
+  土台作り            「観測」             API 仕様確定        のライフサイクル       のライフサイクル      リリース
                                                                    再設計                 整理
+       │                    │                      │                      │                     │            │
+  ─────┴────────────────────┴──────────────────────┴──────────────────────┴─────────────────────┴────────────┤
+                                         Dependency Cleanup Track（横串）                                      │
+  ─────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
 ```
 
 ### フェーズの方針
 
-| フェーズ | 方針 | コード変更 |
-|----------|------|-----------|
-| alpha.1 | 観測に徹する | 最小限（文書化中心） |
-| alpha.2 | 設計 + 最小実装 | 小規模（API 導線 + ホットフィックス） |
-| beta.1 | 再設計 + 実装 | 中規模（props/ParsedData 周り） |
-| beta.2 | 再設計 + 実装 | 中規模（handlers/timers/previews） |
-| RC | 整理 + テスト | 削除・整理中心 |
+| フェーズ | 方針 | コード変更 | 依存クリーンアップ |
+|----------|------|-----------|-------------------|
+| alpha.1 | 観測に徹する | 最小限（文書化中心） | 分析のみ（違反クラスタリング） |
+| alpha.2 | 設計 + Hotfix | 小規模（Reload 修正 + 仕様確定） | Low risk 3〜5 件 |
+| beta.1 | 再設計 + 実装 | 中規模（props/ParsedData 周り） | props 周辺 5〜10 件 |
+| beta.2 | 再設計 + 実装 | 中規模（handlers/timers/previews） | handlers 周辺 5〜10 件 |
+| RC | 整理 + テスト | 削除・整理中心 | 残りを許容リストへ |
+
+---
+
+## Dependency Cleanup Track
+
+レイヤ違反を段階的に削減する横串プロセス。詳細は `rules/dependency_cleanup_plan.md` を参照。
+
+### 概要
+
+- `DBG_DEPS=True` で違反を可視化
+- 各フェーズで少量ずつ修正（一気に直さない）
+- Phase 1 完了時点: **49 件** の違反
+
+### 各フェーズの目標
+
+| フェーズ | 削減目標 | 対象 |
+|----------|---------|------|
+| alpha.1 | 0 件 | 分析のみ |
+| alpha.2 | 3〜5 件 | Low risk（明示的 import 等） |
+| beta.1 | 5〜10 件 | props/ParsedData 周辺 |
+| beta.2 | 5〜10 件 | handlers/previews 周辺 |
+| RC | 残りを整理 | 許容リストをドキュメント化 |

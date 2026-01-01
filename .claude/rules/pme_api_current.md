@@ -247,11 +247,110 @@ Phase 2-A の観測結果を踏まえ、以下が決定されました：
 
 ---
 
-## 残りの調査項目（Phase 3 以降）
+## Phase 2-A 観測結果（追加）
 
-- [ ] `props.prop_map` への登録順序と、各エディタの `register()` 呼び出し順序の関係
-- [ ] `ParsedData` の属性一覧（どのエディタがどのプロパティを登録しているか）
-- [ ] `context` の `exec_globals` / `exec_locals` の使い分けパターン
+以下は Phase 2-A で調査した結果。元々「残りの調査項目」として挙げられていた内容。
+
+### `props.prop_map` への登録順序
+
+**問題**: プロパティ登録がモジュールのロード時（import 時）に発生する
+
+各エディタモジュールでは、**モジュールレベル**（`class Editor` 定義の前）で `pme.props.*Property()` が呼び出される:
+
+```python
+# editors/pie_menu.py:15-18 (モジュールレベル)
+pme.props.IntProperty("pm", "pm_radius", -1)
+pme.props.IntProperty("pm", "pm_confirm", -1)
+pme.props.IntProperty("pm", "pm_threshold", -1)
+pme.props.BoolProperty("pm", "pm_flick", True)
+
+class Editor(EditorBase):
+    ...
+```
+
+**登録タイミング**:
+1. モジュールが import される → `pme.props.*Property()` が実行
+2. `pme.props.prop_map[name] = PMEProp(...)` で登録
+3. `register()` が呼ばれる → `Editor()` インスタンスが作成される
+
+**Reload Scripts での問題**:
+1. Reload 前: `prop_map` には全プロパティが登録済み
+2. Reload 開始: `unregister()` が呼ばれるが、`prop_map` はクリアされない
+3. モジュール再ロード: 同じプロパティが再登録される（問題なし）
+4. しかし、`ParsedData` のキャッシュ（`props.parsed_data`）は古い状態のまま
+5. 古い `ParsedData` が新しい `prop_map` と整合しない可能性
+
+### `ParsedData` の属性一覧
+
+各エディタが登録するプロパティと、`ParsedData` の属性の対応:
+
+| type | プロパティ名 | ptype | デフォルト値 | 登録元 |
+|------|-------------|-------|-------------|--------|
+| `pm` | `pm_radius` | INT | -1 | `editors/pie_menu.py:15` |
+| `pm` | `pm_confirm` | INT | -1 | `editors/pie_menu.py:16` |
+| `pm` | `pm_threshold` | INT | -1 | `editors/pie_menu.py:17` |
+| `pm` | `pm_flick` | BOOL | True | `editors/pie_menu.py:18` |
+| `rm` | `rm_title` | BOOL | True | `editors/menu.py:600` |
+| `row` | `layout` | STR (ENUM) | 'COLUMN' | `editors/popup.py:1649` |
+| `row` | `width` | STR (ENUM) | 'NORMAL' | `editors/popup.py:1659` |
+| `row` | `poll` | STR (ENUM) | 'NORMAL' | `editors/popup.py:1669` |
+| `row` | `fixed_col` | BOOL | False | `editors/popup.py:1680` |
+| `row` | `fixed_but` | BOOL | False | `editors/popup.py:1681` |
+| `pd` | `align` | BOOL | True | `editors/popup.py:1682` (推定) |
+| `pg` | `pg_wicons` | BOOL | - | `editors/panel_group.py:683` |
+| `pg` | `pg_context` | STR | "ANY" | `editors/panel_group.py:684` |
+| `pg` | `pg_category` | STR | "My Category" | `editors/panel_group.py:685` |
+| `pg` | `pg_space` | STR | "VIEW_3D" | `editors/panel_group.py:686` |
+| `pg` | `pg_region` | STR | "TOOLS" | `editors/panel_group.py:687` |
+| `mo` | `confirm` | BOOL | False | `ed_modal.py:25` |
+| `mo` | `block_ui` | BOOL | True | `ed_modal.py:26` |
+| `mo` | `lock` | BOOL | True | `ed_modal.py:27` |
+| `s` | `s_undo` | BOOL | - | `ed_stack_key.py:5` |
+| `s` | `s_state` | BOOL | - | `ed_stack_key.py:6` |
+| `sk` | `sk_block_ui` | BOOL | False | `ed_sticky_key.py:48` |
+
+**`type` の意味**:
+- `pm`: Pie Menu
+- `rm`: Regular Menu
+- `row` / `pd`: Pop-up Dialog
+- `pg`: Panel Group
+- `mo`: Modal Operator
+- `s`: Stack Key
+- `sk`: Sticky Key
+
+`ParsedData.__init__()` は、`text` の先頭から `type` を抽出し、その `type` に対応するプロパティのみを属性として設定する。
+
+### `exec_globals` / `exec_locals` の使い分けパターン
+
+`PMEContext` には 3 種類の辞書がある:
+
+| 属性 | 用途 | ライフサイクル |
+|------|------|--------------|
+| `_globals` | 基本的なグローバル変数 (`bpy`, `pme_context`, `drag_x/y`) | インスタンス生成時に初期化 |
+| `exec_globals` | `exec()` 呼び出し時のグローバル辞書 | 各 exec 呼び出しで設定、`reset()` でクリア |
+| `exec_locals` | `exec()` 呼び出し時のローカル辞書 | 各 exec 呼び出しで設定、`reset()` でクリア |
+| `exec_user_locals` | ユーザースクリプトから設定されたローカル変数 | 永続、`reset()` ではクリアされない |
+
+**典型的な使用パターン**:
+
+```python
+# 1. gen_globals() で統合辞書を生成
+globals_dict = context.gen_globals()
+# → _globals + exec_user_locals + 動的値 (text, icon, PME, PREFS) を統合
+
+# 2. exe() でコードを実行
+context.exe(code, globals=globals_dict)
+# → exec(code, globals_dict) を呼び出し
+
+# 3. eval() で式を評価
+result = context.eval(expression, globals=globals_dict)
+# → eval(expression, globals_dict) を呼び出し
+```
+
+**外部から触らせない理由**:
+- `exec_globals` / `exec_locals` は `exec()` の実行中のみ有効
+- 外部から設定すると、次の実行で上書きされる
+- 意図しない副作用の原因になる
 
 ---
 

@@ -10,6 +10,35 @@
 
 ---
 
+## 基本方針（Phase 2-B で確定）
+
+### pme 外部 API は「到達点」として設計する
+
+**pme 外部 API は v2.1.0 以降に Stable として公開する「到達点」であり、v2.0.0 の alpha/beta 段階では設計と実験に留める。**
+
+| フェーズ | pme API の扱い |
+|----------|---------------|
+| alpha.1 (Phase 2-A) | 観測のみ（API 実装なし） |
+| alpha.2 (Phase 2-B) | 仕様確定 + 最小限の Experimental 実装検討 |
+| beta (Phase 3) | 内部利用で実験、Executor Bundle の実装 |
+| RC | 外部利用シナリオのテスト |
+| v2.0.0 | 全て **Experimental** として公開 |
+| v2.1.0+ | 利用実績を見て **Stable** に昇格 |
+
+### なぜ Stable を急がないか
+
+1. **内部構造が安定していない**: Reload Scripts 問題、props ライフサイクル問題が未解決
+2. **利用実績がない**: 外部ツールからのフィードバックを得てから API を固めたい
+3. **リファクタの自由度**: 早期に Stable を約束すると、内部改善の選択肢が狭まる
+
+### α 段階での実装方針
+
+- **コード変更は最小限**: 大規模な API 実装は後ろへ送る
+- **設計ドキュメント優先**: `rules/pme_api_plan.md` での仕様策定を優先
+- **Reload Hotfix が最優先**: API より先にクラッシュを止める
+
+---
+
 ## Phase 2-B: External pme API Scope
 
 このセクションでは、**Gizmo Creator 開発者視点のレビュー** を踏まえ、外部ツールが PME を「コマンド実行エンジン」として使うための **最小限の** API スコープを定義します。
@@ -425,10 +454,47 @@ if pme.evaluate(pme.polls.MESH_EDIT):
 
 ---
 
+## Post v2.0.0 / Phase 3 以降の API 候補
+
+以下の API は v2.0.0 では実装せず、Post v2.0.0 または Phase 3 以降で検討する。
+
+### Menu Integration（Post v2.0.0 候補）
+
+| API | 説明 | 優先度 |
+|-----|------|--------|
+| `pme.find_pm(name)` | PM を名前で検索 | 中 |
+| `pme.invoke_pm(pm, event)` | PM を呼び出し | 中 |
+| `pme.list_pms(mode=None)` | PM 一覧を取得 | 低 |
+| `PMHandle` の拡張フィールド | `hotkey`, `tag` など | 低 |
+
+**理由**: PM モデルの内部構造が固まるまで待つ。
+
+### User Data 永続化（Post v2.0.0 候補）
+
+| API | 説明 | 優先度 |
+|-----|------|--------|
+| `pme.user_data.get(key, default)` | 永続化されたユーザーデータを取得 | 低 |
+| `pme.user_data.set(key, value)` | ユーザーデータを永続化 | 低 |
+
+**理由**: ファイル I/O の設計、データ形式の決定が必要。
+
+### Utility API（Post v2.0.0 候補）
+
+| API | 説明 | 優先度 |
+|-----|------|--------|
+| `pme.polls.*` | poll 条件のプリセット定数 | 中 |
+| `pme.log.*` | 構造化ログラッパー | 低 |
+| `pme.profile()` | 簡易プロファイラ | 低 |
+
+**理由**: コア API の安定後に追加。
+
+---
+
 ## 参照
 
 - `rules/pme_api_current.md` — 現状のインベントリ
 - `rules/pme_standard_namespace.md` — 標準名前空間の定義
+- `rules/milestones.md` — フェーズ計画
 - `docs/api_pme.md` — API ドキュメント（Phase 2+ で整備予定）
 - `rules/architecture.md` — レイヤ構造と依存方向のルール
 - Gizmo Creator 開発者視点の PME API レビュー
