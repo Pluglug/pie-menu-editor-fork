@@ -391,6 +391,11 @@ def log_layer_violations(
 ) -> None:
     """
     レイヤ違反を検出してログ出力する。カテゴリ無効時は完全スキップ。
+
+    出力フォーマット (違反がある場合):
+        [deps] Layer violations: 3
+        [deps]   infra <- ui : bl_utils.py imports from ui/__init__.py
+        [deps]   core <- editors : pme_types.py imports from editors/base.py
     """
     if not _is_enabled(category):
         return
@@ -406,6 +411,7 @@ def log_layer_violations(
         )
         return
 
+    # ヘッダー出力
     dbg_log(
         category,
         f"Layer violations: {len(violations)}",
@@ -414,3 +420,15 @@ def log_layer_violations(
         location=location,
         run_id=run_id,
     )
+
+    # 各違反を読みやすい形式で出力
+    # フォーマット: layer_dependent <- layer_dependency : dependent imports dependency
+    for v in violations:
+        l_dep = v["layer_dependency"]
+        l_mod = v["layer_dependent"]
+        dep_short = v["dependency"].split(".")[-1]
+        mod_short = v["dependent"].split(".")[-1]
+        _log(
+            "\033[33m",  # yellow/warn
+            f"  {l_mod} <- {l_dep} : {mod_short} imports {dep_short}",
+        )

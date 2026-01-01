@@ -1,5 +1,11 @@
-# ui/screen.py - Screen/Area/Region manipulation helpers
+# ui/screen.py - エリア・リージョン・スペース操作
 # LAYER = "ui"
+#
+# 責務:
+#   - find_area, find_region, find_window, find_screen: Blenderオブジェクト検索
+#   - ContextOverride, get_override_args: コンテキストオーバーライド
+#   - focus_area, override_context: エリアフォーカス・コンテキスト切替
+#   - toggle_header, move_header, toggle_sidebar: UI領域の表示切替
 #
 # Moved from: screen_utils.py (PME2 layer separation)
 

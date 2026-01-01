@@ -1,5 +1,11 @@
-# ui/layout.py - UILayout wrappers and helpers
+# ui/layout.py - UILayout ラッパー・ヘルパー
 # LAYER = "ui"
+#
+# 責務:
+#   - LayoutHelper (lh): UILayout操作の簡易ラッパー
+#   - CLayout, Row, Col: コンテキストベースのレイアウト構築
+#   - draw_pme_layout: PMEカスタムレイアウト描画
+#   - operator, split: よく使うUI操作のショートカット
 #
 # Moved from: layout_helper.py (PME2 layer separation)
 

@@ -1,7 +1,14 @@
-# ui/ - UI描画ヘルパー（LayoutHelper, UIList, menus, popups）
+# ui/ - UI描画ヘルパーパッケージ
 # LAYER = "ui"
 #
-# This file also contains functions/classes originally from ui.py
+# パッケージ構成:
+#   - __init__.py (本ファイル): utitle, tag_redraw, 旧ui.py互換シンボル
+#   - layout.py: UILayoutラッパー・ヘルパー (LayoutHelper, CLayout, Row, Col)
+#   - panels.py: パネル登録・表示ヘルパー (panel, PLayout, hide_panel)
+#   - utils.py: メニュー・スクリプト実行 (WM_MT_pme, execute_script)
+#   - screen.py: エリア・リージョン操作 (find_area, ContextOverride)
+#
+# Note: This file contains functions originally from ui.py
 # to maintain backward compatibility with `from .ui import utitle` etc.
 
 LAYER = "ui"

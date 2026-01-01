@@ -1,5 +1,11 @@
-# ui/utils.py - Menu utilities and script execution
+# ui/utils.py - メニュー・スクリプト実行ヘルパー
 # LAYER = "ui"
+#
+# 責務:
+#   - WM_MT_pme: PMEメニュー基底クラス
+#   - execute_script: ユーザースクリプト実行
+#   - draw_menu, open_menu, toggle_menu: メニュー操作
+#   - get_pme_menu_class, pme_menu_classes: メニュークラス管理
 #
 # Moved from: ui_utils.py (PME2 layer separation)
 

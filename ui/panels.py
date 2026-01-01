@@ -1,5 +1,11 @@
-# ui/panels.py - Panel management utilities
+# ui/panels.py - パネル登録・表示ヘルパー
 # LAYER = "ui"
+#
+# 責務:
+#   - パネルの動的登録/解除 (panel, hide_panel, hidden_panel)
+#   - PLayout: パネル描画用レイアウトヘルパー
+#   - PME_OT_panel_toggle, PME_OT_btn_hide: パネル操作オペレーター
+#   - bl_panel_types, bl_panel_enum_items: パネル型の列挙
 #
 # Moved from: panel_utils.py (PME2 layer separation)
 
