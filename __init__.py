@@ -240,15 +240,27 @@ unregister_module = legacy_unregister_module
 if not bpy.app.background:
     import importlib
 
+    # Track reload activity for debugging unexpected reloads
+    _reload_count = 0
+    _import_count = 0
+
     for mod in MODULES:
         if mod in locals():
             try:
                 importlib.reload(locals()[mod])
+                _reload_count += 1
                 continue
             except:
                 pass
 
         importlib.import_module("pie_menu_editor." + mod)
+        _import_count += 1
+
+    # Log reload activity (helps detect unexpected module reloads)
+    if _reload_count > 0:
+        logw(f"PME: Module-level reload detected: {_reload_count} reloaded, {_import_count} imported")
+    else:
+        DBG_INIT and logi(f"PME: Module-level import: {_import_count} modules imported (no reloads)")
 
     from .addon import get_prefs, temp_prefs
     from . import property_utils
@@ -510,11 +522,20 @@ class PME_OT_wait_keymaps(bpy.types.Operator):
         return {'RUNNING_MODAL'}
 
 
+_register_count = 0  # Track register calls for debugging
+
 def register():
+    global _register_count
+    _register_count += 1
+
     if bpy.app.background:
         return
 
     DBG_INIT and logh("PME Register")
+
+    # Detect multiple register calls (shouldn't happen in normal operation)
+    if _register_count > 1:
+        logw(f"PME: register() called {_register_count} times - possible unexpected reload")
 
     if addon.check_bl_version():
         if _bpy.context.window:
@@ -545,7 +566,12 @@ def register():
         bpy.utils.register_class(invalid_prefs)
 
 
+_unregister_count = 0  # Track unregister calls for debugging
+
 def unregister():
+    global _unregister_count, _register_count
+    _unregister_count += 1
+
     if bpy.app.background:
         return
 
@@ -554,6 +580,10 @@ def unregister():
         return
 
     DBG_INIT and logh("PME Unregister")
+
+    # Detect mismatched register/unregister calls
+    if _unregister_count > _register_count:
+        logw(f"PME: unregister() called more times than register() - register={_register_count}, unregister={_unregister_count}")
 
     for op in PME_OT_wait_context.instances:
         op.cancelled = True
