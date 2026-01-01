@@ -252,6 +252,7 @@ class ParsedData:
 
     def __init__(self, text):
         self.type, _, data = text.partition("?")
+        self._initialized = False  # Track if prop_map was available
 
         for k, prop in props.prop_map.items():
             if prop.type == self.type:
@@ -272,6 +273,69 @@ class ParsedData:
             if getattr(self, k) != prop.default:
                 self.is_empty = False
                 break
+
+        self._initialized = bool(props.prop_map)
+
+    # Fallback defaults for known properties when prop_map is empty (Reload Scripts hotfix)
+    # These MUST match the defaults registered in editors/*.py
+    _FALLBACK_DEFAULTS = {
+        # editors/pie_menu.py
+        'pm_radius': -1,
+        'pm_confirm': -1,
+        'pm_threshold': -1,
+        'pm_flick': True,
+        # editors/menu.py
+        'rm_title': True,
+        # editors/popup.py
+        'layout': 'COLUMN',
+        'width': 300,
+        'poll': "",
+        'fixed_col': False,
+        'fixed_but': False,
+        'align': False,
+        'column': 'ONE',
+        'pd_row': 'TWO',
+        'pd_box': False,
+        'pd_panel': False,
+        'pd_expand': True,
+        # editors/panel_group.py
+        'pg_wicons': False,
+        'pg_context': "",
+        'pg_category': "",
+        'pg_space': 'CURRENT',
+        'pg_region': 'UI',
+        # ed_modal.py
+        'confirm': True,
+        'block_ui': True,
+        'lock': False,
+        # ed_stack_key.py
+        's_undo': False,
+        's_state': 'PRESS',
+        # ed_sticky_key.py
+        'sk_block_ui': True,
+    }
+
+    def __getattr__(self, name):
+        # Safety net for Reload Scripts: return sensible defaults if prop_map was empty
+        if name.startswith('_'):
+            raise AttributeError(name)
+
+        # Try to find the property in prop_map now (it may have been populated after __init__)
+        prop = props.prop_map.get(name)
+        if prop:
+            default = prop.default
+            object.__setattr__(self, name, default)
+            logw("PME: late-bound prop via __getattr__", f"type={self.type}", f"prop={name}")
+            return default
+
+        # Use hardcoded fallback defaults for known properties
+        if name in self._FALLBACK_DEFAULTS:
+            default = self._FALLBACK_DEFAULTS[name]
+            object.__setattr__(self, name, default)
+            logw("PME: fallback default used", f"type={self.type}", f"prop={name}", f"default={default}")
+            return default
+
+        raise AttributeError(f"'{type(self).__name__}' object has no attribute '{name}'")
 
     def value(self, name):
         prop = props.get(name)

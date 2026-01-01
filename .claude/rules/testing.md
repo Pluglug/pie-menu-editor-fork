@@ -38,15 +38,41 @@
 - [ ] `force_order=[]` で正常起動できる
 - [ ] アドオン無効化 → 有効化でエラーが出ない
 
-> ⚠️ **KNOWN BROKEN: Reload Scripts**
->
-> F3 → Reload Scripts は現在 **既知の不具合** があります。
->
-> - `ParsedData.pm_flick` などの属性エラー (Issue #64)
-> - カスタムアイコンが読み込まれない (Issue #65)
->
-> これらは Phase 1 のスコープ外とし、Phase 2 以降で対応予定です。
-> Reload Scripts のテストは **スキップ** してください。
+### Reload Scripts テスト（Phase 2-B Hotfix 適用後）
+
+⚠️ **Hotfix 適用済み** (v2.0.0-alpha.2)
+
+Phase 2-B で以下のホットフィックスが適用されました:
+
+| Issue | 問題 | 対策 |
+|-------|------|------|
+| #64 | `ParsedData.pm_flick` などの属性エラー | `ParsedData.__getattr__` でフォールバックデフォルト値を返す |
+| #65 | カスタムアイコンが読み込まれない | `previews_helper` に try-except ガードを追加 |
+
+**テスト手順**:
+
+1. **Reload Scripts の実行**
+   - [ ] F3 → 「Reload Scripts」を実行
+   - [ ] Python コンソールにクラッシュなし（警告ログは許容）
+
+2. **Preferences 画面の確認**
+   - [ ] Edit → Preferences → Add-ons → Pie Menu Editor を開く
+   - [ ] パネルが表示される（アイコンが出なくても許容）
+   - [ ] PM リストが表示される
+
+3. **基本的な Pie 呼び出し**
+   - [ ] 既存の Pie Menu をホットキーで呼び出す
+   - [ ] 項目をクリックして動作する
+
+**期待される警告ログ** (正常動作):
+```
+PME: fallback default used type=PMENU prop=pm_flick default=True
+PME: previews refresh failed (icons may not display) ...
+```
+
+**クラッシュする場合**:
+- コンソールのトレースバックを Issue に報告
+- Phase 3 でライフサイクルを再設計予定
 
 ### PropertyGroup / クラス構造を触ったとき
 

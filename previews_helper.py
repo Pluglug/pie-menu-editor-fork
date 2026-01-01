@@ -2,6 +2,7 @@ import bpy
 import bpy.utils.previews
 import os
 from . import pme
+from .infra.debug import logw
 
 
 class PreviewsHelper:
@@ -48,19 +49,28 @@ class PreviewsHelper:
         if self.preview is not None:
             return
 
-        self.preview = bpy.utils.previews.new()
-        for f in os.listdir(self.path):
-            if not f.endswith(".png"):
-                continue
+        try:
+            self.preview = bpy.utils.previews.new()
+            for f in os.listdir(self.path):
+                if not f.endswith(".png"):
+                    continue
 
-            self.preview.load(
-                os.path.splitext(f)[0], os.path.join(self.path, f), 'IMAGE'
-            )
+                self.preview.load(
+                    os.path.splitext(f)[0], os.path.join(self.path, f), 'IMAGE'
+                )
+        except Exception as e:
+            # Hotfix: Reload Scripts may leave previews in unstable state
+            logw("PME: previews refresh failed (icons may not display)", str(e))
+            self.preview = None
 
     def unregister(self):
         if not self.preview:
             return
-        bpy.utils.previews.remove(self.preview)
+        try:
+            bpy.utils.previews.remove(self.preview)
+        except Exception as e:
+            # Hotfix: Reload Scripts may leave previews in unstable state
+            logw("PME: previews unregister failed", str(e))
         self.preview = None
 
 
