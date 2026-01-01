@@ -20,7 +20,7 @@ from traceback import format_exc
 from errno import ENOENT
 from ..addon import ADDON_PATH, get_prefs, print_exc
 from .. import pme
-from ..layout_helper import lh, draw_pme_layout, CLayout
+from .layout import lh, draw_pme_layout, CLayout
 from ..operators import WM_OT_pme_user_pie_menu_call
 
 

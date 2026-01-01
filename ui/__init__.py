@@ -15,8 +15,8 @@ LAYER = "ui"
 
 import bpy
 import traceback
-from .. import constants as CC
-from ..debug_utils import *
+from ..core import constants as CC
+from ..infra.debug import *
 from .. import operator_utils
 from .. import pme
 from ..addon import get_uprefs, ic
