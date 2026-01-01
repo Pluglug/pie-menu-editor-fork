@@ -432,3 +432,63 @@ def log_layer_violations(
             "\033[33m",  # yellow/warn
             f"  {l_mod} <- {l_dep} : {mod_short} imports {dep_short}",
         )
+
+
+# ======================================================
+# 出力改善用ヘルパー関数
+# ======================================================
+
+def print_section_header(title: str) -> None:
+    """セクションヘッダーを出力する。"""
+    print()
+    print(f"\033[1;36m{'=' * 50}\033[0m")
+    print(f"\033[1;36m  {title}\033[0m")
+    print(f"\033[1;36m{'=' * 50}\033[0m")
+
+
+def print_subsection_header(title: str) -> None:
+    """サブセクションヘッダーを出力する。"""
+    print()
+    print(f"\033[1;33m--- {title} ---\033[0m")
+
+
+def print_success(message: str) -> None:
+    """成功メッセージを出力する。"""
+    print(f"\033[32m✓ {message}\033[0m")
+
+
+def print_failure(message: str) -> None:
+    """失敗メッセージを出力する。"""
+    print(f"\033[31m✗ {message}\033[0m")
+
+
+def print_numbered_list(
+    items: Iterable[str],
+    *,
+    short_name_func: Optional[callable] = None,
+    deps_dict: Optional[Dict[str, Iterable[str]]] = None,
+) -> None:
+    """
+    番号付きリストを出力する。
+
+    Args:
+        items: 出力するアイテムのリスト
+        short_name_func: モジュール名を短縮する関数（省略時はそのまま出力）
+        deps_dict: 依存関係の辞書（キー: モジュール、値: 依存先のセット）
+    """
+    for i, item in enumerate(items, 1):
+        name = short_name_func(item) if short_name_func else item
+        if deps_dict and item in deps_dict:
+            deps = deps_dict[item]
+            if deps:
+                dep_names = ", ".join(
+                    short_name_func(d) if short_name_func else d
+                    for d in sorted(deps)[:3]  # 最大3件表示
+                )
+                if len(deps) > 3:
+                    dep_names += f" +{len(deps) - 3}"
+                print(f"  {i:2d}. {name} \033[90m(→ {dep_names})\033[0m")
+            else:
+                print(f"  {i:2d}. {name}")
+        else:
+            print(f"  {i:2d}. {name}")

@@ -181,6 +181,11 @@ from .infra.debug import (
     DependencyGraphLogger,
     make_edges_from_graph,
     log_layer_violations,
+    print_section_header,
+    print_subsection_header,
+    print_success,
+    print_failure,
+    print_numbered_list,
 )
 
 # Module management globals
@@ -251,6 +256,10 @@ def init_addon(
     MODULE_PATTERNS.append(re.compile(f"^{ADDON_ID}$"))
 
     try:
+        # セクションヘッダーで PME2 初期化の開始を示す
+        if DBG_DEPS:
+            print_section_header("PME2 Addon Initialization")
+
         # Collect module names
         with dbg_scope("profile", "init_addon.collect_modules", location="addon.init_addon"):
             module_names = list(_collect_module_names())
@@ -365,6 +374,11 @@ def init_addon(
 
     # Log final module order
     if DBG_DEPS:
+        # セクションヘッダーで視覚的に区切る
+        print_section_header(f"Module Load Order ({len(MODULE_NAMES)} modules)")
+        print_numbered_list(MODULE_NAMES, short_name_func=_short_name)
+
+        # Mermaid グラフも出力
         dep_logger = DependencyGraphLogger("init_addon")
         dep_logger.add_chain(
             [_short_name(m) for m in MODULE_NAMES],
@@ -396,37 +410,65 @@ def register_modules() -> None:
         classes = _get_classes()
 
     success = True
+    class_success_count = 0
+    class_fail_count = 0
 
     # Register classes
+    if DBG_DEPS:
+        print_subsection_header(f"Registering {len(classes)} classes")
+
     for cls in classes:
         try:
             _validate_class(cls)
             bpy.utils.register_class(cls)
+            class_success_count += 1
             dbg_log("deps", f"Registered: {cls.__name__}", location="addon.register_modules")
         except Exception as e:
             success = False
-            print(f"Failed to register class: {cls.__name__}")
-            print(f"   Reason: {str(e)}")
-            print(f"   Module: {cls.__module__}")
+            class_fail_count += 1
+            print_failure(f"Class: {cls.__name__}")
+            print(f"     Reason: {str(e)}")
+            print(f"     Module: {cls.__module__}")
             if hasattr(cls, "__annotations__"):
-                print(f"   Annotations: {list(cls.__annotations__.keys())}")
+                print(f"     Annotations: {list(cls.__annotations__.keys())}")
+
+    if DBG_DEPS:
+        if class_fail_count == 0:
+            print_success(f"All {class_success_count} classes registered")
+        else:
+            print_failure(f"{class_fail_count}/{len(classes)} classes failed")
 
     # Initialize modules
+    module_success_count = 0
+    module_fail_count = 0
+
+    if DBG_DEPS:
+        print_subsection_header(f"Initializing {len(MODULE_NAMES)} modules")
+
     with dbg_scope("profile", "register_modules.init", location="addon.register_modules"):
         for mod_name in MODULE_NAMES:
             try:
                 mod = sys.modules[mod_name]
                 if hasattr(mod, "register"):
                     mod.register()
+                    module_success_count += 1
                     dbg_log("deps", f"Initialized: {_short_name(mod_name)}", location="addon.register_modules")
             except Exception as e:
                 success = False
-                print(f"Failed to initialize module: {mod_name}")
-                print(f"   Reason: {str(e)}")
+                module_fail_count += 1
+                print_failure(f"Module: {_short_name(mod_name)}")
+                print(f"     Reason: {str(e)}")
                 traceback.print_exc()
 
+    if DBG_DEPS:
+        if module_fail_count == 0:
+            print_success(f"All {module_success_count} modules initialized")
+        else:
+            print_failure(f"{module_fail_count}/{len(MODULE_NAMES)} modules failed")
+
     if not success:
-        print("Warning: Some components failed to initialize")
+        print()
+        print_failure("Some components failed to initialize")
 
 
 def unregister_modules() -> None:
@@ -447,14 +489,14 @@ def unregister_modules() -> None:
             if hasattr(mod, "unregister"):
                 mod.unregister()
         except Exception as e:
-            print(f"Module unregistration error: {mod_name} - {str(e)}")
+            print_failure(f"Module unregister: {_short_name(mod_name)} - {str(e)}")
 
     # Unregister classes (reverse order)
     for cls in reversed(_get_classes()):
         try:
             bpy.utils.unregister_class(cls)
         except Exception as e:
-            print(f"Class unregistration error: {cls.__name__} - {str(e)}")
+            print_failure(f"Class unregister: {cls.__name__} - {str(e)}")
 
 
 # ======================================================
