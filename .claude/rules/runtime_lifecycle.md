@@ -327,25 +327,34 @@ Sprint 1 では残りの構造問題を調査し、ユーザー体験を完全�
 |---|--------|--------|------|
 | 1.1 | `editors/property.py` の props 登録箇所を特定 | 登録一覧 | ✅ 完了 |
 | 1.2 | `preferences.init_menus()` の呼び出しフロー追跡 | シーケンス図 | ✅ 完了 |
-| 1.3 | 循環依存 `preferences ↔ operators.io` の原因特定 | 依存グラフ | ⏳ 次のタスク |
+| 1.3 | 循環依存 `preferences ↔ operators.io` の原因特定 | 依存グラフ | ✅ 完了 |
 | 1.4 | クラス重複登録（178 → 186）の原因特定 | 重複クラス一覧 | ⏳ 次のタスク |
 | 1.5 | **previews_helper reload-safe 化** | ライフサイクル設計 | ⏳ 次のタスク |
 
 ---
 
-#### 1.3 循環依存の原因特定
+#### 1.3 循環依存の原因特定 ✅ 解決済み
 
-**目的**: 循環のパターンを文書化し、「どの import がどの層ルールを破っているか」を明確にする。
-
-**ゴール**:
-- 本ドキュメントまたは `rules/editor_dependency_map.md` に循環の説明を追記
-- 将来的な解消方針（例: io 側の prefs 参照を逆転）を記載
-- 「問題の輪郭が完全に見えている状態」にする
-
-**現状のログ出力**:
+**原因**:
 ```
-Cycle 1: operators.io -> preferences -> operators.io
+preferences.py:104     → from .operators.io import (...)  [モジュールレベル]
+operators/io.py:316    → from ..preferences import PME_UL_pm_tree  [関数内遅延]
 ```
+
+**解決策**: `addon.py` の `_analyze_imports()` を改善
+
+関数スコープ内の import（遅延インポート）を依存検出から除外：
+- `visit_FunctionDef` / `visit_AsyncFunctionDef` で `function_depth` をトラッキング
+- `function_depth > 0` の場合、import を依存としてカウントしない
+
+**設計理由**:
+- モジュールレベル import = **ロード時依存**（循環するとエラー）
+- 関数内 import = **ランタイム依存**（呼び出し時に解決、循環しても OK）
+
+**結果**:
+- `preferences → operators.io`: ✅ 検出される（正常な依存方向）
+- `operators.io → preferences`: ❌ 検出されない（関数内遅延インポート）
+- 循環警告が消える
 
 ---
 

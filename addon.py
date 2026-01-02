@@ -727,6 +727,7 @@ def _analyze_imports(module_names: List[str]) -> Dict[str, Set[str]]:
             self.mod_name = mod_name
             self.graph = graph
             self.in_type_checking_block = False
+            self.function_depth = 0  # Track function nesting depth
 
         def visit_If(self, node: ast.If):
             is_type_checking = (
@@ -739,15 +740,37 @@ def _analyze_imports(module_names: List[str]) -> Dict[str, Set[str]]:
             self.generic_visit(node)
             self.in_type_checking_block = original_state
 
-        def visit_Import(self, node: ast.Import):
+        def visit_FunctionDef(self, node: ast.FunctionDef):
+            # Track entering a function scope (lazy imports are OK inside functions)
+            self.function_depth += 1
+            self.generic_visit(node)
+            self.function_depth -= 1
+
+        def visit_AsyncFunctionDef(self, node: ast.AsyncFunctionDef):
+            # Same for async functions
+            self.function_depth += 1
+            self.generic_visit(node)
+            self.function_depth -= 1
+
+        def _should_skip_import(self) -> bool:
+            """Return True if this import should not count as a dependency."""
+            # Skip TYPE_CHECKING imports (type hints only)
             if self.in_type_checking_block:
+                return True
+            # Skip lazy imports inside functions (runtime dependency, not load-time)
+            if self.function_depth > 0:
+                return True
+            return False
+
+        def visit_Import(self, node: ast.Import):
+            if self._should_skip_import():
                 return
             for alias in node.names:
                 if alias.name.startswith(ADDON_ID):
                     self.graph[self.mod_name].add(alias.name)
 
         def visit_ImportFrom(self, node: ast.ImportFrom):
-            if self.in_type_checking_block:
+            if self._should_skip_import():
                 return
 
             if node.module:
