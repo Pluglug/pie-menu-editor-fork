@@ -318,14 +318,101 @@ Reload Scripts テスト中に発見された新規問題への対応。
 
 ---
 
-### Sprint 1: 調査と設計（1-2 日）
+### Sprint 1: Runtime Lifecycle / Reload-safe behavior ⏳ 進行中
+
+Sprint 0/0.1 で「Reload Scripts で落ちない」という最低ラインをクリア。
+Sprint 1 では残りの構造問題を調査し、ユーザー体験を完全にするためのタスクに取り組む。
 
 | # | タスク | 成果物 | 状態 |
 |---|--------|--------|------|
-| 1.1 | `editors/property.py` の props 登録箇所を特定 | 登録一覧の追記 | ✅ 完了 |
-| 1.2 | `preferences.init_menus()` の呼び出しフローを追跡 | シーケンス図 | ✅ 完了 |
+| 1.1 | `editors/property.py` の props 登録箇所を特定 | 登録一覧 | ✅ 完了 |
+| 1.2 | `preferences.init_menus()` の呼び出しフロー追跡 | シーケンス図 | ✅ 完了 |
 | 1.3 | 循環依存 `preferences ↔ operators.io` の原因特定 | 依存グラフ | ⏳ 次のタスク |
 | 1.4 | クラス重複登録（178 → 186）の原因特定 | 重複クラス一覧 | ⏳ 次のタスク |
+| 1.5 | **previews_helper reload-safe 化** | ライフサイクル設計 | ⏳ 次のタスク |
+
+---
+
+#### 1.3 循環依存の原因特定
+
+**目的**: 循環のパターンを文書化し、「どの import がどの層ルールを破っているか」を明確にする。
+
+**ゴール**:
+- 本ドキュメントまたは `rules/editor_dependency_map.md` に循環の説明を追記
+- 将来的な解消方針（例: io 側の prefs 参照を逆転）を記載
+- 「問題の輪郭が完全に見えている状態」にする
+
+**現状のログ出力**:
+```
+Cycle 1: operators.io -> preferences -> operators.io
+```
+
+---
+
+#### 1.4 クラス重複登録の原因特定
+
+**目的**: どのクラスが「二度目の register_class(..., unregistering previous)」を引き起こしているかを特定。
+
+**対象クラス（ログから）**:
+- `WM_OT_pme_user_pie_menu_call`
+- `WM_OT_pm_select`
+- `PME_OT_exec`
+- `PME_OT_input_box`
+- `PME_OT_message_box`
+
+**ゴール**:
+- 原因が以下のどれかを明確化:
+  - a) 旧 PME1 時代の register/unregister の設計ミス
+  - b) PME2 Loader の import 戦略
+  - c) 双方のミスマッチ
+- 「必ず直す」までやらなくても、「どこの責任レイヤか」を明確にする
+
+---
+
+#### 1.5 previews_helper reload-safe 化（カスタムアイコンの根本解決）
+
+**関連 Issue**: #65, #62, #57
+**関連コミット**: `a0d5aba` (Fix custom icon lifecycle and prefs #57)
+
+**背景**:
+- Sprint 0/0.1 で Reload Scripts 自体は通るようになった
+- しかし「カスタムアイコンが再登録できない」という UX 的に致命的な傷が残る
+- Lifecycle フェーズの完了条件として「カスタムアイコンが普通に使える」を含めるべき
+
+**スコープ**:
+
+1. **現状把握**
+   - `previews_helper.py` がどのタイミングで preview コレクションを作成/破棄しているか整理
+   - `bpy.utils.previews.new()` / `remove()` の呼び出し箇所
+   - 依存違反: `core.constants imports previews_helper` の影響評価
+
+2. **ライフサイクル設計**
+   - インバリアントを決定:
+     - PME enable / Reload Scripts / PME disable-enable を何度やっても:
+       - 「ユーザーが設定した custom icon 定義」は消えない（prefs / data として保持）
+       - 「preview キャッシュ」は必要な時に再構築される揮発的なもの
+   - PME2 Loader のフックに合わせた管理:
+     - `register_modules.init` で preview コレクションを作り直す
+     - `unregister_modules.uninit` で確実に `remove()` する
+
+3. **実装**
+   - 既存ホットフィックス（`a0d5aba`）の評価と改善
+   - `init_previews()` / `clear_previews()` のペアで管理する形にリプレイス
+   - Reload Scripts シナリオのテスト:
+     - 通常起動 → custom icon 登録 → Reload Scripts → icon が使える
+     - PME disable → enable → icon 生存
+
+4. **ドキュメント**
+   - 本ドキュメントに previews_helper のライフサイクル図を追加
+   - 「Reload Scripts を前提とした custom icon の保証範囲」を明記
+
+**受け入れ条件**:
+- [ ] Reload Scripts 実行後も、ユーザー定義 custom icon が再起動なしで機能する
+- [ ] custom icon 周りのエラーでアドオン全体が register 失敗しない
+- [ ] previews_helper の preview コレクションは register/unregister で必ず作成/破棄される
+- [ ] 既存のホットフィックスコードは削除または明確に位置づけられている
+
+---
 
 ### Sprint 2: 循環依存の解消（1-2 日）
 
@@ -367,11 +454,17 @@ Reload Scripts テスト中に発見された新規問題への対応。
 
 ### Reload Scripts テスト
 
-- [ ] F3 → Reload Scripts を実行
-- [ ] Python コンソールにエラーなし（警告は許容）
-- [ ] Preferences パネルが表示される
+- [x] F3 → Reload Scripts を実行 ✅ Sprint 0 で達成
+- [x] Python コンソールにクラッシュなし（警告は許容）✅ Sprint 0/0.1 で達成
+- [x] Preferences パネルが表示される ✅ Sprint 0 で達成
 - [ ] 既存の Pie Menu が呼び出せる
 - [ ] 新規 Pie Menu を作成できる
+
+### カスタムアイコンテスト（Sprint 1.5）
+
+- [ ] Reload Scripts 実行後もカスタムアイコンが表示される
+- [ ] アイコン更新ボタン（refresh）が機能する
+- [ ] `wm.read_homefile(app_template=...)` 後もアイコンが機能する
 
 ### ON/OFF 切り替えテスト
 
