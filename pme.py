@@ -6,7 +6,7 @@ import bpy
 LAYER = "infra"
 
 from .addon import get_prefs, temp_prefs, print_exc
-from .infra.debug import logw
+from .infra.debug import logw, DBG_RUNTIME
 
 
 class UserData:
@@ -195,7 +195,7 @@ class PMEProps:
         for k, prop in self.prop_map.items():
             if prop.type == pd.type and not hasattr(pd, k):
                 setattr(pd, k, prop.default)
-                logw("PME: defaulted missing prop", f"type={pd.type}", f"prop={k}")
+                DBG_RUNTIME and logw("PME: defaulted missing prop", f"type={pd.type}", f"prop={k}")
 
         return pd
 
@@ -337,14 +337,14 @@ class ParsedData:
         if prop:
             default = prop.default
             object.__setattr__(self, name, default)
-            logw("PME: late-bound prop via __getattr__", f"type={self.type}", f"prop={name}")
+            DBG_RUNTIME and logw("PME: late-bound prop via __getattr__", f"type={self.type}", f"prop={name}")
             return default
 
         # Use hardcoded fallback defaults for known properties
         if name in self._FALLBACK_DEFAULTS:
             default = self._FALLBACK_DEFAULTS[name]
             object.__setattr__(self, name, default)
-            logw("PME: fallback default used", f"type={self.type}", f"prop={name}", f"default={default}")
+            DBG_RUNTIME and logw("PME: fallback default used", f"type={self.type}", f"prop={name}", f"default={default}")
             return default
 
         raise AttributeError(f"'{type(self).__name__}' object has no attribute '{name}'")
@@ -352,13 +352,13 @@ class ParsedData:
     def value(self, name):
         prop = props.get(name)
         if not prop:
-            logw("PME: value() missing prop in map", f"type={self.type}", f"prop={name}")
+            DBG_RUNTIME and logw("PME: value() missing prop in map", f"type={self.type}", f"prop={name}")
             return 0
 
         has_attr = hasattr(self, name)
         current_value = getattr(self, name, prop.default)
         if not has_attr:
-            logw("PME: value() defaulted missing prop", f"type={self.type}", f"prop={name}")
+            DBG_RUNTIME and logw("PME: value() defaulted missing prop", f"type={self.type}", f"prop={name}")
 
         items = getattr(prop, "items", None)
         if not items:

@@ -292,9 +292,29 @@ def __getattr__(self, name):
 | 0.2 | `from .pme import props as pp` を削除 | Low | ✅ 完了 |
 | 0.3 | `pp.xxx` を `pme.props.xxx` に置換（15 箇所） | Low | ✅ 完了 |
 | 0.4 | `_FALLBACK_DEFAULTS` に `vector` 等を追加 | Low | ✅ 完了 |
-| 0.5 | Reload Scripts テスト | - | ⏳ ユーザー確認待ち |
+| 0.5 | Reload Scripts テスト | - | ✅ 完了 |
 
 **コミット**: `2b0704d` - Fix Reload Scripts failure: use pme.props instead of cached pp
+
+---
+
+### Sprint 0.1: ユーザープロパティ防御策 ✅ 完了
+
+Reload Scripts テスト中に発見された新規問題への対応。
+
+**問題**: `graph view prop` という user property の EnumProperty 定義が破損
+- `ENUM_FLAG` が無効なのに `default` が `set` 型
+- `TypeError: default option must be a 'str' or 'int' type when ENUM_FLAG is disabled`
+
+| # | タスク | リスク | 状態 |
+|---|--------|--------|------|
+| 0.1.1 | `register_user_property()` に EnumProperty default サニタイズ追加 | Low | ✅ 完了 |
+| 0.1.2 | プロパティ登録を try/except でガード | Low | ✅ 完了 |
+| 0.1.3 | `late-bound prop` 警告を `DBG_RUNTIME` のみに制限 | Low | ✅ 完了 |
+
+**変更ファイル**:
+- `editors/property.py`: サニタイズロジック + try/except ガード
+- `pme.py`: 警告を `DBG_RUNTIME and logw(...)` に変更
 
 ---
 
@@ -304,8 +324,8 @@ def __getattr__(self, name):
 |---|--------|--------|------|
 | 1.1 | `editors/property.py` の props 登録箇所を特定 | 登録一覧の追記 | ✅ 完了 |
 | 1.2 | `preferences.init_menus()` の呼び出しフローを追跡 | シーケンス図 | ✅ 完了 |
-| 1.3 | 循環依存 `preferences ↔ operators.io` の原因特定 | 依存グラフ | - |
-| 1.4 | クラス重複登録（178 → 186）の原因特定 | 重複クラス一覧 | - |
+| 1.3 | 循環依存 `preferences ↔ operators.io` の原因特定 | 依存グラフ | ⏳ 次のタスク |
+| 1.4 | クラス重複登録（178 → 186）の原因特定 | 重複クラス一覧 | ⏳ 次のタスク |
 
 ### Sprint 2: 循環依存の解消（1-2 日）
 

@@ -28,7 +28,7 @@ DBG_PROP_PATH = False
 # 新規カテゴリ（後方互換を維持しつつ段階的に使用する）
 DBG_DEPS = True      # init_addon の依存解析・ロード順
 DBG_PROFILE = True   # 軽量な処理時間計測
-DBG_RUNTIME = True   # ランタイム挙動観測（挙動変更はしない）
+DBG_RUNTIME = False   # ランタイム挙動観測（挙動変更はしない）
 DBG_STRUCTURED = True  # NDJSON への構造化ログ出力（明示的にオンにする）
 
 # NDJSON 出力先。既定は .cursor/debug.log（存在しない場合は自動作成）

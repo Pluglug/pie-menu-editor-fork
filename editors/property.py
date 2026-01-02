@@ -428,9 +428,31 @@ def register_user_property(pm):
     DBG_PROP and logi(pm.name, kwargs)
     DBG_PROP and logi(pm.data)
 
+    # Sanitize EnumProperty default: set type requires ENUM_FLAG
+    if pm.poll_cmd == 'ENUM' and 'default' in kwargs:
+        default_val = kwargs['default']
+        has_enum_flag = 'ENUM_FLAG' in options
+        if isinstance(default_val, set) and not has_enum_flag:
+            # User property has corrupted default (set without ENUM_FLAG)
+            # Convert to single value or remove default entirely
+            if default_val:
+                # Use first element of the set
+                kwargs['default'] = next(iter(default_val))
+                logw("PME: sanitized EnumProperty default", f"pm={pm.name}", f"was_set={default_val}")
+            else:
+                # Empty set - remove default
+                del kwargs['default']
+                logw("PME: removed empty set default", f"pm={pm.name}")
+
     pmi = pm.pmis.get('CLASS', None)
     cls = getattr(bpy.types, pmi.text) if pmi else pr.props.__class__
-    setattr(cls, pm.name, bpy_prop(options=options, **kwargs))
+
+    # Guard against corrupted user properties crashing the entire addon registration
+    try:
+        setattr(cls, pm.name, bpy_prop(options=options, **kwargs))
+    except Exception as ex:
+        logw("PME: failed to register user property", f"pm={pm.name}", f"error={ex}")
+        # Property registration failed, but don't crash addon
 
 
 def unregister_user_property(pm):
