@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-このファイルは、Claude Code（claude.ai/code）がこのリポジトリ（特に `pme2-dev` / `v2.0.0-alpha.0`）で作業する際の基本方針を示します。
+このファイルは、Claude Code（claude.ai/code）がこのリポジトリ（特に `pme2-dev` / `v2.0.0-alpha.2`）で作業する際の基本方針を示します。
 詳細なルールや手順は、今後 `rules/` 以下に分割していきます。
 
 ---
@@ -28,7 +28,7 @@ Pie Menu Editor (PME) は、Blender 用の UI 拡張アドオンです。ユー�
 
 * **PME2 Experimental**: 次世代版 PME2 の試験実装ブランチ
 * **Blender 対応想定**: **5.0 以降専用**（詳細は `.claude/rules/compatibility.md`）
-* **現在のフェーズ**: **Phase 2-B (Module Separation)** ⏳ 進行中
+* **現在のフェーズ**: **Phase 3 (Lifecycle Sprint)** ⏳ 準備中
 
 ### PME1 と PME2 の関係
 
@@ -42,17 +42,28 @@ Pie Menu Editor (PME) は、Blender 用の UI 拡張アドオンです。ユー�
 
 ### 開発の焦点
 
-**物理的モジュール分割** を最優先とする。pme 外部 API の設計は完了しているが、**実装は凍結中**（内部構造が安定するまで）。
+**ライフサイクル整備** を最優先とする。core 層の設計は、ライフサイクルが安定してから着手する。
 
-> **Phase 2-B の状況**:
-> - Reload Scripts Hotfix 完了 ✅ (Issue #64, #65)
-> - 新ローダー (`init_addon` / `register_modules`) がコンパス
-> - `infra/overlay.py` 作成など、モジュール分割を加速中
+> **Phase 2 (Module Separation) の成果** (v2.0.0-alpha.2):
+> - operators/ の分割完了（3400行 → 2588行、7サブモジュール + extras/）
+> - infra/overlay.py, infra/io.py 作成完了
+> - レイヤ違反 46件 → 23件 (50% 削減)
+>
+> **Phase 3 (Lifecycle Sprint) の目標**:
+> - `use_reload` パターンの導入
+> - props 登録を register/unregister に移動
+> - ParsedData / handler / timer のクリアポイント実装
+> - 「Reload Scripts / アドオン ON/OFF / Blender 再起動」の全シナリオ対応
 >
 > 詳細は `.claude/rules/milestones.md` を参照
 
-PME1 / PME-F の挙動そのものをすぐに変えることは目的ではありません。
-当面は **「挙動はほぼそのまま / 中身だけ段階的に整理」** というスタンスを維持します。
+### 進め方の原則
+
+**「バグの原因を一つに限定できる進め方」** を選ぶ。
+
+- ライフサイクルが安定するまで core には手を出さない
+- 複数の変更を同時に行わない（問題発生時の切り分けを容易にする）
+- 各フェーズは明確なゲート条件を持つ
 
 ---
 
