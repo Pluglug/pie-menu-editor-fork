@@ -1,6 +1,6 @@
 import bpy
 from . import pme
-from .ed_base import EditorBase
+from .editors.base import EditorBase
 from .addon import get_prefs
 from .ui import tag_redraw
 from .operator_utils import find_statement

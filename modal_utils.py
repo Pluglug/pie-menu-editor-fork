@@ -1,3 +1,8 @@
+# modal_utils.py - Modal operator utilities
+# LAYER = "infra"
+
+LAYER = "infra"
+
 from .addon import temp_prefs
 from .utils import isclose
 

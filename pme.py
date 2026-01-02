@@ -1,6 +1,12 @@
+# pme.py - PME execution context and props
+# LAYER = "infra"
+
 import bpy
+
+LAYER = "core"
+
 from .addon import get_prefs, temp_prefs, print_exc
-from .debug_utils import logw
+from .infra.debug import logw, DBG_RUNTIME
 
 
 class UserData:
@@ -83,8 +89,8 @@ class PMEContext:
 
     @property
     def globals(self):
-        if self._globals["D"].__class__.__name__ == "_RestrictData":
-            # self._globals["C"] = bpy.context
+        # Ensure "D" is set (may be missing after Reload Scripts)
+        if "D" not in self._globals or self._globals["D"].__class__.__name__ == "_RestrictData":
             self._globals["D"] = bpy.data
         return self._globals
 
@@ -189,7 +195,7 @@ class PMEProps:
         for k, prop in self.prop_map.items():
             if prop.type == pd.type and not hasattr(pd, k):
                 setattr(pd, k, prop.default)
-                logw("PME: defaulted missing prop", f"type={pd.type}", f"prop={k}")
+                DBG_RUNTIME and logw("PME: defaulted missing prop", f"type={pd.type}", f"prop={k}")
 
         return pd
 
@@ -252,6 +258,7 @@ class ParsedData:
 
     def __init__(self, text):
         self.type, _, data = text.partition("?")
+        self._initialized = False  # Track if prop_map was available
 
         for k, prop in props.prop_map.items():
             if prop.type == self.type:
@@ -273,16 +280,96 @@ class ParsedData:
                 self.is_empty = False
                 break
 
+        self._initialized = bool(props.prop_map)
+
+    # Fallback defaults for known properties when prop_map is empty (Reload Scripts hotfix)
+    # These MUST match the defaults registered in editors/*.py
+    # See: grep -r "pme\.props\.(Enum|String|Int|Bool)Property" for all registrations
+    _FALLBACK_DEFAULTS = {
+        # editors/pie_menu.py (type: pm)
+        'pm_radius': -1,
+        'pm_confirm': -1,
+        'pm_threshold': -1,
+        'pm_flick': True,
+        # editors/menu.py (type: rm)
+        'rm_title': True,
+        # editors/popup.py (type: row)
+        'align': 'CENTER',
+        'size': 'NORMAL',
+        'vspacer': 'NORMAL',
+        'fixed_col': False,
+        'fixed_but': False,
+        # editors/popup.py (type: spacer)
+        'hsep': 'NONE',
+        'subrow': 'NONE',
+        # editors/popup.py (type: pd)
+        'pd_title': True,
+        'pd_box': True,
+        'pd_expand': False,
+        'pd_panel': 1,
+        'pd_auto_close': False,
+        'pd_width': 300,
+        # editors/panel_group.py (type: pg)
+        'pg_wicons': False,
+        'pg_context': "ANY",
+        'pg_category': "My Category",
+        'pg_space': "VIEW_3D",
+        'pg_region': "TOOLS",
+        # ed_modal.py (type: mo)
+        'confirm': False,
+        'block_ui': True,
+        'lock': True,
+        # ed_stack_key.py (type: s)
+        's_undo': False,
+        's_state': False,
+        # ed_sticky_key.py (type: sk)
+        'sk_block_ui': False,
+        # editors/property.py (type: prop)
+        'vector': 1,
+        'mulsel': False,
+        'hor_exp': True,
+        'exp': True,
+        'save': True,
+        # Legacy properties (may be used in old menu data)
+        'layout': 'COLUMN',
+        'width': 300,
+        'poll': "",
+        'column': 'ONE',
+        'pd_row': 'TWO',
+    }
+
+    def __getattr__(self, name):
+        # Safety net for Reload Scripts: return sensible defaults if prop_map was empty
+        if name.startswith('_'):
+            raise AttributeError(name)
+
+        # Try to find the property in prop_map now (it may have been populated after __init__)
+        prop = props.prop_map.get(name)
+        if prop:
+            default = prop.default
+            object.__setattr__(self, name, default)
+            DBG_RUNTIME and logw("PME: late-bound prop via __getattr__", f"type={self.type}", f"prop={name}")
+            return default
+
+        # Use hardcoded fallback defaults for known properties
+        if name in self._FALLBACK_DEFAULTS:
+            default = self._FALLBACK_DEFAULTS[name]
+            object.__setattr__(self, name, default)
+            DBG_RUNTIME and logw("PME: fallback default used", f"type={self.type}", f"prop={name}", f"default={default}")
+            return default
+
+        raise AttributeError(f"'{type(self).__name__}' object has no attribute '{name}'")
+
     def value(self, name):
         prop = props.get(name)
         if not prop:
-            logw("PME: value() missing prop in map", f"type={self.type}", f"prop={name}")
+            DBG_RUNTIME and logw("PME: value() missing prop in map", f"type={self.type}", f"prop={name}")
             return 0
 
         has_attr = hasattr(self, name)
         current_value = getattr(self, name, prop.default)
         if not has_attr:
-            logw("PME: value() defaulted missing prop", f"type={self.type}", f"prop={name}")
+            DBG_RUNTIME and logw("PME: value() defaulted missing prop", f"type={self.type}", f"prop={name}")
 
         items = getattr(prop, "items", None)
         if not items:

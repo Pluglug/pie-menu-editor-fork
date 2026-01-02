@@ -1,3 +1,10 @@
+# property_utils.py - Property parsing and manipulation utilities
+# LAYER = "infra"
+#
+# Provides PropertyData class for introspecting and manipulating Blender properties.
+
+LAYER = "infra"
+
 import bpy
 from bpy.app import version as APP_VERSION
 from types import BuiltinFunctionType

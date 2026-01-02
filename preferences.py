@@ -1,10 +1,15 @@
+# preferences.py - PMEPreferences and addon settings UI
+# LAYER = "prefs"
+
 import bpy
 import os
 import json
-import datetime
 import re
 from types import MethodType
 from bpy_extras.io_utils import ExportHelper, ImportHelper
+
+LAYER = "prefs"
+
 from .addon import (
     ADDON_ID,
     ADDON_PATH,
@@ -20,7 +25,7 @@ from .addon import (
     ic_cb,
     ic_eye,
 )
-from . import constants as CC
+from .core import constants as CC
 from . import operators as OPS
 from . import extra_operators as EOPS
 from .bl_utils import (
@@ -31,10 +36,10 @@ from .bl_utils import (
     ConfirmBoxHandler,
     message_box,
 )
-from .collection_utils import BaseCollectionItem, sort_collection
-from .layout_helper import lh, operator, split
-from .debug_utils import *
-from .panel_utils import (
+from .infra.collections import BaseCollectionItem, sort_collection
+from .ui.layout import lh, operator, split
+from .infra.debug import *
+from .ui.panels import (
     hide_panel,
     unhide_panel,
     add_panel,
@@ -53,6 +58,15 @@ from . import keymap_helper
 from . import pme
 from . import operator_utils
 from .compatibility_fixes import fix_json, fix
+from .infra.io import (
+    read_import_file,
+    write_export_file,
+    parse_json_data,
+    BackupManager,
+    get_user_exports_dir,
+    get_user_icons_dir,
+    iter_script_dirs,
+)
 from .keymap_helper import (
     KeymapHelper,
     MOUSE_BUTTONS,
@@ -64,11 +78,11 @@ from .keymap_helper import (
 from .previews_helper import ph
 from .overlay import OverlayPrefs
 from .ui import tag_redraw, draw_addons_maximized, is_userpref_maximized
-from .ui_utils import get_pme_menu_class, execute_script
+from .ui.utils import get_pme_menu_class, execute_script
 from . import utils as U
 from .property_utils import PropertyData, to_py_value
-from .types import Tag, PMItem, PMIItem, PMLink, EdProperties, UserProperties
-from .ed_base import (
+from .pme_types import Tag, PMItem, PMIItem, PMLink, EdProperties, UserProperties
+from .editors.base import (
     WM_OT_pmi_icon_select,
     WM_OT_pmi_data_edit,
     PME_OT_pm_edit,
@@ -86,9 +100,16 @@ from .ed_panel_group import (
 from .ed_sticky_key import PME_OT_sticky_key_edit
 from .ed_modal import PME_OT_prop_data_reset
 
+# IO operators (moved to operators/io.py in Phase 2-C)
+from .operators.io import (
+    WM_OT_pm_import,
+    WM_OT_pm_export,
+    PME_OT_backup,
+    import_filepath,
+    export_filepath,
+)
+
 pp = pme.props
-import_filepath = os.path.join(ADDON_PATH, "examples", "examples.json")
-export_filepath = os.path.join(ADDON_PATH, "examples", "my_pie_menus.json")
 
 
 def update_pmi_data(self, context, reset_prop_data=True):
@@ -164,461 +185,10 @@ def update_data(self, context):
     update_pmi_data(self, context, reset_prop_data=True)
 
 
-class WM_OT_pm_import(bpy.types.Operator, ImportHelper):
-    bl_idname = "wm.pm_import"
-    bl_label = "Import Menus"
-    bl_description = "Import menus"
-    bl_options = {'INTERNAL'}
+# WM_OT_pm_import moved to operators/io.py
+# WM_OT_pm_export moved to operators/io.py
+# PME_OT_backup moved to operators/io.py
 
-    filename_ext = ".json"
-    filepath: bpy.props.StringProperty(subtype='FILE_PATH', default="*.json")
-    files: bpy.props.CollectionProperty(type=bpy.types.OperatorFileListElement)
-    filter_glob: bpy.props.StringProperty(default="*.json;*.zip", options={'HIDDEN'})
-    directory: bpy.props.StringProperty(subtype='DIR_PATH')
-    mode: bpy.props.StringProperty()
-    tags: bpy.props.StringProperty(
-        name="Tags",
-        description="Assign tags (separate by comma)",
-        options={'SKIP_SAVE'},
-    )
-    password: bpy.props.StringProperty(
-        name="Password",
-        description="Password for zip files",
-        subtype='PASSWORD',
-        options={'HIDDEN', 'SKIP_SAVE'},
-    )
-    password_visible: bpy.props.StringProperty(
-        name="Password",
-        description="Password for zip files",
-        get=lambda s: s.password,
-        set=lambda s, v: setattr(s, "password", v),
-        options={'HIDDEN', 'SKIP_SAVE'},
-    )
-    show_password: bpy.props.BoolProperty(options={'HIDDEN'})
-
-    def _draw(self, menu, context):
-        lh.lt(menu.layout, operator_context='INVOKE_DEFAULT')
-
-        lh.operator(
-            WM_OT_pm_import.bl_idname,
-            "Rename if exists",
-            filepath=import_filepath,
-            mode='RENAME',
-        )
-
-        lh.operator(
-            WM_OT_pm_import.bl_idname,
-            "Skip if exists",
-            filepath=import_filepath,
-            mode='SKIP',
-        )
-
-        lh.operator(
-            WM_OT_pm_import.bl_idname,
-            "Replace if exists",
-            filepath=import_filepath,
-            mode='REPLACE',
-        )
-
-    def draw(self, context):
-        col = self.layout.column(align=True)
-        col.label(text="Assign Tags:")
-        col.prop(self, "tags", text="", icon=ic_fb(False))
-
-        col = self.layout.column(align=True)
-        col.active = self.password != ""
-        col.label(text="Password:")
-        row = col.row(align=True)
-        row.prop(
-            self, "password_visible" if self.show_password else "password", text=""
-        )
-        row.prop(
-            self, "show_password", text="", toggle=True, icon=ic_eye(self.show_password)
-        )
-
-    def import_json(self, json_data):
-        if isinstance(json_data, bytes):
-            json_data = json_data.decode("utf-8")
-        try:
-            data = json.loads(json_data)
-        except:
-            self.report({'WARNING'}, CC.W_JSON)
-            return
-
-        pr = get_prefs()
-
-        menus = None
-        if isinstance(data, list):
-            version = "1.13.6"
-            menus = data
-        elif isinstance(data, dict):
-            try:
-                version = data["version"]
-                menus = data["menus"]
-            except:
-                self.report({'WARNING'}, CC.W_JSON)
-                return
-        else:
-            self.report({'WARNING'}, CC.W_JSON)
-            return
-
-        if not menus:
-            return
-
-        version = tuple(int(i) for i in version.split("."))
-
-        new_names = {}
-        if self.mode == 'RENAME':
-            pm_names = [menu[0] for menu in menus]
-
-            for name in pm_names:
-                if name in pr.pie_menus:
-                    new_names[name] = pr.unique_pm_name(name)
-
-        for menu in menus:
-            if self.mode == 'REPLACE':
-                if menu[0] in pr.pie_menus:
-                    pr.remove_pm(pr.pie_menus[menu[0]])
-            elif self.mode == 'RENAME':
-                if menu[0] in new_names:
-                    menu[0] = new_names[menu[0]]
-            elif self.mode == 'SKIP':
-                if menu[0] in pr.pie_menus:
-                    continue
-
-            mode = menu[4] if len(menu) > 4 else 'PMENU'
-            # pm = pr.add_pm(mode, menu[0], True)
-            pm = pr.pie_menus.add()
-            pm.mode = mode
-            fix_json(pm, menu, version)
-            pm.name = pr.unique_pm_name(menu[0] or pm.ed.default_name)
-            pm.km_name = menu[1]
-
-            n = len(menu)
-            if n > 5:
-                pm.data = menu[5]
-            if n > 6:
-                pm.open_mode = menu[6]
-            if n > 7:
-                pm.poll_cmd = menu[7] or CC.DEFAULT_POLL
-            if n > 8:
-                pm.tag = menu[8]
-            if n > 9:
-                pm.enabled = bool(menu[9])
-            if n > 10 and pm.open_mode == 'CLICK_DRAG':
-                try:
-                    pm.drag_dir = menu[10] or 'ANY'
-                except:
-                    pm.drag_dir = 'ANY'
-
-            if self.tags:
-                tags = self.tags.split(",")
-                for t in tags:
-                    pm.add_tag(t)
-
-            if menu[2]:
-                try:
-                    (
-                        pm.key,
-                        pm.ctrl,
-                        pm.shift,
-                        pm.alt,
-                        pm.oskey,
-                        pm.any,
-                        pm.key_mod,
-                        pm.chord,
-                    ) = keymap_helper.parse_hotkey(menu[2])
-                except:
-                    self.report({'WARNING'}, CC.W_KEY % menu[2])
-
-            items = menu[3]
-            for i in range(0, len(items)):
-                item = items[i]
-                # pmi = pm.pmis[i] if mode == 'PMENU' else pm.pmis.add()
-                pmi = pm.pmis.add()
-                n = len(item)
-                if n >= 4:
-                    if (
-                        self.mode == 'RENAME'
-                        and item[1] == 'MENU'
-                        and item[3] in new_names
-                    ):
-                        item[3] = new_names[item[3]]
-
-                    try:
-                        pmi.mode = item[1]
-                    except:
-                        pmi.mode = 'EMPTY'
-
-                    pmi.name = item[0]
-                    pmi.icon = item[2]
-                    pmi.text = item[3]
-
-                    if n >= 5:
-                        pmi.flags(item[4])
-
-                elif n == 3:
-                    pmi.mode = 'EMPTY'
-                    pmi.name = item[0]
-                    pmi.icon = item[1]
-                    pmi.text = item[2]
-
-                elif n == 1:
-                    pmi.mode = 'EMPTY'
-                    pmi.text = item[0]
-
-            if pm.mode == 'SCRIPT' and not pm.data.startswith("s?"):
-                pmi = pm.pmis.add()
-                pmi.text = pm.data
-                pmi.mode = 'COMMAND'
-                pmi.name = "Command 1"
-                pm.data = pm.ed.default_pmi_data
-
-        pms = [pr.pie_menus[menu[0]] for menu in menus]
-
-        fix(pms, version)
-
-        for pm in pms:
-            pm.ed.init_pm(pm)
-
-    def import_file(self, filepath):
-        from zipfile import ZipFile, is_zipfile
-
-        if is_zipfile(filepath):
-            with ZipFile(filepath, "r") as f:
-                if self.password:
-                    f.setpassword(self.password.encode("utf-8"))
-
-                try:
-                    f.testzip()
-                except RuntimeError as e:
-                    message_box(str(e))
-                    return
-
-                for info in f.infolist():
-                    if info.is_dir():
-                        if info.filename == "icons/":
-                            self.refresh_icons_flag = True
-
-                        try:
-                            os.mkdir(os.path.join(ADDON_PATH, info.filename))
-                        except:
-                            pass
-
-                    elif info.filename.endswith(".json"):
-                        self.import_json(f.read(info.filename))
-
-                    else:
-                        if os.path.isfile(os.path.join(ADDON_PATH, info.filename)):
-                            if self.mode == 'SKIP':
-                                continue
-                            elif self.mode == 'RENAME':
-                                mo = re.search(r"(.+)\.(\d{3,})(\.\w+)", info.filename)
-                                if mo:
-                                    name, idx, ext = mo.groups()
-                                    idx = int(idx)
-
-                                else:
-                                    name, ext = os.path.splitext(info.filename)
-                                    idx = 0
-
-                                while True:
-                                    idx += 1
-                                    info.filename = "%s.%s%s" % (
-                                        name,
-                                        str(idx).zfill(3),
-                                        ext,
-                                    )
-                                    if not os.path.isfile(
-                                        os.path.join(ADDON_PATH, info.filename)
-                                    ):
-                                        break
-
-                        f.extract(info, path=ADDON_PATH)
-        else:
-            try:
-                with open(filepath, "r") as f:
-                    s = f.read()
-            except:
-                self.report({'WARNING'}, CC.W_FILE)
-                return
-
-            self.import_json(s)
-
-    def execute(self, context):
-        global import_filepath
-        pr = get_prefs()
-        pr.tree.lock()
-
-        select_pm_flag = len(pr.pie_menus) == 0
-
-        self.refresh_icons_flag = False
-        try:
-            # From direct file path
-            if not self.files and self.filepath and os.path.isfile(self.filepath):
-                self.import_file(self.filepath)
-            else:
-                # From file selection dialog
-                for f in self.files:
-                    filepath = os.path.join(self.directory, f.name)
-                    if os.path.isfile(filepath):
-                        self.import_file(filepath)
-        except:
-            raise
-        finally:
-            pr.tree.unlock()
-
-        import_filepath = self.filepath
-
-        temp_prefs().init_tags()
-        PME_UL_pm_tree.update_tree()
-
-        if select_pm_flag:
-            idx = pr.active_pie_menu_idx
-            pr.active_pie_menu_idx = -1
-            pr.active_pie_menu_idx = idx
-
-        if self.refresh_icons_flag:
-            bpy.ops.pme.icons_refresh()
-
-        return {'FINISHED'}
-
-    def invoke(self, context, event):
-        if not self.mode:
-            context.window_manager.popup_menu(self._draw, title=self.bl_description)
-            return {'FINISHED'}
-
-        context.window_manager.fileselect_add(self)
-        return {'RUNNING_MODAL'}
-
-
-class WM_OT_pm_export(bpy.types.Operator, ExportHelper):
-    bl_idname = "wm.pm_export"
-    bl_label = "Export Menus"
-    bl_description = "Export menus"
-    bl_options = {'INTERNAL', 'REGISTER', 'UNDO'}
-
-    filename_ext = ".json"
-    filepath: bpy.props.StringProperty(subtype='FILE_PATH', default="*.json")
-    filter_glob: bpy.props.StringProperty(default="*.json", options={'HIDDEN'})
-    mode: bpy.props.StringProperty(options={'SKIP_SAVE'})
-    tag: bpy.props.StringProperty(options={'SKIP_SAVE'})
-    export_tags: bpy.props.BoolProperty(
-        name="Export Tags",
-        description="Export tags",
-        default=True,
-        options={'SKIP_SAVE'},
-    )
-    compat_json: bpy.props.BoolProperty(
-        name="Export Compatible JSON",
-        description="Export without PME-F extensions (no enabled/drag_dir; CLICK->PRESS, CLICK_DRAG->TWEAK)",
-        default=False,
-        options={'SKIP_SAVE'},
-    ) # Compat
-    mark_schema: bpy.props.BoolProperty(
-        name="Mark Schema (PME-F)",
-        description="Add 'schema': 'PME-F' to top-level JSON when not compatible",
-        default=True,
-        options={'SKIP_SAVE'},
-    ) # Compat
-
-    def _draw(self, menu, context):
-        lh.lt(menu.layout, operator_context='INVOKE_DEFAULT')
-
-        lh.operator(
-            WM_OT_pm_export.bl_idname,
-            "All Menus",
-            'ALIGN_JUSTIFY',
-            filepath=export_filepath,
-            mode='ALL',
-        )
-
-        lh.operator(
-            WM_OT_pm_export.bl_idname,
-            "All Enabled Menus",
-            'SYNTAX_ON',
-            filepath=export_filepath,
-            mode='ENABLED',
-        )
-
-        lh.operator(
-            WM_OT_pm_export.bl_idname,
-            "Selected Menu",
-            'REMOVE',
-            filepath=export_filepath,
-            mode='ACTIVE',
-        )
-
-        if temp_prefs().tags:
-            lh.operator(
-                WM_OT_pm_export.bl_idname,
-                "By Tag",
-                filepath=export_filepath,
-                mode='TAG',
-            )
-
-        lh.sep()
-
-        lh.layout.prop(get_prefs(), "auto_backup")
-
-        lh.operator(PME_OT_backup.bl_idname, "Backup Now", 'FILE_HIDDEN')
-
-    def check(self, context):
-        return True
-
-    def draw(self, context):
-        layout = self.layout
-        layout.prop(self, "export_tags")
-        layout.prop(self, "compat_json")
-        row = layout.row(align=True)
-        row.active = not self.compat_json
-        row.prop(self, "mark_schema")
-
-    def execute(self, context):
-        global export_filepath
-
-        if not self.filepath:
-            return {'CANCELLED'}
-
-        if not self.filepath.endswith(".json"):
-            self.filepath += ".json"
-
-        data = get_prefs().get_export_data(
-            export_tags=self.export_tags, mode=self.mode, tag=self.tag,
-            compat=self.compat_json, mark_schema=self.mark_schema
-        )
-        data = json.dumps(data, indent=2, separators=(", ", ": "))
-        try:
-            with open(self.filepath, 'w') as f:
-                f.write(data)
-        except:
-            print_exc()
-            return {'CANCELLED'}
-
-        export_filepath = self.filepath
-        return {'FINISHED'}
-
-    def invoke(self, context, event):
-        if not self.mode:
-            context.window_manager.popup_menu(self._draw, title=self.bl_description)
-            return {'FINISHED'}
-
-        elif self.mode == 'TAG' and not self.tag:
-            Tag.popup_menu(self.bl_idname, "Export by Tag", invoke=True, mode=self.mode)
-            return {'FINISHED'}
-
-        context.window_manager.fileselect_add(self)
-        return {'RUNNING_MODAL'}
-
-
-class PME_OT_backup(bpy.types.Operator):
-    bl_idname = "pme.backup"
-    bl_label = "Backup Menus"
-    bl_description = "Backup PME menus"
-
-    def invoke(self, context, event):
-        get_prefs().backup_menus(operator=self)
-        return {'FINISHED'}
 
 
 class WM_OT_pm_duplicate(bpy.types.Operator):
@@ -955,7 +525,10 @@ class PME_OT_pmi_name_apply(bpy.types.Operator):
 class PME_OT_icons_refresh(bpy.types.Operator):
     bl_idname = "pme.icons_refresh"
     bl_label = ""
-    bl_description = "Refresh icons"
+    bl_description = (
+        "Reload icons from disk.\n"
+        "Use this after adding or changing icon files"
+    )
     bl_options = {'INTERNAL'}
 
     def execute(self, context):
@@ -3044,7 +2617,7 @@ class PMEPreferences(bpy.types.AddonPreferences):
             )
 
             p = row.operator("wm.path_open", text="", icon=ic('FILE_FOLDER'))
-            p.filepath = ph.path
+            p.filepath = get_user_icons_dir(create=True)
 
         if tpr.icons_tab == 'BLENDER':
             box = layout.box()
@@ -3540,64 +3113,31 @@ class PMEPreferences(bpy.types.AddonPreferences):
 
     def backup_menus(self, operator=None):
         DBG_INIT and logh("Backup")
-        # gen new filename
-        backup_folder_path = os.path.abspath(
-            os.path.join(ADDON_PATH, os.pardir, ADDON_ID + "_data", "backups")
-        )
-        new_backup_filepath = os.path.join(
-            backup_folder_path,
-            "backup_%s.json" % datetime.datetime.now().strftime("%Y.%m.%d_%H.%M.%S"),
-        )
-        if os.path.isfile(new_backup_filepath):
-            DBG_INIT and logi("Backup exists")
+
+        # Use BackupManager from infra.io (uses Blender standard user config path)
+        backup_mgr = BackupManager()
+
+        # Get export data
+        data = self.get_export_data()
+
+        # Create backup
+        backup_path, message = backup_mgr.create_backup(data, check_changes=True)
+
+        if backup_path:
+            DBG_INIT and logi("New backup", backup_path)
             if operator:
                 bpy.ops.pme.message_box(
                     title="Backup Menus",
-                    message="Backup exists: " + new_backup_filepath,
+                    message="New backup: " + backup_path
                 )
-            return
-
-        # find backups
-        re_backup_filename = re.compile(
-            r"backup_\d{4}\.\d{2}\.\d{2}_\d{2}\.\d{2}\.\d{2}\.json"
-        )
-        if not os.path.exists(backup_folder_path):
-            os.makedirs(backup_folder_path)
-
-        MAX_NUM_BACKUPS = 20
-        backups = []
-        for filepath in sorted(os.listdir(backup_folder_path)):
-            if re_backup_filename.match(filepath):
-                backups.append(filepath)
-
-        # open last backup
-        last_data = None
-        if len(backups):
-            with open(os.path.join(backup_folder_path, backups[-1])) as f:
-                last_data = f.read()
-
-        data = self.get_export_data()
-        data = json.dumps(data, indent=2, separators=(", ", ": "))
-        if not data or last_data and last_data == data:
-            DBG_INIT and logi("No changes")
+        else:
+            # Determine reason for not creating backup
+            if "No changes" in message:
+                DBG_INIT and logi("No changes")
+            elif "already exists" in message:
+                DBG_INIT and logi("Backup exists")
             if operator:
-                bpy.ops.pme.message_box(title="Backup Menus", message="No changes")
-            return
-
-        # remove old backups
-        if len(backups) >= MAX_NUM_BACKUPS:
-            for i in range(len(backups) + 1 - MAX_NUM_BACKUPS):
-                DBG_INIT and logw("Remove backup", backups[i])
-                os.remove(os.path.join(backup_folder_path, backups[i]))
-
-        # save new backup
-        with open(new_backup_filepath, "w") as f:
-            f.write(data)
-            DBG_INIT and logi("New backup", new_backup_filepath)
-            if operator:
-                bpy.ops.pme.message_box(
-                    title="Backup Menus", message="New backup: " + new_backup_filepath
-                )
+                bpy.ops.pme.message_box(title="Backup Menus", message=message)
 
     def get_export_data(self, export_tags=True, mode='ALL', tag="", compat=False, mark_schema=True):
         pr = self
@@ -3914,21 +3454,21 @@ def register():
     pr.tree.update()
     PME_UL_pm_tree.load_state()
 
-    for root, dirs, files in os.walk(
-        os.path.join(SCRIPT_PATH, "autorun"), followlinks=True
-    ):
-        dirs[:] = [d for d in dirs if d != "__pycache__"]
-        for file in files:
-            if file.endswith('.py'):
-                execute_script(os.path.join(root, file))
+    # Run autorun scripts (system first, then user)
+    for script_dir in iter_script_dirs(ADDON_PATH, "autorun"):
+        for root, dirs, files in os.walk(script_dir, followlinks=True):
+            dirs[:] = [d for d in dirs if d != "__pycache__"]
+            for file in files:
+                if file.endswith('.py'):
+                    execute_script(os.path.join(root, file))
 
-    for root, dirs, files in os.walk(
-        os.path.join(SCRIPT_PATH, "register"), followlinks=True
-    ):
-        dirs[:] = [d for d in dirs if d != "__pycache__"]
-        for file in files:
-            if file.endswith('.py'):
-                execute_script(os.path.join(root, file))
+    # Run register scripts (system first, then user)
+    for script_dir in iter_script_dirs(ADDON_PATH, "register"):
+        for root, dirs, files in os.walk(script_dir, followlinks=True):
+            dirs[:] = [d for d in dirs if d != "__pycache__"]
+            for file in files:
+                if file.endswith('.py'):
+                    execute_script(os.path.join(root, file))
 
 
 def unregister():
@@ -3941,10 +3481,10 @@ def unregister():
     if hasattr(bpy.types, "WM_MT_button_context"):
         bpy.types.WM_MT_button_context.remove(button_context_menu)
 
-    for root, dirs, files in os.walk(
-        os.path.join(SCRIPT_PATH, "unregister"), followlinks=True
-    ):
-        dirs[:] = [d for d in dirs if d != "__pycache__"]
-        for file in files:
-            if file.endswith('.py'):
-                execute_script(os.path.join(root, file))
+    # Run unregister scripts (system first, then user)
+    for script_dir in iter_script_dirs(ADDON_PATH, "unregister"):
+        for root, dirs, files in os.walk(script_dir, followlinks=True):
+            dirs[:] = [d for d in dirs if d != "__pycache__"]
+            for file in files:
+                if file.endswith('.py'):
+                    execute_script(os.path.join(root, file))

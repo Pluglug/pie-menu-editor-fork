@@ -1,8 +1,13 @@
+# c_utils.py - Context and Blender utilities
+# LAYER = "infra"
+
 import bpy
 from bpy.app import version as APP_VERSION
 from bpy.props import StringProperty
 import re
 from itertools import islice
+
+LAYER = "infra"
 
 from ctypes import (
     Structure,

@@ -1,11 +1,28 @@
+# ui/ - UI描画ヘルパーパッケージ
+# LAYER = "ui"
+#
+# パッケージ構成:
+#   - __init__.py (本ファイル): utitle, tag_redraw, 旧ui.py互換シンボル
+#   - layout.py: UILayoutラッパー・ヘルパー (LayoutHelper, CLayout, Row, Col)
+#   - panels.py: パネル登録・表示ヘルパー (panel, PLayout, hide_panel)
+#   - utils.py: メニュー・スクリプト実行 (WM_MT_pme, execute_script)
+#   - screen.py: エリア・リージョン操作 (find_area, ContextOverride)
+#
+# Note: This file contains functions originally from ui.py
+# to maintain backward compatibility with `from .ui import utitle` etc.
+
+LAYER = "ui"
+
 import bpy
 import traceback
-from . import constants as CC
-from .debug_utils import *
-from . import operator_utils
-from . import pme
-from .bl_utils import bp, ctx_dict
-from .addon import get_uprefs, ic
+from ..core import constants as CC
+from ..infra.debug import *
+from .. import operator_utils
+from .. import pme
+from ..addon import get_uprefs, ic
+
+# Note: bp imported lazily in gen_prop_name() to avoid circular import
+# (bl_utils -> screen_utils -> ui/__init__ -> bl_utils)
 
 uilayout_getattribute = bpy.types.UILayout.__getattribute__
 draw_addons_default = None
@@ -68,6 +85,8 @@ def gen_prop_name(mo, is_prop=False, strict=False):
     if is_prop and prop_path[-1] == "]":
         prop_path, _, _ = prop_path.rpartition("[")
 
+    # Lazy import to avoid circular dependency
+    from ..bl_utils import bp
     prop = bp.get(prop_path)
 
     if prop:
