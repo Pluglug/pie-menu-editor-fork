@@ -64,6 +64,7 @@ from .infra.io import (
     parse_json_data,
     BackupManager,
     get_user_exports_dir,
+    iter_script_dirs,
 )
 from .keymap_helper import (
     KeymapHelper,
@@ -3863,21 +3864,21 @@ def register():
     pr.tree.update()
     PME_UL_pm_tree.load_state()
 
-    for root, dirs, files in os.walk(
-        os.path.join(SCRIPT_PATH, "autorun"), followlinks=True
-    ):
-        dirs[:] = [d for d in dirs if d != "__pycache__"]
-        for file in files:
-            if file.endswith('.py'):
-                execute_script(os.path.join(root, file))
+    # Run autorun scripts (system first, then user)
+    for script_dir in iter_script_dirs(ADDON_PATH, "autorun"):
+        for root, dirs, files in os.walk(script_dir, followlinks=True):
+            dirs[:] = [d for d in dirs if d != "__pycache__"]
+            for file in files:
+                if file.endswith('.py'):
+                    execute_script(os.path.join(root, file))
 
-    for root, dirs, files in os.walk(
-        os.path.join(SCRIPT_PATH, "register"), followlinks=True
-    ):
-        dirs[:] = [d for d in dirs if d != "__pycache__"]
-        for file in files:
-            if file.endswith('.py'):
-                execute_script(os.path.join(root, file))
+    # Run register scripts (system first, then user)
+    for script_dir in iter_script_dirs(ADDON_PATH, "register"):
+        for root, dirs, files in os.walk(script_dir, followlinks=True):
+            dirs[:] = [d for d in dirs if d != "__pycache__"]
+            for file in files:
+                if file.endswith('.py'):
+                    execute_script(os.path.join(root, file))
 
 
 def unregister():
@@ -3890,10 +3891,10 @@ def unregister():
     if hasattr(bpy.types, "WM_MT_button_context"):
         bpy.types.WM_MT_button_context.remove(button_context_menu)
 
-    for root, dirs, files in os.walk(
-        os.path.join(SCRIPT_PATH, "unregister"), followlinks=True
-    ):
-        dirs[:] = [d for d in dirs if d != "__pycache__"]
-        for file in files:
-            if file.endswith('.py'):
-                execute_script(os.path.join(root, file))
+    # Run unregister scripts (system first, then user)
+    for script_dir in iter_script_dirs(ADDON_PATH, "unregister"):
+        for root, dirs, files in os.walk(script_dir, followlinks=True):
+            dirs[:] = [d for d in dirs if d != "__pycache__"]
+            for file in files:
+                if file.endswith('.py'):
+                    execute_script(os.path.join(root, file))

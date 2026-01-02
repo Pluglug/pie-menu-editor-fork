@@ -181,6 +181,32 @@ def get_system_icons_dir(addon_path: str) -> str:
     return os.path.join(addon_path, "icons")
 
 
+def iter_script_dirs(addon_path: str, category: str):
+    """
+    Iterate over script directories for a given category.
+
+    Yields directories in order:
+    1. System scripts directory (bundled with addon)
+    2. User scripts directory (if exists)
+
+    Args:
+        addon_path: Path to the addon directory
+        category: Script category ("autorun", "register", "unregister")
+
+    Yields:
+        Directory paths that exist
+    """
+    # System scripts first (always available)
+    system_dir = os.path.join(get_system_scripts_dir(addon_path), category)
+    if os.path.isdir(system_dir):
+        yield system_dir
+
+    # User scripts second (may override or extend)
+    user_dir = os.path.join(get_user_scripts_dir(), category)
+    if os.path.isdir(user_dir):
+        yield user_dir
+
+
 # -----------------------------------------------------------------------------
 # Legacy Paths (for backward compatibility, will be deprecated)
 # -----------------------------------------------------------------------------

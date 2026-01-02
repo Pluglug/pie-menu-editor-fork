@@ -19,6 +19,7 @@ import py_compile
 from traceback import format_exc
 from errno import ENOENT
 from ..addon import ADDON_PATH, get_prefs, print_exc
+from ..infra.io import get_user_scripts_dir, get_system_scripts_dir
 from .. import pme
 from .layout import lh, draw_pme_layout, CLayout
 from ..operators import WM_OT_pme_user_pie_menu_call
@@ -157,7 +158,19 @@ def header_menu(areas):
 
 def execute_script(path, **kwargs):
     if not os.path.isabs(path):
-        path = os.path.join(ADDON_PATH, path)
+        # For relative paths starting with "scripts/", search user dir first
+        if path.startswith("scripts/") or path.startswith("scripts\\"):
+            relative_part = path[8:]  # Remove "scripts/" prefix
+            # Try user scripts directory first
+            user_path = os.path.join(get_user_scripts_dir(), relative_part)
+            if os.path.isfile(user_path):
+                path = user_path
+            else:
+                # Fall back to system scripts directory
+                path = os.path.join(get_system_scripts_dir(ADDON_PATH), relative_part)
+        else:
+            # Other relative paths use ADDON_PATH as base
+            path = os.path.join(ADDON_PATH, path)
     path = os.path.normpath(path)
 
     if not os.path.isfile(path):
