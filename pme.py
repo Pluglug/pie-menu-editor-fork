@@ -3,7 +3,7 @@
 
 import bpy
 
-LAYER = "infra"
+LAYER = "core"
 
 from .addon import get_prefs, temp_prefs, print_exc
 from .infra.debug import logw, DBG_RUNTIME
@@ -284,47 +284,58 @@ class ParsedData:
 
     # Fallback defaults for known properties when prop_map is empty (Reload Scripts hotfix)
     # These MUST match the defaults registered in editors/*.py
+    # See: grep -r "pme\.props\.(Enum|String|Int|Bool)Property" for all registrations
     _FALLBACK_DEFAULTS = {
-        # editors/pie_menu.py
+        # editors/pie_menu.py (type: pm)
         'pm_radius': -1,
         'pm_confirm': -1,
         'pm_threshold': -1,
         'pm_flick': True,
-        # editors/menu.py
+        # editors/menu.py (type: rm)
         'rm_title': True,
-        # editors/popup.py
-        'layout': 'COLUMN',
-        'width': 300,
-        'poll': "",
+        # editors/popup.py (type: row)
+        'align': 'CENTER',
+        'size': 'NORMAL',
+        'vspacer': 'NORMAL',
         'fixed_col': False,
         'fixed_but': False,
-        'align': False,
-        'column': 'ONE',
-        'pd_row': 'TWO',
-        'pd_box': False,
-        'pd_panel': False,
-        'pd_expand': True,
-        # editors/panel_group.py
+        # editors/popup.py (type: spacer)
+        'hsep': 'NONE',
+        'subrow': 'NONE',
+        # editors/popup.py (type: pd)
+        'pd_title': True,
+        'pd_box': True,
+        'pd_expand': False,
+        'pd_panel': 1,
+        'pd_auto_close': False,
+        'pd_width': 300,
+        # editors/panel_group.py (type: pg)
         'pg_wicons': False,
-        'pg_context': "",
-        'pg_category': "",
-        'pg_space': 'CURRENT',
-        'pg_region': 'UI',
-        # ed_modal.py
-        'confirm': True,
+        'pg_context': "ANY",
+        'pg_category': "My Category",
+        'pg_space': "VIEW_3D",
+        'pg_region': "TOOLS",
+        # ed_modal.py (type: mo)
+        'confirm': False,
         'block_ui': True,
-        'lock': False,
-        # ed_stack_key.py
+        'lock': True,
+        # ed_stack_key.py (type: s)
         's_undo': False,
-        's_state': 'PRESS',
-        # ed_sticky_key.py
-        'sk_block_ui': True,
-        # editors/property.py
+        's_state': False,
+        # ed_sticky_key.py (type: sk)
+        'sk_block_ui': False,
+        # editors/property.py (type: prop)
         'vector': 1,
         'mulsel': False,
         'hor_exp': True,
         'exp': True,
         'save': True,
+        # Legacy properties (may be used in old menu data)
+        'layout': 'COLUMN',
+        'width': 300,
+        'poll': "",
+        'column': 'ONE',
+        'pd_row': 'TWO',
     }
 
     def __getattr__(self, name):

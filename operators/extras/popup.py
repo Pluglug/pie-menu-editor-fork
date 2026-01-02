@@ -53,8 +53,10 @@ class PME_OT_popup_property(PopupOperator, Operator):
         obj, sep, prop = self.path.rpartition(".")
         if sep:
             obj = pme.context.eval(obj)
-            if obj:
+            if obj and hasattr(obj, prop):
                 lh.prop_compact(obj, prop)
+            elif obj:
+                lh.label(f"[{prop}]", 'ERROR')
 
 
 class PME_OT_popup_user_preferences(PopupOperator, Operator):

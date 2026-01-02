@@ -4,6 +4,39 @@ PME2 のライフサイクル問題の分析と解決計画。
 
 ---
 
+## ⚠️ 現在のステータス (2026-01-02)
+
+**`use_reload` パターンは一時的に無効化されています。**
+
+### 試行結果
+
+Sprint 0/0.1 で以下を達成：
+- ✅ `pme_types.py` の古いインスタンス参照問題を修正
+- ✅ `_FALLBACK_DEFAULTS` に不足プロパティを追加
+- ✅ PROPERTY モードの描画クラッシュガードを追加
+
+しかし、複雑なユーザー設定環境では **C レベルクラッシュ** が発生：
+- CUSTOM スクリプトが無効な Blender 状態にアクセス
+- UserProperties の動的プロパティ再登録の失敗
+- Python の try-except では捕捉不可能
+
+### 決定事項
+
+`use_reload` パターンを **Phase 3 完了まで無効化**：
+- `__init__.py` で `use_reload = False` に設定
+- 根本的なライフサイクル設計が必要
+- **Issue #67** で追跡: https://github.com/Pluglug/pie-menu-editor-fork/issues/67
+
+### 残存する問題
+
+| 問題 | 影響 | 対策 |
+|------|------|------|
+| CUSTOM スクリプトの C レベルクラッシュ | Reload Scripts 後にクラッシュ | Phase 3 で対処 |
+| UserProperties 動的プロパティ | 再登録タイミング | Phase 3 で対処 |
+| `_FALLBACK_DEFAULTS` の保守 | 新プロパティ追加時に更新が必要 | 根本解決が必要 |
+
+---
+
 ## 目的
 
 Blender アドオンには 3 つのライフサイクルシナリオがある：

@@ -1243,33 +1243,38 @@ class WM_OT_pme_user_pie_menu_call(bpy.types.Operator):
                             lh.restore()
 
                 elif sub_pm.mode == 'PROPERTY':
-                    is_enum = sub_pm.poll_cmd == 'ENUM'
-                    # enum_flag = sub_pm.get_data("mulsel")
-                    hor_exp = sub_pm.get_data("hor_exp")
-                    is_array = sub_pm.get_data("vector") > 1
-                    if (is_enum or is_array) and hor_exp:
-                        lh.save()
-                        sy = lh.layout.scale_y
-                        lh.layout.scale_y = 1
-                        lh.row()
-                        lh.layout.scale_y = sy
+                    # Safety: check if property exists (may have failed to register after Reload Scripts)
+                    if not hasattr(pr.props, sub_pm.name):
+                        text, icon, *_ = pmi.parse()
+                        lh.label(text or f"[{sub_pm.name}]", 'ERROR')
+                    else:
+                        is_enum = sub_pm.poll_cmd == 'ENUM'
+                        # enum_flag = sub_pm.get_data("mulsel")
+                        hor_exp = sub_pm.get_data("hor_exp")
+                        is_array = sub_pm.get_data("vector") > 1
+                        if (is_enum or is_array) and hor_exp:
+                            lh.save()
+                            sy = lh.layout.scale_y
+                            lh.layout.scale_y = 1
+                            lh.row()
+                            lh.layout.scale_y = sy
 
-                    text, icon, *_ = pmi.parse()
-                    lh.prop_compact(
-                        pr.props,
-                        sub_pm.name,
-                        text,
-                        icon,
-                        toggle=True,
-                        expand=sub_pm.get_data("exp"),
-                    )
-                    # if is_enum and not enum_flag:
-                    #     lh.prop(pr.props, sub_pm.name, "")
-                    # else:
-                    #     lh.prop(pr.props, sub_pm.name)
+                        text, icon, *_ = pmi.parse()
+                        lh.prop_compact(
+                            pr.props,
+                            sub_pm.name,
+                            text,
+                            icon,
+                            toggle=True,
+                            expand=sub_pm.get_data("exp"),
+                        )
+                        # if is_enum and not enum_flag:
+                        #     lh.prop(pr.props, sub_pm.name, "")
+                        # else:
+                        #     lh.prop(pr.props, sub_pm.name)
 
-                    if (is_enum or is_array) and hor_exp:
-                        lh.restore()
+                        if (is_enum or is_array) and hor_exp:
+                            lh.restore()
 
                 else:
                     invoke_mode = (

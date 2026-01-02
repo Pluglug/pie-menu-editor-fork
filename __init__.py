@@ -9,11 +9,18 @@ bl_info = {
     "category": "User Interface",
 }
 
-use_reload = "addon" in locals()
-if use_reload:
-    import importlib
-    importlib.reload(locals()["addon"])
-    del importlib
+# TODO: use_reload pattern disabled due to C-level crashes with complex user configs
+# See: https://github.com/Pluglug/pie-menu-editor-fork/issues/67
+# The pattern itself works, but exposes latent issues with:
+#   - UserProperties re-registration timing
+#   - CUSTOM script execution with stale Blender state
+# Re-enable after Phase 3 lifecycle work is complete.
+use_reload = False
+# use_reload = "addon" in locals()
+# if use_reload:
+#     import importlib
+#     importlib.reload(locals()["addon"])
+#     del importlib
 
 import bpy
 import _bpy
@@ -171,7 +178,9 @@ PME2_MODULE_PATTERNS = [
     "editors",
     "editors.*",
     # Core modules (without package)
-    "addon",
+    # NOTE: "addon" is intentionally excluded - it's the bootstrap module
+    # that is already loaded/reloaded in __init__.py's use_reload block.
+    # Reloading it again in init_addon() would reset VERSION to None.
     "pme",
     "c_utils",
     "utils",
