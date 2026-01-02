@@ -284,15 +284,17 @@ def __getattr__(self, name):
 
 ## 実装計画
 
-### Sprint 0: 根本原因の修正（🔴 最優先）
+### Sprint 0: 根本原因の修正（🔴 最優先）✅ 完了
 
 | # | タスク | リスク | 状態 |
 |---|--------|--------|------|
 | 0.1 | `pme_types.py` の `pp` 使用箇所を特定 | Low | ✅ 完了 |
-| 0.2 | `from .pme import props as pp` を `from . import pme` に変更 | Low | - |
-| 0.3 | `pp.xxx` を `pme.props.xxx` に置換（約 3-4 箇所） | Low | - |
-| 0.4 | `_FALLBACK_DEFAULTS` に `vector` 等を追加（暫定 hotfix） | Low | - |
-| 0.5 | Reload Scripts テスト | - | - |
+| 0.2 | `from .pme import props as pp` を削除 | Low | ✅ 完了 |
+| 0.3 | `pp.xxx` を `pme.props.xxx` に置換（15 箇所） | Low | ✅ 完了 |
+| 0.4 | `_FALLBACK_DEFAULTS` に `vector` 等を追加 | Low | ✅ 完了 |
+| 0.5 | Reload Scripts テスト | - | ⏳ ユーザー確認待ち |
+
+**コミット**: `2b0704d` - Fix Reload Scripts failure: use pme.props instead of cached pp
 
 ---
 
