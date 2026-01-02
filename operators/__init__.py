@@ -51,6 +51,7 @@ from ..modal_utils import decode_modal_data
 from .. import pme, operator_utils, keymap_helper
 from .. import screen_utils as SU
 from ..property_utils import PropertyData
+from ..infra.io import get_user_scripts_dir
 from ..keymap_helper import (
     MOUSE_BUTTONS,
     is_key_pressed,
@@ -3230,7 +3231,12 @@ class PME_OT_script_open(bpy.types.Operator):
 
     def invoke(self, context, event):
         if not self.filepath:
-            self.filepath = get_prefs().scripts_filepath
+            stored_path = get_prefs().scripts_filepath
+            # Use user scripts directory if no stored path or stored path doesn't exist
+            if not stored_path or not os.path.exists(stored_path):
+                self.filepath = get_user_scripts_dir(create=True)
+            else:
+                self.filepath = stored_path
         context.window_manager.fileselect_add(self)
         return {'RUNNING_MODAL'}
 

@@ -64,6 +64,7 @@ from .infra.io import (
     parse_json_data,
     BackupManager,
     get_user_exports_dir,
+    get_user_icons_dir,
     iter_script_dirs,
 )
 from .keymap_helper import (
@@ -3027,7 +3028,7 @@ class PMEPreferences(bpy.types.AddonPreferences):
             )
 
             p = row.operator("wm.path_open", text="", icon=ic('FILE_FOLDER'))
-            p.filepath = ph.path
+            p.filepath = get_user_icons_dir(create=True)
 
         if tpr.icons_tab == 'BLENDER':
             box = layout.box()
