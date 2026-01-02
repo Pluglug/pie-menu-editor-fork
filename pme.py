@@ -89,8 +89,8 @@ class PMEContext:
 
     @property
     def globals(self):
-        if self._globals["D"].__class__.__name__ == "_RestrictData":
-            # self._globals["C"] = bpy.context
+        # Ensure "D" is set (may be missing after Reload Scripts)
+        if "D" not in self._globals or self._globals["D"].__class__.__name__ == "_RestrictData":
             self._globals["D"] = bpy.data
         return self._globals
 

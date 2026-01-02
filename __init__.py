@@ -225,6 +225,8 @@ def new_register_modules():
         addon.init_addon(
             module_patterns=PME2_MODULE_PATTERNS,
             use_reload=use_reload,
+            version=bl_info["version"][:3],
+            bl_version=bl_info["blender"],
         )
 
     # Register all classes and call module register() functions

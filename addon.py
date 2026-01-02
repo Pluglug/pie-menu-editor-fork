@@ -210,6 +210,8 @@ def init_addon(
     prefix: str = None,
     prefix_py: str = None,
     force_order: List[str] = None,
+    version: tuple = None,
+    bl_version: tuple = None,
 ) -> None:
     """
     Initialize the addon module loading system.
@@ -228,6 +230,8 @@ def init_addon(
         prefix: Operator prefix override (default: "PME")
         prefix_py: Python prefix override (default: "pme")
         force_order: Force specific module load order (debugging only)
+        version: Addon version tuple (e.g., (2, 0, 0))
+        bl_version: Blender version tuple (e.g., (4, 5, 0))
 
     Example:
         init_addon(
@@ -239,10 +243,17 @@ def init_addon(
                 "operators.*",
                 "prefs.*",
             ],
-            use_reload=True
+            use_reload=True,
+            version=(2, 0, 0),
         )
     """
-    global ADDON_PREFIX, ADDON_PREFIX_PY, _class_cache
+    global VERSION, BL_VERSION, ADDON_PREFIX, ADDON_PREFIX_PY, _class_cache
+
+    # Set version info early (before any module registration)
+    if version is not None:
+        VERSION = version
+    if bl_version is not None:
+        BL_VERSION = bl_version
 
     # Reset class cache
     _class_cache = None
