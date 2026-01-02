@@ -319,6 +319,12 @@ class ParsedData:
         's_state': 'PRESS',
         # ed_sticky_key.py
         'sk_block_ui': True,
+        # editors/property.py
+        'vector': 1,
+        'mulsel': False,
+        'hor_exp': True,
+        'exp': True,
+        'save': True,
     }
 
     def __getattr__(self, name):
