@@ -60,6 +60,42 @@ from ..keymap_helper import (
     to_ui_hotkey,
 )
 
+# Search operators (moved to operators/search.py in Phase 2-C)
+from .search import (
+    SearchOperator,
+    PME_OT_pm_search_and_select,
+    PME_OT_addonpref_search,
+    PME_OT_pmi_pm_search,
+    PME_OT_pmi_operator_search,
+    PME_OT_pmi_panel_search,
+    PME_OT_pmi_area_search,
+    PME_OT_pmi_menu_search,
+)
+
+# Panel operators (moved to operators/panel.py in Phase 2-C)
+from .panel import (
+    PME_OT_panel_hide,
+    PME_OT_panel_hide_by,
+)
+
+# Utility operators (moved to operators/utils.py in Phase 2-C)
+from .utils import (
+    WM_OT_pme_none,
+    PME_OT_preview,
+    PME_OT_docs,
+    PME_OT_debug_mode_toggle,
+)
+
+# Script operators (moved to operators/script.py in Phase 2-C)
+from .script import PME_OT_script_open
+
+# Hotkey operators (moved to operators/hotkey.py in Phase 2-C)
+from .hotkey import (
+    WM_OT_pme_hotkey_call,
+    PME_OT_pm_chord_add,
+    PME_OT_pm_hotkey_remove,
+)
+
 
 def popup_dialog_pie(event, draw, title=""):
     pr = get_prefs()
@@ -71,13 +107,7 @@ def popup_dialog_pie(event, draw, title=""):
     # pr.pie_menu_prefs.restore()
 
 
-class WM_OT_pme_none(bpy.types.Operator):
-    bl_idname = "wm.pme_none"
-    bl_label = ""
-    bl_options = {'INTERNAL'}
-
-    def execute(self, context):
-        return {'FINISHED'}
+# WM_OT_pme_none moved to operators/utils.py
 
 
 class WM_OT_pm_select(bpy.types.Operator):
@@ -148,45 +178,7 @@ class WM_OT_pm_select(bpy.types.Operator):
         return {'CANCELLED'}
 
 
-class PME_OT_pm_search_and_select(bpy.types.Operator):
-    bl_idname = "pme.pm_search_and_select"
-    bl_label = "Search and Select Item"
-    bl_description = "Search and select an item"
-    bl_options = {'INTERNAL'}
-    bl_property = "item"
-
-    enum_items = None
-
-    def get_items(self, context):
-        pr = get_prefs()
-
-        if not PME_OT_pm_search_and_select.enum_items:
-            enum_items = []
-
-            for k in sorted(pr.pie_menus.keys()):
-                pm = pr.pie_menus[k]
-                if self.mode and pm.mode not in self.mode:
-                    continue
-                enum_items.append((pm.name, "%s|%s" % (pm.name, to_ui_hotkey(pm)), ""))
-
-            PME_OT_pm_search_and_select.enum_items = enum_items
-
-        return PME_OT_pm_search_and_select.enum_items
-
-    item: bpy.props.EnumProperty(items=get_items)
-    mode: bpy.props.EnumProperty(
-        items=PM_ITEMS_M, default=set(), options={'SKIP_SAVE', 'ENUM_FLAG'}
-    )
-
-    def execute(self, context):
-        bpy.ops.wm.pm_select(pm_name=self.item)
-        PME_OT_pm_search_and_select.enum_items = None
-        return {'FINISHED'}
-
-    def invoke(self, context, event):
-        PME_OT_pm_search_and_select.enum_items = None
-        context.window_manager.invoke_search_popup(self)
-        return {'FINISHED'}
+# PME_OT_pm_search_and_select moved to operators/search.py
 
 
 class WM_OT_pme_user_command_exec(bpy.types.Operator):
@@ -246,262 +238,9 @@ class PME_OT_exec(bpy.types.Operator):
         return self.execute(context)
 
 
-class PME_OT_panel_hide(bpy.types.Operator):
-    bl_idname = "pme.panel_hide"
-    bl_label = "Hide Panel"
-    bl_description = "Hide panel"
-    bl_options = {'INTERNAL'}
-    bl_property = "item"
 
-    enum_items = None
-
-    def get_items(self, context):
-        if not PME_OT_panel_hide.enum_items:
-            PME_OT_panel_hide.enum_items = bl_panel_enum_items(False)
-
-        return PME_OT_panel_hide.enum_items
-
-    item: bpy.props.EnumProperty(items=get_items, options={'SKIP_SAVE'})
-    panel: bpy.props.StringProperty(options={'SKIP_SAVE'})
-    group: bpy.props.StringProperty(options={'SKIP_SAVE'})
-
-    def draw_menu(self, menu, context):
-        lh.lt(menu.layout)
-        pr = get_prefs()
-        for pm in pr.pie_menus:
-            if pm.mode == 'HPANEL':
-                lh.operator(
-                    PME_OT_panel_hide.bl_idname,
-                    pm.name,
-                    pm.ed.icon,
-                    group=pm.name,
-                    panel=self.panel,
-                )
-
-        lh.sep(check=True)
-
-        lh.operator(
-            PME_OT_panel_hide.bl_idname,
-            "New Hidden Panel Group",
-            'ADD',
-            group=pr.unique_pm_name(pr.ed('HPANEL').default_name),
-            panel=self.panel,
-        )
-
-    def execute(self, context):
-        if not self.panel:
-            self.panel = self.item
-
-        pr = get_prefs()
-
-        if not self.group:
-            context.window_manager.popup_menu(self.draw_menu, title="Group")
-            return {'FINISHED'}
-        else:
-            if self.group not in pr.pie_menus:
-                group = pr.add_pm('HPANEL', self.group)
-                pr.update_tree()
-            else:
-                group = pr.pie_menus[self.group]
-
-        tp = hidden_panel(self.panel) or getattr(bpy.types, self.panel, None)
-
-        if not tp:
-            return {'CANCELLED'}
-
-        for pmi in group.pmis:
-            if pmi.text == self.panel:
-                return {'CANCELLED'}
-
-        pmi = group.pmis.add()
-        pmi.mode = 'MENU'
-        pmi.name = tp.bl_label if hasattr(tp, "bl_label") else self.panel
-        pmi.text = self.panel
-
-        hide_panel(self.panel)
-
-        tag_redraw()
-        return {'FINISHED'}
-
-    def invoke(self, context, event):
-        if not self.panel:
-            PME_OT_panel_hide.enum_items = None
-            context.window_manager.invoke_search_popup(self)
-        else:
-            return self.execute(context)
-        return {'FINISHED'}
-
-
-class PME_OT_panel_hide_by(bpy.types.Operator):
-    bl_idname = "pme.panel_hide_by"
-    bl_label = "Hide Panels by ..."
-    bl_description = "Hide panels by ..."
-    bl_options = {'INTERNAL'}
-
-    space_items = None
-    region_items = None
-    ctx_items = None
-    cat_items = None
-
-    def _get_space_items(self, context):
-        if not PME_OT_panel_hide_by.space_items:
-            enum_items = [("ANY", "Any Space", "", 'LAYER_ACTIVE', 0)]
-
-            for i, item in enumerate(SPACE_ITEMS):
-                enum_items.append((item[0], item[1], "", item[3], i + 1))
-
-            PME_OT_panel_hide_by.space_items = enum_items
-
-        return PME_OT_panel_hide_by.space_items
-
-    def _get_region_items(self, context):
-        if not PME_OT_panel_hide_by.region_items:
-            enum_items = [("ANY", "Any Region", "", 'LAYER_ACTIVE', 0)]
-
-            for i, item in enumerate(REGION_ITEMS):
-                enum_items.append((item[0], item[1], "", item[3], i + 1))
-
-            PME_OT_panel_hide_by.region_items = enum_items
-
-        return PME_OT_panel_hide_by.region_items
-
-    def _get_context_items(self, context):
-        if not PME_OT_panel_hide_by.ctx_items:
-            enum_items = [("ANY", "Any Context", "", 'LAYER_ACTIVE', 0)]
-
-            contexts = set()
-            for tp in bl_panel_types():
-                if hasattr(tp, "bl_context"):
-                    contexts.add(tp.bl_context)
-
-            for i, c in enumerate(sorted(contexts)):
-                enum_items.append((c, c, "", 'LAYER_USED', i + 1))
-
-            PME_OT_panel_hide_by.ctx_items = enum_items
-
-        return PME_OT_panel_hide_by.ctx_items
-
-    def _get_category_items(self, context):
-        if not PME_OT_panel_hide_by.cat_items:
-            enum_items = [("ANY", "Any Category", "", 'LAYER_ACTIVE', 0)]
-
-            categories = set()
-            for tp in bl_panel_types():
-                if hasattr(tp, "bl_category"):
-                    categories.add(tp.bl_category)
-
-            for i, c in enumerate(sorted(categories)):
-                enum_items.append((c, c, "", 'LAYER_USED', i + 1))
-
-            PME_OT_panel_hide_by.cat_items = enum_items
-
-        return PME_OT_panel_hide_by.cat_items
-
-    space: bpy.props.EnumProperty(
-        items=_get_space_items, name="Space", description="Space", options={'SKIP_SAVE'}
-    )
-    region: bpy.props.EnumProperty(
-        items=_get_region_items,
-        name="Region",
-        description="Region",
-        options={'SKIP_SAVE'},
-    )
-    context: bpy.props.EnumProperty(
-        items=_get_context_items,
-        name="Context",
-        description="Context",
-        options={'SKIP_SAVE'},
-    )
-    category: bpy.props.EnumProperty(
-        items=_get_category_items,
-        name="Category",
-        description="Category",
-        options={'SKIP_SAVE'},
-    )
-    mask: bpy.props.StringProperty(
-        name="Mask", description="Mask", options={'SKIP_SAVE'}
-    )
-
-    def _filtered_panels(self, num=False):
-        if num:
-            num_panels = 0
-        else:
-            panels = []
-
-        for tp in self.panel_types:
-            if (
-                tp.bl_space_type != 'PREFERENCES'
-                and (self.space == 'ANY' or tp.bl_space_type == self.space)
-                and (self.region == 'ANY' or tp.bl_region_type == self.region)
-                and (
-                    self.context == 'ANY'
-                    or hasattr(tp, "bl_context")
-                    and tp.bl_context == self.context
-                )
-                and (
-                    self.category == 'ANY'
-                    or hasattr(tp, "bl_category")
-                    and tp.bl_category == self.category
-                )
-                and (
-                    not self.mask
-                    or hasattr(tp, "bl_label")
-                    and self.mask.lower() in tp.bl_label.lower()
-                )
-            ):
-                if is_panel_hidden(tp.__name__):
-                    continue
-
-                if num:
-                    num_panels += 1
-                else:
-                    panels.append(tp)
-
-        return num_panels if num else panels
-
-    def check(self, context):
-        return True
-
-    def draw(self, context):
-        col = self.layout.column(align=True)
-        lh.row(col)
-        lh.prop(self, "space", "")
-        lh.prop(self, "region", "")
-        lh.row(col)
-        lh.prop(self, "context", "")
-        lh.prop(self, "category", "")
-        lh.lt(col)
-        lh.prop(self, "mask", "", 'FILTER')
-        lh.sep()
-        lh.row(col)
-        lh.layout.alignment = 'CENTER'
-        lh.label("%d panel(s) will be hidden" % self._filtered_panels(True))
-
-    def execute(self, context):
-        pm = get_prefs().selected_pm
-
-        for tp in self._filtered_panels():
-            tp_name = tp.__name__
-            if hasattr(tp, "bl_idname"):
-                tp_name = tp.bl_idname
-
-            pmi = pm.pmis.add()
-            pmi.mode = 'MENU'
-            pmi.name = tp.bl_label if hasattr(tp, "bl_label") else tp.__name__
-            pmi.text = tp_name
-
-            hide_panel(tp_name)
-
-        tag_redraw()
-        return {'FINISHED'}
-
-    def invoke(self, context, event):
-        PME_OT_panel_hide_by.space_items = None
-        PME_OT_panel_hide_by.region_items = None
-        PME_OT_panel_hide_by.ctx_items = None
-        PME_OT_panel_hide_by.cat_items = None
-        self.panel_types = bl_panel_types()
-        return context.window_manager.invoke_props_dialog(self)
+# PME_OT_panel_hide moved to operators/panel.py
+# PME_OT_panel_hide_by moved to operators/panel.py
 
 
 class PME_OT_sticky_key_base:
@@ -2401,57 +2140,7 @@ class WM_OT_pmi_submenu_select(bpy.types.Operator):
         return {'FINISHED'}
 
 
-class PME_OT_addonpref_search(bpy.types.Operator):
-    bl_idname = "pme.addonpref_search"
-    bl_label = ""
-    bl_description = "Open addon preferences in a popup"
-    bl_options = {'INTERNAL'}
-    bl_property = "enumprop"
-
-    items = None
-
-    def get_items(self, context):
-        cl = PME_OT_addonpref_search
-        if not cl.items:
-            cl.items = []
-            import addon_utils
-
-            for addon in get_uprefs().addons:
-                if hasattr(addon.preferences, "draw"):
-                    mod = addon_utils.addons_fake_modules.get(addon.module)
-                    if not mod:
-                        continue
-                    info = addon_utils.module_bl_info(mod)
-                    cl.items.append((addon.module, info["name"], ""))
-
-        return cl.items
-
-    enumprop: bpy.props.EnumProperty(items=get_items)
-
-    def execute(self, context):
-        pr = get_prefs()
-        if pr.pmi_data.mode not in MODAL_CMD_MODES:
-            pr.pmi_data.mode = 'COMMAND'
-        pr.pmi_data.cmd = ""
-        pr.pmi_data.cmd += (
-            "bpy.ops.pme.popup_addon_preferences(" "addon='%s', center=True)"
-        ) % self.enumprop
-
-        sname = ""
-        for item in PME_OT_addonpref_search.items:
-            if item[0] == self.enumprop:
-                sname = item[1]
-                break
-
-        pr.pmi_data.sname = sname
-
-        tag_redraw()
-        return {'FINISHED'}
-
-    def invoke(self, context, event):
-        self.__class__.items = None
-        context.window_manager.invoke_search_popup(self)
-        return {'FINISHED'}
+# PME_OT_addonpref_search moved to operators/search.py
 
 
 class PME_OT_pmi_custom_set(bpy.types.Operator):
@@ -2584,261 +2273,13 @@ class PME_OT_pmi_custom_set(bpy.types.Operator):
         return {'FINISHED'}
 
 
-class PME_OT_preview(bpy.types.Operator):
-    bl_idname = "pme.preview"
-    bl_label = ""
-    bl_description = "Preview"
-    bl_options = {'INTERNAL'}
+# PME_OT_preview moved to operators/utils.py
+# PME_OT_docs moved to operators/utils.py
 
-    pie_menu_name: bpy.props.StringProperty()
-
-    def execute(self, context):
-        bpy.ops.wm.pme_user_pie_menu_call(
-            'INVOKE_DEFAULT', pie_menu_name=self.pie_menu_name, invoke_mode='RELEASE'
-        )
-        return {'FINISHED'}
-
-
-class PME_OT_docs(bpy.types.Operator):
-    bl_idname = "pme.docs"
-    bl_label = "Pie Menu Editor Documentation"
-    bl_description = "Documentation"
-    bl_options = {'INTERNAL'}
-
-    id: bpy.props.StringProperty(options={'SKIP_SAVE'})
-    url: bpy.props.StringProperty(options={'SKIP_SAVE'})
-
-    def execute(self, context):
-        if self.id:
-            self.url = ("https://pluglug.github.io/pme-docs/") + self.id
-        bpy.ops.wm.url_open(url=self.url)
-        return {'FINISHED'}
-
-
-class PME_OT_pmi_pm_search(bpy.types.Operator):
-    bl_idname = "pme.pmi_pm_search"
-    bl_label = ""
-    bl_description = "Open/execute/draw a menu, popup or operator"
-    bl_options = {'INTERNAL'}
-    bl_property = "enumprop"
-
-    items = None
-
-    def get_items(self, context):
-        pr = get_prefs()
-        if not PME_OT_pmi_pm_search.items:
-            if PME_OT_pmi_pm_search.items is None:
-                PME_OT_pmi_pm_search.items = []
-
-            items = PME_OT_pmi_pm_search.items
-            for pm in sorted(pr.pie_menus.keys()):
-                if self.custom and pr.pie_menus[pm].mode != 'DIALOG':
-                    continue
-                items.append((pm, pm, ""))
-
-            PME_OT_pmi_pm_search.items = items
-
-        return PME_OT_pmi_pm_search.items
-
-    enumprop: bpy.props.EnumProperty(items=get_items)
-    custom: bpy.props.BoolProperty(options={'SKIP_SAVE'})
-
-    def execute(self, context):
-        pr = get_prefs()
-
-        if self.custom:
-            pr.pmi_data.mode = 'CUSTOM'
-            pr.pmi_data.custom = "draw_menu(\"%s\")" % self.enumprop
-        else:
-            if pr.pmi_data.mode not in MODAL_CMD_MODES:
-                pr.pmi_data.mode = 'COMMAND'
-            pr.pmi_data.cmd = "open_menu(\"%s\")" % self.enumprop
-
-        pr.pmi_data.sname = self.enumprop
-
-        tag_redraw()
-        return {'FINISHED'}
-
-    def invoke(self, context, event):
-        if PME_OT_pmi_pm_search.items:
-            PME_OT_pmi_pm_search.items.clear()
-        context.window_manager.invoke_search_popup(self)
-        return {'FINISHED'}
-
-
-class PME_OT_pmi_operator_search(bpy.types.Operator):
-    bl_idname = "pme.pmi_operator_search"
-    bl_label = ""
-    bl_description = (
-        "Command tab:\n"
-        "  Execute operator when the user clicks the button"
-    )
-    bl_options = {'INTERNAL'}
-    bl_property = "operator"
-
-    idx: bpy.props.IntProperty(options={'SKIP_SAVE'})
-
-    items = []
-
-    def get_items(self, context):
-        if not PME_OT_pmi_operator_search.items:
-            items = []
-            for op_module_name in dir(bpy.ops):
-                op_module = getattr(bpy.ops, op_module_name)
-                for op_submodule_name in dir(op_module):
-                    op = getattr(op_module, op_submodule_name)
-                    op_name = operator_utils.get_rna_type(op).bl_rna.name
-
-                    label = op_name or op_submodule_name
-                    label = "%s|%s" % (utitle(label), op_module_name.upper())
-
-                    items.append(
-                        ("%s.%s" % (op_module_name, op_submodule_name), label, "")
-                    )
-
-            PME_OT_pmi_operator_search.items = items
-
-        return PME_OT_pmi_operator_search.items
-
-    operator: bpy.props.EnumProperty(items=get_items)
-
-    def execute(self, context):
-        pr = get_prefs()
-        pm = pr.selected_pm
-        pmi = pm.pmis[self.idx]
-
-        op_name = operator_utils.operator_label(self.operator)
-
-        if pr.mode == 'PMI':
-            if pr.pmi_data.mode not in MODAL_CMD_MODES:
-                pr.pmi_data.mode = 'COMMAND'
-
-            pr.pmi_data.cmd = "bpy.ops.%s()" % self.operator
-            pr.pmi_data.sname = op_name or self.operator
-        else:
-            if pmi.mode not in MODAL_CMD_MODES:
-                pmi.mode = 'COMMAND'
-
-            pmi.text = "bpy.ops.%s()" % self.operator
-            pmi.name = op_name or self.operator
-
-        tag_redraw()
-        return {'FINISHED'}
-
-    def invoke(self, context, event):
-        context.window_manager.invoke_search_popup(self)
-        return {'FINISHED'}
-
-
-class PME_OT_pmi_panel_search(bpy.types.Operator):
-    bl_idname = "pme.pmi_panel_search"
-    bl_label = "Panel"
-    bl_description = "Open or draw the panel in a popup"
-    bl_options = {'INTERNAL'}
-    bl_property = "enumprop"
-
-    items = None
-
-    def get_items(self, context):
-        if not PME_OT_pmi_panel_search.items:
-            PME_OT_pmi_panel_search.items = bl_panel_enum_items()
-
-        return PME_OT_pmi_panel_search.items
-
-    enumprop: bpy.props.EnumProperty(items=get_items)
-    custom: bpy.props.BoolProperty(options={'SKIP_SAVE'})
-    popover: bpy.props.BoolProperty(options={'SKIP_SAVE'})
-
-    def execute(self, context):
-        pr = get_prefs()
-        tp = hidden_panel(self.enumprop) or getattr(bpy.types, self.enumprop, None)
-
-        if not tp:
-            return {'CANCELLED'}
-
-        pr.pmi_data.mode = 'CUSTOM' if self.custom or self.popover else 'COMMAND'
-
-        if self.popover:
-            pr.pmi_data.custom = (
-                "L.popover("
-                "panel='%s', "
-                "text=slot, icon=icon, icon_value=icon_value)"
-            ) % self.enumprop
-
-        elif pr.pmi_data.mode == 'COMMAND':
-            pr.pmi_data.cmd = ("bpy.ops.pme.popup_panel(" "panel='%s')") % self.enumprop
-
-        elif pr.pmi_data.mode == 'CUSTOM':
-            frame = header = True
-            if (
-                self.enumprop == "DATA_PT_modifiers"
-                or self.enumprop == "OBJECT_PT_constraints"
-                or self.enumprop == "BONE_PT_constraints"
-            ):
-                frame = header = False
-
-            pr.pmi_data.custom = "panel(\"%s\", frame=%r, header=%r, expand=None)" % (
-                self.enumprop,
-                frame,
-                header,
-            )
-
-        sname = (
-            tp.bl_label if hasattr(tp, "bl_label") and tp.bl_label else self.enumprop
-        )
-        if "_PT_" in sname:
-            _, _, sname = sname.partition("_PT_")
-            sname = utitle(sname)
-        pr.pmi_data.sname = sname
-
-        return {'CANCELLED'}
-
-    def invoke(self, context, event):
-        PME_OT_pmi_panel_search.items = None
-        context.window_manager.invoke_search_popup(self)
-        return {'FINISHED'}
-
-
-class PME_OT_pmi_area_search(bpy.types.Operator):
-    bl_idname = "pme.pmi_area_search"
-    bl_label = "Area"
-    bl_description = "Open/toggle area"
-    bl_options = {'INTERNAL'}
-
-    area: bpy.props.EnumProperty(items=CC.AreaEnumHelper.gen_items_with_current, options={'SKIP_SAVE'})
-    cmd: bpy.props.StringProperty(
-        default="bpy.ops.pme.popup_area(area='%s')", options={'SKIP_SAVE'}
-    )
-
-    def draw_pmi_area_search(self, menu, context):
-        for item in CC.AreaEnumHelper.gen_items(context=context):
-            operator(
-                menu.layout,
-                self.bl_idname,
-                text=item[1],
-                icon='NONE',
-                icon_value=item[3],
-                area=item[0],
-                cmd=self.cmd,
-            )
-
-    def execute(self, context):
-        pr = get_prefs()
-
-        for item in CC.AreaEnumHelper.gen_items_with_current():
-            if item[0] == self.area:
-                break
-
-        pr.pmi_data.mode = 'COMMAND'
-        pr.pmi_data.cmd = self.cmd % self.area
-
-        pr.pmi_data.sname = item[1]
-
-        return {'FINISHED'}
-
-    def invoke(self, context, event):
-        context.window_manager.popup_menu(self.draw_pmi_area_search, title="Area")
-        return {'FINISHED'}
+# PME_OT_pmi_pm_search moved to operators/search.py
+# PME_OT_pmi_operator_search moved to operators/search.py
+# PME_OT_pmi_panel_search moved to operators/search.py
+# PME_OT_pmi_area_search moved to operators/search.py
 
 
 class WM_OT_pmidata_hints_show(bpy.types.Operator):
@@ -3069,176 +2510,11 @@ class PME_OT_pmidata_specials_call(bpy.types.Operator):
         return {'FINISHED'}
 
 
-class SearchOperator:
-    use_cache = False
-
-    def fill_enum_items(self, items):
-        pass
-
-    def get_enum_items(self, context):
-        cls = getattr(bpy.types, self.__class__.__name__)
-        if not hasattr(cls, "enum_items"):
-            return tuple()
-
-        if cls.enum_items is None:
-            cls.enum_items = []
-            cls.fill_enum_items(self, cls.enum_items)
-
-        return cls.enum_items
-
-    value: bpy.props.EnumProperty(name="Value", items=get_enum_items)
-
-    def invoke(self, context, event):
-        cls = getattr(bpy.types, self.__class__.__name__)
-        if not hasattr(cls, "enum_items"):
-            cls.enum_items = None
-        elif not self.use_cache and cls.enum_items:
-            cls.enum_items.clear()
-            cls.enum_items = None
-
-        context.window_manager.invoke_search_popup(self)
-        return {'FINISHED'}
+# SearchOperator moved to operators/search.py
+# PME_OT_pmi_menu_search moved to operators/search.py
 
 
-class PME_OT_pmi_menu_search(SearchOperator, bpy.types.Operator):
-    bl_idname = "pme.pmi_menu_search"
-    bl_label = ""
-    bl_description = "Call menu"
-    bl_options = {'INTERNAL'}
-    bl_property = "value"
-
-    idx: bpy.props.IntProperty(options={'SKIP_SAVE'})
-    mouse_over: bpy.props.BoolProperty(options={'SKIP_SAVE'})
-    pie: bpy.props.BoolProperty(options={'SKIP_SAVE'})
-
-    def fill_enum_items(self, items):
-        for tp_name in dir(bpy.types):
-            tp = getattr(bpy.types, tp_name)
-            if not isclass(tp):
-                continue
-
-            if issubclass(tp, bpy.types.Menu) and hasattr(tp, "bl_label"):
-                ctx, _, name = tp_name.partition("_MT_")
-                label = hasattr(tp, "bl_label") and tp.bl_label or name or tp_name
-                label = "%s|%s" % (utitle(label), ctx)
-
-                items.append((tp_name, label, ""))
-
-    def execute(self, context):
-        pr = get_prefs()
-        pm = pr.selected_pm
-        pmi = pm.pmis[self.idx]
-
-        if self.pie:
-            cmd = "bpy.ops.wm.call_menu_pie(name=\"%s\")" % self.value
-            mode = 'COMMAND'
-
-        elif self.mouse_over:
-            cmd = (
-                "L.menu(\"%s\", text=text, icon=icon, icon_value=icon_value, "
-                "use_mouse_over_open=True)"
-            ) % self.value
-            mode = 'CUSTOM'
-        else:
-            cmd = "bpy.ops.wm.call_menu(name=\"%s\")" % self.value
-            mode = 'COMMAND'
-
-        typ = getattr(bpy.types, self.value)
-        name = typ.bl_label if typ.bl_label else self.value
-
-        if pr.mode == 'PMI':
-            pr.pmi_data.mode = mode
-            if self.mouse_over:
-                pr.pmi_data.custom = cmd
-            else:
-                pr.pmi_data.cmd = cmd
-            pr.pmi_data.sname = name
-        else:
-            pmi.mode = mode
-            pmi.text = cmd
-            pmi.name = name
-
-        tag_redraw()
-        return {'FINISHED'}
-
-
-class PME_OT_script_open(bpy.types.Operator):
-    bl_idname = "pme.script_open"
-    bl_label = "Open Script"
-    bl_description = (
-        "Command tab:\n"
-        "  Execute external script when the user clicks the button\n"
-        "Custom tab:\n"
-        "  Use external script to draw custom layout of widgets"
-    )
-    bl_options = {'INTERNAL'}
-
-    filename_ext = ".py"
-    filepath: bpy.props.StringProperty(subtype='FILE_PATH', default="")
-    filter_glob: bpy.props.StringProperty(default="*.py", options={'HIDDEN'})
-    idx: bpy.props.IntProperty(default=-1, options={'SKIP_SAVE'})
-    mode: bpy.props.EnumProperty(
-        name="Tab",
-        items=(
-            ('COMMAND', "Command", ""),
-            ('CUSTOM', "Custom", ""),
-        ),
-    )
-
-    def draw(self, context):
-        if self.idx != -1:
-            col = self.layout.column(align=True)
-            col.label(text="Tab:")
-            col.prop(self, "mode", text="")
-
-    def execute(self, context):
-        pr = get_prefs()
-
-        filepath = os.path.normpath(self.filepath)
-        pr.scripts_filepath = filepath
-
-        if filepath.startswith(ADDON_PATH):
-            filepath = os.path.relpath(filepath, ADDON_PATH)
-
-        filename = os.path.basename(filepath)
-        filename, _, _ = filename.rpartition(".")
-        name = filename.replace("_", " ").strip().title()
-
-        filepath = filepath.replace("\\", "/")
-        cmd = "execute_script(\"%s\")" % filepath
-
-        pm = pr.selected_pm
-        if self.idx == -1:
-            pm.poll_cmd = "return " + cmd
-
-        else:
-            pmi = pm.pmis[self.idx]
-
-            if pr.mode == 'PMI':
-                pr.pmi_data.mode = self.mode
-                if pr.pmi_data.mode == 'COMMAND':
-                    pr.pmi_data.cmd = cmd
-                elif pr.pmi_data.mode == 'CUSTOM':
-                    pr.pmi_data.custom = cmd
-
-                pr.pmi_data.sname = name
-            else:
-                pmi.mode = self.mode
-                pmi.text = cmd
-                pmi.name = name
-
-        return {'FINISHED'}
-
-    def invoke(self, context, event):
-        if not self.filepath:
-            stored_path = get_prefs().scripts_filepath
-            # Use user scripts directory if no stored path or stored path doesn't exist
-            if not stored_path or not os.path.exists(stored_path):
-                self.filepath = get_user_scripts_dir(create=True)
-            else:
-                self.filepath = stored_path
-        context.window_manager.fileselect_add(self)
-        return {'RUNNING_MODAL'}
+# PME_OT_script_open moved to operators/script.py
 
 
 class PME_OT_button_add(bpy.types.Operator):
@@ -3292,79 +2568,11 @@ class PME_OT_button_add(bpy.types.Operator):
         return {'CANCELLED'}
 
 
-class PME_OT_debug_mode_toggle(bpy.types.Operator):
-    bl_idname = "pme.debug_mode_toggle"
-    bl_label = "Toggle Debug Mode"
-    bl_description = "Toggle debug mode"
+# PME_OT_debug_mode_toggle moved to operators/utils.py
 
-    def execute(self, context):
-        bpy.app.debug_wm = not bpy.app.debug_wm
-        mode = "Off"
-        if bpy.app.debug_wm:
-            mode = "On"
-        self.report({'INFO'}, I_DEBUG % mode)
-        tag_redraw()
-        return {'CANCELLED'}
-
-
-class WM_OT_pme_hotkey_call(bpy.types.Operator):
-    bl_idname = "wm.pme_hotkey_call"
-    bl_label = "Hotkey"
-
-    hotkey: bpy.props.StringProperty(options={'SKIP_SAVE'})
-
-    def execute(self, context):
-        keymap_helper.run_operator_by_hotkey(context, self.hotkey)
-        return {'FINISHED'}
-
-
-class PME_OT_pm_chord_add(bpy.types.Operator):
-    bl_idname = "pme.pm_chord_add"
-    bl_label = "Add or Remove Chord"
-    bl_description = "Add or remove chord"
-    bl_options = {'INTERNAL'}
-
-    add: bpy.props.BoolProperty(default=True, options={'SKIP_SAVE'})
-
-    def execute(self, context):
-        pm = get_prefs().selected_pm
-        if self.add:
-            pm.chord = 'A'
-        else:
-            pm.chord = 'NONE'
-
-        return {'FINISHED'}
-
-
-class PME_OT_pm_hotkey_remove(bpy.types.Operator):
-    bl_idname = "pme.pm_hotkey_remove"
-    bl_label = ""
-    bl_description = "Remove the hotkey"
-    bl_options = {'INTERNAL'}
-
-    @classmethod
-    def poll(cls, context):
-        pm = get_prefs().selected_pm
-        return pm and pm.key != 'NONE'
-
-    def execute(self, context):
-        pm = get_prefs().selected_pm
-        pm.key = 'NONE'
-        pm.ctrl = False
-        pm.shift = False
-        pm.alt = False
-        pm.oskey = False
-        pm.key_mod = 'NONE'
-        pm.update_keymap_item(context)
-
-        return {'FINISHED'}
-
-    def invoke(self, context, event):
-        if event.shift:
-            if 'FINISHED' in bpy.ops.pme.pm_hotkey_convert():
-                return {'FINISHED'}
-
-        return self.execute(context)
+# WM_OT_pme_hotkey_call moved to operators/hotkey.py
+# PME_OT_pm_chord_add moved to operators/hotkey.py
+# PME_OT_pm_hotkey_remove moved to operators/hotkey.py
 
 
 def register():

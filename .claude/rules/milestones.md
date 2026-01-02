@@ -114,8 +114,15 @@ PME2 開発のマイルストーンとフェーズ定義。
 | `from ..operators import *` の明示化 | - | ✅ 完了 | 低 |
 | LAYER 定数追加（27 モジュール） | - | ✅ 完了 | 低 |
 | ファサードモジュール例外処理 | `infra/debug.py` | ✅ 完了 | 低 |
+| extra_operators.py 解体 | `operators/extras/` | ✅ 完了 | 低 |
+| Script/Hotkey オペレーター | `operators/script.py`, `operators/hotkey.py` | ✅ 完了 | 低 |
 
-**達成した違反削減**: **46 件 → 22 件** (52% 削減)
+**達成した違反削減**: **46 件 → 23 件** (50% 削減)
+
+**operators/ パッケージの分割状況**:
+- `operators/__init__.py`: 3400+ 行 → 2588 行（812行削減）
+- 7 サブモジュール + 1 サブパッケージ（extras/）に分離
+- 37 クラスを整理（全体約178クラス中の約21%）
 
 **手順**:
 1. `DBG_DEPS=True` でレイヤ違反を確認
