@@ -9,6 +9,12 @@ bl_info = {
     "category": "User Interface",
 }
 
+use_reload = "addon" in locals()
+if use_reload:
+    import importlib
+    importlib.reload(locals()["addon"])
+    del importlib
+
 import bpy
 import _bpy
 from bpy.app.handlers import persistent
@@ -212,13 +218,13 @@ def new_register_modules():
     """Register modules using init_addon approach."""
     from .infra.debug import dbg_log, dbg_scope
 
-    dbg_log("deps", "Using init_addon loader", location="__init__.new_register_modules")
+    dbg_log("deps", f"Using init_addon loader (use_reload={use_reload})", location="__init__.new_register_modules")
 
     # Initialize addon module system
     with dbg_scope("profile", "new_register_modules.init_addon", location="__init__"):
         addon.init_addon(
             module_patterns=PME2_MODULE_PATTERNS,
-            use_reload=False,
+            use_reload=use_reload,
         )
 
     # Register all classes and call module register() functions
