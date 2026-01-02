@@ -156,18 +156,37 @@ Phase 2-B で達成した違反削減（46→22件）を維持しつつ、残り
 
 ### 計画タスク
 
-| 対象 | 作業内容 | リスク |
-|------|----------|--------|
-| 違反の許容リスト作成 | 意図的に許容する違反をドキュメント化 | 低 |
-| `infra/io.py` | IO 系オペレーター（import/export/backup）の分離 | 低〜中 |
-| `operators/` の整理 | 編集系・検索系の分類 | 中 |
-| `pme_types.py` | `core/` への移動検討 | 中 |
+| 対象 | 作業内容 | リスク | 状態 |
+|------|----------|--------|------|
+| `infra/io.py` | IO 系ユーティリティの分離 | 低〜中 | ✅ 完了 |
+| ユーザーリソースパス | `bpy.utils.user_resource()` 対応 | 低 | ✅ 完了 |
+| デュアルパス検索 | scripts/icons のシステム+ユーザー検索 | 低 | ✅ 完了 |
+| 違反の許容リスト作成 | 意図的に許容する違反をドキュメント化 | 低 | - |
+| `operators/` の整理 | 編集系・検索系の分類 | 中 | - |
+| `pme_types.py` | `core/` への移動検討 | 中 | - |
+
+### 完了した作業
+
+**`infra/io.py` 作成** ✅:
+- ファイル I/O ユーティリティ（read_import_file, write_export_file, BackupManager）
+- ユーザーリソースパス関数（get_user_config_dir, get_user_scripts_dir, get_user_icons_dir, etc.）
+- システムリソースパス関数（get_system_scripts_dir, get_system_icons_dir）
+- デュアルパスイテレータ（iter_script_dirs）
+
+**ユーザーリソース管理** ✅:
+- バックアップ: `{user_config}/backups/` に保存（アップデート後も維持）
+- エクスポート: `{user_config}/exports/` をデフォルトに
+- スクリプト: システム→ユーザーの順で検索、ユーザーが拡張可能
+- アイコン: システム→ユーザーの順で読み込み、ユーザーがオーバーライド可能
+- UI のパス誘導も更新（path_open オペレーター）
 
 ### 受け入れ基準
 
 - [x] レイヤ違反が 40 件未満（Phase 1 時点: 49 件）✅ **22件達成**
+- [x] `infra/io.py` が作成されている ✅
+- [x] ユーザーリソースが Blender 標準パスに保存される ✅
 - [ ] 許容する違反が `rules/allowed_violations.md` に文書化されている
-- [ ] 主要な `infra/` モジュールが整理されている
+- [ ] `operators/` が整理されている
 
 ---
 
