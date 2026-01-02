@@ -9,12 +9,16 @@ LAYER = "infra"
 
 from . import pme
 from .infra.debug import logw
+from .infra.io import get_user_icons_dir, get_system_icons_dir
 
 
 class PreviewsHelper:
 
     def __init__(self, folder="icons"):
+        # Legacy: single path (system icons only)
         self.path = os.path.join(os.path.dirname(__file__), folder)
+        # New: dual-path support (system + user icons)
+        self._addon_path = os.path.dirname(__file__)
         self.preview = None
 
     def get_icon(self, name):
@@ -44,6 +48,23 @@ class PreviewsHelper:
     def has_icon(self, name):
         return self.preview is not None and name in self.preview
 
+    def _load_icons_from_dir(self, icon_dir):
+        """Load all .png icons from a directory."""
+        if not os.path.isdir(icon_dir):
+            return
+
+        for f in os.listdir(icon_dir):
+            if not f.endswith(".png"):
+                continue
+
+            name = os.path.splitext(f)[0]
+            # User icons override system icons with same name
+            if name in self.preview:
+                # Remove existing to allow override
+                del self.preview[name]
+
+            self.preview.load(name, os.path.join(icon_dir, f), 'IMAGE')
+
     def refresh(self):
         # NOTE:
         # - This currently initializes previews only once per session.
@@ -57,13 +78,15 @@ class PreviewsHelper:
 
         try:
             self.preview = bpy.utils.previews.new()
-            for f in os.listdir(self.path):
-                if not f.endswith(".png"):
-                    continue
 
-                self.preview.load(
-                    os.path.splitext(f)[0], os.path.join(self.path, f), 'IMAGE'
-                )
+            # Load system icons first (bundled with addon)
+            system_dir = get_system_icons_dir(self._addon_path)
+            self._load_icons_from_dir(system_dir)
+
+            # Load user icons second (overrides system icons with same name)
+            user_dir = get_user_icons_dir()
+            self._load_icons_from_dir(user_dir)
+
         except Exception as e:
             # Hotfix: Reload Scripts may leave previews in unstable state
             logw("PME: previews refresh failed (icons may not display)", str(e))
