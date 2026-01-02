@@ -66,16 +66,24 @@ class PreviewsHelper:
             self.preview.load(name, os.path.join(icon_dir, f), 'IMAGE')
 
     def refresh(self):
-        # NOTE:
-        # - This currently initializes previews only once per session.
-        # - Enum-based icons (e.g. OPEN_MODE_ITEMS in constants.py) cache their
-        #   icon_value at class definition time, so calling this again will NOT
-        #   update those enums. A true "icon refresh" would require either
-        #   re-registering the affected classes or switching to a dynamic
-        #   draw-time lookup instead of static enum icon_values.
-        if self.preview is not None:
-            return
+        """Reload icons from disk.
 
+        If preview collection already exists, it is destroyed and recreated.
+        Use this when user has added/changed icon files.
+
+        NOTE: Enum-based icons (e.g. OPEN_MODE_ITEMS in constants.py) cache their
+        icon_value at class definition time, so refreshing will NOT update those
+        enums - they require Blender restart.
+        """
+        # Clear existing preview collection
+        if self.preview is not None:
+            try:
+                bpy.utils.previews.remove(self.preview)
+            except Exception as e:
+                logw("PME: previews remove failed during refresh", str(e))
+            self.preview = None
+
+        # Load fresh icons
         try:
             self.preview = bpy.utils.previews.new()
 
@@ -88,7 +96,6 @@ class PreviewsHelper:
             self._load_icons_from_dir(user_dir)
 
         except Exception as e:
-            # Hotfix: Reload Scripts may leave previews in unstable state
             logw("PME: previews refresh failed (icons may not display)", str(e))
             self.preview = None
 

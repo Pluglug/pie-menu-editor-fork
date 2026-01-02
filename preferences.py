@@ -525,7 +525,10 @@ class PME_OT_pmi_name_apply(bpy.types.Operator):
 class PME_OT_icons_refresh(bpy.types.Operator):
     bl_idname = "pme.icons_refresh"
     bl_label = ""
-    bl_description = "Refresh icons"
+    bl_description = (
+        "Reload icons from disk.\n"
+        "Use this after adding or changing icon files"
+    )
     bl_options = {'INTERNAL'}
 
     def execute(self, context):
