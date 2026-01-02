@@ -25,6 +25,13 @@ pme API 設計のための、既存コンポーネントの理解ガイド。
 - [よく使われるパターン](#付録-よく使われるパターン) — コード内の頻出イディオム
 - [用語集](#付録-用語集クイックリファレンス) — 略語・変数名の早見表
 
+### 詳細解説サブページ
+- [PMEProps スキーマシステム](./pmeprops-schema-system.md) — 詳細解説、dataclass 移行検討
+- [EditorBase 分解計画](./editorbase-decomposition.md) — PME2 再設計提案、Schema/Behavior/View 分離
+- [BlContext プロキシ](./blcontext-proxy.md) — コンテキストプロキシの分析と簡素化提案
+- [Editor と PMItem の関係](./editor-pmitem-relationship.md) — データと振る舞いの分離パターン
+- [**PME2 理想アーキテクチャ**](./ideal-architecture.md) — 再設計のビジョン、全体クラス図
+
 ---
 
 ## 1. コンポーネント概観
