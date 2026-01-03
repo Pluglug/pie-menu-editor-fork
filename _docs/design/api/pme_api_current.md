@@ -100,20 +100,20 @@ Phase 2-B (alpha.2) で、各シンボルに **Stability level** を付与しま
 
 > **注意**: v2.0.0 では全て Experimental。Stable は v2.1.0 以降で検討。
 
-| 変数名 | 値 | Stability (v2.0) |
-|--------|-----|------------------|
-| `bpy` | `bpy` モジュール | **Experimental** |
-| `C` | `bpy.context` | **Experimental** |
-| `D` | `bpy.data` | **Experimental** |
-| `E` | 現在の `event` | **Experimental** |
-| `L` | 現在の `layout` | **Experimental** |
-| `U` | `UserData` インスタンス | **Experimental** |
-| `drag_x`, `drag_y` | ドラッグ座標 | **Experimental** |
-| `delta` | マウスホイールのデルタ値 | **Experimental** |
-| `text`, `icon`, `icon_value` | 現在のコンテキスト値 | **Experimental** |
-| `pme_context` | `context` インスタンス自身 | **Internal** |
-| `PME` | `temp_prefs()` | **Internal** |
-| `PREFS` | `get_prefs()` | **Internal** |
+| 変数名 | 値 | Stability (v2.0) | Available |
+|--------|-----|------------------|-----------|
+| `bpy` | `bpy` モジュール | **Experimental** | always |
+| `C` | `bpy.context` | **Experimental** | always |
+| `D` | `bpy.data` | **Experimental** | always |
+| `E` | 現在の `event` | **Experimental** | when event context exists |
+| `delta` | マウスホイールのデルタ値 | **Experimental** | when event context exists |
+| `drag_x`, `drag_y` | ドラッグ座標 | **Experimental** | during drag operations |
+| `U` | `UserData` インスタンス | **Experimental** | always after registration |
+| `L` | 現在の `layout` | **Experimental** | during UI drawing only |
+| `text`, `icon`, `icon_value` | 現在のコンテキスト値 | **Experimental** | during PM/PMI execution |
+| `pme_context` | `context` インスタンス自身 | **Internal** | internal only |
+| `PME` | `temp_prefs()` | **Internal** | internal only |
+| `PREFS` | `get_prefs()` | **Internal** | internal only |
 
 ---
 
