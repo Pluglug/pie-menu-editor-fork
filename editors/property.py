@@ -20,7 +20,6 @@ from ..addon import get_prefs, temp_prefs
 from ..ui.layout import lh
 from ..ui import tag_redraw, shorten_str
 from ..bl_utils import uname
-from ..extra_operators import PME_OT_popup_property
 from ..infra.collections import MoveItemOperator
 from .. import operator_utils
 from ..core import constants as CC
@@ -1171,7 +1170,7 @@ class Editor(EditorBase):
         lh.row(alignment='RIGHT')
 
         lh.operator(
-            PME_OT_popup_property.bl_idname,
+            "pme.popup_property",
             self.ep.ed_preview_path,
             'GREASEPENCIL',
             emboss=False,

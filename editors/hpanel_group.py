@@ -11,10 +11,6 @@ from ..addon import get_prefs, temp_prefs, SAFE_MODE
 from ..ui.layout import lh
 from ..ui import panels as PAU
 from ..ui import tag_redraw
-from ..operators import (
-    PME_OT_panel_hide,
-    PME_OT_panel_hide_by,
-)
 
 
 class PME_OT_hpanel_menu(bpy.types.Operator):
@@ -25,8 +21,8 @@ class PME_OT_hpanel_menu(bpy.types.Operator):
     def _draw(self, menu, context):
         pr = get_prefs()
         lh.lt(menu.layout, 'INVOKE_DEFAULT')
-        lh.operator(PME_OT_panel_hide.bl_idname, None, 'ADD', group=pr.selected_pm.name)
-        lh.operator(PME_OT_panel_hide_by.bl_idname, None, 'ADD')
+        lh.operator("pme.panel_hide", None, 'ADD', group=pr.selected_pm.name)
+        lh.operator("pme.panel_hide_by", None, 'ADD')
         lh.sep()
 
         lh.prop(pr, "interactive_panels")

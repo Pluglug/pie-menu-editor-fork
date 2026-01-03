@@ -14,13 +14,8 @@ from ..ui.layout import lh, operator, draw_pme_layout
 from ..ui import utitle, tag_redraw
 from ..ui.utils import draw_menu
 from ..bl_utils import bl_context
-from ..operators import (
-    WM_OT_pm_select,
-    WM_OT_pme_user_pie_menu_call,
-    PME_OT_panel_hide,
-    PME_OT_pm_search_and_select,
-)
-from ..extra_operators import PME_OT_clipboard_copy
+# NOTE: WM_OT_pme_user_pie_menu_call is needed for _draw_item method reference
+from ..operators import WM_OT_pme_user_pie_menu_call
 from ..ui import panels as PAU
 from ..ui.panels import (
     panel,
@@ -209,7 +204,7 @@ class PME_OT_panel_menu(bpy.types.Operator):
     def extend_ui_operator(self, label, icon, mode, pm_name):
         pr = get_prefs()
         if pm_name in pr.pie_menus:
-            lh.operator(WM_OT_pm_select.bl_idname, label, icon, pm_name=pm_name)
+            lh.operator("wm.pm_select", label, icon, pm_name=pm_name)
         else:
             lh.operator(PME_OT_pm_add.bl_idname, label, icon, mode=mode, name=pm_name)
 
@@ -229,19 +224,19 @@ class PME_OT_panel_menu(bpy.types.Operator):
         )
 
         lh.operator(
-            PME_OT_clipboard_copy.bl_idname, "Copy Menu ID", 'COPYDOWN', text=self.panel
+            "pme.clipboard_copy", "Copy Menu ID", 'COPYDOWN', text=self.panel
         )
 
         lh.sep()
 
         lh.operator(
-            WM_OT_pm_select.bl_idname,
+            "wm.pm_select",
             None,
             'COLLAPSEMENU',
             pm_name="",
             use_mode_icons=False,
         )
-        lh.operator(PME_OT_pm_search_and_select.bl_idname, None, 'VIEWZOOM')
+        lh.operator("pme.pm_search_and_select", None, 'VIEWZOOM')
 
         lh.sep()
 
@@ -278,19 +273,19 @@ class PME_OT_panel_menu(bpy.types.Operator):
         self.extend_ui_operator("Extend Menu", 'TRIA_DOWN', 'RMENU', self.panel)
 
         lh.operator(
-            PME_OT_clipboard_copy.bl_idname, "Copy Menu ID", 'COPYDOWN', text=self.panel
+            "pme.clipboard_copy", "Copy Menu ID", 'COPYDOWN', text=self.panel
         )
 
         lh.sep()
 
         lh.operator(
-            WM_OT_pm_select.bl_idname,
+            "wm.pm_select",
             None,
             'COLLAPSEMENU',
             pm_name="",
             use_mode_icons=False,
         )
-        lh.operator(PME_OT_pm_search_and_select.bl_idname, None, 'VIEWZOOM')
+        lh.operator("pme.pm_search_and_select", None, 'VIEWZOOM')
 
         lh.sep()
 
@@ -304,7 +299,7 @@ class PME_OT_panel_menu(bpy.types.Operator):
         pm = pr.selected_pm
 
         lh.operator(
-            PME_OT_panel_hide.bl_idname,
+            "pme.panel_hide",
             "Hide Panel",
             'VISIBLE_IPO_OFF',
             panel=self.panel,
@@ -380,7 +375,7 @@ class PME_OT_panel_menu(bpy.types.Operator):
         self.extend_ui_operator("Extend Panel", 'TRIA_DOWN', 'DIALOG', self.panel)
 
         lh.operator(
-            PME_OT_clipboard_copy.bl_idname,
+            "pme.clipboard_copy",
             "Copy Panel ID",
             'COPYDOWN',
             text=self.panel,
@@ -389,13 +384,13 @@ class PME_OT_panel_menu(bpy.types.Operator):
         lh.sep()
 
         lh.operator(
-            WM_OT_pm_select.bl_idname,
+            "wm.pm_select",
             None,
             'COLLAPSEMENU',
             pm_name="",
             use_mode_icons=False,
         )
-        lh.operator(PME_OT_pm_search_and_select.bl_idname, None, 'VIEWZOOM')
+        lh.operator("pme.pm_search_and_select", None, 'VIEWZOOM')
 
         lh.sep()
 
