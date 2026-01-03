@@ -6,19 +6,20 @@
 LAYER = "operators"
 
 import bpy
+from bpy.types import Menu
 from ...addon import ic
-from ...core import constants as CC
+from ...core.constants import PME_SCREEN, PME_TEMP_SCREEN, SPACE_ITEMS
 from ...ui.layout import lh
 
 
-class PME_MT_header_menu_set(bpy.types.Menu):
+class PME_MT_header_menu_set(Menu):
     bl_label = "Menu"
 
     def draw(self, context):
         lh.save()
         lh.lt(self.layout)
 
-        for id, name, _, icon, _ in CC.SPACE_ITEMS:
+        for id, name, _, icon, _ in SPACE_ITEMS:
             lh.operator(
                 "pme.exec",
                 name,
@@ -47,7 +48,7 @@ class PME_MT_header_menu_set(bpy.types.Menu):
         lh.restore()
 
 
-class PME_MT_screen_set(bpy.types.Menu):
+class PME_MT_screen_set(Menu):
     bl_label = "Menu"
 
     def draw(self, context):
@@ -75,8 +76,8 @@ class PME_MT_screen_set(bpy.types.Menu):
         for name in sorted(bpy.data.workspaces.keys()):
             if (
                 name == "temp"
-                or name.startswith(CC.PME_TEMP_SCREEN)
-                or name.startswith(CC.PME_SCREEN)
+                or name.startswith(PME_TEMP_SCREEN)
+                or name.startswith(PME_SCREEN)
             ):
                 continue
             icon = icons.get(name, 'LAYER_USED')
@@ -97,7 +98,7 @@ class PME_MT_screen_set(bpy.types.Menu):
         lh.restore()
 
 
-class PME_MT_brush_set(bpy.types.Menu):
+class PME_MT_brush_set(Menu):
     bl_label = "Menu"
 
     def draw(self, context):

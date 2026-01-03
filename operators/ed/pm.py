@@ -1,3 +1,4 @@
+# pyright: reportInvalidTypeForm=false
 # operators/ed/pm.py - Pie Menu (PM) management operators
 # LAYER = "operators"
 #
@@ -6,8 +7,11 @@
 LAYER = "operators"
 
 import bpy
+from bpy import app
+from bpy.props import BoolProperty, EnumProperty, IntProperty, StringProperty
+from bpy.types import Menu, Operator
 from ...addon import get_prefs, ic
-from ...core import constants as CC
+from ...core.constants import ARROW_ICONS, ED_DATA
 from ...bl_utils import PME_OT_message_box
 from ...ui import tag_redraw
 from ...ui.layout import lh, operator, draw_pme_layout
@@ -23,7 +27,7 @@ from ...operators import (
 from .pmi import WM_OT_pmi_edit, WM_OT_pmi_edit_clipboard, WM_OT_pmi_edit_auto
 
 
-class PME_MT_select_menu(bpy.types.Menu):
+class PME_MT_select_menu(Menu):
     bl_label = "Select Menu"
 
     def draw(self, context):
@@ -42,27 +46,27 @@ class PME_MT_select_menu(bpy.types.Menu):
         operator(layout, PME_OT_pm_search_and_select.bl_idname, None, 'VIEWZOOM')
 
 
-class PME_MT_pm_new(bpy.types.Menu):
+class PME_MT_pm_new(Menu):
     bl_label = "New"
 
     def draw_items(self, layout):
         lh.lt(layout)
 
-        for id, name, icon in CC.ED_DATA:
+        for id, name, icon in ED_DATA:
             lh.operator(PME_OT_pm_add.bl_idname, name, icon, mode=id)
 
     def draw(self, context):
         self.draw_items(self.layout)
 
 
-class PME_OT_pm_add(bpy.types.Operator):
+class PME_OT_pm_add(Operator):
     bl_idname = "wm.pm_add"
     bl_label = ""
     bl_description = "Add an item"
     bl_options = {'INTERNAL'}
 
-    mode: bpy.props.StringProperty()
-    name: bpy.props.StringProperty(options={'SKIP_SAVE'})
+    mode: StringProperty()
+    name: StringProperty(options={'SKIP_SAVE'})
 
     def _draw(self, menu, context):
         PME_MT_pm_new.draw_items(self, menu.layout)
@@ -81,16 +85,16 @@ class PME_OT_pm_add(bpy.types.Operator):
         return {'CANCELLED'}
 
 
-class PME_OT_pm_edit(bpy.types.Operator):
+class PME_OT_pm_edit(Operator):
     bl_idname = "pme.pm_edit"
     bl_label = "Edit Menu (PME)"
     bl_description = "Edit the menu"
 
-    auto: bpy.props.BoolProperty(default=True, options={'SKIP_SAVE'})
-    clipboard: bpy.props.BoolProperty(options={'SKIP_SAVE'})
-    mode: bpy.props.StringProperty(options={'SKIP_SAVE'})
-    text: bpy.props.StringProperty(options={'SKIP_SAVE'})
-    name: bpy.props.StringProperty(options={'SKIP_SAVE'})
+    auto: BoolProperty(default=True, options={'SKIP_SAVE'})
+    clipboard: BoolProperty(options={'SKIP_SAVE'})
+    mode: StringProperty(options={'SKIP_SAVE'})
+    text: StringProperty(options={'SKIP_SAVE'})
+    name: StringProperty(options={'SKIP_SAVE'})
 
     def _draw_pm(self, menu, context):
         pm = get_prefs().selected_pm
@@ -105,7 +109,7 @@ class PME_OT_pm_edit(bpy.types.Operator):
             lh.operator(
                 self.op_bl_idname,
                 text,
-                CC.ARROW_ICONS[idx],
+                ARROW_ICONS[idx],
                 pm_item=idx,
                 mode=self.mode,
                 text=self.text,
@@ -369,7 +373,7 @@ class PME_OT_pm_edit(bpy.types.Operator):
         elif self.auto:
             self.op_bl_idname = WM_OT_pmi_edit_auto.bl_idname
 
-        if not self.text and not bpy.app.debug_wm:
+        if not self.text and not app.debug_wm:
             bpy.context.window_manager.popup_menu(self._draw_debug, title="Debug Mode")
 
         elif pm.mode == 'DIALOG':
@@ -401,14 +405,14 @@ class PME_OT_pm_edit(bpy.types.Operator):
         return {'FINISHED'}
 
 
-class PME_OT_pm_toggle(bpy.types.Operator):
+class PME_OT_pm_toggle(Operator):
     bl_idname = "pme.pm_toggle"
     bl_label = "Enable or Disable Item"
     bl_description = "Enable or disable the active item"
     bl_options = {'INTERNAL'}
 
-    name: bpy.props.StringProperty(options={'SKIP_SAVE'})
-    action: bpy.props.EnumProperty(
+    name: StringProperty(options={'SKIP_SAVE'})
+    action: EnumProperty(
         items=(
             ('TOGGLE', "Toggle", ""),
             ('ENABLE', "Enable", ""),
@@ -427,14 +431,14 @@ class PME_OT_pm_toggle(bpy.types.Operator):
         return {'FINISHED'}
 
 
-class PME_OT_pmi_toggle(bpy.types.Operator):
+class PME_OT_pmi_toggle(Operator):
     bl_idname = "pme.pmi_toggle"
     bl_label = "Enable or Disable Menu Slot"
     bl_description = "Enable or disable the slot"
     bl_options = {'INTERNAL'}
 
-    pm: bpy.props.StringProperty(options={'SKIP_SAVE'})
-    pmi: bpy.props.IntProperty(options={'SKIP_SAVE'})
+    pm: StringProperty(options={'SKIP_SAVE'})
+    pmi: IntProperty(options={'SKIP_SAVE'})
 
     def execute(self, context):
         pr = get_prefs()

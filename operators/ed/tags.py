@@ -1,3 +1,4 @@
+# pyright: reportInvalidTypeForm=false
 # operators/ed/tags.py - Tag management operators
 # LAYER = "operators"
 #
@@ -5,9 +6,10 @@
 
 LAYER = "operators"
 
-import bpy
+from bpy.props import BoolProperty, EnumProperty, IntProperty, StringProperty
+from bpy.types import Operator
 from ...addon import get_prefs, temp_prefs, ic_rb, ic
-from ...core import constants as CC
+from ...core.constants import ICON_OFF, ICON_ON, UNTAGGED
 from ...bl_utils import uname
 from ...infra.collections import sort_collection
 from ...ui import tag_redraw
@@ -15,14 +17,14 @@ from ...ui.layout import operator
 from ...pme_types import Tag
 
 
-class PME_OT_tags_filter(bpy.types.Operator):
+class PME_OT_tags_filter(Operator):
     bl_idname = "pme.tags_filter"
     bl_label = "Filter by Tag"
     bl_description = "Filter by tag"
     bl_options = {'INTERNAL'}
 
-    ask: bpy.props.BoolProperty(default=True, options={'SKIP_SAVE'})
-    tag: bpy.props.StringProperty(options={'SKIP_SAVE'})
+    ask: BoolProperty(default=True, options={'SKIP_SAVE'})
+    tag: StringProperty(options={'SKIP_SAVE'})
 
     def draw_menu(self, menu, context):
         pr = get_prefs()
@@ -51,9 +53,9 @@ class PME_OT_tags_filter(bpy.types.Operator):
         operator(
             layout,
             self.bl_idname,
-            CC.UNTAGGED,
-            icon=ic_rb(pr.tag_filter == CC.UNTAGGED),
-            tag=CC.UNTAGGED,
+            UNTAGGED,
+            icon=ic_rb(pr.tag_filter == UNTAGGED),
+            tag=UNTAGGED,
             ask=False,
         )
 
@@ -70,15 +72,15 @@ class PME_OT_tags_filter(bpy.types.Operator):
         return {'FINISHED'}
 
 
-class PME_OT_tags(bpy.types.Operator):
+class PME_OT_tags(Operator):
     bl_idname = "pme.tags"
     bl_label = ""
     bl_description = "Manage tags"
     bl_options = {'INTERNAL'}
     bl_property = "tag"
 
-    idx: bpy.props.IntProperty(default=-1, options={'SKIP_SAVE'})
-    action: bpy.props.EnumProperty(
+    idx: IntProperty(default=-1, options={'SKIP_SAVE'})
+    action: EnumProperty(
         items=(
             ('MENU', "Menu", ""),
             ('TAG', "Tag", ""),
@@ -89,8 +91,8 @@ class PME_OT_tags(bpy.types.Operator):
         ),
         options={'SKIP_SAVE'},
     )
-    tag: bpy.props.StringProperty(maxlen=50, options={'SKIP_SAVE'})
-    group: bpy.props.BoolProperty(options={'SKIP_SAVE'})
+    tag: StringProperty(maxlen=50, options={'SKIP_SAVE'})
+    group: BoolProperty(options={'SKIP_SAVE'})
 
     def draw_menu(self, menu, context):
         pr = get_prefs()
@@ -100,10 +102,10 @@ class PME_OT_tags(bpy.types.Operator):
         layout.operator_context = 'INVOKE_DEFAULT'
         i = 0
         for i, tag in enumerate(tpr.tags):
-            icon = CC.ICON_OFF
+            icon = ICON_OFF
             action = 'TAG'
             if pm.has_tag(tag.name):
-                icon = CC.ICON_ON
+                icon = ICON_ON
                 action = 'UNTAG'
             if self.action != 'MENU':
                 action = self.action
@@ -159,7 +161,7 @@ class PME_OT_tags(bpy.types.Operator):
         self.tag = self.tag.replace(",", "").strip()
         if not self.tag:
             return {'CANCELLED'}
-        if self.tag == CC.UNTAGGED:
+        if self.tag == UNTAGGED:
             self.tag += ".001"
 
         if self.action == 'ADD':

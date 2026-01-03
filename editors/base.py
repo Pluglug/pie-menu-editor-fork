@@ -7,55 +7,35 @@
 LAYER = "editors"
 
 import bpy
-from ..core import constants as CC
-from .. import keymap_helper as KH
-from ..addon import get_prefs, temp_prefs, ic_rb, ic_cb, ic_eye, ic_fb, ic
-from ..core.constants import MAX_STR_LEN, EMODE_ITEMS
+from bpy import types as bpy_types
+from bpy.types import Header, Menu, Panel
+from ..addon import get_prefs, temp_prefs, ic_cb, ic_eye, ic_fb, ic
+from ..core.constants import (
+    ED_DATA,
+    EMODE_ITEMS,
+    F_EXPAND,
+    F_PRE,
+    F_RIGHT,
+    KEYMAP_SPLITTER,
+    MODAL_CMD_MODES,
+    W_PMI_HOTKEY,
+    W_PMI_MENU,
+    W_PMI_SYNTAX,
+)
 from ..infra.debug import *
-from ..bl_utils import (
-    find_context,
-    re_operator,
-    re_prop,
-    re_prop_path,
-    bp,
-    message_box,
-    uname,
-    ConfirmBoxHandler,
-    PME_OT_message_box,
-)
-from ..infra.collections import (
-    sort_collection,
-    AddItemOperator,
-    MoveItemOperator,
-    RemoveItemOperator,
-)
-from ..ui import (
-    tag_redraw,
-    shorten_str,
-    gen_prop_name,
-    gen_op_name,
-    find_enum_args,
-    utitle,
-)
-from .. import utils as U
+from ..bl_utils import re_operator, re_prop, bp, uname
+from ..ui import shorten_str, gen_prop_name, gen_op_name, utitle
+from ..keymap_helper import MOUSE_BUTTONS, parse_hotkey, remove_mouse_button, to_ui_hotkey
+from ..utils import extract_str_flags, extract_str_flags_b
 from ..ui import screen as SU
-from ..ui.utils import get_pme_menu_class, toggle_menu, pme_menu_classes
+from ..ui.utils import get_pme_menu_class, pme_menu_classes
 from ..ui.layout import lh, operator, split, draw_pme_layout, L_SEP, L_LABEL
-from ..property_utils import to_py_value
 from ..pme_types import Tag, PMItem, PMIItem
-from .. import keymap_helper
-from .. import pme
-from .. import operator_utils
 from ..operators import (
-    popup_dialog_pie,
-    PME_OT_exec,
     PME_OT_docs,
     PME_OT_preview,
-    PME_OT_debug_mode_toggle,
     PME_OT_pm_hotkey_remove,
     WM_OT_pm_select,
-    PME_OT_pm_search_and_select,
-    PME_OT_script_open,
     WM_OT_pme_user_pie_menu_call,
 )
 
@@ -109,7 +89,7 @@ EXTENDED_PANELS = {}
 def gen_header_draw(pm_name):
     def _draw(self, context):
         is_right_region = context.region.alignment == 'RIGHT'
-        _, is_right_pm, _ = U.extract_str_flags_b(pm_name, CC.F_RIGHT, CC.F_PRE)
+        _, is_right_pm, _ = extract_str_flags_b(pm_name, F_RIGHT, F_PRE)
         if is_right_region and is_right_pm or not is_right_region and not is_right_pm:
             try:
                 pm = get_prefs().pie_menus[pm_name]
@@ -160,7 +140,7 @@ def extend_panel(pm):
     if pm.name in EXTENDED_PANELS:
         return
 
-    tp_name, right, pre = U.extract_str_flags_b(pm.name, CC.F_RIGHT, CC.F_PRE)
+    tp_name, right, pre = extract_str_flags_b(pm.name, F_RIGHT, F_PRE)
 
     if (
         tp_name.startswith("PME_PT")
@@ -169,11 +149,11 @@ def extend_panel(pm):
     ):
         return
 
-    tp = getattr(bpy.types, tp_name, None)
+    tp = getattr(bpy_types, tp_name, None)
     if not tp:
         return
 
-    if tp and issubclass(tp, (bpy.types.Panel, bpy.types.Menu, bpy.types.Header)):
+    if tp and issubclass(tp, (Panel, Menu, Header)):
         if '_HT_' in pm.name:
             EXTENDED_PANELS[pm.name] = gen_header_draw(pm.name)
         elif '_MT_' in pm.name:
@@ -189,9 +169,9 @@ def unextend_panel(pm):
     if pm.name not in EXTENDED_PANELS:
         return
 
-    tp_name, _, _ = U.extract_str_flags_b(pm.name, CC.F_RIGHT, CC.F_PRE)
+    tp_name, _, _ = extract_str_flags_b(pm.name, F_RIGHT, F_PRE)
 
-    tp = getattr(bpy.types, tp_name, None)
+    tp = getattr(bpy_types, tp_name, None)
     if tp:
         tp.remove(EXTENDED_PANELS[pm.name])
         del EXTENDED_PANELS[pm.name]
@@ -202,7 +182,7 @@ class EditorBase:
     def __init__(self):
         get_prefs().editors[self.id] = self
 
-        for id, name, icon in CC.ED_DATA:
+        for id, name, icon in ED_DATA:
             if id == self.id:
                 self.default_name = name
                 self.icon = icon
@@ -304,13 +284,13 @@ class EditorBase:
         if self.has_hotkey:
             pm.update_keymap_item(bpy.context)
 
-            if pm.key_mod in KH.MOUSE_BUTTONS:
+            if pm.key_mod in MOUSE_BUTTONS:
                 kms = pm.parse_keymap()
                 for km in kms:
                     if pm.enabled:
                         pass
                     else:
-                        KH.remove_mouse_button(pm.key_mod, get_prefs().kh, km)
+                        remove_mouse_button(pm.key_mod, get_prefs().kh, km)
 
     def on_pm_rename(self, pm, name):
         pr = get_prefs()
@@ -332,11 +312,11 @@ class EditorBase:
 
             for pmi in v.pmis:
                 if pmi.mode == 'MENU':
-                    menu_name, mouse_over, _ = U.extract_str_flags(
-                        pmi.text, CC.F_EXPAND, CC.F_EXPAND
+                    menu_name, mouse_over, _ = extract_str_flags(
+                        pmi.text, F_EXPAND, F_EXPAND
                     )
                     if menu_name == old_name:
-                        pmi.text = CC.F_EXPAND + name if mouse_over else name
+                        pmi.text = F_EXPAND + name if mouse_over else name
 
         if old_name in pm.kmis_map:
             if pm.kmis_map[old_name]:
@@ -373,14 +353,14 @@ class EditorBase:
 
         data = pmi_data
         data.info()
-        pmi_mode = 'COMMAND' if data.mode in CC.MODAL_CMD_MODES else data.mode
+        pmi_mode = 'COMMAND' if data.mode in MODAL_CMD_MODES else data.mode
 
         if pmi_mode == 'COMMAND':
             if data.cmd:
                 try:
                     compile(data.cmd, '<string>', 'exec')
                 except:
-                    data.info(CC.W_PMI_SYNTAX)
+                    data.info(W_PMI_SYNTAX)
 
             data.sname = ""
             if not data.has_errors():
@@ -399,7 +379,7 @@ class EditorBase:
                 try:
                     compile(data.prop, '<string>', 'eval')
                 except:
-                    data.info(CC.W_PMI_SYNTAX)
+                    data.info(W_PMI_SYNTAX)
 
             data.sname = ""
             if not data.has_errors():
@@ -413,12 +393,12 @@ class EditorBase:
             data.sname = data.menu
             pr = get_prefs()
             if not data.menu or data.menu not in pr.pie_menus:
-                data.info(CC.W_PMI_MENU)
+                data.info(W_PMI_MENU)
 
         elif pmi_mode == 'HOTKEY':
-            data.sname = keymap_helper.to_ui_hotkey(data)
+            data.sname = to_ui_hotkey(data)
             if data.key == 'NONE':
-                data.info(CC.W_PMI_HOTKEY)
+                data.info(W_PMI_HOTKEY)
 
         elif pmi_mode == 'CUSTOM':
             data.sname = ""
@@ -428,7 +408,7 @@ class EditorBase:
                     compile(data.custom, '<string>', 'exec')
                     data.sname = shorten_str(data.custom, 20)
                 except:
-                    data.info(CC.W_PMI_SYNTAX)
+                    data.info(W_PMI_SYNTAX)
 
     def on_pmi_add(self, pm, pmi):
         pmi.mode = 'COMMAND'
@@ -450,14 +430,14 @@ class EditorBase:
         data.name = pmi.name
         data.icon = pmi.icon
 
-        data_mode = 'COMMAND' if data.mode in CC.MODAL_CMD_MODES else data.mode
+        data_mode = 'COMMAND' if data.mode in MODAL_CMD_MODES else data.mode
 
         data.cmd = pmi.text if data_mode == 'COMMAND' else ""
         data.custom = pmi.text if data_mode == 'CUSTOM' else ""
         data.prop = pmi.text if data_mode == 'PROP' else ""
         data.menu = pmi.text if data_mode == 'MENU' else ""
-        data.menu, data.expand_menu, data.use_frame = U.extract_str_flags(
-            data.menu, CC.F_EXPAND, CC.F_EXPAND
+        data.menu, data.expand_menu, data.use_frame = extract_str_flags(
+            data.menu, F_EXPAND, F_EXPAND
         )
 
         data.key, data.ctrl, data.shift, data.alt, data.oskey, data.key_mod = (
@@ -479,7 +459,7 @@ class EditorBase:
                 data.any,
                 data.key_mod,
                 _,
-            ) = keymap_helper.parse_hotkey(pmi.text)
+            ) = parse_hotkey(pmi.text)
 
     def on_pmi_rename(self, pm, pmi, old_name, name):
         pmi.name = name
@@ -534,7 +514,7 @@ class EditorBase:
 
     def draw_keymap(self, layout, data):
         row = layout.row(align=True)
-        if CC.KEYMAP_SPLITTER in data.km_name:
+        if KEYMAP_SPLITTER in data.km_name:
             row.prop(data, "km_name", text="", icon=ic('MOUSE_MMB'))
         else:
             row.prop_search(

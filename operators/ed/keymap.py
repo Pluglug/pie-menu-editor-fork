@@ -1,3 +1,4 @@
+# pyright: reportInvalidTypeForm=false
 # operators/ed/keymap.py - Keymap and hotkey operators
 # LAYER = "operators"
 #
@@ -5,14 +6,15 @@
 
 LAYER = "operators"
 
-import bpy
+from bpy.props import EnumProperty
+from bpy.types import Operator
 from ...addon import get_prefs
-from ...core import constants as CC
+from ...core.constants import KEYMAP_SPLITTER
 from ...ui import tag_redraw
 from ... import keymap_helper
 
 
-class PME_OT_keymap_add(bpy.types.Operator):
+class PME_OT_keymap_add(Operator):
     bl_idname = "pme.keymap_add"
     bl_label = ""
     bl_description = "Add a keymap"
@@ -58,7 +60,7 @@ class PME_OT_keymap_add(bpy.types.Operator):
 
         return cl.items
 
-    enumprop: bpy.props.EnumProperty(items=get_items)
+    enumprop: EnumProperty(items=get_items)
 
     def execute(self, context):
         pr = get_prefs()
@@ -70,7 +72,7 @@ class PME_OT_keymap_add(bpy.types.Operator):
                 names.clear()
             names.append(self.enumprop)
             names.sort()
-            pm.km_name = (CC.KEYMAP_SPLITTER + " ").join(names)
+            pm.km_name = (KEYMAP_SPLITTER + " ").join(names)
 
         tag_redraw()
         return {'FINISHED'}
@@ -81,7 +83,7 @@ class PME_OT_keymap_add(bpy.types.Operator):
         return {'FINISHED'}
 
 
-class PME_OT_pm_open_mode_select(bpy.types.Operator):
+class PME_OT_pm_open_mode_select(Operator):
     bl_idname = "pme.pm_open_mode_select"
     bl_label = "Hotkey Mode"
     bl_description = "Select hotkey mode"
@@ -110,7 +112,7 @@ class PME_OT_pm_open_mode_select(bpy.types.Operator):
         return {'FINISHED'}
 
 
-class PME_OT_pm_hotkey_convert(bpy.types.Operator):
+class PME_OT_pm_hotkey_convert(Operator):
     bl_idname = "pme.pm_hotkey_convert"
     bl_label = ""
     bl_options = {'INTERNAL'}

@@ -1,3 +1,4 @@
+# pyright: reportInvalidTypeForm=false
 # operators/ed/pmi.py - Pie Menu Item (PMI) editing operators
 # LAYER = "operators"
 #
@@ -6,9 +7,16 @@
 LAYER = "operators"
 
 import bpy
+from bpy.props import BoolProperty, IntProperty, StringProperty
+from bpy.types import Operator
 from ...addon import get_prefs, temp_prefs
-from ...core import constants as CC
-from ...core.constants import MAX_STR_LEN
+from ...core.constants import (
+    F_EXPAND,
+    I_CMD,
+    MAX_STR_LEN,
+    MODAL_CMD_MODES,
+    W_PMI_LONG_CMD,
+)
 from ...bl_utils import (
     message_box,
     re_operator,
@@ -40,7 +48,7 @@ def _edit_pmi(operator, text, event):
         text = operator.text
 
     if not text:
-        message_box(CC.I_CMD)
+        message_box(I_CMD)
         return
 
     if operator.new_script:
@@ -93,7 +101,7 @@ def _edit_pmi(operator, text, event):
 
         len_lines = len(lines)
         if len_lines == 0:
-            message_box(CC.I_CMD)
+            message_box(I_CMD)
         elif len_lines > 1:
             pmi.mode = 'COMMAND'
             pmi.text = "; ".join(lines)
@@ -141,7 +149,7 @@ def _edit_pmi(operator, text, event):
                     pmi.text = lines[0]
 
             if not parsed:
-                message_box(CC.I_CMD)
+                message_box(I_CMD)
 
     if ed:
         ed.on_pmi_edit(pm, pmi)
@@ -149,15 +157,15 @@ def _edit_pmi(operator, text, event):
     pr.update_tree()
 
 
-class WM_OT_pmi_type_select(bpy.types.Operator):
+class WM_OT_pmi_type_select(Operator):
     bl_idname = "wm.pmi_type_select"
     bl_label = ""
     bl_description = "Select type of the item"
     bl_options = {'INTERNAL'}
 
-    pm_item: bpy.props.IntProperty()
-    text: bpy.props.StringProperty()
-    mode: bpy.props.StringProperty()
+    pm_item: IntProperty()
+    text: StringProperty()
+    mode: StringProperty()
 
     def _draw(self, menu, context):
         pm = get_prefs().selected_pm
@@ -335,19 +343,19 @@ class WM_OT_pmi_type_select(bpy.types.Operator):
         return {'CANCELLED'}
 
 
-class WM_OT_pmi_edit(bpy.types.Operator):
+class WM_OT_pmi_edit(Operator):
     bl_idname = "wm.pmi_edit"
     bl_label = ""
     bl_description = "Use selected actions"
     bl_options = {'INTERNAL'}
 
-    pm_item: bpy.props.IntProperty()
-    auto: bpy.props.BoolProperty()
-    add: bpy.props.BoolProperty()
-    new_script: bpy.props.BoolProperty()
-    mode: bpy.props.StringProperty(options={'SKIP_SAVE'})
-    text: bpy.props.StringProperty(options={'SKIP_SAVE'})
-    name: bpy.props.StringProperty(options={'SKIP_SAVE'})
+    pm_item: IntProperty()
+    auto: BoolProperty()
+    add: BoolProperty()
+    new_script: BoolProperty()
+    mode: StringProperty(options={'SKIP_SAVE'})
+    text: StringProperty(options={'SKIP_SAVE'})
+    name: StringProperty(options={'SKIP_SAVE'})
 
     def execute(self, context):
         return {'FINISHED'}
@@ -365,7 +373,7 @@ class WM_OT_pmi_edit(bpy.types.Operator):
             text = text.strip("\n")
 
             if len(text) > MAX_STR_LEN:
-                message_box(CC.W_PMI_LONG_CMD)
+                message_box(W_PMI_LONG_CMD)
                 return {'CANCELLED'}
 
         _edit_pmi(self, text, event)
@@ -373,19 +381,19 @@ class WM_OT_pmi_edit(bpy.types.Operator):
         return {'CANCELLED'}
 
 
-class WM_OT_pmi_edit_clipboard(bpy.types.Operator):
+class WM_OT_pmi_edit_clipboard(Operator):
     bl_idname = "wm.pmi_edit_clipboard"
     bl_label = ""
     bl_description = ""
     bl_options = {'INTERNAL'}
 
-    pm_item: bpy.props.IntProperty()
-    auto: bpy.props.BoolProperty()
-    add: bpy.props.BoolProperty()
-    new_script: bpy.props.BoolProperty()
-    mode: bpy.props.StringProperty(options={'SKIP_SAVE'})
-    text: bpy.props.StringProperty(options={'SKIP_SAVE'})
-    name: bpy.props.StringProperty(options={'SKIP_SAVE'})
+    pm_item: IntProperty()
+    auto: BoolProperty()
+    add: BoolProperty()
+    new_script: BoolProperty()
+    mode: StringProperty(options={'SKIP_SAVE'})
+    text: StringProperty(options={'SKIP_SAVE'})
+    name: StringProperty(options={'SKIP_SAVE'})
 
     def execute(self, context):
         return {'FINISHED'}
@@ -395,7 +403,7 @@ class WM_OT_pmi_edit_clipboard(bpy.types.Operator):
         text = text.strip("\n")
 
         if len(text) > MAX_STR_LEN:
-            message_box(CC.W_PMI_LONG_CMD)
+            message_box(W_PMI_LONG_CMD)
             return {'CANCELLED'}
 
         _edit_pmi(self, text, event)
@@ -403,7 +411,7 @@ class WM_OT_pmi_edit_clipboard(bpy.types.Operator):
         return {'CANCELLED'}
 
 
-class WM_OT_pmi_edit_auto(bpy.types.Operator):
+class WM_OT_pmi_edit_auto(Operator):
     bl_idname = "wm.pmi_edit_auto"
     bl_label = ""
     bl_description = "Use previous action"
@@ -419,12 +427,12 @@ class WM_OT_pmi_edit_auto(bpy.types.Operator):
         "bpy.ops.view3d.smoothview",
     }
 
-    pm_item: bpy.props.IntProperty()
-    add: bpy.props.BoolProperty()
-    new_script: bpy.props.BoolProperty()
-    mode: bpy.props.StringProperty(options={'SKIP_SAVE'})
-    text: bpy.props.StringProperty(options={'SKIP_SAVE'})
-    name: bpy.props.StringProperty(options={'SKIP_SAVE'})
+    pm_item: IntProperty()
+    add: BoolProperty()
+    new_script: BoolProperty()
+    mode: StringProperty(options={'SKIP_SAVE'})
+    text: StringProperty(options={'SKIP_SAVE'})
+    name: StringProperty(options={'SKIP_SAVE'})
 
     def execute(self, context):
         return {'FINISHED'}
@@ -475,7 +483,7 @@ class WM_OT_pmi_edit_auto(bpy.types.Operator):
         return {'CANCELLED'}
 
 
-class PME_OT_pmi_menu(bpy.types.Operator):
+class PME_OT_pmi_menu(Operator):
     bl_idname = "pme.pmi_menu"
     bl_label = ""
     bl_description = "Slot tools"
@@ -483,7 +491,7 @@ class PME_OT_pmi_menu(bpy.types.Operator):
 
     draw_func = None
 
-    idx: bpy.props.IntProperty()
+    idx: IntProperty()
 
     def draw_menu(self, menu, context):
         lh.lt(menu.layout, operator_context='INVOKE_DEFAULT')
@@ -496,7 +504,7 @@ class PME_OT_pmi_menu(bpy.types.Operator):
         return {'FINISHED'}
 
 
-class PME_OT_pmi_add(AddItemOperator, bpy.types.Operator):
+class PME_OT_pmi_add(AddItemOperator, Operator):
     bl_idname = "pme.pmi_add"
     bl_label = "Add Slot"
     bl_description = "Add a slot"
@@ -513,7 +521,7 @@ class PME_OT_pmi_add(AddItemOperator, bpy.types.Operator):
         tag_redraw()
 
 
-class PME_OT_pmi_move(MoveItemOperator, bpy.types.Operator):
+class PME_OT_pmi_move(MoveItemOperator, Operator):
     bl_idname = "pme.pmi_move"
 
     def get_collection(self):
@@ -538,7 +546,7 @@ class PME_OT_pmi_move(MoveItemOperator, bpy.types.Operator):
         tag_redraw()
 
 
-class PME_OT_pmi_remove(RemoveItemOperator, bpy.types.Operator):
+class PME_OT_pmi_remove(RemoveItemOperator, Operator):
     bl_idname = "pme.pmi_remove"
 
     def get_collection(self):
@@ -555,13 +563,13 @@ class PME_OT_pmi_remove(RemoveItemOperator, bpy.types.Operator):
         tag_redraw()
 
 
-class PME_OT_pmi_clear(ConfirmBoxHandler, bpy.types.Operator):
+class PME_OT_pmi_clear(ConfirmBoxHandler, Operator):
     bl_idname = "pme.pmi_clear"
     bl_label = "Clear"
     bl_description = "Clear the slot"
     bl_options = {'INTERNAL'}
 
-    idx: bpy.props.IntProperty()
+    idx: IntProperty()
 
     def on_confirm(self, value):
         if not value:
@@ -585,12 +593,12 @@ class PME_OT_pmi_clear(ConfirmBoxHandler, bpy.types.Operator):
         return {'FINISHED'}
 
 
-class PME_OT_pmi_cmd_generate(bpy.types.Operator):
+class PME_OT_pmi_cmd_generate(Operator):
     bl_idname = "pme.pmi_cmd_generate"
     bl_label = "Generate Command"
     bl_description = "Generate command"
 
-    clear: bpy.props.BoolProperty(options={'SKIP_SAVE'})
+    clear: BoolProperty(options={'SKIP_SAVE'})
 
     def execute(self, context):
         pr = get_prefs()
@@ -601,7 +609,7 @@ class PME_OT_pmi_cmd_generate(bpy.types.Operator):
             for k in keys:
                 del data.kmi.properties[k]
 
-        if pr.mode == 'PMI' and data.mode in CC.MODAL_CMD_MODES:
+        if pr.mode == 'PMI' and data.mode in MODAL_CMD_MODES:
             op_idname, _, pos_args = operator_utils.find_operator(data.cmd)
 
             parsed_ctx, parsed_undo = operator_utils.parse_pos_args(pos_args)
@@ -638,15 +646,15 @@ class PME_OT_pmi_cmd_generate(bpy.types.Operator):
         return {'PASS_THROUGH'}
 
 
-class WM_OT_pmi_data_edit(bpy.types.Operator):
+class WM_OT_pmi_data_edit(Operator):
     bl_idname = "wm.pmi_data_edit"
     bl_label = "Edit Slot"
     bl_description = "Edit the slot\n" "Enter - OK\n" "Esc - Cancel"
     bl_options = {'INTERNAL'}
 
-    idx: bpy.props.IntProperty()
-    ok: bpy.props.BoolProperty(options={'SKIP_SAVE'})
-    hotkey: bpy.props.BoolProperty(options={'SKIP_SAVE'})
+    idx: IntProperty()
+    ok: BoolProperty(options={'SKIP_SAVE'})
+    hotkey: BoolProperty(options={'SKIP_SAVE'})
 
     def execute(self, context):
         pr = get_prefs()
@@ -659,7 +667,7 @@ class WM_OT_pmi_data_edit(bpy.types.Operator):
         pm = pr.selected_pm
         data = pr.pmi_data
         data_mode = data.mode
-        if data_mode in CC.MODAL_CMD_MODES:
+        if data_mode in MODAL_CMD_MODES:
             data_mode = 'COMMAND'
 
         if self.ok:
@@ -695,9 +703,9 @@ class WM_OT_pmi_data_edit(bpy.types.Operator):
                             get_pme_menu_class(pmi.text)
 
                         if data.use_frame:
-                            pmi.text = CC.F_EXPAND + pmi.text
+                            pmi.text = F_EXPAND + pmi.text
 
-                        pmi.text = CC.F_EXPAND + pmi.text
+                        pmi.text = F_EXPAND + pmi.text
 
                 elif data_mode == 'HOTKEY':
                     pmi.text = keymap_helper.to_hotkey(
@@ -756,13 +764,13 @@ class WM_OT_pmi_data_edit(bpy.types.Operator):
         return self.execute(context)
 
 
-class PME_OT_pmi_copy(bpy.types.Operator):
+class PME_OT_pmi_copy(Operator):
     bl_idname = "pme.pmi_copy"
     bl_label = "Copy Slot"
     bl_description = "Copy the slot"
     bl_options = {'INTERNAL'}
 
-    idx: bpy.props.IntProperty(default=-1, options={'SKIP_SAVE'})
+    idx: IntProperty(default=-1, options={'SKIP_SAVE'})
 
     def execute(self, context):
         pr = get_prefs()
@@ -774,13 +782,13 @@ class PME_OT_pmi_copy(bpy.types.Operator):
         return {'FINISHED'}
 
 
-class PME_OT_pmi_paste(bpy.types.Operator):
+class PME_OT_pmi_paste(Operator):
     bl_idname = "pme.pmi_paste"
     bl_label = "Paste Slot"
     bl_description = "Paste the slot"
     bl_options = {'INTERNAL'}
 
-    idx: bpy.props.IntProperty(default=-1, options={'SKIP_SAVE'})
+    idx: IntProperty(default=-1, options={'SKIP_SAVE'})
 
     def execute(self, context):
         pr = get_prefs()

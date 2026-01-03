@@ -6,11 +6,12 @@
 LAYER = "operators"
 
 import bpy
+from bpy.types import Menu, Object, Operator
 from ...addon import ic
 from ...operators import PME_OT_exec, PME_OT_script_open
 
 
-class PME_MT_poll_mesh(bpy.types.Menu):
+class PME_MT_poll_mesh(Menu):
     bl_label = "Mesh Select Mode"
 
     def draw(self, context):
@@ -36,7 +37,7 @@ class PME_MT_poll_mesh(bpy.types.Menu):
         )
 
 
-class PME_MT_poll_object(bpy.types.Menu):
+class PME_MT_poll_object(Menu):
     bl_label = "Active Object Type"
 
     def draw(self, context):
@@ -44,7 +45,7 @@ class PME_MT_poll_object(bpy.types.Menu):
 
         icon = ic('NODE_SEL')
         for item in sorted(
-            bpy.types.Object.bl_rna.properties["type"].enum_items,
+            Object.bl_rna.properties["type"].enum_items,
             key=lambda item: item.name,
         ):
             layout.operator(
@@ -56,7 +57,7 @@ class PME_MT_poll_object(bpy.types.Menu):
             ) % item.identifier
 
 
-class PME_MT_poll_workspace(bpy.types.Menu):
+class PME_MT_poll_workspace(Menu):
     bl_label = "Active Workspace"
 
     def draw(self, context):
@@ -70,7 +71,7 @@ class PME_MT_poll_workspace(bpy.types.Menu):
             ) % item.name
 
 
-class PME_OT_poll_specials_call(bpy.types.Operator):
+class PME_OT_poll_specials_call(Operator):
     bl_idname = "pme.poll_specials_call"
     bl_label = "Menu"
     bl_description = "Menu"

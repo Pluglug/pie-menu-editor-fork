@@ -1,3 +1,4 @@
+# pyright: reportInvalidTypeForm=false
 # operators/ed/icon.py - Icon selection and toggle operators
 # LAYER = "operators"
 #
@@ -5,22 +6,23 @@
 
 LAYER = "operators"
 
-import bpy
+from bpy.props import BoolProperty, IntProperty, StringProperty
+from bpy.types import Operator
 from ...addon import get_prefs
-from ...core import constants as CC
+from ...core.constants import F_CB, F_HIDDEN, F_ICON_ONLY
 from ...bl_utils import bp, message_box
 from ...ui import tag_redraw
 from ... import pme
 
 
-class WM_OT_pmi_icon_tag_toggle(bpy.types.Operator):
+class WM_OT_pmi_icon_tag_toggle(Operator):
     bl_idname = "wm.pmi_icon_tag_toggle"
     bl_label = ""
     bl_description = ""
     bl_options = {'INTERNAL'}
 
-    idx: bpy.props.IntProperty()
-    tag: bpy.props.StringProperty()
+    idx: IntProperty()
+    tag: StringProperty()
 
     def execute(self, context):
         pr = get_prefs()
@@ -28,23 +30,23 @@ class WM_OT_pmi_icon_tag_toggle(bpy.types.Operator):
         pmi = pr.pmi_data if self.idx < 0 else pm.pmis[self.idx]
 
         icon, icon_only, hidden, use_cb = pmi.extract_flags()
-        if self.tag == CC.F_ICON_ONLY:
+        if self.tag == F_ICON_ONLY:
             if not icon or icon == 'NONE':
                 icon = 'FILE_HIDDEN'
             icon_only = not icon_only
 
-        elif self.tag == CC.F_HIDDEN:
+        elif self.tag == F_HIDDEN:
             hidden = not hidden
 
-        elif self.tag == CC.F_CB:
+        elif self.tag == F_CB:
             use_cb = not use_cb
 
         if icon_only:
-            icon = CC.F_ICON_ONLY + icon
+            icon = F_ICON_ONLY + icon
         if hidden:
-            icon = CC.F_HIDDEN + icon
+            icon = F_HIDDEN + icon
         if use_cb:
-            icon = CC.F_CB + icon
+            icon = F_CB + icon
 
         pmi.icon = icon
 
@@ -52,15 +54,15 @@ class WM_OT_pmi_icon_tag_toggle(bpy.types.Operator):
         return {'FINISHED'}
 
 
-class WM_OT_pmi_icon_select(bpy.types.Operator):
+class WM_OT_pmi_icon_select(Operator):
     bl_idname = "wm.pmi_icon_select"
     bl_label = "Select Icon"
     bl_description = "Select an icon\n" "Esc - Cancel"
     bl_options = {'INTERNAL'}
 
-    idx: bpy.props.IntProperty()
-    icon: bpy.props.StringProperty(options={'SKIP_SAVE'})
-    hotkey: bpy.props.BoolProperty(options={'SKIP_SAVE'})
+    idx: IntProperty()
+    icon: StringProperty(options={'SKIP_SAVE'})
+    hotkey: BoolProperty(options={'SKIP_SAVE'})
 
     def execute(self, context):
         pr = get_prefs()
@@ -96,11 +98,11 @@ class WM_OT_pmi_icon_select(bpy.types.Operator):
             icon = self.icon
             _, icon_only, hidden, use_cb = data.extract_flags()
             if icon_only:
-                icon = CC.F_ICON_ONLY + icon
+                icon = F_ICON_ONLY + icon
             if hidden:
-                icon = CC.F_HIDDEN + icon
+                icon = F_HIDDEN + icon
             if use_cb:
-                icon = CC.F_CB + icon
+                icon = F_CB + icon
             data.icon = icon if self.icon != 'NONE' else ""
             if pr.mode == 'ICONS':
                 pr.leave_mode()
