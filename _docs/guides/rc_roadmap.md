@@ -105,24 +105,20 @@ from ..previews_helper import ph
 
 ---
 
-### Phase 7: infra/editors → operators 依存の解消（優先度: 低）⏸️ 保留
+### Phase 7: infra/editors → operators 依存の解消（優先度: 低）✅ 部分完了
 
-**目標**: TYPE_CHECKING への移動と実行時依存の分離
+**目標**: bl_idname のリテラル化で operators import を削減
 
-**対象**:
-- `panel_group.py` → operators
-- `hpanel_group.py` → operators
-- `property.py` → extra_operators
+**完了した作業**:
+- `panel_group.py`: 4 operator imports を削除、リテラル化
+  - `WM_OT_pme_user_pie_menu_call` は `_draw_item` 参照のため残存
+- `hpanel_group.py`: operators import を完全削除
+- `property.py`: extra_operators import を削除
 
-**保留理由**: 実行時に必要な依存
-- 使用箇所: `lh.operator(SomeOperator.bl_idname, ...)` など
-- `.bl_idname` はクラス属性アクセスであり、実行時にクラスが必要
-- TYPE_CHECKING に移動すると実行時エラーになる
+**結果**: editors → operators 違反を 1件削減 (hpanel_group.py の import 削除)
 
-**代替案（将来検討）**:
-1. オペレーターの bl_idname を定数として定義
-2. editors は定数を参照し、operators を直接 import しない
-3. しかし大規模変更のため RC 後に検討
+**残存する違反**:
+- `panel_group.py` → `WM_OT_pme_user_pie_menu_call._draw_item` (メソッド参照)
 
 ---
 
@@ -156,15 +152,15 @@ Phase 5-A 完了時 (17件)
     ├── Phase 6: constants → previews_helper 分離 ⏸️ 保留
     │   └── Issue #65 関連のため保留
     │
-    ├── Phase 7: TYPE_CHECKING 移動 ⏸️ 保留
-    │   └── 実行時依存のため保留
+    ├── Phase 7: bl_idname リテラル化 ✅ 部分完了
+    │   └── 結果: 12件 (-1)
     │
     └── RC 準備
         ├── 許容リスト文書化
         ├── 旧ローダー削除
         └── マイグレーションガイド
 
-現在の違反: 13件 (目標 < 30件 達成済み)
+現在の違反: 12件 (2026-01-04 確認済み)
 ```
 
 ---
