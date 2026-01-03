@@ -1,0 +1,92 @@
+# Pre-commit hooks configuration
+# https://pre-commit.com/
+#
+# Install: pre-commit install
+# Run manually: pre-commit run --all-files
+
+default_language_version:
+  python: python3.12
+
+repos:
+  # General file checks
+  # NOTE: Legacy files (c_utils.py, ed_*.py, etc.) are excluded to preserve
+  # original author's formatting. Only new/refactored files are checked.
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: trailing-whitespace
+        # Legacy files excluded: roaoao's original code, ctypes structures, runtime operators
+        exclude: ^(scripts/|c_utils\.py|ed_.*\.py|extra_operators\.py|preferences\.py|pme_types\.py|keymap_helper\.py|bl_utils\.py|pme\.py)
+      - id: end-of-file-fixer
+        exclude: ^(scripts/|c_utils\.py|ed_.*\.py|extra_operators\.py|preferences\.py|pme_types\.py|keymap_helper\.py|bl_utils\.py|pme\.py)
+      - id: check-yaml
+      - id: check-json
+      - id: check-toml
+      - id: check-added-large-files
+        args: ['--maxkb=500']
+      - id: check-merge-conflict
+      - id: detect-private-key
+      - id: mixed-line-ending
+        args: ['--fix=lf']
+        exclude: \.bat$
+
+  # Ruff - Fast Python linter and formatter
+  # NOTE: Currently disabled to avoid changing original author's code style
+  # Uncomment when ready to apply consistent formatting
+  # - repo: https://github.com/astral-sh/ruff-pre-commit
+  #   rev: v0.8.4
+  #   hooks:
+  #     # Linter (import sorting, code quality)
+  #     - id: ruff
+  #       args: ['--fix', '--exit-non-zero-on-fix']
+  #       exclude: ^scripts/
+  #     # Formatter (Black-compatible)
+  #     - id: ruff-format
+  #       exclude: ^scripts/
+
+  # Docstring formatter (AI-generated docstrings can be inconsistent)
+  # NOTE: Currently disabled to preserve original author's docstring style
+  # Uncomment when ready to enforce consistent docstring formatting
+  # - repo: https://github.com/PyCQA/docformatter
+  #   rev: v1.7.5
+  #   hooks:
+  #     - id: docformatter
+  #       args: ['--in-place', '--wrap-summaries=100', '--wrap-descriptions=100']
+  #       exclude: ^scripts/
+
+  # Remove unused imports (AI sometimes leaves unused imports)
+  # NOTE: Currently disabled to avoid removing imports that might be needed
+  # Uncomment when ready to clean up unused imports
+  # - repo: https://github.com/hadolint/pycln
+  #   rev: v2.4.0
+  #   hooks:
+  #     - id: pycln
+  #       args: ['--config=pyproject.toml']
+  #       exclude: ^scripts/
+
+  # Type checking with Pyright (optional, can be slow)
+  # Uncomment to enable
+  # - repo: https://github.com/RobertCraiworthy/pyright-python
+  #   rev: v1.1.390
+  #   hooks:
+  #     - id: pyright
+  #       exclude: ^scripts/
+
+  # Markdown linting
+  - repo: https://github.com/igorshubovych/markdownlint-cli
+    rev: v0.43.0
+    hooks:
+      - id: markdownlint
+        args: ['--disable', 'MD013', 'MD033', 'MD041', '--']
+        exclude: ^(scripts/|CHANGELOG\.md)
+
+# CI configuration
+ci:
+  autofix_commit_msg: |
+    [pre-commit.ci] auto fixes from pre-commit hooks
+  autofix_prs: true
+  autoupdate_branch: ''
+  autoupdate_commit_msg: '[pre-commit.ci] pre-commit autoupdate'
+  autoupdate_schedule: monthly
+  skip: []
+  submodules: false

@@ -1,3 +1,11 @@
+---
+title: Core Layer Design
+phase: 3
+status: stub
+issue: "#64"
+last_updated: 2026-01-02
+---
+
 # Core Layer Design (Phase 3)
 
 Core 層の設計文書。Issue #64 の根本解決を目指す。
@@ -126,4 +134,4 @@ PM_SCHEMA = {
 - Issue #64: https://github.com/Pluglug/pie-menu-editor-fork/issues/64
 - Issue #67: https://github.com/Pluglug/pie-menu-editor-fork/issues/67
 - `rules/milestones.md` — Phase 3 計画
-- `rules/api/pme_api_current.md` — 現状の pme API インベントリ
+- `rules/design/api/pme_api_current.md` — 現状の pme API インベントリ

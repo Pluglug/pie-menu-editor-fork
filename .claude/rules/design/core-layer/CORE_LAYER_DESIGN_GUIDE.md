@@ -1256,5 +1256,5 @@ pr.some_saved_setting = value
 - `bl_utils.py` — BlContext, BlBpy（コンテキストプロキシ）
 - `preferences.py` — PMEPreferences
 - `editors/base.py` — EditorBase
-- `.claude/rules/api/pme_api_current.md` — API インベントリ
+- `.claude/rules/design/api/pme_api_current.md` — API インベントリ
 - `.claude/rules/editor_dependency_map.md` — Editor 依存関係の詳細

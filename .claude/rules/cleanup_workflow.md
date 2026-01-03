@@ -1,3 +1,9 @@
+---
+title: Dependency Cleanup Workflow
+status: stable
+last_updated: 2026-01-01
+---
+
 # Dependency Cleanup Workflow
 
 Claude Code を使ったレイヤ違反クリーンアップの自動化ワークフロー。

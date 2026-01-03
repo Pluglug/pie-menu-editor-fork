@@ -210,8 +210,49 @@ data/
 debug/
 
 # ----------------------------------------------------------------------------------------
-# Claude Code
+# Claude Code / AI Assistants
 # ----------------------------------------------------------------------------------------
 
 # Local settings (may contain sensitive information)
 .claude/settings.local.json
+.claude/CLAUDE.local.md
+
+# Cursor IDE
+.cursor/
+
+# Aider
+.aider*
+
+# ----------------------------------------------------------------------------------------
+# Development Tools
+# ----------------------------------------------------------------------------------------
+
+# Ruff
+.ruff_cache/
+
+# UV package manager
+uv.lock
+
+# Type stubs (auto-generated)
+typings/
+
+# Test artifacts
+.pytest_cache/
+test-results/
+*.pytest_cache
+
+# Profiling
+*.prof
+*.pstats
+
+# ----------------------------------------------------------------------------------------
+# Project Specific
+# ----------------------------------------------------------------------------------------
+
+# Debug logs
+debug.log
+*.ndjson
+
+# Backup exports (user data, not source)
+backups/
+exports/

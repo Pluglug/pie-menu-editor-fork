@@ -1,3 +1,11 @@
+---
+title: Runtime Lifecycle Design
+phase: 3
+status: paused
+issue: "#67"
+last_updated: 2026-01-02
+---
+
 # Runtime Lifecycle Design (Phase 3)
 
 PME2 のライフサイクル問題の分析と解決計画。
@@ -528,6 +536,6 @@ operators/io.py:316    → from ..preferences import PME_UL_pm_tree  [関数内�
 
 - `rules/milestones.md` — フェーズ定義
 - `rules/editor_dependency_map.md` — Editor の依存関係
-- `rules/api/pme_api_current.md` — pme モジュールの現状
+- `rules/design/api/pme_api_current.md` — pme モジュールの現状
 - `pme.py` — PMEProps, ParsedData の実装
 - `addon.py` — init_addon, register_modules の実装

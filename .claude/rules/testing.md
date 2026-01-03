@@ -1,3 +1,9 @@
+---
+title: Testing Procedures
+status: stable
+last_updated: 2026-01-01
+---
+
 # rules/testing.md
 
 ## 1. 手動テスト（毎回やる最低ライン）

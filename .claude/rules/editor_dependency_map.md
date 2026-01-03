@@ -1,3 +1,10 @@
+---
+title: Editor Dependency Map
+phase: 2-A
+status: observation
+last_updated: 2026-01-01
+---
+
 # Editor 依存関係マップ
 
 Phase 2-A の観測結果。`EditorBase` と各 Editor の依存関係を整理する。

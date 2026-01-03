@@ -1,3 +1,10 @@
+---
+title: UI List Analysis
+phase: 2-A
+status: observation
+last_updated: 2026-01-01
+---
+
 # UI List / TreeView 分析
 
 Phase 2-A の観測結果。UIList / TreeView 系クラスの責務と依存関係を整理する。

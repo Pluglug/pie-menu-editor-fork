@@ -1,3 +1,9 @@
+---
+title: Architecture Rules
+status: stable
+last_updated: 2026-01-01
+---
+
 # rules/architecture.md
 
 ## 1. レイヤ構造（目標）
@@ -180,7 +186,7 @@ PME2 では、3 つの重要なモジュールがそれぞれ異なる役割を�
 
 > **注意**: pme 外部 API の設計は完了していますが、**実装は凍結中**です。
 > 内部構造（物理的モジュール分割）が安定するまで、API 実装は行いません。
-> 詳細は `rules/api/pme_api_plan.md` を参照。
+> 詳細は `rules/design/api/pme_api_plan.md` を参照。
 
 `pme.py` は **将来的に** 外部向けファサードとして再構成する予定です。
 

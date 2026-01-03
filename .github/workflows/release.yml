@@ -40,6 +40,7 @@ jobs:
           rsync -av --exclude='.git' \
                     --exclude='.github' \
                     --exclude='.claude' \
+                    --exclude='.cursor' \
                     --exclude='_docs' \
                     --exclude='__pycache__' \
                     --exclude='*.pyc' \
@@ -49,12 +50,18 @@ jobs:
                     --exclude='.personal' \
                     --exclude='debug' \
                     --exclude='data' \
+                    --exclude='build' \
                     --exclude='CLAUDE.md' \
+                    --exclude='CONTRIBUTING.md' \
                     --exclude='.gitignore' \
+                    --exclude='.claudeignore' \
+                    --exclude='.editorconfig' \
                     --exclude='.pylintrc' \
+                    --exclude='.pre-commit-config.yaml' \
+                    --exclude='pyproject.toml' \
+                    --exclude='uv.lock' \
                     --exclude='.DS_Store' \
                     --exclude='Thumbs.db' \
-                    --exclude='build' \
                     ./ build/pie_menu_editor/
 
           # Create zip

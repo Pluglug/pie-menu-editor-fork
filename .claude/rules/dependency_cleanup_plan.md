@@ -1,3 +1,10 @@
+---
+title: Dependency Cleanup Plan
+phase: 2-C
+status: in_progress
+last_updated: 2026-01-02
+---
+
 # Dependency Cleanup Plan
 
 レイヤ違反を段階的に削減するための横串プロセスを定義する。

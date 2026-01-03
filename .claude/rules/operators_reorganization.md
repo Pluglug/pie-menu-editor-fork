@@ -1,3 +1,11 @@
+---
+title: Operators Reorganization Plan
+phase: 2-C
+status: completed
+completed_phases: 7/7
+last_updated: 2026-01-02
+---
+
 # Operators Reorganization Plan
 
 operators/ ディレクトリの整理計画。Phase 2-C の一環として実施。

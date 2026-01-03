@@ -1,5 +1,9 @@
 # Pie Menu Editor Fork
 
+[![Blender](https://img.shields.io/badge/Blender-4.2%20LTS%20%7C%205.0+-orange?logo=blender&logoColor=white)](https://www.blender.org/)
+[![License](https://img.shields.io/badge/License-GPL%20v3-blue.svg)](./LICENSE.md)
+[![Python](https://img.shields.io/badge/Python-3.11+-3776AB?logo=python&logoColor=white)](https://www.python.org/)
+
 ## Overview
 
 This repository provides ongoing maintenance and version updates for the Blender add-on *Pie Menu Editor (PME)*.
@@ -47,6 +51,32 @@ I am grateful to the community members who have encouraged and supported this on
 
 * **Documentation Improvements**  
   Clarify internal behavior to help future contributors understand the system.
+
+---
+
+## Development
+
+For development setup instructions, see [CONTRIBUTING.md](./CONTRIBUTING.md).
+
+### Quick Start
+
+```bash
+# Clone and setup
+git clone https://github.com/Pluglug/pie-menu-editor-fork.git
+cd pie-menu-editor-fork
+git checkout pme2-dev  # Active development branch
+
+# Install dev tools (optional)
+uv pip install -e ".[dev]"
+pre-commit install
+```
+
+### Branches
+
+| Branch | Purpose | Status |
+|--------|---------|--------|
+| `main` | PME1 stable (Blender 4.x) | Hotfixes only |
+| `pme2-dev` | PME2 development (Blender 5.0+) | Active |
 
 ---
 

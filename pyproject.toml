@@ -1,0 +1,180 @@
+# pyproject.toml - Pie Menu Editor (PME2)
+# Python tooling configuration for development
+
+[project]
+name = "pie-menu-editor"
+version = "2.0.0-alpha.3"
+description = "Blender addon for creating custom pie menus and UI elements"
+readme = "README.md"
+license = { text = "GPL-3.0-or-later" }
+requires-python = ">=3.12"  # Blender 5.0+ uses Python 3.12
+keywords = ["blender", "addon", "pie-menu", "ui"]
+authors = [
+    { name = "roaoao", email = "roaoao@users.noreply.github.com" },
+    { name = "Pluglug" },
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Environment :: Plugins",
+    "Intended Audience :: End Users/Desktop",
+    "License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Multimedia :: Graphics :: 3D Modeling",
+]
+
+[project.urls]
+Homepage = "https://github.com/Pluglug/pie-menu-editor-fork"
+Repository = "https://github.com/Pluglug/pie-menu-editor-fork"
+Issues = "https://github.com/Pluglug/pie-menu-editor-fork/issues"
+
+# ============================================================================
+# Development Dependencies (optional, for local development)
+# ============================================================================
+
+[project.optional-dependencies]
+dev = [
+    "ruff>=0.8.0",
+    "pyright>=1.1.390",
+    "pre-commit>=4.0.0",
+]
+test = [
+    "pytest>=8.0.0",
+    "pytest-cov>=6.0.0",
+]
+
+# ============================================================================
+# Ruff Configuration (Linter & Formatter)
+# ============================================================================
+
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+indent-width = 4
+
+# Exclude patterns
+exclude = [
+    ".git",
+    ".venv",
+    "__pycache__",
+    "build",
+    "dist",
+    # Legacy files that shouldn't be modified
+    "scripts/",
+]
+
+[tool.ruff.lint]
+# Enable rules
+select = [
+    "E",      # pycodestyle errors
+    "W",      # pycodestyle warnings
+    "F",      # Pyflakes
+    "I",      # isort
+    "B",      # flake8-bugbear
+    "C4",     # flake8-comprehensions
+    "UP",     # pyupgrade
+    "SIM",    # flake8-simplify
+    "RUF",    # Ruff-specific rules
+]
+
+# Disable rules that conflict with Blender patterns
+ignore = [
+    "E501",   # Line too long (handled by formatter)
+    "E741",   # Ambiguous variable name (C, D, L are Blender conventions)
+    "F401",   # Unused imports (sometimes needed for re-export)
+    "F403",   # Star imports (used in some legacy code)
+    "F405",   # Name from star import (used in some legacy code)
+    "B008",   # Function call in default argument (Blender property pattern)
+    "B009",   # getattr with constant (sometimes clearer)
+    "B010",   # setattr with constant (sometimes clearer)
+    "UP007",  # Use X | Y for union (Python 3.10+, but we target 3.11)
+    "RUF001", # String contains ambiguous unicode (Japanese comments)
+    "RUF002", # Docstring contains ambiguous unicode
+    "RUF003", # Comment contains ambiguous unicode
+]
+
+# Allow autofix for safe operations
+fixable = ["ALL"]
+unfixable = []
+
+[tool.ruff.lint.isort]
+known-first-party = ["pie_menu_editor"]
+section-order = ["future", "standard-library", "third-party", "first-party", "local-folder"]
+
+# Blender imports should be treated as third-party
+known-third-party = ["bpy", "bgl", "blf", "gpu", "mathutils", "bmesh"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+skip-magic-trailing-comma = false
+line-ending = "lf"
+
+# ============================================================================
+# Pyright Configuration (Type Checker)
+# ============================================================================
+
+[tool.pyright]
+pythonVersion = "3.12"
+typeCheckingMode = "basic"
+
+# Blender stubs location (if using fake-bpy-module or similar)
+# stubPath = "typings"
+
+# Exclude from type checking
+exclude = [
+    ".venv",
+    "__pycache__",
+    "scripts/",
+    "build/",
+]
+
+# Report settings (relaxed for Blender addon development)
+reportMissingImports = "warning"
+reportMissingTypeStubs = false
+reportUnknownMemberType = false
+reportUnknownArgumentType = false
+reportUnknownVariableType = false
+reportGeneralTypeIssues = "warning"
+reportOptionalMemberAccess = false
+reportAttributeAccessIssue = false
+
+# ============================================================================
+# Pytest Configuration
+# ============================================================================
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_functions = ["test_*"]
+addopts = [
+    "-v",
+    "--tb=short",
+    "--strict-markers",
+]
+markers = [
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+    "blender: marks tests that require Blender context",
+]
+
+# ============================================================================
+# Coverage Configuration
+# ============================================================================
+
+[tool.coverage.run]
+source = ["."]
+omit = [
+    ".venv/*",
+    "tests/*",
+    "scripts/*",
+    "__pycache__/*",
+]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "raise NotImplementedError",
+    "if TYPE_CHECKING:",
+    "if __name__ == .__main__.:",
+]

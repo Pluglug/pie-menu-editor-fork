@@ -1,3 +1,10 @@
+---
+title: PME2 Milestones
+phase: 3
+status: in_progress
+last_updated: 2026-01-02
+---
+
 # rules/milestones.md
 
 PME2 開発のマイルストーンとフェーズ定義。
@@ -10,11 +17,12 @@ PME2 開発のマイルストーンとフェーズ定義。
 
 | ブランチ | 目的 | 状態 |
 |----------|------|------|
-| `main` / `pme1-lts` | PME1 安定版 (Blender 4.x) | **安定済み・Hotfix のみ** |
 | `pme2-dev` | PME2 開発版 (Blender 5.0+) | **アクティブ開発中** |
+| `pme1-lts` | PME1 最終アーカイブ (v1.19.2) | 凍結・緊急修正のみ（メンテナ判断） |
 
 - **PME1 への還元は行わない**: pme2-dev の成果は PME2 専用
 - **リリース計画**: pme2-dev → プレリリース → ユーザーからの安定報告 → 正式リリース
+- **PME1 について**: `pme1-lts` は Blender 4.x ユーザー向けの最終保存版。積極的なメンテナンスは行わない
 
 ### 開発の焦点
 
@@ -91,7 +99,7 @@ PME2 開発のマイルストーンとフェーズ定義。
 
 - `rules/ui_list_analysis.md` — UI リストの責務分析 ✅
 - `rules/editor_dependency_map.md` — Editor の依存関係マップ ✅
-- `rules/api/pme_api_current.md` — pme モジュールの現状インベントリ ✅
+- `rules/design/api/pme_api_current.md` — pme モジュールの現状インベントリ ✅
 
 ---
 
@@ -141,8 +149,8 @@ PME2 開発のマイルストーンとフェーズ定義。
 
 ### pme API 仕様文書化 ✅ 完了（実装は凍結）
 
-- [x] `rules/api/pme_api_plan.md` で Stability level を文書化 ✅
-- [x] `rules/api/pme_standard_namespace.md` で名前空間を定義 ✅
+- [x] `rules/design/api/pme_api_plan.md` で Stability level を文書化 ✅
+- [x] `rules/design/api/pme_standard_namespace.md` で名前空間を定義 ✅
 
 > **重要**: pme API の **実装は凍結**。内部構造が安定するまで設計文書のみを維持する。
 > 実装は Phase 3 以降で、内部リファクタリングが十分に進んだ後に検討。
@@ -336,7 +344,7 @@ v2.0.0 リリース後の計画。
 - `pme.find_pm()` / `pme.invoke_pm()` の実装
 - Stability level の Stable 昇格（v2.1.0 以降）
 
-詳細は `rules/api/pme_api_plan.md` を参照。
+詳細は `rules/design/api/pme_api_plan.md` を参照。
 
 ### pme モジュールの再構成
 

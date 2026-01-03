@@ -1,0 +1,51 @@
+# .claudeignore - Exclude from Claude Code context
+# This file reduces noise and improves context efficiency
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+
+# Build artifacts
+build/
+dist/
+*.egg-info/
+
+# IDE / Editor
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Version control
+.git/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Blender specific
+*.blend1
+*.blend2
+.blender_backup/
+
+# Logs
+*.log
+debug.log
+
+# Large data files
+*.zip
+*.tar.gz
+
+# Test output
+.pytest_cache/
+htmlcov/
+.coverage
+
+# Local/temporary files
+*.tmp
+*.temp
+*.bak

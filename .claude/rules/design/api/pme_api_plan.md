@@ -14,7 +14,7 @@
 
 このドキュメントは、**外部スクリプトや他アドオンから使ってよい API** をどう定義するかの設計ドキュメントです。
 
-`rules/api/pme_api_current.md` の観測結果をベースに、各シンボルに Stability level を付与し、v2.0.0 以降の公開 API を設計します。
+`rules/design/api/pme_api_current.md` の観測結果をベースに、各シンボルに Stability level を付与し、v2.0.0 以降の公開 API を設計します。
 
 ---
 
@@ -496,8 +496,8 @@ if pme.evaluate(pme.polls.MESH_EDIT):
 
 ## 参照
 
-- `rules/api/pme_api_current.md` — 現状のインベントリ
-- `rules/api/pme_standard_namespace.md` — 標準名前空間の定義
+- `rules/design/api/pme_api_current.md` — 現状のインベントリ
+- `rules/design/api/pme_standard_namespace.md` — 標準名前空間の定義
 - `rules/milestones.md` — フェーズ計画
 - `docs/api_pme.md` — API ドキュメント（Phase 2+ で整備予定）
 - `rules/architecture.md` — レイヤ構造と依存方向のルール
