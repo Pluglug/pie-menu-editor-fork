@@ -125,6 +125,9 @@ def extend_panel(pm):
         return
 
     tp = getattr(bpy.types, tp_name, None)
+    if not tp:
+        return
+
     if tp and issubclass(tp, (bpy.types.Panel, bpy.types.Menu, bpy.types.Header)):
         if '_HT_' in pm.name:
             EXTENDED_PANELS[pm.name] = gen_header_draw(pm.name)
