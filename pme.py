@@ -294,6 +294,139 @@ def evaluate(expr: str, *, extra_globals: dict[str, Any] | None = None) -> Any:
 
 
 # =============================================================================
+# Menu Integration API (Experimental)
+# =============================================================================
+# These functions provide access to PME's menu system.
+# External tools can find and invoke menus programmatically.
+
+
+@dataclass
+class PMHandle:
+    """Read-only handle to a Pie Menu.
+
+    This is a lightweight wrapper that provides safe access to PM metadata
+    without exposing the internal PMItem object directly.
+
+    Attributes:
+        name: The unique name of the menu.
+        mode: The menu type ('PMENU', 'RMENU', 'DIALOG', etc.)
+        enabled: Whether the menu is enabled.
+
+    Note:
+        More fields (hotkey, tag, etc.) may be added in future versions.
+
+    Stability: Experimental
+    """
+
+    name: str
+    mode: str | None = None
+    enabled: bool = True
+
+
+def find_pm(name: str) -> PMHandle | None:
+    """Find a Pie Menu by name.
+
+    Args:
+        name: The exact name of the menu to find.
+
+    Returns:
+        PMHandle if found, None otherwise.
+
+    Example:
+        >>> pm = pme.find_pm("My Pie Menu")
+        >>> if pm:
+        ...     print(f"Found: {pm.name} ({pm.mode})")
+
+    Stability: Experimental
+    """
+    prefs = get_prefs()
+    if prefs is None:
+        return None
+
+    pie_menus = getattr(prefs, "pie_menus", None)
+    if pie_menus is None or name not in pie_menus:
+        return None
+
+    pm = pie_menus[name]
+    return PMHandle(
+        name=pm.name,
+        mode=getattr(pm, "mode", None),
+        enabled=getattr(pm, "enabled", True),
+    )
+
+
+def list_pms(mode: str | None = None) -> list[PMHandle]:
+    """List all Pie Menus, optionally filtered by mode.
+
+    Args:
+        mode: Filter by menu type ('PMENU', 'RMENU', 'DIALOG', etc.)
+              If None, returns all menus.
+
+    Returns:
+        List of PMHandle objects.
+
+    Example:
+        >>> all_menus = pme.list_pms()
+        >>> pie_menus = pme.list_pms(mode='PMENU')
+
+    Stability: Experimental
+    """
+    prefs = get_prefs()
+    if prefs is None:
+        return []
+
+    pie_menus = getattr(prefs, "pie_menus", None)
+    if pie_menus is None:
+        return []
+
+    result = []
+    for pm in pie_menus:
+        pm_mode = getattr(pm, "mode", None)
+        if mode is None or pm_mode == mode:
+            result.append(PMHandle(
+                name=pm.name,
+                mode=pm_mode,
+                enabled=getattr(pm, "enabled", True),
+            ))
+    return result
+
+
+def invoke_pm(pm_or_name: PMHandle | str) -> bool:
+    """Invoke (show) a Pie Menu.
+
+    This opens the specified menu as if the user triggered its hotkey.
+
+    Args:
+        pm_or_name: Either a PMHandle or the menu name as string.
+
+    Returns:
+        True if the menu was invoked successfully, False otherwise.
+
+    Example:
+        >>> # By name
+        >>> pme.invoke_pm("My Pie Menu")
+
+        >>> # By handle
+        >>> pm = pme.find_pm("My Pie Menu")
+        >>> if pm:
+        ...     pme.invoke_pm(pm)
+
+    Note:
+        The menu must exist and be enabled. The current context must be
+        appropriate for the menu (e.g., correct editor type).
+
+    Stability: Experimental
+    """
+    name = pm_or_name.name if isinstance(pm_or_name, PMHandle) else pm_or_name
+
+    try:
+        bpy.ops.wm.pme_user_pie_menu_call('INVOKE_DEFAULT', pie_menu_name=name)
+        return True
+    except Exception:
+        return False
+
+
+# =============================================================================
 # Namespace Validation (Debug Utilities)
 # =============================================================================
 # These functions help verify that the namespace is correctly configured.

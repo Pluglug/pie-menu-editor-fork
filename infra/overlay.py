@@ -606,21 +606,3 @@ def register():
     #     list(opr.color), round(opr.size * TablePainter.col_style_scale))
 
     pme.context.add_global("overlay", overlay)
-
-
-__all__ = [
-    'OVERLAY_ALIGNMENT_ITEMS',
-    'Timer',
-    'SpaceGroup',
-    'Painter',
-    'Style',
-    'Text',
-    'Col',
-    'TablePainter',
-    'Overlay',
-    'OverlayPrefs',
-    'PME_OT_overlay',
-    'space_groups',
-    'overlay',
-    'register',
-]

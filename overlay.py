@@ -6,7 +6,41 @@
 
 LAYER = "infra"
 
-from .infra import overlay as _overlay
-from .infra.overlay import *  # noqa: F401,F403
+from .infra.overlay import (
+    # Constants
+    OVERLAY_ALIGNMENT_ITEMS,
+    # Classes
+    Timer,
+    SpaceGroup,
+    Painter,
+    Style,
+    Text,
+    Col,
+    TablePainter,
+    Overlay,
+    OverlayPrefs,
+    PME_OT_overlay,
+    # Module-level objects
+    space_groups,
+    # Functions
+    overlay,
+    register,
+)
 
-__all__ = _overlay.__all__
+# Re-export all for star imports
+__all__ = [
+    'OVERLAY_ALIGNMENT_ITEMS',
+    'Timer',
+    'SpaceGroup',
+    'Painter',
+    'Style',
+    'Text',
+    'Col',
+    'TablePainter',
+    'Overlay',
+    'OverlayPrefs',
+    'PME_OT_overlay',
+    'space_groups',
+    'overlay',
+    'register',
+]

@@ -22,7 +22,7 @@ from ..bl_utils import (
     area_header_text_set,
 )
 from ..layout_helper import lh, draw_pme_layout, operator
-from ..infra import overlay as ovl
+from ..overlay import Timer, Overlay, TablePainter
 from ..ui import tag_redraw, utitle
 from .. import utils as U
 from .. import c_utils as CTU
@@ -997,7 +997,7 @@ class PME_OT_modal_base:
                 self.cell_indices.append(None)
 
         if not self.table:
-            self.table = ovl.TablePainter(3, self.cells, self.pm.name)
+            self.table = TablePainter(3, self.cells, self.pm.name)
         else:
             self.table.update(self.cells)
 
@@ -1077,7 +1077,7 @@ class PME_OT_modal_base:
                 elif pmi.mode == 'UPDATE':
                     self.update_pmis.append((pmi, None))
 
-        self.overlay = ovl.Overlay(context.area.type)
+        self.overlay = Overlay(context.area.type)
         self.overlay.show()
 
         if prop.lock:
@@ -1795,7 +1795,7 @@ class WM_OT_pme_user_pie_menu_call(bpy.types.Operator):
                     )
 
                 if not flick:
-                    self.pm_timer = ovl.Timer(0.05 + view.pie_animation_timeout / 100)
+                    self.pm_timer = Timer(0.05 + view.pie_animation_timeout / 100)
                     return self.modal_start()
 
             return {'CANCELLED'}
@@ -2027,7 +2027,7 @@ class WM_OT_pme_user_pie_menu_call(bpy.types.Operator):
         if self.invoke_mode == 'HOTKEY':
             DBG_PM and logi("Mode: HOTKEY, open_mode:", cpm.open_mode)
             if cpm.open_mode == 'HOLD':
-                self.hold_timer = ovl.Timer(pr.hold_time / 1000)
+                self.hold_timer = Timer(pr.hold_time / 1000)
                 self.__class__.hold_inst = self
                 return self.modal_start()
 
@@ -2036,7 +2036,7 @@ class WM_OT_pme_user_pie_menu_call(bpy.types.Operator):
 
             elif cpm.open_mode == 'CHORDS':
                 DBG_PM and logi("Starting CHORDS modal, waiting for:", [keymap_helper.key_names[v.chord] for v in self.chord_pms])
-                self.chord_timer = ovl.Timer(pr.chord_time / 1000)
+                self.chord_timer = Timer(pr.chord_time / 1000)
                 if pr.use_chord_hint:
                     area_header_text_set(
                         "Waiting next key chord in the sequence: "
@@ -2109,7 +2109,7 @@ class WM_OT_pme_keyconfig_wait(bpy.types.Operator):
         return {'PASS_THROUGH'}
 
     def execute(self, context):
-        self.t = ovl.Timer(10)
+        self.t = Timer(10)
         self.timer = context.window_manager.event_timer_add(0.1, window=context.window)
         context.window_manager.modal_handler_add(self)
         return {'RUNNING_MODAL'}

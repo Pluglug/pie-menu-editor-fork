@@ -1,4 +1,4 @@
-﻿# preferences.py - PMEPreferences and addon settings UI
+# preferences.py - PMEPreferences and addon settings UI
 # LAYER = "prefs"
 
 import bpy
@@ -76,7 +76,7 @@ from .keymap_helper import (
     to_ui_hotkey,
 )
 from .previews_helper import ph
-from .infra.overlay import OverlayPrefs
+from .overlay import OverlayPrefs
 from .ui import tag_redraw, draw_addons_maximized, is_userpref_maximized
 from .ui.utils import get_pme_menu_class, execute_script
 from . import utils as U
@@ -97,8 +97,8 @@ from .ed_panel_group import (
     draw_pme_panel,
     poll_pme_panel,
 )
-from .editors.sticky_key import PME_OT_sticky_key_edit
-from .editors.modal import PME_OT_prop_data_reset
+from .ed_sticky_key import PME_OT_sticky_key_edit
+from .ed_modal import PME_OT_prop_data_reset
 
 # IO operators (moved to operators/io.py in Phase 2-C)
 from .operators.io import (
@@ -3486,4 +3486,3 @@ def unregister():
             for file in files:
                 if file.endswith('.py'):
                     execute_script(os.path.join(root, file))
-
