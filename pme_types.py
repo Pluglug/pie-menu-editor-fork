@@ -1,9 +1,14 @@
 # pme_types.py - Core data models (Tag, PMItem, PMIItem, PMLink, etc.)
-# LAYER = "core"
+# LAYER = "infra"
 #
 # Contains the primary PropertyGroup definitions for PME's data structures.
+#
+# Note: This module was originally labeled as "core", but PropertyGroup
+# definitions inherently depend on bpy and cannot be pure Python.
+# The actual dependencies (ui, operators, panels) place this in the infra layer.
+# See: _docs/guides/rc_roadmap.md (Phase 5-B)
 
-LAYER = "core"
+LAYER = "infra"
 
 import bpy
 from . import bl_utils as BU

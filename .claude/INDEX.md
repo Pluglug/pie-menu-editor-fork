@@ -51,6 +51,7 @@ _docs/              ← 参照ドキュメント（@参照でオンデマンド�
 - `cleanup_workflow.md` — 違反クリーンアップ手順
 - `dependency_cleanup_plan.md` — レイヤ違反削減計画
 - `operators_reorganization.md` — operators/ 再編計画
+- `rc_roadmap.md` — RC までのロードマップ（NEW）
 
 ### analysis/
 

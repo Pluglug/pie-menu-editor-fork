@@ -73,13 +73,18 @@ pme.py            → PMEContext, UserData, context
 
 ## 次のフェーズ候補
 
-- Phase 4-C: 外部ツール連携の実証（Gizmo Creator 等）
-- Phase 5-B: EditorBase 責務整理（5-A 完了後に再検討）
-- RC 準備: マイグレーションガイド作成
+詳細は `@_docs/guides/rc_roadmap.md` を参照。
+
+| フェーズ | 内容 | 予想削減 |
+|---------|------|---------|
+| Phase 5-B | pme_types LAYER 変更 | 17 → 13 件 (-4) |
+| Phase 6 | constants → previews_helper 分離 | 13 → 12 件 (-1) |
+| Phase 7 | TYPE_CHECKING 移動 | 12 → 9 件 (-3) |
+| RC 準備 | 許容リスト文書化、旧ローダー削除 | — |
 
 ## RC への条件
 
-- レイヤ違反 < 30 件
+- レイヤ違反 < 30 件 ✅ (現在 17 件)
 - Reload Scripts が安定動作
 - 旧ローダー削除
 - マイグレーションガイド作成
@@ -90,4 +95,5 @@ pme.py            → PMEContext, UserData, context
 |-------------|------|
 | `@_docs/archive/milestones_full.md` | 完了フェーズの詳細 |
 | `@_docs/guides/cleanup_workflow.md` | 違反整理手順 |
+| `@_docs/guides/rc_roadmap.md` | RC ロードマップ |
 | `@_docs/design/api/pme_api_plan.md` | API 設計 |
