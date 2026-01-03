@@ -200,7 +200,8 @@ class ParsedData:
 
         self.is_empty = True
         for k, prop in props.prop_map.items():
-            if not hasattr(self, k):
+            # use __dict__ to avoid triggering __getattr__ for other types
+            if k not in self.__dict__:
                 continue
             if getattr(self, k) != prop.default:
                 self.is_empty = False
