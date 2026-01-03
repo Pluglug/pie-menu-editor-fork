@@ -197,13 +197,13 @@ core       (0) ← Blender-independent logic
 
 **Dependency Rule**: Upper layers may import from lower layers, not vice versa.
 
-See `.claude/rules/architecture.md` for detailed documentation.
+See `CLAUDE.md` for detailed documentation.
 
 ## Getting Help
 
 - **Questions**: Open a [Discussion](../../discussions)
 - **Bugs**: Open an [Issue](../../issues)
-- **Design discussions**: Check `.claude/rules/` documentation
+- **Design discussions**: Check `_docs/` documentation
 
 ## License
 
