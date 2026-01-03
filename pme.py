@@ -293,5 +293,93 @@ def evaluate(expr: str, *, extra_globals: dict[str, Any] | None = None) -> Any:
     return eval(expr, globals_dict)
 
 
+# =============================================================================
+# Namespace Validation (Debug Utilities)
+# =============================================================================
+# These functions help verify that the namespace is correctly configured.
+# Use with DBG_DEPS or during development to catch configuration issues.
+
+
+def validate_public_namespace(globals_dict: dict[str, Any] | None = None) -> dict[str, list[str]]:
+    """Validate that the public namespace is correctly configured.
+
+    Checks:
+    1. All PUBLIC_NAMES variables are present in the globals dict
+    2. No INTERNAL variables are accidentally exposed with public-looking names
+
+    Args:
+        globals_dict: The globals dict to validate. If None, uses gen_globals().
+
+    Returns:
+        A dict with 'missing' and 'warnings' lists:
+        - missing: Public variables that should be present but aren't
+        - warnings: Potential issues (e.g., internal vars that might confuse users)
+
+    Example:
+        >>> issues = pme.validate_public_namespace()
+        >>> if issues['missing']:
+        ...     print(f"Missing public vars: {issues['missing']}")
+
+    Stability: Internal (debug utility)
+    """
+    if globals_dict is None:
+        globals_dict = context.gen_globals()
+
+    present_names = set(globals_dict.keys())
+
+    # Check for missing public variables
+    missing = [name for name in PUBLIC_NAMES if name not in present_names]
+
+    # Check for potential confusion (internal vars that look important)
+    # These are not errors, just warnings for documentation purposes
+    warnings = []
+    suspicious_internal = {"PME", "PREFS", "pme_context"}
+    for name in suspicious_internal:
+        if name in present_names and is_internal(name):
+            warnings.append(f"'{name}' is internal but exposed (document as internal)")
+
+    return {"missing": missing, "warnings": warnings}
+
+
+def get_namespace_report() -> str:
+    """Generate a human-readable report of the current namespace configuration.
+
+    Useful for debugging and documentation.
+
+    Returns:
+        Multi-line string describing the namespace state.
+
+    Stability: Internal (debug utility)
+    """
+    globals_dict = context.gen_globals()
+    present = set(globals_dict.keys())
+
+    lines = ["=== PME Namespace Report ===", ""]
+
+    # Public variables
+    lines.append("Public (Experimental):")
+    for name in sorted(PUBLIC_NAMES):
+        status = "✓" if name in present else "✗ MISSING"
+        info = NAMESPACE_PUBLIC.get(name, {})
+        desc = info.get("desc", "")
+        lines.append(f"  {status} {name}: {desc}")
+
+    lines.append("")
+
+    # Internal variables present
+    lines.append("Internal (present in globals):")
+    internal_present = [n for n in present if is_internal(n)]
+    for name in sorted(internal_present)[:10]:  # Limit to first 10
+        lines.append(f"  - {name}")
+    if len(internal_present) > 10:
+        lines.append(f"  ... and {len(internal_present) - 10} more")
+
+    lines.append("")
+    lines.append(f"Total variables in namespace: {len(present)}")
+    lines.append(f"Public: {len(PUBLIC_NAMES)}, Internal: {len(internal_present)}")
+
+    return "\n".join(lines)
+
+
 def register():
     context.add_global("U", UserData())
