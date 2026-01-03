@@ -15,9 +15,10 @@ from . import utils as U
 from .addon import get_prefs, temp_prefs, ic_fb
 from . import keymap_helper as KH
 from . import pme
+from .core.props import props
 from .ui import tag_redraw
-# NOTE: Do NOT use `from .pme import props as pp` - it caches old instance on Reload Scripts
-# Always use `pme.props` to get the current instance
+# NOTE: props is now in core/props.py (Phase 4-A separation)
+# Import directly from core.props for early loading and proper initialization
 from .operators import WM_OT_pme_user_pie_menu_call
 
 
@@ -491,7 +492,7 @@ class PMItem(bpy.types.PropertyGroup):
         self.ed.update_panel_group(self)
 
     def get_panel_context(self):
-        prop = pme.props.parse(self.data)
+        prop = props.parse(self.data)
         for item in PAU.panel_context_items(self, bpy.context):
             if item[0] == prop.pg_context:
                 return item[4]
@@ -499,10 +500,10 @@ class PMItem(bpy.types.PropertyGroup):
 
     def set_panel_context(self, value):
         value = PAU.panel_context_items(self, bpy.context)[value][0]
-        prop = pme.props.parse(self.data)
+        prop = props.parse(self.data)
         if prop.pg_context == value:
             return
-        self.data = pme.props.encode(self.data, "pg_context", value)
+        self.data = props.encode(self.data, "pg_context", value)
         self.update_panel_group()
 
     panel_context: bpy.props.EnumProperty(
@@ -514,14 +515,14 @@ class PMItem(bpy.types.PropertyGroup):
     )
 
     def get_panel_category(self):
-        prop = pme.props.parse(self.data)
+        prop = props.parse(self.data)
         return prop.pg_category
 
     def set_panel_category(self, value):
-        prop = pme.props.parse(self.data)
+        prop = props.parse(self.data)
         if prop.pg_category == value:
             return
-        self.data = pme.props.encode(self.data, "pg_category", value)
+        self.data = props.encode(self.data, "pg_category", value)
         self.update_panel_group()
 
     panel_category: bpy.props.StringProperty(
@@ -532,7 +533,7 @@ class PMItem(bpy.types.PropertyGroup):
     )
 
     def get_panel_region(self):
-        prop = pme.props.parse(self.data)
+        prop = props.parse(self.data)
         for item in CC.REGION_ITEMS:
             if item[0] == prop.pg_region:
                 return item[4]
@@ -540,10 +541,10 @@ class PMItem(bpy.types.PropertyGroup):
 
     def set_panel_region(self, value):
         value = CC.REGION_ITEMS[value][0]
-        prop = pme.props.parse(self.data)
+        prop = props.parse(self.data)
         if prop.pg_region == value:
             return
-        self.data = pme.props.encode(self.data, "pg_region", value)
+        self.data = props.encode(self.data, "pg_region", value)
         self.update_panel_group()
 
     panel_region: bpy.props.EnumProperty(
@@ -555,7 +556,7 @@ class PMItem(bpy.types.PropertyGroup):
     )
 
     def get_panel_space(self):
-        prop = pme.props.parse(self.data)
+        prop = props.parse(self.data)
         for item in CC.SPACE_ITEMS:
             if item[0] == prop.pg_space:
                 return item[4]
@@ -563,10 +564,10 @@ class PMItem(bpy.types.PropertyGroup):
 
     def set_panel_space(self, value):
         value = CC.SPACE_ITEMS[value][0]
-        prop = pme.props.parse(self.data)
+        prop = props.parse(self.data)
         if prop.pg_space == value:
             return
-        self.data = pme.props.encode(self.data, "pg_space", value)
+        self.data = props.encode(self.data, "pg_space", value)
         self.update_panel_group()
 
     panel_space: bpy.props.EnumProperty(
@@ -876,14 +877,14 @@ class PMItem(bpy.types.PropertyGroup):
         )
 
     def get_data(self, key):
-        value = getattr(pme.props.parse(self.data), key)
+        value = getattr(props.parse(self.data), key)
         return value
 
     def set_data(self, key, value):
-        self.data = pme.props.encode(self.data, key, value)
+        self.data = props.encode(self.data, key, value)
 
     def clear_data(self, *args):
-        self.data = pme.props.clear(self.data, *args)
+        self.data = props.clear(self.data, *args)
 
     @property
     def ed(self):

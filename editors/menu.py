@@ -22,7 +22,7 @@ from ..addon import get_prefs, ic_eye
 from ..ui.layout import lh, Col
 from ..ui import tag_redraw, shorten_str
 from ..core.constants import SPACER_SCALE_Y, SEPARATOR_SCALE_Y
-from .. import pme
+from ..core.props import props
 
 
 class WM_OT_rmi_add(bpy.types.Operator):
@@ -597,7 +597,7 @@ class WM_OT_rmi_specials_call(bpy.types.Operator):
         return {'FINISHED'}
 
 
-pme.props.BoolProperty("rm", "rm_title", True)
+props.BoolProperty("rm", "rm_title", True)
 
 
 class Editor(EditorBase):

@@ -13,6 +13,7 @@ LAYER = "ui"
 
 import bpy
 from .. import pme
+from ..core.props import props
 from .. import c_utils as CTU
 from ..addon import get_prefs, print_exc, ic
 from ..core.constants import SCALE_X, SPACER_SCALE_Y, F_CUSTOM_ICON
@@ -650,7 +651,7 @@ class Row:
         for i in range(self.a + 1, self.b):
             pmi = pm.pmis[i]
             if pmi.mode == 'EMPTY' and pmi.text.startswith("spacer"):
-                prop = pme.props.parse(pmi.text)
+                prop = props.parse(pmi.text)
                 if prop.hsep == 'COLUMN':
                     return True
 
@@ -662,7 +663,7 @@ class Row:
         for i in range(self.a + 1, self.b):
             pmi = pm.pmis[i]
             if pmi.mode == 'EMPTY':
-                prop = pme.props.parse(pmi.text)
+                prop = props.parse(pmi.text)
                 if prop.hsep == 'COLUMN':
                     self.num_columns += 1
                 if prop.hsep == 'ALIGNER':
@@ -676,7 +677,7 @@ class Row:
             self.num_columns += 1
 
     def remove_subrows(self, pm):
-        pp = pme.props
+        pp = props
         i = self.a + 1
         while i < self.b:
             pmi = pm.pmis[i]  # BUG
@@ -735,7 +736,7 @@ def draw_pme_layout(pm, column, draw_pmi, rows=None, icon_btn_scale_x=-1):
 
     global num_btns, num_spacers, max_btns, max_spacers, al_l, al_r
     pr = get_prefs()
-    pp = pme.props
+    pp = props
 
     if icon_btn_scale_x == -1:
         icon_btn_scale_x = SCALE_X
@@ -923,7 +924,7 @@ has_aligners = False
 
 def _parse_empty_pdi(prefs, pm, idx, row_idx, layout, row, has_columns, is_subrow):
     global cur_column, cur_subrow, num_btns, num_spacers, max_btns, max_spacers, al_split, has_aligners, al_l, al_r
-    pp = pme.props
+    pp = props
     pmi = pm.pmis[idx]
     r = pp.parse(pmi.text)
 

@@ -1,10 +1,10 @@
 import bpy
 from .editors.base import EditorBase
-from . import pme
+from .core.props import props
 
-pme.props.BoolProperty("s", "s_undo")
-pme.props.BoolProperty("s", "s_state")
-# pme.props.BoolProperty("s", "s_scroll", True)
+props.BoolProperty("s", "s_undo")
+props.BoolProperty("s", "s_state")
+# props.BoolProperty("s", "s_scroll", True)
 
 
 class Editor(EditorBase):

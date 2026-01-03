@@ -7,15 +7,15 @@ LAYER = "editors"
 
 from .base import EditorBase
 from ..core.constants import ARROW_ICONS
-from .. import pme
+from ..core.props import props
 from ..addon import ic, get_prefs
 from ..ui.layout import lh
 
 
-pme.props.IntProperty("pm", "pm_radius", -1)
-pme.props.IntProperty("pm", "pm_confirm", -1)
-pme.props.IntProperty("pm", "pm_threshold", -1)
-pme.props.BoolProperty("pm", "pm_flick", True)
+props.IntProperty("pm", "pm_radius", -1)
+props.IntProperty("pm", "pm_confirm", -1)
+props.IntProperty("pm", "pm_threshold", -1)
+props.BoolProperty("pm", "pm_flick", True)
 
 
 class Editor(EditorBase):

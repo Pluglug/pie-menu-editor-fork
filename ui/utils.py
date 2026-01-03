@@ -21,6 +21,7 @@ from errno import ENOENT
 from ..addon import ADDON_PATH, get_prefs, print_exc
 from ..infra.io import get_user_scripts_dir, get_system_scripts_dir
 from .. import pme
+from ..core.props import props
 from .layout import lh, draw_pme_layout, CLayout
 from ..operators import WM_OT_pme_user_pie_menu_call
 
@@ -113,7 +114,7 @@ def header_menu(areas):
             row = layout.row()
             row.alignment = 'CENTER'
             pm = pme.context.pm
-            prop = pme.props.parse(pm.data)
+            prop = props.parse(pm.data)
             if pm.mode != 'DIALOG' or not prop.pd_panel and not prop.pd_box:
                 row = row.box().row()
 

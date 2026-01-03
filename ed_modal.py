@@ -1,6 +1,6 @@
 import bpy
-from . import pme
 from .core.constants import MODAL_CMD_MODES, W_PMI_HOTKEY, I_MODAL_PROP_MOVE, W_PMI_EXPR
+from .core.props import props
 from .bl_utils import uname
 from .editors.base import EditorBase
 from .addon import temp_prefs
@@ -22,9 +22,9 @@ class PME_OT_prop_data_reset(bpy.types.Operator):
         return {'FINISHED'}
 
 
-pme.props.BoolProperty("mo", "confirm", False)
-pme.props.BoolProperty("mo", "block_ui", True)
-pme.props.BoolProperty("mo", "lock", True)
+props.BoolProperty("mo", "confirm", False)
+props.BoolProperty("mo", "block_ui", True)
+props.BoolProperty("mo", "lock", True)
 
 
 class Editor(EditorBase):

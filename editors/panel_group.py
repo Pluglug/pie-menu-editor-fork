@@ -27,6 +27,7 @@ from ..ui.panels import (
     PLayout,
 )
 from .. import pme
+from ..core.props import props
 
 
 class PME_OT_panel_sub_toggle(bpy.types.Operator):
@@ -168,7 +169,7 @@ def draw_pme_panel(self, context):
         scale_x = 1
         if getattr(self, "pm_name", None) in pr.pie_menus:
             pg = pr.pie_menus[self.pm_name]
-            prop = pme.props.parse(pg.data)
+            prop = props.parse(pg.data)
             scale_x = -1 if prop.pg_wicons else 1
 
         draw_pme_layout(
@@ -680,11 +681,11 @@ class PME_OT_panel_item_remove(bpy.types.Operator):
         return {'CANCELLED'}
 
 
-pme.props.BoolProperty("pg", "pg_wicons")
-pme.props.StringProperty("pg", "pg_context", "ANY")
-pme.props.StringProperty("pg", "pg_category", "My Category")
-pme.props.StringProperty("pg", "pg_space", "VIEW_3D")
-pme.props.StringProperty("pg", "pg_region", "TOOLS")
+props.BoolProperty("pg", "pg_wicons")
+props.StringProperty("pg", "pg_context", "ANY")
+props.StringProperty("pg", "pg_category", "My Category")
+props.StringProperty("pg", "pg_space", "VIEW_3D")
+props.StringProperty("pg", "pg_region", "TOOLS")
 
 
 class Editor(EditorBase):

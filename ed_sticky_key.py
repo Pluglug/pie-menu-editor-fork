@@ -1,5 +1,5 @@
 import bpy
-from . import pme
+from .core.props import props
 from .editors.base import EditorBase
 from .addon import get_prefs
 from .ui import tag_redraw
@@ -45,7 +45,7 @@ class PME_OT_sticky_key_edit(bpy.types.Operator):
         return {'FINISHED'}
 
 
-pme.props.BoolProperty("sk", "sk_block_ui", False)
+props.BoolProperty("sk", "sk_block_ui", False)
 
 
 class Editor(EditorBase):

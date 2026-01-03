@@ -109,8 +109,6 @@ from .operators.io import (
     export_filepath,
 )
 
-pp = pme.props
-
 
 def update_pmi_data(self, context, reset_prop_data=True):
     pr = get_prefs()

@@ -15,6 +15,7 @@ from . import (
     pme,
     selection_state,
 )
+from .core.props import props
 
 MOUSE_BUTTONS = {
     'LEFTMOUSE',
@@ -1330,7 +1331,7 @@ class StackKey:
             StackKey.exec_globals = pme.context.gen_globals()
 
         elif StackKey.is_first:
-            prop = pme.props.parse(pm.data)
+            prop = props.parse(pm.data)
             StackKey.idx = 0
             StackKey.count = 0
             StackKey.lo = None
@@ -1414,7 +1415,7 @@ class StackKey:
                 StackKey.is_first = True
 
             StackKey.name = cpm.name
-            prop = pme.props.parse(cpm.data)
+            prop = props.parse(cpm.data)
             if StackKey.is_first:
                 StackKey.operator_mode = prop.s_undo
 

@@ -7,6 +7,7 @@ LAYER = "editors"
 
 import bpy
 from .. import pme
+from ..core.props import props as pme_props
 from .base import (
     EditorBase,
     PME_OT_pmi_add,
@@ -666,11 +667,11 @@ class PME_OT_prop_pmi_move(MoveItemOperator, bpy.types.Operator):
         tag_redraw()
 
 
-pme.props.IntProperty("prop", "vector", 1)
-pme.props.BoolProperty("prop", "mulsel", False)
-pme.props.BoolProperty("prop", "hor_exp", True)
-pme.props.BoolProperty("prop", "exp", True)
-pme.props.BoolProperty("prop", "save", True)
+pme_props.IntProperty("prop", "vector", 1)
+pme_props.BoolProperty("prop", "mulsel", False)
+pme_props.BoolProperty("prop", "hor_exp", True)
+pme_props.BoolProperty("prop", "exp", True)
+pme_props.BoolProperty("prop", "save", True)
 
 
 class Editor(EditorBase):

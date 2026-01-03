@@ -69,8 +69,8 @@ PME2 開発のマイルストーンとフェーズ定義。
 
 ### 未完了（Phase 2 へ繰り越し）
 
-- [ ] `infra/overlay.py` の作成（初期計画にあったが漏れ）
-- [ ] `utils/helpers.py` の作成（PreviewsHelper 等は lifecycle 問題があり保留）
+- [x] `infra/overlay.py` の作成（初期計画にあったが漏れ）
+- [x] `utils/helpers.py` の作成（PreviewsHelper 等は lifecycle 問題があり保留）
 
 ### ローダー構成
 
@@ -231,59 +231,88 @@ Phase 2-B で達成した違反削減（46→22件）を維持しつつ、残り
 
 ---
 
-## v2.0.0-alpha.3 (Phase 3: Core Layer Sprint) ⏳ CURRENT
+## ⏭️ Phase 3: Core Layer Sprint — スキップ
 
-**目標**: Core 層の設計・実装（Issue #64 の根本解決）
-
-> **方針転換**: 旧 Phase 4 を前倒し。Issue #64 を Core 層開発の forcing function として活用。
-
-### 背景
-
-Issue #64（ParsedData / props 登録問題）の分析により判明:
-
-1. `_FALLBACK_DEFAULTS` は技術的負債（39 プロパティの重複定義）
-2. `pme.py` は `LAYER="infra"` だが実質 core の責務を持つ
-3. props 登録が 8 ファイルに散在し、ロード順序に依存
-
-### 計画タスク
-
-| タスク | 説明 | リスク | 状態 |
-|--------|------|--------|------|
-| `pme.py` の LAYER を core に変更 | レイヤ割り当ての修正 | 低 | ⏳ |
-| Core 層設計文書作成 | `rules/core_layer_design.md` | 低 | ⏳ |
-| `PMEProps`, `ParsedData` の設計見直し | Issue #64 の根本解決 | 中 | - |
-| `PMEContext` の core 層移動 | 実行コンテキストの分離 | 中 | - |
-
-### 検討事項
-
-- **`core/schema.py` の導入**: スキーマ定義の一元化（宣言的定義 vs 現行の命令的登録）
-- **`core/registry.py` の導入**: ライフサイクル管理の明示化
-
-### 受け入れ基準
-
-- [ ] `pme.py` が `LAYER="core"` として正しく動作
-- [ ] Issue #64 が根本的に解決される
-- [ ] `_FALLBACK_DEFAULTS` が不要になる（または大幅縮小）
-- [ ] Reload Scripts でエラーなし
+> **スキップ理由**: Issue #64 はロード順の問題と仮定し、プロパティスキーマを core 層に分離。
+> しかし Phase 4-A の結果、**ロード順は本質的な問題ではない**ことが判明。
+> 新しい仮説については Issue #64 を参照。
 
 ---
 
-## v2.0.0-beta.1 (Phase 4-A: Core Layer – Props & Context)
+## v2.0.0-alpha.3 (Phase 4-A: Core Layer – Props Separation) ✅ COMPLETED
 
-**目標**: pme.py の内部実装を core 層に分離
+**目標**: プロパティスキーマを core 層に分離し、ロード順問題を根本解決
 
-> **前提条件**: Phase 3 のゲート条件をすべてクリアしていること
+> **結果**: ロード順の改善は達成したが、Issue #64 の根本原因は別にあることが判明。
+> フォールバック警告は依然として発生する。新しい仮説を立てて次フェーズで調査予定。
 
-### 計画タスク
+### 背景と結論
 
-- [ ] `PMEContext` を `core/executor.py` に移動
-- [ ] `PMEProps`, `ParsedData` を `core/` に移動
-- [ ] `pme.py` を薄いファサードに変更
+**元の仮説（誤り）**:
+> Issue #64 の本質はロード順の問題であり、`core/props.py` を早期ロードすれば解決する
+
+**検証結果**:
+- `core/props.py` は位置 13 でロード（`pme` は位置 20）→ ロード順は改善
+- しかしフォールバック警告は依然として発生:
+  ```
+  PME: late-bound prop via __getattr__, type=pm, prop=rm_title
+  PME: late-bound prop via __getattr__, type=pm, prop=align
+  ```
+
+**新しい仮説（Issue #64 に記録）**:
+問題の本質は**型の不一致**。`ParsedData` は `type` に基づいて属性を設定するが、
+コードが型を跨いでプロパティにアクセスしている。
+
+| 観測 | 意味 |
+|------|------|
+| `type=pm, prop=rm_title` | `rm_title` は `type="rm"` で登録されている |
+| `type=pm, prop=align` | `align` は `type="row"` で登録されている |
+
+**次の調査候補**:
+1. `EditorBase` の汎用描画コードが型を確認せずにアクセス
+2. `data` 文字列の型プレフィックスが不正
+3. `props.parse()` のキャッシュが異なるコンテキストで再利用
+
+### 完了したタスク ✅
+
+| タスク | 説明 | 状態 |
+|--------|------|------|
+| `core/props.py` 作成 | `PMEProp`, `PMEProps`, `ParsedData`, `props` を移動 | ✅ 完了 |
+| `pme.py` のファサード化 | core/props から再エクスポート、`PMEContext` は残留 | ✅ 完了 |
+| 後方互換性維持 | `pme.props.xxx` のインポートパスを維持 | ✅ 完了 |
+| インポート移行 | 14ファイルを `core.props` への直接インポートに変更 | ✅ 完了 |
+| 名前衝突修正 | `editors/property.py` で `as pme_props` を使用 | ✅ 完了 |
+
+### 現在の構造
+
+```
+core/props.py (LAYER="core")
+├── PMEProp         # プロパティメタデータ
+├── PMEProps        # スキーマレジストリ
+├── ParsedData      # パース結果コンテナ
+└── props           # グローバルインスタンス
+
+pme.py (LAYER="infra")
+├── UserData        # ユーザーデータコンテナ
+├── PMEContext      # コマンド実行コンテキスト
+├── context         # グローバルインスタンス
+└── (re-exports)    # PMEProp, PMEProps, ParsedData, props
+```
+
+### 検証結果
+
+| タスク | 説明 | 状態 |
+|--------|------|------|
+| アドオン有効化テスト | Blender 5.0+ で有効化 | ✅ 成功 |
+| Reload Scripts テスト | エラーなし（警告は発生） | ✅ 成功 |
+| レイヤ違反 | 21件（新規増加なし） | ✅ 維持 |
 
 ### 受け入れ基準
 
-- [ ] core 層が Blender 依存を最小化
-- [ ] ライフサイクルシナリオが引き続き安定動作
+- [x] アドオン有効化でエラーなし
+- [x] 既存の `pme.props.xxx` インポートが動作
+- [x] ライフサイクルシナリオが安定動作（警告は許容）
+- [ ] `_FALLBACK_DEFAULTS` の必要性を再評価 → **Issue #64 の新仮説調査後に判断**
 
 ---
 
