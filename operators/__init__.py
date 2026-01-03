@@ -22,7 +22,7 @@ from ..bl_utils import (
     area_header_text_set,
 )
 from ..layout_helper import lh, draw_pme_layout, operator
-from ..overlay import Timer, Overlay, TablePainter
+from ..infra.overlay import Timer, Overlay, TablePainter
 from ..ui import tag_redraw, utitle
 from .. import utils as U
 from .. import c_utils as CTU

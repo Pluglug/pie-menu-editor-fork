@@ -76,7 +76,7 @@ from .keymap_helper import (
     to_ui_hotkey,
 )
 from .previews_helper import ph
-from .overlay import OverlayPrefs
+from .infra.overlay import OverlayPrefs
 from .ui import tag_redraw, draw_addons_maximized, is_userpref_maximized
 from .ui.utils import get_pme_menu_class, execute_script
 from . import utils as U
