@@ -71,20 +71,30 @@ pme.py            → PMEContext, UserData, context
 - EditorBase の責務整理（Behavior / View 分離）
 - 理想アーキテクチャに向けた段階的移行
 
-## 次のフェーズ候補
+## 完了したフェーズ
+
+| フェーズ | 内容 | 結果 |
+|---------|------|------|
+| Phase 5-B | pme_types LAYER 変更 | 17 → 13 件 (-4) ✅ |
+| Phase 7 | bl_idname リテラル化 | 13 → 12 件 (-1) ✅ |
+
+## 保留中のフェーズ
+
+| フェーズ | 内容 | 理由 |
+|---------|------|------|
+| Phase 6 | constants → previews_helper 分離 | Issue #65 関連 |
+
+## 次のステップ候補
+
+- **RC 準備**: 許容リスト文書化、旧ローダー削除
+- **Issue #65**: OPEN_MODE_ITEMS アイコン問題
+- **理想アーキテクチャ**: v2.1.0 以降で Schema/Behavior/View 分離
 
 詳細は `@_docs/guides/rc_roadmap.md` を参照。
 
-| フェーズ | 内容 | 予想削減 |
-|---------|------|---------|
-| Phase 5-B | pme_types LAYER 変更 | 17 → 13 件 (-4) |
-| Phase 6 | constants → previews_helper 分離 | 13 → 12 件 (-1) |
-| Phase 7 | TYPE_CHECKING 移動 | 12 → 9 件 (-3) |
-| RC 準備 | 許容リスト文書化、旧ローダー削除 | — |
-
 ## RC への条件
 
-- レイヤ違反 < 30 件 ✅ (現在 17 件)
+- レイヤ違反 < 30 件 ✅ (現在 12 件)
 - Reload Scripts が安定動作
 - 旧ローダー削除
 - マイグレーションガイド作成
