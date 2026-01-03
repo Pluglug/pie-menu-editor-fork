@@ -8,12 +8,12 @@
 |----------|------|---------|
 | Phase 1 (alpha.0) | ✅ | 新ローダー、レイヤ分離 |
 | Phase 2-A/B/C (alpha.1-2) | ✅ | モジュール分割、違反 49→21件 |
-| Phase 4-A (alpha.3) | ✅ | `core/props.py` 分離 |
-| **Phase 4-B** | ⏳ 次 | 標準名前空間、外部 API |
+| Phase 4-A (alpha.3) | ✅ | `core/props.py` 分離、#64 解消 |
+| **Phase 4-B** | ⏳ 進行中 | 標準名前空間、外部 API |
 
 ## 基本方針
 
-- **Core 層の設計・実装**を最優先（Issue #64 の根本解決）
+- **Core 層の設計・実装**を最優先
 - `use_reload` パターンは保留（Issue #67）
 - `DBG_DEPS=True` でレイヤ違反を可視化
 
@@ -24,12 +24,19 @@ core/props.py   → PMEProp, PMEProps, ParsedData, props
 pme.py          → UserData, PMEContext, context + 再エクスポート
 ```
 
-## Issue #64 の状況
+## 解決済み Issue
 
-**ロード順は改善したが、根本原因は別**:
-- `type=pm` の ParsedData が `rm_title`（type=rm）にアクセス
-- **仮説**: 型を跨いだプロパティアクセスが原因
-- **次の調査**: EditorBase の汎用描画コード
+| Issue | 内容 | 解決方法 |
+|-------|------|---------|
+| #64 | ParsedData の cross-type property binding | `is_empty` で `__dict__` 直接参照 |
+
+## 関連 Issue
+
+| Issue | 内容 | 状態 |
+|-------|------|------|
+| #69 | Extend Panel の name 設計問題 | PME2 スキーマで対応予定 |
+| #65 | icon previews の Reload 問題 | 解消済み、モジュール移動待ち |
+| #67 | use_reload パターン | 保留 |
 
 ## 次のフェーズ: Phase 4-B
 
