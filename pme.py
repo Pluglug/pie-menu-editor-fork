@@ -11,6 +11,9 @@
 
 LAYER = "infra"
 
+from dataclasses import dataclass
+from typing import Any
+
 import bpy
 
 from .addon import get_prefs, temp_prefs, print_exc
@@ -19,6 +22,23 @@ from .addon import get_prefs, temp_prefs, print_exc
 # This provides backward compatibility for existing imports like:
 #   from . import pme; pme.props.parse(...)
 from .core.props import PMEProp, PMEProps, ParsedData, props
+
+# Import and re-export namespace definitions for external API
+# External tools can use: from pie_menu_editor import pme; pme.is_public("C")
+from .core.namespace import (
+    Stability,
+    NAMESPACE_CORE,
+    NAMESPACE_EVENT,
+    NAMESPACE_USER,
+    NAMESPACE_UI,
+    NAMESPACE_PUBLIC,
+    NAMESPACE_INTERNAL,
+    PUBLIC_NAMES,
+    is_public,
+    is_internal,
+    get_stability,
+    get_public_names_by_stability,
+)
 
 
 class UserData:
@@ -171,6 +191,106 @@ class PMEContext:
 
 
 context = PMEContext()
+
+
+# =============================================================================
+# Public API Facades (Experimental)
+# =============================================================================
+# These functions provide a stable interface for external tools.
+# They wrap the internal PMEContext methods with cleaner signatures.
+
+
+@dataclass
+class ExecuteResult:
+    """Result of code execution.
+
+    Attributes:
+        success: True if execution completed without errors.
+        error_message: Error description if execution failed, None otherwise.
+
+    Stability: Experimental
+    """
+
+    success: bool
+    error_message: str | None = None
+
+
+def execute(code: str, *, extra_globals: dict[str, Any] | None = None) -> ExecuteResult:
+    """Execute arbitrary Python code with PME's standard namespace.
+
+    The standard namespace includes: C, D, bpy, E, L, U, delta, drag_x, drag_y,
+    and other PME-provided variables. See NAMESPACE_PUBLIC for the full list.
+
+    Args:
+        code: Python code to execute (can be multi-line).
+        extra_globals: Additional variables to inject into the namespace.
+            These override standard namespace variables if names conflict.
+
+    Returns:
+        ExecuteResult with success status and optional error message.
+
+    Example:
+        >>> result = pme.execute("print(C.mode)")
+        >>> if not result.success:
+        ...     print(f"Error: {result.error_message}")
+
+        >>> result = pme.execute(
+        ...     "print(gizmo.name)",
+        ...     extra_globals={"gizmo": my_gizmo}
+        ... )
+
+    Stability: Experimental
+    """
+    globals_dict = context.gen_globals()
+    if extra_globals:
+        globals_dict.update(extra_globals)
+
+    try:
+        exec(code, globals_dict)
+        return ExecuteResult(success=True)
+    except Exception as e:
+        return ExecuteResult(success=False, error_message=str(e))
+
+
+def evaluate(expr: str, *, extra_globals: dict[str, Any] | None = None) -> Any:
+    """Evaluate an expression and return the result.
+
+    Unlike execute(), this function raises exceptions on failure.
+    This is intentional: silent failures hide bugs. If you need
+    fallback behavior, wrap the call in try-except.
+
+    The standard namespace includes: C, D, bpy, E, L, U, delta, drag_x, drag_y,
+    and other PME-provided variables.
+
+    Args:
+        expr: Python expression to evaluate (single expression, not statements).
+        extra_globals: Additional variables to inject into the namespace.
+
+    Returns:
+        The result of evaluating the expression.
+
+    Raises:
+        SyntaxError: If the expression has invalid syntax.
+        NameError: If the expression references undefined variables.
+        Any other exception that occurs during evaluation.
+
+    Example:
+        >>> mode = pme.evaluate("C.mode")
+        >>> print(mode)  # 'OBJECT', 'EDIT_MESH', etc.
+
+        >>> # For poll-like usage, handle exceptions explicitly:
+        >>> try:
+        ...     visible = pme.evaluate("C.mode == 'EDIT_MESH'")
+        ... except Exception:
+        ...     visible = True  # Safe fallback
+
+    Stability: Experimental
+    """
+    globals_dict = context.gen_globals()
+    if extra_globals:
+        globals_dict.update(extra_globals)
+
+    return eval(expr, globals_dict)
 
 
 def register():
