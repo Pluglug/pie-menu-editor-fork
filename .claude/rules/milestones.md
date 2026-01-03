@@ -9,7 +9,7 @@
 | Phase 1 (alpha.0) | ✅ | 新ローダー、レイヤ分離 |
 | Phase 2-A/B/C (alpha.1-2) | ✅ | モジュール分割、違反 49→21件 |
 | Phase 4-A (alpha.3) | ✅ | `core/props.py` 分離、#64 解消 |
-| **Phase 4-B** | ⏳ 進行中 | 標準名前空間、外部 API |
+| Phase 4-B | ✅ | 標準名前空間、外部 API ファサード |
 
 ## 基本方針
 
@@ -20,8 +20,11 @@
 ## 現在の構造
 
 ```
-core/props.py   → PMEProp, PMEProps, ParsedData, props
-pme.py          → UserData, PMEContext, context + 再エクスポート
+core/namespace.py → Stability, NAMESPACE_*, PUBLIC_NAMES, is_public()
+core/props.py     → PMEProp, PMEProps, ParsedData, props
+pme.py            → PMEContext, UserData, context
+                  → execute(), evaluate() (Experimental)
+                  → find_pm(), list_pms(), invoke_pm() (Experimental)
 ```
 
 ## 解決済み Issue
@@ -34,15 +37,24 @@ pme.py          → UserData, PMEContext, context + 再エクスポート
 
 | Issue | 内容 | 状態 |
 |-------|------|------|
+| #70 | Phase 4-B 外部 API 実装 | ✅ 完了 |
 | #69 | Extend Panel の name 設計問題 | PME2 スキーマで対応予定 |
 | #65 | icon previews の Reload 問題 | 解消済み、モジュール移動待ち |
 | #67 | use_reload パターン | 保留 |
+| #73 | モジュール読み込み順序問題 | 調査待ち |
 
-## 次のフェーズ: Phase 4-B
+## Phase 4-B 完了サマリー
 
-- [ ] `core/namespace.py` に標準名前空間を定義
-- [ ] `pme.execute()` / `pme.evaluate()` のファサード実装
-- [ ] 外部ツールからの利用シナリオを検証
+- [x] `core/namespace.py` に標準名前空間を定義
+- [x] `pme.execute()` / `pme.evaluate()` ファサード実装
+- [x] `pme.find_pm()` / `list_pms()` / `invoke_pm()` 実装
+- [x] ドキュメント同期（PR #72）
+
+## 次のフェーズ候補
+
+- Phase 4-C: 外部ツール連携の実証（Gizmo Creator 等）
+- Phase 5: レイヤ違反の継続的削減
+- RC 準備: マイグレーションガイド作成
 
 ## RC への条件
 
