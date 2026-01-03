@@ -10,6 +10,7 @@
 | Phase 2-A/B/C (alpha.1-2) | ✅ | モジュール分割、違反 49→21件 |
 | Phase 4-A (alpha.3) | ✅ | `core/props.py` 分離、#64 解消 |
 | Phase 4-B | ✅ | 標準名前空間、外部 API ファサード |
+| Phase 5-A | ⏳ | オペレーター分離（#74） |
 
 ## 基本方針
 
@@ -41,7 +42,8 @@ pme.py            → PMEContext, UserData, context
 | #69 | Extend Panel の name 設計問題 | PME2 スキーマで対応予定 |
 | #65 | icon previews の Reload 問題 | 解消済み、モジュール移動待ち |
 | #67 | use_reload パターン | 保留 |
-| #73 | モジュール読み込み順序問題 | 調査待ち |
+| #73 | モジュール読み込み順序問題 | ✅ workaround 適用、設計問題は #74 へ |
+| #74 | Phase 5-A オペレーター分離 | ⏳ 進行中 |
 
 ## Phase 4-B 完了サマリー
 
@@ -50,10 +52,30 @@ pme.py            → PMEContext, UserData, context
 - [x] `pme.find_pm()` / `list_pms()` / `invoke_pm()` 実装
 - [x] ドキュメント同期（PR #72）
 
+## Phase 5-A: オペレーター分離
+
+**目標**: `editors/base.py` から 33 個のオペレーターを `operators/` に移動
+
+**背景** (Issue #73 から):
+- `editors/base.py` に EditorBase と 33 個のオペレーターが同居
+- `preferences.py` が 8 個のオペレーターをインポート → `editors` レイヤへの依存
+- これが循環的な読み込み順序問題を引き起こした
+
+**タスク**:
+- [ ] オペレーターの依存関係を分析
+- [ ] 移動先ファイル構成を決定
+- [ ] オペレーターを段階的に移動
+- [ ] `preferences.py` のインポートを更新
+- [ ] テスト（有効化、基本操作、Reload Scripts）
+
+**Phase 5-B（将来検討）**:
+- EditorBase の責務整理（Behavior / View 分離）
+- 理想アーキテクチャに向けた段階的移行
+
 ## 次のフェーズ候補
 
 - Phase 4-C: 外部ツール連携の実証（Gizmo Creator 等）
-- Phase 5: レイヤ違反の継続的削減
+- Phase 5-B: EditorBase 責務整理（5-A 完了後に再検討）
 - RC 準備: マイグレーションガイド作成
 
 ## RC への条件

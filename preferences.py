@@ -82,7 +82,8 @@ from .ui.utils import get_pme_menu_class, execute_script
 from . import utils as U
 from .property_utils import PropertyData, to_py_value
 from .pme_types import Tag, PMItem, PMIItem, PMLink, EdProperties, UserProperties
-from .editors.base import (
+# Editor operators (moved to operators/ed/ in Phase 5-A)
+from .operators.ed import (
     WM_OT_pmi_icon_select,
     WM_OT_pmi_data_edit,
     PME_OT_pm_edit,
