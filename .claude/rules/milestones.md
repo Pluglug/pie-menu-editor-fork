@@ -10,7 +10,7 @@
 | Phase 2-A/B/C (alpha.1-2) | ✅ | モジュール分割、違反 49→21件 |
 | Phase 4-A (alpha.3) | ✅ | `core/props.py` 分離、#64 解消 |
 | Phase 4-B | ✅ | 標準名前空間、外部 API ファサード |
-| Phase 5-A | ⏳ | オペレーター分離（#74） |
+| Phase 5-A | ✅ | オペレーター分離（#74）、base.py 71%削減 |
 
 ## 基本方針
 
@@ -43,7 +43,7 @@ pme.py            → PMEContext, UserData, context
 | #65 | icon previews の Reload 問題 | 解消済み、モジュール移動待ち |
 | #67 | use_reload パターン | 保留 |
 | #73 | モジュール読み込み順序問題 | ✅ workaround 適用、設計問題は #74 へ |
-| #74 | Phase 5-A オペレーター分離 | ⏳ 進行中 |
+| #74 | Phase 5-A オペレーター分離 | ✅ 完了 |
 
 ## Phase 4-B 完了サマリー
 
@@ -61,12 +61,11 @@ pme.py            → PMEContext, UserData, context
 - `preferences.py` が 8 個のオペレーターをインポート → `editors` レイヤへの依存
 - これが循環的な読み込み順序問題を引き起こした
 
-**タスク**:
-- [ ] オペレーターの依存関係を分析
-- [ ] 移動先ファイル構成を決定
-- [ ] オペレーターを段階的に移動
-- [ ] `preferences.py` のインポートを更新
-- [ ] テスト（有効化、基本操作、Reload Scripts）
+**成果**:
+- [x] 33 個のオペレーターを `operators/ed/` に移動（8 ファイル）
+- [x] `editors/base.py` を 2662 → 768 行に削減（71%）
+- [x] `preferences` → `editors` 依存を解消
+- [x] `pm.ed` null safety guards 追加
 
 **Phase 5-B（将来検討）**:
 - EditorBase の責務整理（Behavior / View 分離）
