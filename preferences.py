@@ -1,4 +1,4 @@
-# preferences.py - PMEPreferences and addon settings UI
+﻿# preferences.py - PMEPreferences and addon settings UI
 # LAYER = "prefs"
 
 import bpy
@@ -76,7 +76,7 @@ from .keymap_helper import (
     to_ui_hotkey,
 )
 from .previews_helper import ph
-from .overlay import OverlayPrefs
+from .infra.overlay import OverlayPrefs
 from .ui import tag_redraw, draw_addons_maximized, is_userpref_maximized
 from .ui.utils import get_pme_menu_class, execute_script
 from . import utils as U
@@ -1750,8 +1750,10 @@ class PMEPreferences(bpy.types.AddonPreferences):
         temp_prefs().hidden_panels_idx = 0
         # Ignore invalid/empty selection
         if 0 <= self.active_pie_menu_idx < len(self.pie_menus):
-            # Valid index only
-            self.selected_pm.ed.on_pm_select(self.selected_pm)
+            # Valid index only - guard for initialization phase
+            ed = self.selected_pm.ed
+            if ed:
+                ed.on_pm_select(self.selected_pm)
 
     active_pie_menu_idx: bpy.props.IntProperty(
         default=0, update=update_active_pie_menu_idx
@@ -3388,11 +3390,8 @@ def register():
 
     pr = get_prefs()
     pr.tree.lock()
-    pr.init_menus()
-    if pr.auto_backup:
-        pr.backup_menus()
-
-    pr.ed('DIALOG').update_default_pmi_data()
+    # NOTE: init_menus() and pr.ed() moved to deferred_init()
+    # Called from __init__.py after all editors are registered
 
     tpr = temp_prefs()
     tpr.init_tags()
@@ -3446,7 +3445,7 @@ def register():
         )
         pr.enable_window_kmis(False)
 
-    pr.selected_pm.ed.register_props(pr.selected_pm)
+    # NOTE: pr.selected_pm.ed.register_props() moved to deferred_init()
 
     pr.tree.unlock()
     pr.tree.update()
@@ -3486,3 +3485,18 @@ def unregister():
             for file in files:
                 if file.endswith('.py'):
                     execute_script(os.path.join(root, file))
+
+
+def deferred_init():
+    """Initialize editor-dependent functionality.
+
+    Called from __init__.py after all modules (including editors) are registered.
+    This ensures pr.editors dict is populated before init_menus() accesses it.
+    """
+    pr = get_prefs()
+    pr.init_menus()
+    if pr.auto_backup:
+        pr.backup_menus()
+
+    pr.ed('DIALOG').update_default_pmi_data()
+    pr.selected_pm.ed.register_props(pr.selected_pm)

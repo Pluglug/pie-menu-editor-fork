@@ -242,6 +242,12 @@ def new_register_modules():
     with dbg_scope("profile", "new_register_modules.register", location="__init__"):
         addon.register_modules()
 
+    # Deferred initialization for editor-dependent code
+    # Must run after all Editor() instances are registered
+    with dbg_scope("profile", "new_register_modules.deferred_init", location="__init__"):
+        from .preferences import deferred_init
+        deferred_init()
+
 
 def new_unregister_modules():
     """Unregister modules using init_addon approach."""

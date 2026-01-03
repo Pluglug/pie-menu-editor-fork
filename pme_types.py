@@ -888,7 +888,11 @@ class PMItem(bpy.types.PropertyGroup):
 
     @property
     def ed(self):
-        return get_prefs().ed(self.mode)
+        # Guard: editors may not be registered yet during initialization
+        prefs = get_prefs()
+        if not prefs.editors:
+            return None
+        return prefs.editors.get(self.mode)
 
     def __str__(self):
         return "[%s][%s][%s] %s" % (
