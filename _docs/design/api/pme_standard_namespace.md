@@ -78,6 +78,15 @@ PME の実行エンジンは、ユーザーが書いた Python コードを評�
 |--------|------|---------|
 | `U` | ユーザーデータ（セッション内のみ） | `pme.py` (register) |
 
+#### UI（公開候補）
+
+| 変数名 | 意味 | 登録箇所 |
+|--------|------|---------|
+| `L` | 現在の UILayout | `pme.py` (layout setter) |
+| `text` | 現在のアイテムの表示テキスト | `pme.py` |
+| `icon` | 現在のアイテムのアイコン名 | `pme.py` |
+| `icon_value` | 現在のアイテムのアイコン値 | `pme.py` |
+
 ### Internal（依存禁止）
 
 以下は PME 内部でユーザースクリプトに便利機能を提供するために存在しますが、**外部ツールからの依存は禁止**です。予告なく変更・削除されます。
@@ -103,7 +112,6 @@ PME の実行エンジンは、ユーザーが書いた Python コードを評�
 | `pme` | `pme` モジュール | `preferences.py` |
 | `prefs`, `_prefs`, `get_prefs`, `temp_prefs` | 設定アクセス | `preferences.py` |
 | `context`, `bl_context` | コンテキストラッパー | `bl_utils.py` |
-| `L` | 現在のレイアウト | `pme.py` (layout setter) |
 
 #### UI ヘルパー（Internal）
 
@@ -150,7 +158,6 @@ PME の実行エンジンは、ユーザーが書いた Python コードを評�
 | 変数名 | 内容 |
 |--------|------|
 | `PMEData` | PME データクラス |
-| `text`, `icon`, `icon_value` | 現在のアイテム情報 |
 | `header_menu`, `draw_menu`, `open_menu`, ... | メニュー操作 |
 | `__name__`, `__file__`, `__builtins__`, ... | Python 内部変数 |
 
@@ -207,7 +214,8 @@ class GizmoAction:
 
 1. **`E`, `delta`, `drag_x`, `drag_y`** — イベントコンテキストがないと `None` / `0`
 2. **`L`** — UI 描画コンテキストがないと `None`
-3. **`U`** — セッション内のみ有効。Blender 再起動でリセット
+3. **`text`, `icon`, `icon_value`** — PM/PMI 実行時のみ有効。それ以外は `None`
+4. **`U`** — セッション内のみ有効。Blender 再起動でリセット
 
 ### 依存すべきでない変数
 

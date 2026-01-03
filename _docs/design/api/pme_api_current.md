@@ -5,7 +5,7 @@
 このドキュメントは、現状の `pme` モジュールが外部・内部からどう使われているかを記録する **観測ドキュメント** です。
 
 Phase 2-B (alpha.2) で、各シンボルに **Stability level** を付与しました。
-詳細な設計は `rules/design/api/pme_api_plan.md` を参照してください。
+詳細な設計は `_docs/design/api/pme_api_plan.md` を参照してください。
 
 ---
 
@@ -96,24 +96,24 @@ Phase 2-B (alpha.2) で、各シンボルに **Stability level** を付与しま
 ### グローバル名前空間のデフォルト変数
 
 `gen_globals()` によって生成される辞書には以下が含まれる。
-詳細は `rules/design/api/pme_standard_namespace.md` を参照。
+詳細は `_docs/design/api/pme_standard_namespace.md` を参照。
 
 > **注意**: v2.0.0 では全て Experimental。Stable は v2.1.0 以降で検討。
 
-| 変数名 | 値 | Stability (v2.0) |
-|--------|-----|------------------|
-| `bpy` | `bpy` モジュール | **Experimental** |
-| `C` | `bpy.context` | **Experimental** |
-| `D` | `bpy.data` | **Experimental** |
-| `E` | 現在の `event` | **Experimental** |
-| `L` | 現在の `layout` | **Experimental** |
-| `U` | `UserData` インスタンス | **Experimental** |
-| `drag_x`, `drag_y` | ドラッグ座標 | **Experimental** |
-| `delta` | マウスホイールのデルタ値 | **Experimental** |
-| `text`, `icon`, `icon_value` | 現在のコンテキスト値 | **Experimental** |
-| `pme_context` | `context` インスタンス自身 | **Internal** |
-| `PME` | `temp_prefs()` | **Internal** |
-| `PREFS` | `get_prefs()` | **Internal** |
+| 変数名 | 値 | Stability (v2.0) | Available |
+|--------|-----|------------------|-----------|
+| `bpy` | `bpy` モジュール | **Experimental** | always |
+| `C` | `bpy.context` | **Experimental** | always |
+| `D` | `bpy.data` | **Experimental** | always |
+| `E` | 現在の `event` | **Experimental** | when event context exists |
+| `delta` | マウスホイールのデルタ値 | **Experimental** | when event context exists |
+| `drag_x`, `drag_y` | ドラッグ座標 | **Experimental** | during drag operations |
+| `U` | `UserData` インスタンス | **Experimental** | always after registration |
+| `L` | 現在の `layout` | **Experimental** | during UI drawing only |
+| `text`, `icon`, `icon_value` | 現在のコンテキスト値 | **Experimental** | during PM/PMI execution |
+| `pme_context` | `context` インスタンス自身 | **Internal** | internal only |
+| `PME` | `temp_prefs()` | **Internal** | internal only |
+| `PREFS` | `get_prefs()` | **Internal** | internal only |
 
 ---
 
@@ -243,7 +243,7 @@ Phase 2-A の観測結果を踏まえ、以下が決定されました：
 - `pme.context.pm` / `pme.context.pmi` の生オブジェクト — 副作用リスク
 - `PME`, `PREFS` 変数 — 内部設定への直接アクセス
 
-詳細は `rules/design/api/pme_api_plan.md` を参照。
+詳細は `_docs/design/api/pme_api_plan.md` を参照。
 
 ---
 
@@ -358,6 +358,6 @@ result = context.eval(expression, globals=globals_dict)
 
 - `pme.py`: 実装ファイル
 - `addon.py`: `get_prefs()`, `temp_prefs()`, `print_exc()` の実装
-- `rules/design/api/pme_api_plan.md`: API 設計案（Phase 2-B で更新）
-- `rules/design/api/pme_standard_namespace.md`: 標準名前空間の定義
+- `_docs/design/api/pme_api_plan.md`: API 設計案（Phase 2-B で更新）
+- `_docs/design/api/pme_standard_namespace.md`: 標準名前空間の定義
 - `docs/api_pme.md`: API ドキュメント（Phase 2+ で整備予定）
