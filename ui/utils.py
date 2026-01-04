@@ -204,9 +204,10 @@ def execute_script(path, **kwargs):
                     f.read(12)
 
                 exec(marshal.load(f), exec_globals)
-        except:
-            if pr.debug_mode:
+        except Exception:
+            if pr.show_error_trace:
                 s = format_exc()
+                print(f"[PME] Script error in: {path}")
                 print(s)
                 if pme.context.exec_operator:
                     pme.context.exec_operator.report({'ERROR'}, s)
@@ -215,9 +216,10 @@ def execute_script(path, **kwargs):
         try:
             with open(path) as f:
                 exec(f.read(), exec_globals)
-        except:
-            if pr.debug_mode:
+        except Exception:
+            if pr.show_error_trace:
                 s = format_exc()
+                print(f"[PME] Script error in: {path}")
                 print(s)
                 if pme.context.exec_operator:
                     pme.context.exec_operator.report({'ERROR'}, s)
