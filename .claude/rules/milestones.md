@@ -94,8 +94,30 @@ pme.py            → PMEContext, UserData, context
 
 **詳細**: `@_docs/analysis/remaining_violations_analysis.md`
 
+## Phase 8: 薄いラッパー削除
+
+**目標**: プロジェクトルートを `addon.py`, `pme.py` のみにする
+
+### 8-A: 低リスク移動（優先）
+
+| ファイル | 移動先 | 状態 |
+|----------|--------|------|
+| `macro_utils.py` | `infra/macro.py` | 未着手 |
+| `keymap_helper.py` | `infra/keymap.py` | 未着手 |
+| `operator_utils.py` | `operators/utils.py` | 未着手 |
+| `utils.py` | `infra/utils.py` | 未着手 |
+| `property_utils.py` | `infra/property.py` | 未着手 |
+
+### 8-B: 高リスク分離
+
+| タスク | 注意点 | 状態 |
+|--------|--------|------|
+| `WM_OT_pme_user_pie_menu_call` 切り出し | `_draw_item` が 3 箇所から参照 | 未着手 |
+| `prefs` UI 分離 | draw 系メソッドの依存が複雑 | 未着手 |
+
 ## 次のステップ候補
 
+- **Phase 8-A**: 薄いラッパー移動（Codex タスク候補）
 - **RC 準備**: 許容リスト文書化、旧ローダー削除
 - **Issue #65**: OPEN_MODE_ITEMS アイコン問題
 - **理想アーキテクチャ**: v2.1.0 以降で Schema/Behavior/View 分離

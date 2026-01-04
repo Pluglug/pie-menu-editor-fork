@@ -1002,7 +1002,6 @@ def register():
     pme.context.add_global("panel", panel)
 
     global _prefs_panel_types, _prefs_panel_polls
-    bpy_types = bpy_types
     _prefs_panel_types = [v for v in dir(bpy_types) if "USERPREF_PT" in v]
 
     def sorter(tp_name):

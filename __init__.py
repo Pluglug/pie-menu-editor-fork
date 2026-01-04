@@ -96,7 +96,7 @@ def legacy_get_classes():
     bpy_struct = bpy_types.bpy_struct
     cprop = CollectionProperty
     pprop = PointerProperty
-    pdtype = getattr(props, "_PropertyDeferred", tuple)
+    pdtype = getattr(bpy.props, "_PropertyDeferred", tuple)
     mems = set()
     mem_data = []
     for mod in MODULES:
@@ -339,6 +339,9 @@ def load_post_handler(filepath):
     DBG_INIT and logh("Load Post (%s)" % filepath)
 
     pr = get_prefs()
+    if pr is None:
+        DBG_INIT and logw("Prefs not available, skipping load_post_handler")
+        return
 
     # FIXME: Legacy tmp_data restore (<5.0.0) is kept; 5.0+ path stays disabled.
     # Reason: to_dict/from_dict can introduce drift on 5.x; we'll observe for now.
@@ -369,7 +372,7 @@ def on_context():
     pme.context.add_global("D", bpy.data)
     pme.context.add_global("T", bpy_types)
     pme.context.add_global("O", bpy.ops)
-    pme.context.add_global("P", props)
+    pme.context.add_global("P", bpy.props)
     pme.context.add_global("sys", sys)
     pme.context.add_global("BoolProperty", BoolProperty)
     pme.context.add_global("IntProperty", IntProperty)

@@ -193,7 +193,7 @@ def to_dict(obj):
     if not hasattr(obj.__class__, "__annotations__"):
         return dct
 
-    pdtype = getattr(props, "_PropertyDeferred", tuple)
+    pdtype = getattr(bpy.props, "_PropertyDeferred", tuple)
     for k in obj.__class__.__annotations__:
         pd = obj.__class__.__annotations__[k]
         pfunc = getattr(pd, "function", None) or pd[0]

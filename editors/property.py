@@ -369,7 +369,7 @@ def gen_default_value(pm, use_pmi=False):
 def prop_by_type(prop_type, is_vector=False):
     name = "VectorProperty" if is_vector else "Property"
     name = prop_type.title() + name
-    return getattr(props, name)
+    return getattr(bpy.props, name)
 
 
 def pm_to_value(pm, name):
