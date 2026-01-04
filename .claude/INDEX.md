@@ -50,6 +50,7 @@ _docs/              ← 参照ドキュメント（@参照でオンデマンド�
 - `user_pie_menu_call_analysis.md` — WM_OT_pme_user_pie_menu_call 詳細分析
 - `json_schema_v2.md` — **PME2 JSON スキーマ仕様（Phase 9）**
 - `schema_v2_analysis.md` — **スキーマ v2 の可能性と限界の分析（Phase 9）**
+- `schema_v2_future_extensibility.md` — **将来拡張性の検討（VR/AI/動的機能）**
 - `PME2_FEATURE_REQUESTS.md` — **ユーザー要望調査レポート**
 
 ### guides/

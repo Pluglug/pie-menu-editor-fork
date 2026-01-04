@@ -558,9 +558,65 @@ def build_action(action_type: str, value: str) -> dict:
 
 ---
 
+## 将来拡張性（2.0.0 で追加検討）
+
+### extensions フィールド
+
+将来の機能拡張に備え、未知のフィールドを保持するための仕組み。
+
+```json
+{
+  "name": "My Menu",
+  "mode": "PMENU",
+  "extensions": {
+    "conditions": { ... },
+    "style": { ... },
+    "ai": { ... }
+  }
+}
+```
+
+### MenuItem への description 追加
+
+```json
+{
+  "name": "Add Cube",
+  "action": { ... },
+  "description": "シーンに立方体プリミティブを追加",
+  "icon": "MESH_CUBE"
+}
+```
+
+**用途**:
+- ツールチップ表示（将来的に動的オペレーター/GPU 描画で実現）
+- AI によるアクション理解
+- 検索/フィルタリング
+
+### Menu への meta セクション追加（オプショナル）
+
+```json
+{
+  "name": "My Pie Menu",
+  "mode": "PMENU",
+  "meta": {
+    "description": "モデリング作業用のメインメニュー",
+    "author": "username",
+    "color": "#4A90D9",
+    "category": "modeling"
+  }
+}
+```
+
+**詳細**: `@_docs/design/schema_v2_future_extensibility.md`
+
+---
+
 ## 今後の拡張
 
 1. **JSONSchema 定義**: 正式な JSONSchema ファイルを作成しバリデーション可能に
 2. **差分エクスポート**: 変更されたメニューのみをエクスポート
 3. **参照解決**: サブメニュー参照の整合性チェック
 4. **圧縮形式**: 大量のメニュー用にバイナリ形式を検討
+5. **条件付きロジック**: Context Sensitive Menu のスキーマ化（2.1.0+）
+6. **VR/空間 UI**: 位置/サイズ/インタラクション情報（将来）
+7. **AI 統合**: 意図/自然言語/パラメータ情報（将来）
