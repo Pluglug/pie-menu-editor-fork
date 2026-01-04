@@ -46,7 +46,8 @@ _docs/              ← 参照ドキュメント（@参照でオンデマンド�
 - `api/pme_api_plan.md` — 外部 API 設計仕様
 - `api/pme_api_current.md` — 現行 API インベントリ
 - `core-layer/` — Core Layer 設計ドキュメント群
-- `schema-rename-plan.md` — pme.props → pme.schema リネーム計画（NEW）
+- `schema-rename-plan.md` — pme.props → pme.schema リネーム計画
+- `user_pie_menu_call_analysis.md` — WM_OT_pme_user_pie_menu_call 詳細分析（NEW）
 
 ### guides/
 
