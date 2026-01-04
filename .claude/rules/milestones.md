@@ -84,6 +84,16 @@ pme.py            → PMEContext, UserData, context
 |---------|------|------|
 | Phase 6 | constants → previews_helper 分離 | Issue #65 関連 |
 
+## 残存違反の本質分析
+
+12 件の違反は 3 つの本質的問題に分類される:
+
+1. **`_draw_item` 配置問題**: オペレーターに置かれた UI 描画ロジック (3件)
+2. **`screen.py`/`utils.py` 責務混在**: infra と ui 関数の同居 (4件)
+3. **ランタイム依存**: popup/base のオペレーター呼び出し (3件)
+
+**詳細**: `@_docs/analysis/remaining_violations_analysis.md`
+
 ## 次のステップ候補
 
 - **RC 準備**: 許容リスト文書化、旧ローダー削除

@@ -58,6 +58,7 @@ _docs/              ← 参照ドキュメント（@参照でオンデマンド�
 - `ui_list_analysis.md` — UIList 責務分析
 - `editor_dependency_map.md` — Editor 依存関係マップ
 - `core_layer_design.md` — Core 層設計（Phase 3）
+- `remaining_violations_analysis.md` — 残存違反の本質分析（NEW）
 
 ### archive/
 

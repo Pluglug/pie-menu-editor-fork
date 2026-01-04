@@ -178,8 +178,37 @@ Phase 5-B〜7 は「対症療法」であり、理想アーキテクチャ（`_d
 
 ---
 
+## 本質的問題の分析
+
+残存する 12 件の違反には 3 つの本質的問題がある:
+
+### 1. `_draw_item` の配置問題
+
+`WM_OT_pme_user_pie_menu_call._draw_item` は「オペレーター」ではなく「UI 描画ロジック」。
+オペレータークラスに置かれているのは歴史的経緯であり、`ui/` レイヤに分離すべき。
+
+**影響**: `pme_types`, `utils`, `panel_group` → `operators` 違反 (3件)
+
+### 2. `screen.py`/`utils.py` の責務混在
+
+`ui/screen.py` に infra 関数（`find_area`, `get_override_args`）と ui 関数（`focus_area`）が混在。
+`bl_utils.py` が infra 関数だけを使いたくても ui レイヤ全体を import することになる。
+
+**影響**: `bl_utils`, `base`, `pme_types` → `screen`/`utils` 違反 (4件)
+
+### 3. ランタイム依存
+
+popup/base がオペレーターを呼び出す必要があり、これは分離困難。
+
+**影響**: `popup`, `base` → `operators` 違反 (3件)
+
+**詳細分析**: `@_docs/analysis/remaining_violations_analysis.md`
+
+---
+
 ## 参照
 
 - `rules/milestones.md` — フェーズ計画
 - `_docs/guides/dependency_cleanup_plan.md` — 違反削減計画
 - `_docs/design/core-layer/ideal-architecture.md` — 理想アーキテクチャ
+- `_docs/analysis/remaining_violations_analysis.md` — 残存違反の本質分析
