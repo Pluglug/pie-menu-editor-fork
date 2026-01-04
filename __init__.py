@@ -47,39 +47,12 @@ MODULES = (
     "addon",
     "pme",
     "c_utils",
-    "previews_helper",
-    "constants",
-    "utils",
-    "debug_utils",
     "bl_utils",
-    "compatibility_fixes",
     "operator_utils",
-    "property_utils",
-    "layout_helper",
-    "overlay",
-    "modal_utils",
-    "macro_utils",
     "ui",
-    "panel_utils",
-    "screen_utils",
-    "selection_state",
     "keymap_helper",
-    "collection_utils",
     "operators",
-    "extra_operators",
-    "ui_utils",
     "pme_types",
-    "ed_base",
-    "ed_pie_menu",
-    "ed_menu",
-    "ed_popup",
-    "ed_stack_key",
-    "ed_sticky_key",
-    "ed_macro",
-    "ed_modal",
-    "ed_panel_group",
-    "ed_hpanel_group",
-    "ed_property",
     "preferences",
 )
 
@@ -196,43 +169,16 @@ PME2_MODULE_PATTERNS = [
     # Reloading it again in init_addon() would reset VERSION to None.
     "pme",
     "c_utils",
-    "utils",
-    "previews_helper",
-    "property_utils",
-    "overlay",
-    "modal_utils",
-    "macro_utils",
-    "selection_state",
     "keymap_helper",
     "operator_utils",
-    "compatibility_fixes",
     "pme_types",
     # Operators
     "operators",
     "operators.*",
-    "extra_operators",
     # Preferences
     "preferences",
-    # Legacy wrappers (for backward compat during transition)
-    "constants",
-    "debug_utils",
+    # Remaining root modules
     "bl_utils",
-    "layout_helper",
-    "screen_utils",
-    "collection_utils",
-    "panel_utils",
-    "ui_utils",
-    "ed_base",
-    "ed_pie_menu",
-    "ed_menu",
-    "ed_popup",
-    "ed_stack_key",
-    "ed_sticky_key",
-    "ed_macro",
-    "ed_modal",
-    "ed_panel_group",
-    "ed_hpanel_group",
-    "ed_property",
 ]
 
 
@@ -299,9 +245,9 @@ if not bpy.app.background:
         DBG_INIT and logi(f"PME: Module-level import: {_import_count} modules imported (no reloads)")
 
     from .addon import get_prefs, temp_prefs
-    from . import property_utils
+    from .infra import property as property_utils
     from . import pme
-    from . import compatibility_fixes
+    from .infra import compat as compatibility_fixes
     from . import addon
 
     addon.VERSION = bl_info["version"][:3]

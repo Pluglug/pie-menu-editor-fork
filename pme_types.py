@@ -24,8 +24,8 @@ from . import bl_utils as BU
 from .core import constants as CC
 from .ui import utils as UU
 from .ui import panels as PAU
-from . import macro_utils as MAU
-from . import utils as U
+from .infra import macro as MAU
+from .infra import utils as U
 from .addon import get_prefs, temp_prefs, ic_fb
 from . import keymap_helper as KH
 from . import pme

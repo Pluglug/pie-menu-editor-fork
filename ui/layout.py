@@ -18,9 +18,9 @@ from .. import c_utils as CTU
 from ..addon import get_prefs, print_exc, ic
 from ..core.constants import SCALE_X, SPACER_SCALE_Y, F_CUSTOM_ICON
 from ..bl_utils import bp, PME_OT_message_box
-from ..utils import format_exception
+from ..infra.utils import format_exception
 from ..infra.debug import *
-from ..previews_helper import ph
+from ..infra.previews import ph
 
 
 L_SEP = 1 << 0

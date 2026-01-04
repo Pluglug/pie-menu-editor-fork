@@ -25,12 +25,12 @@ from ..bl_utils import (
     PopupOperator,
     area_header_text_set,
 )
-from ..layout_helper import lh, draw_pme_layout, operator
+from ..ui.layout import lh, draw_pme_layout, operator
 from ..infra import overlay as ovl
 from ..ui import tag_redraw, utitle
-from .. import utils as U
+from ..infra import utils as U
 from .. import c_utils as CTU
-from ..panel_utils import (
+from ..ui.panels import (
     hide_panel,
     hidden_panel,
     is_panel_hidden,
@@ -38,7 +38,7 @@ from ..panel_utils import (
     bl_panel_enum_items,
     panel,
 )
-from ..constants import (
+from ..core.constants import (
     I_DEBUG,
     SPACE_ITEMS,
     REGION_ITEMS,
@@ -48,14 +48,14 @@ from ..constants import (
     F_EXPAND,
     MODAL_CMD_MODES,
 )
-from .. import constants as CC
-from ..debug_utils import *
-from ..macro_utils import execute_macro
-from ..modal_utils import decode_modal_data
+from ..core import constants as CC
+from ..infra.debug import *
+from ..infra.macro import execute_macro
+from ..infra.modal import decode_modal_data
 from .. import pme, operator_utils, keymap_helper
 from ..core.schema import schema
-from .. import screen_utils as SU
-from ..property_utils import PropertyData
+from ..ui import screen as SU
+from ..infra.property import PropertyData
 from ..infra.io import get_user_scripts_dir
 from ..keymap_helper import (
     MOUSE_BUTTONS,

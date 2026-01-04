@@ -52,7 +52,7 @@ from .addon import (
 )
 from .core import constants as CC
 from . import operators as OPS
-from . import extra_operators as EOPS
+from .operators import extras as EOPS
 from .bl_utils import (
     bp,
     uname,
@@ -76,13 +76,13 @@ from .ui.panels import (
     bl_menu_types,
     bl_header_types,
 )
-from .macro_utils import add_macro, remove_macro, update_macro
-from .modal_utils import encode_modal_data
+from .infra.macro import add_macro, remove_macro, update_macro
+from .infra.modal import encode_modal_data
 from . import addon
 from . import keymap_helper
 from . import pme
 from . import operator_utils
-from .compatibility_fixes import fix_json, fix
+from .infra.compat import fix_json, fix
 from .infra.io import (
     read_import_file,
     write_export_file,
@@ -100,12 +100,12 @@ from .keymap_helper import (
     to_key_name,
     to_ui_hotkey,
 )
-from .previews_helper import ph
+from .infra.previews import ph
 from .infra.overlay import OverlayPrefs
 from .ui import tag_redraw, draw_addons_maximized, is_userpref_maximized
 from .ui.utils import get_pme_menu_class, execute_script
-from . import utils as U
-from .property_utils import PropertyData, to_py_value
+from .infra import utils as U
+from .infra.property import PropertyData, to_py_value
 from .pme_types import Tag, PMItem, PMIItem, PMLink, EdProperties, UserProperties
 # Editor operators (moved to operators/ed/ in Phase 5-A)
 from .operators.ed import (
@@ -118,13 +118,13 @@ from .operators.ed import (
     PME_OT_pm_add,
     WM_OT_pmi_icon_tag_toggle,
 )
-from .ed_panel_group import (
+from .editors.panel_group import (
     PME_OT_interactive_panels_toggle,
     draw_pme_panel,
     poll_pme_panel,
 )
-from .ed_sticky_key import PME_OT_sticky_key_edit
-from .ed_modal import PME_OT_prop_data_reset
+from .editors.sticky_key import PME_OT_sticky_key_edit
+from .editors.modal import PME_OT_prop_data_reset
 
 # IO operators (moved to operators/io.py in Phase 2-C)
 from .operators.io import (

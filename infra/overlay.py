@@ -17,7 +17,7 @@ from bpy.types import Operator, PropertyGroup
 import blf
 from time import time
 from ..addon import ADDON_ID, get_prefs, get_uprefs, ic
-from ..utils import multiton
+from .utils import multiton
 from .. import pme
 from ..core import constants as CC
 

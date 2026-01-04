@@ -11,6 +11,7 @@
 | Phase 4-A (alpha.3) | ✅ | `core/props.py` 分離、#64 解消 |
 | Phase 4-B | ✅ | 標準名前空間、外部 API ファサード |
 | Phase 5-A | ✅ | オペレーター分離（#74）、base.py 71%削減 |
+| Phase 8-A | ✅ | Thin wrapper 削除 (PR#75)、違反 12→7 件 |
 | Phase 8-C | ✅ | Schema リネーム（props → schema） |
 
 ## 基本方針
@@ -102,15 +103,21 @@ pme.py            → PMEContext, UserData, context
 
 **目標**: プロジェクトルートを `addon.py`, `pme.py` のみにする
 
-### 8-A: 低リスク移動（優先）
+### 8-A: 低リスク移動 ✅ (PR#75)
 
 | ファイル | 移動先 | 状態 |
 |----------|--------|------|
-| `macro_utils.py` | `infra/macro.py` | 未着手 |
+| `macro_utils.py` | `infra/macro.py` | ✅ |
+| `utils.py` | `infra/utils.py` | ✅ |
+| `property_utils.py` | `infra/property.py` | ✅ |
+| `modal_utils.py` | `infra/modal.py` | ✅ |
+| `selection_state.py` | `infra/selection.py` | ✅ |
+| `compatibility_fixes.py` | `infra/compat.py` | ✅ |
+| `previews_helper.py` | `infra/previews.py` | ✅ |
+
+**残存（高リスク）**:
 | `keymap_helper.py` | `infra/keymap.py` | 未着手 |
 | `operator_utils.py` | `operators/utils.py` | 未着手 |
-| `utils.py` | `infra/utils.py` | 未着手 |
-| `property_utils.py` | `infra/property.py` | 未着手 |
 
 ### 8-B: 高リスク分離
 

@@ -7,18 +7,20 @@ import os
 
 LAYER = "infra"
 
-from . import pme
-from .infra.debug import logw
-from .infra.io import get_user_icons_dir, get_system_icons_dir
+from .. import pme
+from .debug import logw
+from .io import get_user_icons_dir, get_system_icons_dir
 
 
 class PreviewsHelper:
 
     def __init__(self, folder="icons"):
+        # Get addon root (parent of infra/)
+        _addon_root = os.path.dirname(os.path.dirname(__file__))
         # Legacy: single path (system icons only)
-        self.path = os.path.join(os.path.dirname(__file__), folder)
+        self.path = os.path.join(_addon_root, folder)
         # New: dual-path support (system + user icons)
-        self._addon_path = os.path.dirname(__file__)
+        self._addon_path = _addon_root
         self.preview = None
 
     def get_icon(self, name):

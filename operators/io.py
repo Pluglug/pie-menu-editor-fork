@@ -25,11 +25,11 @@ from bpy_extras.io_utils import ImportHelper, ExportHelper
 
 from ..addon import get_prefs, temp_prefs, ic_fb, ic_eye, print_exc, ADDON_PATH
 from ..ui.layout import lh
-from ..compatibility_fixes import fix_json, fix
+from ..infra.compat import fix_json, fix
 from ..bl_utils import message_box
 from .. import keymap_helper
 from ..pme_types import Tag
-from .. import constants as CC
+from ..core import constants as CC
 from ..infra.io import (
     read_import_file,
     write_export_file,
