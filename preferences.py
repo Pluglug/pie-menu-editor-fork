@@ -52,7 +52,7 @@ from .addon import (
 )
 from .core import constants as CC
 from . import operators as OPS
-from . import extra_operators as EOPS
+from .operators import extras as EOPS
 from .bl_utils import (
     bp,
     uname,

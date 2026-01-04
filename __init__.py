@@ -66,7 +66,6 @@ MODULES = (
     "keymap_helper",
     "collection_utils",
     "operators",
-    "extra_operators",
     "ui_utils",
     "pme_types",
     "ed_base",
@@ -210,7 +209,6 @@ PME2_MODULE_PATTERNS = [
     # Operators
     "operators",
     "operators.*",
-    "extra_operators",
     # Preferences
     "preferences",
     # Legacy wrappers (for backward compat during transition)
