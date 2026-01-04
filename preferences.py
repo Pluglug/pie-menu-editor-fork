@@ -118,13 +118,13 @@ from .operators.ed import (
     PME_OT_pm_add,
     WM_OT_pmi_icon_tag_toggle,
 )
-from .ed_panel_group import (
+from .editors.panel_group import (
     PME_OT_interactive_panels_toggle,
     draw_pme_panel,
     poll_pme_panel,
 )
-from .ed_sticky_key import PME_OT_sticky_key_edit
-from .ed_modal import PME_OT_prop_data_reset
+from .editors.sticky_key import PME_OT_sticky_key_edit
+from .editors.modal import PME_OT_prop_data_reset
 
 # IO operators (moved to operators/io.py in Phase 2-C)
 from .operators.io import (

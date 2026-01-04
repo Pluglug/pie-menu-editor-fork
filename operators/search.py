@@ -29,10 +29,10 @@ from ..addon import get_prefs, get_uprefs
 from ..ui import tag_redraw, utitle
 from ..ui.layout import operator
 from ..keymap_helper import to_ui_hotkey
-from ..panel_utils import hidden_panel, bl_panel_enum_items
+from ..ui.panels import hidden_panel, bl_panel_enum_items
 from .. import operator_utils
-from .. import constants as CC
-from ..constants import PM_ITEMS_M, MODAL_CMD_MODES
+from ..core import constants as CC
+from ..core.constants import PM_ITEMS_M, MODAL_CMD_MODES
 
 
 class PME_OT_pm_search_and_select(Operator):

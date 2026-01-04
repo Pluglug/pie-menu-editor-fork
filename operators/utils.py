@@ -21,7 +21,7 @@ from bpy.types import Operator
 from bpy.props import StringProperty
 
 from ..ui import tag_redraw
-from ..constants import I_DEBUG
+from ..core.constants import I_DEBUG
 
 
 class WM_OT_pme_none(Operator):

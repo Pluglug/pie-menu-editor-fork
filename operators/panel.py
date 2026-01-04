@@ -21,14 +21,14 @@ from bpy.props import EnumProperty, StringProperty
 from ..addon import get_prefs
 from ..ui.layout import lh
 from ..ui import tag_redraw
-from ..panel_utils import (
+from ..ui.panels import (
     hide_panel,
     hidden_panel,
     is_panel_hidden,
     bl_panel_types,
     bl_panel_enum_items,
 )
-from ..constants import SPACE_ITEMS, REGION_ITEMS
+from ..core.constants import SPACE_ITEMS, REGION_ITEMS
 
 
 class PME_OT_panel_hide(Operator):
