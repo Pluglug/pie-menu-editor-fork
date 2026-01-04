@@ -736,7 +736,7 @@ def draw_pme_layout(pm, column, draw_pmi, rows=None, icon_btn_scale_x=-1):
 
     global num_btns, num_spacers, max_btns, max_spacers, al_l, al_r
     pr = get_prefs()
-    pp = props
+    pp = schema
 
     if icon_btn_scale_x == -1:
         icon_btn_scale_x = SCALE_X
@@ -924,7 +924,7 @@ has_aligners = False
 
 def _parse_empty_pdi(prefs, pm, idx, row_idx, layout, row, has_columns, is_subrow):
     global cur_column, cur_subrow, num_btns, num_spacers, max_btns, max_spacers, al_split, has_aligners, al_l, al_r
-    pp = props
+    pp = schema
     pmi = pm.pmis[idx]
     r = pp.parse(pmi.text)
 

@@ -317,7 +317,7 @@ class PME_OT_pdr_prop_set(Operator):
 
     def execute(self, context):
         pr = get_prefs()
-        pp = props
+        pp = schema
         pm = pr.selected_pm
 
         if self.toggle:
@@ -706,7 +706,7 @@ class PME_OT_pdi_alignment(Operator):
     def execute(self, context):
         pr = get_prefs()
         pm = pr.selected_pm
-        pp = props
+        pp = schema
         self.idx
 
         cur_row = Row()
@@ -825,7 +825,7 @@ class PME_MT_pdr_alignment(Menu):
     bl_label = "Row Alignment"
 
     def draw(self, context):
-        pp = props
+        pp = schema
         pm = get_prefs().selected_pm
         row = pm.pmis[cur_row.a]
         lh.lt(self.layout)
@@ -893,7 +893,7 @@ class PME_MT_pdr_size(Menu):
 
     def draw(self, context):
         pr = get_prefs()
-        pp = props
+        pp = schema
         pm = pr.selected_pm
         row = pm.pmis[cur_row.a]
         lh.lt(self.layout)
@@ -1000,7 +1000,7 @@ class PME_MT_pdr_spacer(Menu):
 
 #     def draw(self, context):
 #         pr =get_prefs()
-#         pp = props
+#         pp = schema
 #         pm = pr.selected_pm
 #         prev_pmi = pm.pmis[current_pdi - 1]
 #         lh.lt(self.layout)
@@ -1032,7 +1032,7 @@ class PME_OT_pdi_subrow_set(Operator):
         pm = get_prefs().selected_pm
 
         def set_subrow_value(idx, new_idx):
-            pp = props
+            pp = schema
             pmi = pm.pmis[idx]
             if pmi.mode == 'EMPTY' and pmi.text.startswith("spacer"):
                 prop = pp.parse(pmi.text)
@@ -1361,7 +1361,7 @@ class PME_OT_pdi_menu(Operator):
 
     def invoke(self, context, event):
         pr = get_prefs()
-        pp = props
+        pp = schema
         pm = pr.selected_pm
 
         cur_row.find_ab(pm, self.idx)
