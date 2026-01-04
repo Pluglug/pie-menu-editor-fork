@@ -14,10 +14,8 @@ from .infra.property import DynamicPG, to_py_value
 from .infra.debug import *
 from . import c_utils as CTU
 from . import operator_utils as OU
-from . import (
-    pme,
-    selection_state,
-)
+from . import pme
+from .infra import selection as selection_state
 from .core.schema import schema
 
 MOUSE_BUTTONS = {

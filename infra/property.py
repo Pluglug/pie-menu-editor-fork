@@ -23,8 +23,8 @@ from types import BuiltinFunctionType
 from mathutils import Euler
 from math import pi as PI
 
-from .addon import get_prefs, temp_prefs, print_exc
-from . import operator_utils
+from ..addon import get_prefs, temp_prefs, print_exc
+from .. import operator_utils
 
 
 WindowManager.pme_temp = BoolVectorProperty(size=3)

@@ -29,7 +29,7 @@ from ..infra.compat import fix_json, fix
 from ..bl_utils import message_box
 from .. import keymap_helper
 from ..pme_types import Tag
-from .. import constants as CC
+from ..core import constants as CC
 from ..infra.io import (
     read_import_file,
     write_export_file,

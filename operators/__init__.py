@@ -54,7 +54,7 @@ from ..infra.macro import execute_macro
 from ..infra.modal import decode_modal_data
 from .. import pme, operator_utils, keymap_helper
 from ..core.schema import schema
-from .. import screen_utils as SU
+from ..ui import screen as SU
 from ..infra.property import PropertyData
 from ..infra.io import get_user_scripts_dir
 from ..keymap_helper import (
