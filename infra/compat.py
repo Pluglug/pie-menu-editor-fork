@@ -7,10 +7,10 @@
 LAYER = "infra"
 
 import re
-from . import addon
-from .addon import get_prefs
-from .infra.debug import *
-from .core import constants as CC
+from .. import addon
+from ..addon import get_prefs
+from .debug import *
+from ..core import constants as CC
 
 
 def fix(pms=None, version=None):

@@ -47,17 +47,9 @@ MODULES = (
     "addon",
     "pme",
     "c_utils",
-    "previews_helper",
-    "utils",
     "bl_utils",
-    "compatibility_fixes",
     "operator_utils",
-    "property_utils",
-    "overlay",
-    "modal_utils",
-    "macro_utils",
     "ui",
-    "selection_state",
     "keymap_helper",
     "operators",
     "pme_types",
@@ -177,16 +169,8 @@ PME2_MODULE_PATTERNS = [
     # Reloading it again in init_addon() would reset VERSION to None.
     "pme",
     "c_utils",
-    "utils",
-    "previews_helper",
-    "property_utils",
-    "overlay",
-    "modal_utils",
-    "macro_utils",
-    "selection_state",
     "keymap_helper",
     "operator_utils",
-    "compatibility_fixes",
     "pme_types",
     # Operators
     "operators",
@@ -261,9 +245,9 @@ if not bpy.app.background:
         DBG_INIT and logi(f"PME: Module-level import: {_import_count} modules imported (no reloads)")
 
     from .addon import get_prefs, temp_prefs
-    from . import property_utils
+    from .infra import property as property_utils
     from . import pme
-    from . import compatibility_fixes
+    from .infra import compat as compatibility_fixes
     from . import addon
 
     addon.VERSION = bl_info["version"][:3]

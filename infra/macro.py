@@ -6,10 +6,10 @@ import re
 
 LAYER = "infra"
 
-from . import operator_utils
-from .infra.debug import *
-from .addon import get_prefs, print_exc
-from .bl_utils import uname
+from .. import operator_utils
+from .debug import *
+from ..addon import get_prefs, print_exc
+from ..bl_utils import uname
 
 
 _operators = {}

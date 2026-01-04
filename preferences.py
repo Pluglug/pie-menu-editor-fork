@@ -76,13 +76,13 @@ from .ui.panels import (
     bl_menu_types,
     bl_header_types,
 )
-from .macro_utils import add_macro, remove_macro, update_macro
-from .modal_utils import encode_modal_data
+from .infra.macro import add_macro, remove_macro, update_macro
+from .infra.modal import encode_modal_data
 from . import addon
 from . import keymap_helper
 from . import pme
 from . import operator_utils
-from .compatibility_fixes import fix_json, fix
+from .infra.compat import fix_json, fix
 from .infra.io import (
     read_import_file,
     write_export_file,
@@ -100,12 +100,12 @@ from .keymap_helper import (
     to_key_name,
     to_ui_hotkey,
 )
-from .previews_helper import ph
+from .infra.previews import ph
 from .infra.overlay import OverlayPrefs
 from .ui import tag_redraw, draw_addons_maximized, is_userpref_maximized
 from .ui.utils import get_pme_menu_class, execute_script
-from . import utils as U
-from .property_utils import PropertyData, to_py_value
+from .infra import utils as U
+from .infra.property import PropertyData, to_py_value
 from .pme_types import Tag, PMItem, PMIItem, PMLink, EdProperties, UserProperties
 # Editor operators (moved to operators/ed/ in Phase 5-A)
 from .operators.ed import (

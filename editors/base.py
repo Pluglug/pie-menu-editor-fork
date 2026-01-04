@@ -26,7 +26,7 @@ from ..infra.debug import *
 from ..bl_utils import re_operator, re_prop, bp, uname
 from ..ui import shorten_str, gen_prop_name, gen_op_name, utitle
 from ..keymap_helper import MOUSE_BUTTONS, parse_hotkey, remove_mouse_button, to_ui_hotkey
-from ..utils import extract_str_flags, extract_str_flags_b
+from ..infra.utils import extract_str_flags, extract_str_flags_b
 from ..ui import screen as SU
 from ..ui.utils import get_pme_menu_class, pme_menu_classes
 from ..ui.layout import lh, operator, split, draw_pme_layout, L_SEP, L_LABEL

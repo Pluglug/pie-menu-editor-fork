@@ -3,7 +3,7 @@
 
 LAYER = "infra"
 
-from .addon import temp_prefs
+from ..addon import temp_prefs
 from .utils import isclose
 
 

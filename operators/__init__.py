@@ -28,7 +28,7 @@ from ..bl_utils import (
 from ..ui.layout import lh, draw_pme_layout, operator
 from ..infra import overlay as ovl
 from ..ui import tag_redraw, utitle
-from .. import utils as U
+from ..infra import utils as U
 from .. import c_utils as CTU
 from ..ui.panels import (
     hide_panel,
@@ -50,12 +50,12 @@ from ..core.constants import (
 )
 from ..core import constants as CC
 from ..infra.debug import *
-from ..macro_utils import execute_macro
-from ..modal_utils import decode_modal_data
+from ..infra.macro import execute_macro
+from ..infra.modal import decode_modal_data
 from .. import pme, operator_utils, keymap_helper
 from ..core.schema import schema
 from .. import screen_utils as SU
-from ..property_utils import PropertyData
+from ..infra.property import PropertyData
 from ..infra.io import get_user_scripts_dir
 from ..keymap_helper import (
     MOUSE_BUTTONS,

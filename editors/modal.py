@@ -12,7 +12,7 @@ from ..core.schema import schema
 from ..bl_utils import uname
 from .base import EditorBase
 from ..addon import temp_prefs
-from ..modal_utils import encode_modal_data, decode_modal_data
+from ..infra.modal import encode_modal_data, decode_modal_data
 
 
 class PME_OT_prop_data_reset(bpy.types.Operator):

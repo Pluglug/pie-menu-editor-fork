@@ -33,7 +33,7 @@ from ...infra.debug import DBG_CMD_EDITOR
 from ...ui import tag_redraw, shorten_str, gen_prop_name, gen_op_name, find_enum_args
 from ...ui import screen as SU
 from ...ui.layout import lh
-from ...property_utils import to_py_value
+from ...infra.property import to_py_value
 from ... import pme
 from ... import operator_utils
 from ... import keymap_helper

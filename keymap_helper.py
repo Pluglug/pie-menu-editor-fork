@@ -10,7 +10,7 @@ LAYER = "infra"
 
 from .core import constants as CC
 from .addon import get_uprefs, print_exc
-from .property_utils import DynamicPG, to_py_value
+from .infra.property import DynamicPG, to_py_value
 from .infra.debug import *
 from . import c_utils as CTU
 from . import operator_utils as OU

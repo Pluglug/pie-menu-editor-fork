@@ -10,7 +10,7 @@ LAYER = "core"
 import bpy
 import re
 from ..addon import ic
-from ..previews_helper import ph
+from ..infra.previews import ph
 
 MAX_STR_LEN = 1024
 UNTAGGED = "Untagged"

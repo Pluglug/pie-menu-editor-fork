@@ -15,7 +15,7 @@ from ..core.constants import MAX_STR_LEN
 from ..bl_utils import uname
 from .base import EditorBase
 from ..operators import PME_OT_sticky_key_base, PME_OT_modal_base
-from .. import macro_utils as MAU
+from ..infra import macro as MAU
 
 
 class PME_OT_macro_exec_base:

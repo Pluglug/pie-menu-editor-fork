@@ -7,9 +7,9 @@ import os
 
 LAYER = "infra"
 
-from . import pme
-from .infra.debug import logw
-from .infra.io import get_user_icons_dir, get_system_icons_dir
+from .. import pme
+from .debug import logw
+from .io import get_user_icons_dir, get_system_icons_dir
 
 
 class PreviewsHelper:
