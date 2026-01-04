@@ -8,9 +8,9 @@
 LAYER = "operators"
 
 import bpy
-from bpy import props, types as bpy_types
-from props import BoolProperty, EnumProperty, FloatProperty, IntProperty, StringProperty
-from bpy_types import Operator
+from bpy import types as bpy_types
+from bpy.props import BoolProperty, EnumProperty, FloatProperty, IntProperty, StringProperty
+from bpy.types import Operator
 import os
 import traceback
 from inspect import isclass

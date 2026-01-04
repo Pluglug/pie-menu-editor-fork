@@ -17,7 +17,7 @@ LAYER = "ui"
 import bpy
 from bpy import types as bpy_types
 from bpy.props import StringProperty
-from bpy_types import Operator
+from bpy.types import Operator
 import traceback
 from ..core import constants as CC
 from ..infra.debug import *

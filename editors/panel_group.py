@@ -9,7 +9,7 @@ LAYER = "editors"
 import bpy
 from bpy import types as bpy_types
 from bpy.props import BoolProperty, EnumProperty, IntProperty, StringProperty
-from bpy_types import Header, Operator, Panel
+from bpy.types import Header, Operator, Panel
 from ..core import constants as CC
 from ..infra.collections import MoveItemOperator
 from .base import EditorBase, PME_OT_pm_edit, PME_OT_pm_add

@@ -25,7 +25,7 @@ use_reload = False
 
 import bpy
 import _bpy
-from bpy import props, types as bpy_types
+from bpy import types as bpy_types
 from bpy.app.handlers import persistent
 from bpy.app import version as APP_VERSION
 from bpy.props import (
@@ -38,7 +38,7 @@ from bpy.props import (
     PointerProperty,
     StringProperty,
 )
-from bpy_types import AddonPreferences, Operator, WindowManager
+from bpy.types import AddonPreferences, Operator, WindowManager
 import sys
 import inspect
 from .infra.debug import *

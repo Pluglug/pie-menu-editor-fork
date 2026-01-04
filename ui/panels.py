@@ -15,7 +15,7 @@ LAYER = "ui"
 import bpy
 from bpy import types as bpy_types
 from bpy.props import BoolProperty, IntProperty, StringProperty
-from bpy_types import Header, Menu, Panel, Operator, UILayout
+from bpy.types import Header, Menu, Panel, Operator, UILayout
 import re
 from inspect import isclass
 from itertools import chain
