@@ -1,8 +1,19 @@
+# pyright: reportInvalidTypeForm=false
 # infra/overlay.py
 # Overlay drawing primitives and utilities
 # Migrated from root overlay.py in Phase 2-B
 
 import bpy
+from bpy import types as bpy_types
+from bpy.props import (
+    BoolProperty,
+    EnumProperty,
+    FloatProperty,
+    FloatVectorProperty,
+    IntProperty,
+    StringProperty,
+)
+from bpy.types import Operator, PropertyGroup
 import blf
 from time import time
 from ..addon import ADDON_ID, get_prefs, get_uprefs, ic
@@ -57,7 +68,7 @@ space_groups = dict()
 
 
 def add_space_group(id, tp_name):
-    tp = getattr(bpy.types, tp_name, None)
+    tp = getattr(bpy_types, tp_name, None)
     if not tp:
         return
 
@@ -380,7 +391,7 @@ def _split(layout, factor=None, align=True):
     )
 
 
-class OverlayPrefs(bpy.types.PropertyGroup):
+class OverlayPrefs(PropertyGroup):
     def size_update(self, context):
         Text.default_style.size = self.size
         Text.secondary_style.size = self.size
@@ -397,12 +408,12 @@ class OverlayPrefs(bpy.types.PropertyGroup):
     def color2_update(self, context):
         Text.secondary_style.update(list(self.color2))
 
-    overlay: bpy.props.BoolProperty(
+    overlay: BoolProperty(
         name="Use Overlay",
         description="Use overlay for stack keys and modal operators",
         default=True,
     )
-    size: bpy.props.IntProperty(
+    size: IntProperty(
         name="Font Size",
         description="Font size",
         default=24,
@@ -411,7 +422,7 @@ class OverlayPrefs(bpy.types.PropertyGroup):
         options={'SKIP_SAVE'},
         update=size_update,
     )
-    color: bpy.props.FloatVectorProperty(
+    color: FloatVectorProperty(
         name="Color",
         description="Color",
         default=(1, 1, 1, 1),
@@ -421,7 +432,7 @@ class OverlayPrefs(bpy.types.PropertyGroup):
         max=1,
         update=color_update,
     )
-    color2: bpy.props.FloatVectorProperty(
+    color2: FloatVectorProperty(
         name="Color",
         description="Color",
         default=(1, 1, 0, 1),
@@ -431,30 +442,30 @@ class OverlayPrefs(bpy.types.PropertyGroup):
         max=1,
         update=color2_update,
     )
-    alignment: bpy.props.EnumProperty(
+    alignment: EnumProperty(
         name="Alignment",
         description="Alignment",
         items=OVERLAY_ALIGNMENT_ITEMS,
         default='TOP',
     )
-    duration: bpy.props.FloatProperty(
+    duration: FloatProperty(
         name="Duration", subtype='TIME', min=1, max=10, default=2, step=10
     )
-    offset_x: bpy.props.IntProperty(
+    offset_x: IntProperty(
         name="Offset X",
         description="Offset from area edges",
         subtype='PIXEL',
         default=10,
         min=0,
     )
-    offset_y: bpy.props.IntProperty(
+    offset_y: IntProperty(
         name="Offset Y",
         description="Offset from area edges",
         subtype='PIXEL',
         default=10,
         min=0,
     )
-    shadow: bpy.props.BoolProperty(
+    shadow: BoolProperty(
         name="Use Shadow", description="Use shadow", default=True
     )
 
@@ -482,22 +493,22 @@ class OverlayPrefs(bpy.types.PropertyGroup):
         row.prop(self, "offset_y")
 
 
-class PME_OT_overlay(bpy.types.Operator):
+class PME_OT_overlay(Operator):
     bl_idname = "pme.overlay"
     bl_label = ""
     bl_options = {'INTERNAL'}
 
     is_running = False
 
-    text: bpy.props.StringProperty(options={'SKIP_SAVE'})
-    alignment: bpy.props.EnumProperty(
+    text: StringProperty(options={'SKIP_SAVE'})
+    alignment: EnumProperty(
         name="Alignment",
         description="Alignment",
         items=OVERLAY_ALIGNMENT_ITEMS,
         default='TOP',
         options={'SKIP_SAVE'},
     )
-    duration: bpy.props.FloatProperty(
+    duration: FloatProperty(
         name="Duration",
         subtype='TIME',
         min=1,
@@ -505,7 +516,7 @@ class PME_OT_overlay(bpy.types.Operator):
         step=10,
         options={'SKIP_SAVE'},
     )
-    offset_x: bpy.props.IntProperty(
+    offset_x: IntProperty(
         name="Offset X",
         description="Offset from area edges",
         subtype='PIXEL',
@@ -513,7 +524,7 @@ class PME_OT_overlay(bpy.types.Operator):
         min=0,
         options={'SKIP_SAVE'},
     )
-    offset_y: bpy.props.IntProperty(
+    offset_y: IntProperty(
         name="Offset Y",
         description="Offset from area edges",
         subtype='PIXEL',

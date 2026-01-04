@@ -1,3 +1,4 @@
+# pyright: reportInvalidTypeForm=false
 # editors/hpanel_group.py - Hidden Panel Group editor
 # LAYER = "editors"
 #
@@ -6,6 +7,8 @@
 LAYER = "editors"
 
 import bpy
+from bpy.props import IntProperty
+from bpy.types import Operator
 from .base import EditorBase
 from ..addon import get_prefs, temp_prefs, SAFE_MODE
 from ..ui.layout import lh
@@ -13,7 +16,7 @@ from ..ui import panels as PAU
 from ..ui import tag_redraw
 
 
-class PME_OT_hpanel_menu(bpy.types.Operator):
+class PME_OT_hpanel_menu(Operator):
     bl_idname = "pme.panel_hide_menu"
     bl_label = "Hide Panels"
     bl_description = "Hide panels"
@@ -32,13 +35,13 @@ class PME_OT_hpanel_menu(bpy.types.Operator):
         return {'FINISHED'}
 
 
-class PME_OT_hpanel_remove(bpy.types.Operator):
+class PME_OT_hpanel_remove(Operator):
     bl_idname = "pme.hpanel_remove"
     bl_label = "Unhide Panel"
     bl_description = "Unhide panel"
     bl_options = {'INTERNAL'}
 
-    idx: bpy.props.IntProperty()
+    idx: IntProperty()
 
     def execute(self, context):
         pm = get_prefs().selected_pm

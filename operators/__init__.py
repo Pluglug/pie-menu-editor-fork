@@ -1,3 +1,4 @@
+# pyright: reportInvalidTypeForm=false
 # operators/ - 編集・検索・ユーティリティ系オペレーター
 # LAYER = "operators"
 #
@@ -7,6 +8,9 @@
 LAYER = "operators"
 
 import bpy
+from bpy import props, types as bpy_types
+from props import BoolProperty, EnumProperty, FloatProperty, IntProperty, StringProperty
+from bpy_types import Operator
 import os
 import traceback
 from inspect import isclass
@@ -111,14 +115,14 @@ def popup_dialog_pie(event, draw, title=""):
 # WM_OT_pme_none moved to operators/utils.py
 
 
-class WM_OT_pm_select(bpy.types.Operator):
+class WM_OT_pm_select(Operator):
     bl_idname = "wm.pm_select"
     bl_label = "Select Item"
     bl_description = "Select an item to edit"
 
-    pm_name: bpy.props.StringProperty(options={'SKIP_SAVE'})
-    use_mode_icons: bpy.props.BoolProperty(options={'SKIP_SAVE'})
-    mode: bpy.props.EnumProperty(
+    pm_name: StringProperty(options={'SKIP_SAVE'})
+    use_mode_icons: BoolProperty(options={'SKIP_SAVE'})
+    mode: EnumProperty(
         items=PM_ITEMS_M, default=set(), options={'SKIP_SAVE', 'ENUM_FLAG'}
     )
 
@@ -182,7 +186,7 @@ class WM_OT_pm_select(bpy.types.Operator):
 # PME_OT_pm_search_and_select moved to operators/search.py
 
 
-class WM_OT_pme_user_command_exec(bpy.types.Operator):
+class WM_OT_pme_user_command_exec(Operator):
     bl_idname = "wm.pme_user_command_exec"
     bl_label = ""
     bl_description = "Execute python code"
@@ -190,9 +194,9 @@ class WM_OT_pme_user_command_exec(bpy.types.Operator):
 
     cmds = []
 
-    menu: bpy.props.StringProperty(options={'SKIP_SAVE', 'HIDDEN'})
-    slot: bpy.props.StringProperty(options={'SKIP_SAVE', 'HIDDEN'})
-    cmd: bpy.props.StringProperty(
+    menu: StringProperty(options={'SKIP_SAVE', 'HIDDEN'})
+    slot: StringProperty(options={'SKIP_SAVE', 'HIDDEN'})
+    cmd: StringProperty(
         name="Python Code",
         description="Python Code",
         maxlen=MAX_STR_LEN,
@@ -212,7 +216,7 @@ class WM_OT_pme_user_command_exec(bpy.types.Operator):
         return self.execute(context)
 
 
-class PME_OT_exec(bpy.types.Operator):
+class PME_OT_exec(Operator):
     bl_idname = "pme.exec"
     bl_label = ""
     bl_description = "Execute python code"
@@ -220,7 +224,7 @@ class PME_OT_exec(bpy.types.Operator):
 
     cmds = []
 
-    cmd: bpy.props.StringProperty(
+    cmd: StringProperty(
         name="Python Code",
         description="Python Code",
         maxlen=MAX_STR_LEN,
@@ -253,7 +257,7 @@ class PME_OT_sticky_key_base:
     active_instance = None
     idx = 0
 
-    pm_name: bpy.props.StringProperty(
+    pm_name: StringProperty(
         name="Menu Name", maxlen=MAX_STR_LEN, options={'SKIP_SAVE', 'HIDDEN'}
     )
 
@@ -414,27 +418,27 @@ class PME_OT_sticky_key_base:
         return ret
 
 
-class PME_OT_sticky_key(PME_OT_sticky_key_base, bpy.types.Operator):
+class PME_OT_sticky_key(PME_OT_sticky_key_base, Operator):
     pass
 
 
-class PME_OT_timeout(bpy.types.Operator):
+class PME_OT_timeout(Operator):
     bl_idname = "pme.timeout"
     bl_label = "Timeout"
 
-    cmd: bpy.props.StringProperty(
+    cmd: StringProperty(
         name="Python code",
         description="Python code",
         maxlen=MAX_STR_LEN,
         options={'SKIP_SAVE', 'HIDDEN'},
     )
-    delay: bpy.props.FloatProperty(
+    delay: FloatProperty(
         name="Delay (s)",
         description="Delay in seconds",
         default=0.0001,
         options={'SKIP_SAVE', 'HIDDEN'},
     )
-    # area: bpy.props.EnumProperty(
+    # area: EnumProperty(
     #     name="Area",
     #     items=CC.AreaEnumHelper.gen_items_with_current(),
     #     options={'SKIP_SAVE'})
@@ -488,17 +492,17 @@ class PME_OT_timeout(bpy.types.Operator):
         return self.execute(context)
 
 
-class PME_OT_restore_mouse_pos(bpy.types.Operator):
+class PME_OT_restore_mouse_pos(Operator):
     bl_idname = "pme.restore_mouse_pos"
     bl_label = ""
     bl_options = {'INTERNAL'}
 
     inst = None
 
-    key: bpy.props.StringProperty(options={'SKIP_SAVE'})
-    x: bpy.props.IntProperty(options={'SKIP_SAVE'})
-    y: bpy.props.IntProperty(options={'SKIP_SAVE'})
-    mode: bpy.props.IntProperty(options={'SKIP_SAVE'})
+    key: StringProperty(options={'SKIP_SAVE'})
+    x: IntProperty(options={'SKIP_SAVE'})
+    y: IntProperty(options={'SKIP_SAVE'})
+    mode: IntProperty(options={'SKIP_SAVE'})
 
     def modal(self, context, event):
         # prop = pp.parse(pme.context.pm.data)
@@ -570,7 +574,7 @@ class PME_OT_modal_base:
     prop_data = PropertyData()
     active = None
 
-    pm_name: bpy.props.StringProperty(options={'SKIP_SAVE'})
+    pm_name: StringProperty(options={'SKIP_SAVE'})
 
     def draw(self, context):
         pass
@@ -635,7 +639,7 @@ class PME_OT_modal_base:
                 value = self.prop_data.rna_prop.default
 
             if self.prop_data.rna_prop:
-                if self.prop_data.rna_type == bpy.types.EnumProperty:
+                if self.prop_data.rna_type == EnumProperty:
                     enums = self.prop_data.rna_prop.enum_items.keys()
                     if value not in enums:
                         message_box(
@@ -649,13 +653,13 @@ class PME_OT_modal_base:
                         index %= len(enums)
                     new_value = enums[index]
 
-                elif self.prop_data.rna_type == bpy.types.IntProperty:
+                elif self.prop_data.rna_type == IntProperty:
                     new_value = value + delta
 
-                elif self.prop_data.rna_type == bpy.types.FloatProperty:
+                elif self.prop_data.rna_type == FloatProperty:
                     new_value = value + delta
 
-                elif self.prop_data.rna_type == bpy.types.BoolProperty:
+                elif self.prop_data.rna_type == BoolProperty:
                     new_value = delta > 0 if pr.use_mouse_threshold_bool else not value
 
         if value is None:
@@ -816,9 +820,9 @@ class PME_OT_modal_base:
                         self.update_prop_data(pmi)
                         if (
                             not pr.use_mouse_threshold_bool
-                            and self.prop_data.rna_type == bpy.types.BoolProperty
+                            and self.prop_data.rna_type == BoolProperty
                             or not pr.use_mouse_threshold_enum
-                            and self.prop_data.rna_type == bpy.types.EnumProperty
+                            and self.prop_data.rna_type == EnumProperty
                         ):
                             self.execute_prop_pmi(pmi, 1)
                             return {'RUNNING_MODAL'}
@@ -1086,15 +1090,15 @@ class PME_OT_modal_base:
         return {'RUNNING_MODAL'}
 
 
-class PME_OT_modal_grab(PME_OT_modal_base, bpy.types.Operator):
+class PME_OT_modal_grab(PME_OT_modal_base, Operator):
     bl_idname = "pme.modal_grab"
 
 
-class PME_OT_modal(PME_OT_modal_base, bpy.types.Operator):
+class PME_OT_modal(PME_OT_modal_base, Operator):
     bl_options = {'REGISTER'}
 
 
-class PME_OT_restore_pie_prefs(bpy.types.Operator, CTU.HeadModalHandler):
+class PME_OT_restore_pie_prefs(Operator, CTU.HeadModalHandler):
     bl_idname = "pme.restore_pie_prefs"
     bl_label = "Internal (PME)"
     bl_options = {'REGISTER'}
@@ -1103,7 +1107,7 @@ class PME_OT_restore_pie_prefs(bpy.types.Operator, CTU.HeadModalHandler):
         get_prefs().pie_menu_prefs.restore()
 
 
-class PME_OT_restore_pie_radius(bpy.types.Operator):
+class PME_OT_restore_pie_radius(Operator):
     bl_idname = "pme.restore_pie_radius"
     bl_label = "Internal (PME)"
     bl_options = {'INTERNAL'}
@@ -1129,7 +1133,7 @@ class PME_OT_restore_pie_radius(bpy.types.Operator):
         return {'RUNNING_MODAL'}
 
 
-class WM_OT_pme_user_pie_menu_call(bpy.types.Operator):
+class WM_OT_pme_user_pie_menu_call(Operator):
     bl_idname = "wm.pme_user_pie_menu_call"
     bl_label = "Call Menu (PME)"
     bl_description = "Call PME menu"
@@ -1142,10 +1146,10 @@ class WM_OT_pme_user_pie_menu_call(bpy.types.Operator):
     # pm_handler_type = None
     # pm_handler_time = None
 
-    pie_menu_name: bpy.props.StringProperty(options={'SKIP_SAVE'})
-    invoke_mode: bpy.props.StringProperty(options={'SKIP_SAVE'})
-    keymap: bpy.props.StringProperty(options={'HIDDEN', 'SKIP_SAVE'})
-    slot: bpy.props.IntProperty(default=-1, options={'SKIP_SAVE'})
+    pie_menu_name: StringProperty(options={'SKIP_SAVE'})
+    invoke_mode: StringProperty(options={'SKIP_SAVE'})
+    keymap: StringProperty(options={'HIDDEN', 'SKIP_SAVE'})
+    slot: IntProperty(default=-1, options={'SKIP_SAVE'})
 
     # @staticmethod
     # def restore_pie_menu_prefs():
@@ -1427,7 +1431,7 @@ class WM_OT_pme_user_pie_menu_call(bpy.types.Operator):
 
         tp_name, _, _ = U.extract_str_flags_b(pm.name, CC.F_RIGHT, CC.F_PRE)
 
-        is_header = hasattr(bpy.types, tp_name) and (
+        is_header = hasattr(bpy_types, tp_name) and (
             '_HT_' in tp_name or tp_name.endswith("_editor_menus")
         )
 
@@ -2055,12 +2059,12 @@ class WM_OT_pme_user_pie_menu_call(bpy.types.Operator):
         return self.execute_menu(context, event)
 
 
-class WM_OT_pme_user_dialog_call(bpy.types.Operator, PopupOperator):
+class WM_OT_pme_user_dialog_call(Operator, PopupOperator):
     bl_idname = "wm.pme_user_dialog_call"
     bl_label = ""
     bl_options = {'INTERNAL'}
 
-    pie_menu_name: bpy.props.StringProperty(
+    pie_menu_name: StringProperty(
         name="Popup Dialog Name", description="Popup Dialog name"
     )
 
@@ -2083,7 +2087,7 @@ class WM_OT_pme_user_dialog_call(bpy.types.Operator, PopupOperator):
         return PopupOperator.invoke(self, context, event)
 
 
-class WM_OT_pme_keyconfig_wait(bpy.types.Operator):
+class WM_OT_pme_keyconfig_wait(Operator):
     bl_idname = "wm.pme_keyconfig_wait"
     bl_label = ""
     bl_options = {'INTERNAL'}
@@ -2115,7 +2119,7 @@ class WM_OT_pme_keyconfig_wait(bpy.types.Operator):
         return {'RUNNING_MODAL'}
 
 
-class WM_OT_pmi_submenu_select(bpy.types.Operator):
+class WM_OT_pmi_submenu_select(Operator):
     bl_idname = "wm.pmi_submenu_select"
     bl_label = ""
     bl_description = "Select a menu"
@@ -2126,8 +2130,8 @@ class WM_OT_pmi_submenu_select(bpy.types.Operator):
         pr = get_prefs()
         return [(k, k, "") for k in sorted(pr.pie_menus.keys())]
 
-    pm_item: bpy.props.IntProperty()
-    enumprop: bpy.props.EnumProperty(items=get_items)
+    pm_item: IntProperty()
+    enumprop: EnumProperty(items=get_items)
 
     def execute(self, context):
         pr = get_prefs()
@@ -2149,13 +2153,13 @@ class WM_OT_pmi_submenu_select(bpy.types.Operator):
 # PME_OT_addonpref_search moved to operators/search.py
 
 
-class PME_OT_pmi_custom_set(bpy.types.Operator):
+class PME_OT_pmi_custom_set(Operator):
     bl_idname = "pme.pmi_custom_set"
     bl_label = ""
     bl_description = "Draw custom layout of widgets"
     bl_options = {'INTERNAL'}
 
-    mode: bpy.props.EnumProperty(
+    mode: EnumProperty(
         items=(
             ('LABEL', "Label", "", 'SYNTAX_OFF', 0),
             ('PALETTES', "Palettes", "", 'COLOR', 1),
@@ -2288,7 +2292,7 @@ class PME_OT_pmi_custom_set(bpy.types.Operator):
 # PME_OT_pmi_area_search moved to operators/search.py
 
 
-class WM_OT_pmidata_hints_show(bpy.types.Operator):
+class WM_OT_pmidata_hints_show(Operator):
     bl_idname = "wm.pmidata_hints_show"
     bl_label = ""
     bl_description = "Hints"
@@ -2309,8 +2313,8 @@ class WM_OT_pmidata_hints_show(bpy.types.Operator):
         lh.sep()
         lh.label("C = bpy.context", 'LAYER_USED')
         lh.label("D = bpy.data", 'LAYER_USED')
-        lh.label("T = bpy.types", 'LAYER_USED')
-        lh.label("P = bpy.props", 'LAYER_USED')
+        lh.label("T = bpy_types", 'LAYER_USED')
+        lh.label("P = props", 'LAYER_USED')
 
         if mode == 'CUSTOM':
             lh.label("L = layout", 'LAYER_USED')
@@ -2338,7 +2342,7 @@ class WM_OT_pmidata_hints_show(bpy.types.Operator):
         return {'FINISHED'}
 
 
-class PME_OT_pmidata_specials_call(bpy.types.Operator):
+class PME_OT_pmidata_specials_call(Operator):
     bl_idname = "pme.pmidata_specials_call"
     bl_label = ""
     bl_description = "Examples"
@@ -2523,7 +2527,7 @@ class PME_OT_pmidata_specials_call(bpy.types.Operator):
 # PME_OT_script_open moved to operators/script.py
 
 
-class PME_OT_button_add(bpy.types.Operator):
+class PME_OT_button_add(Operator):
     bl_idname = "pme.button_add"
     bl_label = "Add Button"
     bl_description = "Add the button to the menu"

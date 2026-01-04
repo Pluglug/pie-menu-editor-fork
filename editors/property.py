@@ -1,3 +1,4 @@
+# pyright: reportInvalidTypeForm=false
 # editors/property.py - Property editor
 # LAYER = "editors"
 #
@@ -6,6 +7,9 @@
 LAYER = "editors"
 
 import bpy
+from bpy import types as bpy_types
+from bpy.props import BoolProperty, EnumProperty, IntProperty, StringProperty
+from bpy.types import Operator
 from .. import pme
 from ..core.props import props as pme_props
 from .base import (
@@ -365,7 +369,7 @@ def gen_default_value(pm, use_pmi=False):
 def prop_by_type(prop_type, is_vector=False):
     name = "VectorProperty" if is_vector else "Property"
     name = prop_type.title() + name
-    return getattr(bpy.props, name)
+    return getattr(props, name)
 
 
 def pm_to_value(pm, name):
@@ -445,7 +449,7 @@ def register_user_property(pm):
                 logw("PME: removed empty set default", f"pm={pm.name}")
 
     pmi = pm.pmis.get('CLASS', None)
-    cls = getattr(bpy.types, pmi.text) if pmi else pr.props.__class__
+    cls = getattr(bpy_types, pmi.text) if pmi else pr.props.__class__
 
     # Guard against corrupted user properties crashing the entire addon registration
     try:
@@ -461,7 +465,7 @@ def unregister_user_property(pm):
         del pr.props[pm.name]
 
     pmi = pm.pmis.get('CLASS', None)
-    cls = getattr(bpy.types, pmi.text) if pmi else pr.props.__class__
+    cls = getattr(bpy_types, pmi.text) if pmi else pr.props.__class__
     if hasattr(cls, pm.name):
         delattr(cls, pm.name)
 
@@ -501,7 +505,7 @@ def update_user_property(self=None, context=None):
     pm = get_prefs().selected_pm
     ep = temp_prefs().ed_props
     value = ep.ed_default
-    if isinstance(value, bpy.types.bpy_prop_array):
+    if isinstance(value, bpy_types.bpy_prop_array):
         value = list(value)
 
     update_arg_pmi(pm, "default", value)
@@ -521,7 +525,7 @@ def update_user_property(self=None, context=None):
     register_user_property(pm)
 
 
-class PME_OT_prop_class_set(bpy.types.Operator):
+class PME_OT_prop_class_set(Operator):
     bl_idname = "pme.prop_class_set"
     bl_label = "Internal (PME)"
     bl_description = "Where to store the data of the property"
@@ -534,9 +538,9 @@ class PME_OT_prop_class_set(bpy.types.Operator):
         if not PME_OT_prop_class_set.enum_items:
             enum_items = []
 
-            ID = bpy.types.ID
-            for tp_name in dir(bpy.types):
-                tp = getattr(bpy.types, tp_name)
+            ID = bpy_types.ID
+            for tp_name in dir(bpy_types):
+                tp = getattr(bpy_types, tp_name)
                 if isinstance(tp, type) and \
                         issubclass(tp, ID) and tp is not ID:
                     enum_items.append((
@@ -546,8 +550,8 @@ class PME_OT_prop_class_set(bpy.types.Operator):
 
         return PME_OT_prop_class_set.enum_items
 
-    item: bpy.props.EnumProperty(items=get_items, options={'SKIP_SAVE'})
-    add: bpy.props.BoolProperty(options={'SKIP_SAVE'})
+    item: EnumProperty(items=get_items, options={'SKIP_SAVE'})
+    add: BoolProperty(options={'SKIP_SAVE'})
 
     def execute(self, context):
         PME_OT_prop_class_set.enum_items = None
@@ -586,14 +590,14 @@ class PME_OT_prop_class_set(bpy.types.Operator):
         return {'FINISHED'}
 
 
-class PME_OT_prop_script_set(bpy.types.Operator):
+class PME_OT_prop_script_set(Operator):
     bl_idname = "pme.prop_script_set"
     bl_label = "Internal (PME)"
     bl_description = "Add/remove the function"
     bl_options = {'INTERNAL'}
 
-    add: bpy.props.BoolProperty(options={'SKIP_SAVE'})
-    mode: bpy.props.EnumProperty(
+    add: BoolProperty(options={'SKIP_SAVE'})
+    mode: EnumProperty(
         items=(
             ('GET', "", ""),
             ('SET', "", ""),
@@ -641,7 +645,7 @@ class PME_OT_prop_script_set(bpy.types.Operator):
         return {'FINISHED'}
 
 
-class PME_OT_prop_pmi_move(MoveItemOperator, bpy.types.Operator):
+class PME_OT_prop_pmi_move(MoveItemOperator, Operator):
     bl_idname = "pme.prop_pmi_move"
 
     def filter_item(self, pmi, idx):
@@ -715,19 +719,19 @@ class Editor(EditorBase):
         self.unregister_props()
 
         self.register_temp_prop(
-            "ed_preview_path", bpy.props.StringProperty(description="Preview path")
+            "ed_preview_path", StringProperty(description="Preview path")
         )
 
         self.register_pmi_prop(
             "ed_text",
-            bpy.props.StringProperty(
+            StringProperty(
                 get=ed_text_get, set=ed_text_set, maxlen=CC.MAX_STR_LEN
             ),
         )
 
         self.register_temp_prop(
             "ed_type",
-            bpy.props.EnumProperty(
+            EnumProperty(
                 name="Property Type",
                 description="Property type",
                 items=(
@@ -744,7 +748,7 @@ class Editor(EditorBase):
 
         self.register_temp_prop(
             "ed_save",
-            bpy.props.BoolProperty(
+            BoolProperty(
                 name="Restore Default Value",
                 description="Restore Default Value",
                 get=save_get,
@@ -754,7 +758,7 @@ class Editor(EditorBase):
 
         self.register_temp_prop(
             "ed_exp",
-            bpy.props.BoolProperty(
+            BoolProperty(
                 name="Expand",
                 description="Expand items",
                 get=exp_get,
@@ -777,7 +781,7 @@ class Editor(EditorBase):
 
         self.register_arg_prop(
             pm,
-            bpy.props.EnumProperty,
+            EnumProperty,
             "default",
             "Default Value",
             items=enum_items,
@@ -853,7 +857,7 @@ class Editor(EditorBase):
 
             self.register_temp_prop(
                 "ed_multiselect",
-                bpy.props.BoolProperty(
+                BoolProperty(
                     name="Multi-Select", get=multiselect_get, set=multiselect_set
                 ),
             )
@@ -864,7 +868,7 @@ class Editor(EditorBase):
         if pm.poll_cmd != 'STRING':
             self.register_temp_prop(
                 "ed_hor_exp",
-                bpy.props.BoolProperty(
+                BoolProperty(
                     name="Horizontal Layout", get=hor_exp_get, set=hor_exp_set
                 ),
             )
@@ -872,7 +876,7 @@ class Editor(EditorBase):
         if pm.poll_cmd in {'INT', 'FLOAT', 'BOOL'}:
             self.register_temp_prop(
                 "ed_size",
-                bpy.props.IntProperty(
+                IntProperty(
                     name="Property Size", min=1, max=32, get=size_get, set=size_set
                 ),
             )
@@ -901,23 +905,23 @@ class Editor(EditorBase):
             )
             if pm.poll_cmd == 'FLOAT':
                 self.register_arg_prop(
-                    pm, bpy.props.IntProperty, "precision", "Precision", 2, min=0, max=6
+                    pm, IntProperty, "precision", "Precision", 2, min=0, max=6
                 )
                 self.register_arg_prop(
                     pm,
-                    bpy.props.EnumProperty,
+                    EnumProperty,
                     "unit",
                     "Unit",
                     update_dynamic_props=True,
                     items=gen_enum_items(
-                        bpy.types.FloatProperty.bl_rna.properties['unit']
+                        bpy_types.FloatProperty.bl_rna.properties['unit']
                     ),
                 )
 
         if pm.poll_cmd in {'INT', 'FLOAT', 'STRING'}:
             self.register_arg_prop(
                 pm,
-                bpy.props.EnumProperty,
+                EnumProperty,
                 "subtype",
                 "Subtype",
                 update_dynamic_props=True,

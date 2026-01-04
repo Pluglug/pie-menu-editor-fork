@@ -1,3 +1,4 @@
+# pyright: reportInvalidTypeForm=false
 # editors/menu.py - Regular Menu editor
 # LAYER = "editors"
 #
@@ -6,6 +7,8 @@
 LAYER = "editors"
 
 import bpy
+from bpy.props import BoolProperty, IntProperty, StringProperty
+from bpy.types import Operator
 from .base import (
     EditorBase,
     PME_OT_pmi_copy,
@@ -25,14 +28,14 @@ from ..core.constants import SPACER_SCALE_Y, SEPARATOR_SCALE_Y
 from ..core.props import props
 
 
-class WM_OT_rmi_add(bpy.types.Operator):
+class WM_OT_rmi_add(Operator):
     bl_idname = "wm.rmi_add"
     bl_label = "Add Slot or Column"
     bl_description = "Add a slot or column"
     bl_options = {'INTERNAL'}
 
-    mode: bpy.props.StringProperty()
-    index: bpy.props.IntProperty()
+    mode: StringProperty()
+    index: IntProperty()
 
     def execute(self, context):
         pm = get_prefs().selected_pm
@@ -64,14 +67,14 @@ class WM_OT_rmi_add(bpy.types.Operator):
         return {'FINISHED'}
 
 
-class WM_OT_rmi_move(bpy.types.Operator):
+class WM_OT_rmi_move(Operator):
     bl_idname = "wm.rmi_move"
     bl_label = ""
     bl_description = "Move the item"
     bl_options = {'INTERNAL'}
 
-    pm_item: bpy.props.IntProperty()
-    idx: bpy.props.IntProperty()
+    pm_item: IntProperty()
+    idx: IntProperty()
 
     def _draw(self, menu, context):
         pm = get_prefs().selected_pm
@@ -127,7 +130,7 @@ class WM_OT_rmi_move(bpy.types.Operator):
         return {'FINISHED'}
 
 
-class WM_OT_rm_col_specials_call(bpy.types.Operator):
+class WM_OT_rm_col_specials_call(Operator):
     bl_idname = "wm.rm_col_specials_call"
     bl_label = ""
     bl_description = "Menu"
@@ -135,7 +138,7 @@ class WM_OT_rm_col_specials_call(bpy.types.Operator):
 
     cur_col = Col()
 
-    col_idx: bpy.props.IntProperty()
+    col_idx: IntProperty()
 
     def _draw(self, menu, context):
         pr = get_prefs()
@@ -261,14 +264,14 @@ class WM_OT_rm_col_specials_call(bpy.types.Operator):
         return {'FINISHED'}
 
 
-class WM_OT_rm_col_move(bpy.types.Operator):
+class WM_OT_rm_col_move(Operator):
     bl_idname = "wm.rm_col_move"
     bl_label = ""
     bl_description = "Move the column"
     bl_options = {'INTERNAL'}
 
-    col_idx: bpy.props.IntProperty()
-    move_idx: bpy.props.IntProperty()
+    col_idx: IntProperty()
+    move_idx: IntProperty()
     cols = []
 
     def _draw(self, menu, context):
@@ -363,16 +366,16 @@ class WM_OT_rm_col_move(bpy.types.Operator):
         return {'FINISHED'}
 
 
-class WM_OT_rm_col_remove(bpy.types.Operator):
+class WM_OT_rm_col_remove(Operator):
     bl_idname = "wm.rm_col_remove"
     bl_label = ""
     bl_description = "Remove the column"
     bl_options = {'INTERNAL'}
 
-    col_idx: bpy.props.IntProperty()
-    col_last_idx: bpy.props.IntProperty()
-    ask: bpy.props.BoolProperty()
-    mode: bpy.props.StringProperty()
+    col_idx: IntProperty()
+    col_last_idx: IntProperty()
+    ask: BoolProperty()
+    mode: StringProperty()
 
     def _draw(self, menu, context):
         lh.lt(menu.layout)
@@ -413,14 +416,14 @@ class WM_OT_rm_col_remove(bpy.types.Operator):
         return {'FINISHED'}
 
 
-class WM_OT_rm_col_copy(bpy.types.Operator):
+class WM_OT_rm_col_copy(Operator):
     bl_idname = "wm.rm_col_copy"
     bl_label = "Copy Column"
     bl_description = "Copy the column"
     bl_options = {'INTERNAL'}
 
-    idx: bpy.props.IntProperty()
-    last_idx: bpy.props.IntProperty()
+    idx: IntProperty()
+    last_idx: IntProperty()
 
     def execute(self, context):
         pr = get_prefs()
@@ -437,15 +440,15 @@ class WM_OT_rm_col_copy(bpy.types.Operator):
         return {'FINISHED'}
 
 
-class WM_OT_rm_col_paste(bpy.types.Operator):
+class WM_OT_rm_col_paste(Operator):
     bl_idname = "wm.rm_col_paste"
     bl_label = "Paste Column"
     bl_description = "Paste the column"
     bl_options = {'INTERNAL'}
 
-    idx: bpy.props.IntProperty()
-    last_idx: bpy.props.IntProperty()
-    left: bpy.props.BoolProperty()
+    idx: IntProperty()
+    last_idx: IntProperty()
+    left: BoolProperty()
 
     def execute(self, context):
         pr = get_prefs()
@@ -491,13 +494,13 @@ class WM_OT_rm_col_paste(bpy.types.Operator):
         return get_prefs().rmc_clipboard is not None
 
 
-class WM_OT_rmi_specials_call(bpy.types.Operator):
+class WM_OT_rmi_specials_call(Operator):
     bl_idname = "wm.rmi_specials_call"
     bl_label = ""
     bl_description = "Menu"
     bl_options = {'INTERNAL'}
 
-    pm_item: bpy.props.IntProperty()
+    pm_item: IntProperty()
 
     def _draw(self, menu, context):
         pr = get_prefs()

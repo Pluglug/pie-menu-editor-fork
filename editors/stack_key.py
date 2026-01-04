@@ -1,4 +1,5 @@
-﻿# editors/stack_key.py - Stack Key editor
+﻿# pyright: reportInvalidTypeForm=false
+# editors/stack_key.py - Stack Key editor
 # LAYER = "editors"
 #
 # Moved from: ed_stack_key.py (PME2 layer separation)
@@ -6,6 +7,8 @@
 LAYER = "editors"
 
 import bpy
+from bpy import props
+from bpy.props import BoolProperty
 from ..core.props import props
 from .base import EditorBase
 
@@ -29,7 +32,7 @@ class Editor(EditorBase):
     def register_props(self, pm):
         self.register_pm_prop(
             "ed_undo",
-            bpy.props.BoolProperty(
+            BoolProperty(
                 name="Undo Previous Command",
                 description="Undo previous command",
                 get=lambda s: s.get_data("s_undo"),
@@ -38,7 +41,7 @@ class Editor(EditorBase):
         )
         self.register_pm_prop(
             "ed_state",
-            bpy.props.BoolProperty(
+            BoolProperty(
                 name="Remember State",
                 description="Remember state",
                 get=lambda s: s.get_data("s_state"),

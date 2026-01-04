@@ -1,10 +1,11 @@
+# pyright: reportInvalidTypeForm=false
 # infra/collections.py - Collection manipulation helpers and operator mixins
 # LAYER = "infra"
 #
 # Moved from: collection_utils.py (PME2 layer separation)
 #
 # Why infra (not core):
-#   - Depends on bpy.props, bpy.types.PropertyGroup
+#   - Depends on bpy.props, PropertyGroup
 #   - Contains operator mixin classes (AddItemOperator, MoveItemOperator, etc.)
 #   - Uses ConfirmBoxHandler from bl_utils
 #   - These are Blender-specific infrastructure, not pure data models
@@ -12,6 +13,8 @@
 LAYER = "infra"
 
 import bpy
+from bpy.props import BoolProperty, IntProperty
+from bpy.types import PropertyGroup
 from .. import pme
 from ..ui.layout import lh
 from ..bl_utils import ConfirmBoxHandler
@@ -82,7 +85,7 @@ class AddItemOperator:
     bl_description = "Add an item"
     bl_options = {'INTERNAL'}
 
-    idx: bpy.props.IntProperty(default=-1, options={'SKIP_SAVE'})
+    idx: IntProperty(default=-1, options={'SKIP_SAVE'})
 
     def get_collection(self):
         return None
@@ -110,10 +113,10 @@ class MoveItemOperator:
     bl_description = "Move the item"
     bl_options = {'INTERNAL'}
 
-    old_idx: bpy.props.IntProperty(default=-1, options={'SKIP_SAVE'})
-    old_idx_last: bpy.props.IntProperty(default=-1, options={'SKIP_SAVE'})
-    new_idx: bpy.props.IntProperty(default=-1, options={'SKIP_SAVE'})
-    swap: bpy.props.BoolProperty(options={'SKIP_SAVE'})
+    old_idx: IntProperty(default=-1, options={'SKIP_SAVE'})
+    old_idx_last: IntProperty(default=-1, options={'SKIP_SAVE'})
+    new_idx: IntProperty(default=-1, options={'SKIP_SAVE'})
+    swap: BoolProperty(options={'SKIP_SAVE'})
 
     def get_collection(self):
         return None
@@ -205,7 +208,7 @@ class RemoveItemOperator(ConfirmBoxHandler):
     bl_description = "Remove the item"
     bl_options = {'INTERNAL'}
 
-    idx: bpy.props.IntProperty(options={'SKIP_SAVE'})
+    idx: IntProperty(options={'SKIP_SAVE'})
 
     def get_collection(self):
         return None
@@ -226,7 +229,7 @@ class RemoveItemOperator(ConfirmBoxHandler):
         self.finish()
 
 
-class BaseCollectionItem(bpy.types.PropertyGroup):
+class BaseCollectionItem(PropertyGroup):
     pass
 
 

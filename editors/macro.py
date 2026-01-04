@@ -1,4 +1,5 @@
-﻿# editors/macro.py - Macro Operator editor
+# pyright: reportInvalidTypeForm=false
+# editors/macro.py - Macro Operator editor
 # LAYER = "editors"
 #
 # Moved from: ed_macro.py (PME2 layer separation)
@@ -6,6 +7,8 @@
 LAYER = "editors"
 
 import bpy
+from bpy.props import StringProperty
+from bpy.types import Operator
 from .. import pme
 from ..addon import get_prefs
 from ..core.constants import MAX_STR_LEN
@@ -22,7 +25,7 @@ class PME_OT_macro_exec_base:
 
     macro_globals = None
 
-    cmd: bpy.props.StringProperty(maxlen=MAX_STR_LEN, options={'SKIP_SAVE', 'HIDDEN'})
+    cmd: StringProperty(maxlen=MAX_STR_LEN, options={'SKIP_SAVE', 'HIDDEN'})
 
     def execute(self, context):
         if not pme.context.exe(self.cmd, PME_OT_macro_exec_base.macro_globals):
@@ -37,12 +40,12 @@ class PME_OT_macro_exec_base:
         return ret
 
 
-class PME_OT_macro_exec1(bpy.types.Operator):
+class PME_OT_macro_exec1(Operator):
     bl_idname = "pme.macro_exec1"
     bl_label = "Macro Command"
     bl_options = {'INTERNAL'}
 
-    cmd: bpy.props.StringProperty(maxlen=MAX_STR_LEN, options={'SKIP_SAVE', 'HIDDEN'})
+    cmd: StringProperty(maxlen=MAX_STR_LEN, options={'SKIP_SAVE', 'HIDDEN'})
 
     def execute(self, context):
         PME_OT_macro_exec_base.macro_globals = pme.context.gen_globals()

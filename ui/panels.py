@@ -1,3 +1,4 @@
+# pyright: reportInvalidTypeForm=false
 # ui/panels.py - パネル登録・表示ヘルパー
 # LAYER = "ui"
 #
@@ -12,6 +13,9 @@
 LAYER = "ui"
 
 import bpy
+from bpy import types as bpy_types
+from bpy.props import BoolProperty, IntProperty, StringProperty
+from bpy_types import Header, Menu, Panel, Operator, UILayout
 import re
 from inspect import isclass
 from itertools import chain
@@ -44,20 +48,20 @@ def panel_types_sorter(tp, value=0):
         return value
     else:
         return panel_types_sorter(
-            getattr(bpy.types, pid, _hidden_panels.get(pid, None)), value + 1
+            getattr(bpy_types, pid, _hidden_panels.get(pid, None)), value + 1
         )
 
 
 def panel_type_names_sorter(tp_name):
-    return panel_types_sorter(getattr(bpy.types, tp_name, None))
+    return panel_types_sorter(getattr(bpy_types, tp_name, None))
 
 
 def hide_panel(tp_name):
     if tp_name in _hidden_panels:
         pass
 
-    elif hasattr(bpy.types, tp_name):
-        tp = getattr(bpy.types, tp_name)
+    elif hasattr(bpy_types, tp_name):
+        tp = getattr(bpy_types, tp_name)
         bpy.utils.unregister_class(tp)
         _hidden_panels[tp_name] = tp
 
@@ -85,7 +89,7 @@ def unhide_panels(tp_names=None):
         if pid is None:
             return value
         else:
-            return _sort_value(bpy.types, pid, value + 1)
+            return _sort_value(bpy_types, pid, value + 1)
 
     def sorter(tp_name):
         tp = _hidden_panels.get(tp_name, None)
@@ -212,7 +216,7 @@ def add_panel(
         defs["bl_parent_id"] = parent
         defs["bl_options"] = {'DEFAULT_CLOSED'}
 
-    base = bpy.types.Header if region == 'HEADER' else bpy.types.Panel
+    base = Header if region == 'HEADER' else Panel
 
     tp = type(tp_name, (base,), defs)
 
@@ -297,10 +301,10 @@ def move_panel(name, old_idx, idx):
 def panel_context_items(self, context):
     if not _context_items:
         _context_items.append(('ANY', "Any Context", "", 'NODE_SEL', 0))
-        panel_tp = bpy.types.Panel
+        panel_tp = Panel
         contexts = set()
-        for tp_name in dir(bpy.types):
-            tp = getattr(bpy.types, tp_name, None)
+        for tp_name in dir(bpy_types):
+            tp = getattr(bpy_types, tp_name, None)
             if (
                 not tp
                 or tp == panel_tp
@@ -331,9 +335,9 @@ def panel_context_items(self, context):
 
 def bl_header_types():
     ret = []
-    header_tp = bpy.types.Header
-    for tp_name in dir(bpy.types):
-        tp = getattr(bpy.types, tp_name, None)
+    header_tp = Header
+    for tp_name in dir(bpy_types):
+        tp = getattr(bpy_types, tp_name, None)
         if not tp or not isclass(tp):
             continue
 
@@ -347,9 +351,9 @@ def bl_header_types():
 
 def bl_menu_types():
     ret = []
-    menu_tp = bpy.types.Menu
-    for tp_name in dir(bpy.types):
-        tp = getattr(bpy.types, tp_name, None)
+    menu_tp = Menu
+    for tp_name in dir(bpy_types):
+        tp = getattr(bpy_types, tp_name, None)
         if not tp or not isclass(tp):
             continue
 
@@ -363,12 +367,12 @@ def bl_menu_types():
 
 def bl_panel_types():
     ret = []
-    panel_tp = bpy.types.Panel
-    for tp_name in chain(dir(bpy.types), _hidden_panels.keys()):
+    panel_tp = Panel
+    for tp_name in chain(dir(bpy_types), _hidden_panels.keys()):
         tp = (
             _hidden_panels[tp_name]
             if tp_name in _hidden_panels
-            else getattr(bpy.types, tp_name, None)
+            else getattr(bpy_types, tp_name, None)
         )
         if not tp or not isclass(tp):
             continue
@@ -383,17 +387,17 @@ def bl_panel_types():
 
 def bl_panel_enum_items(include_hidden=True):
     ret = []
-    panel_tp = bpy.types.Panel
+    panel_tp = Panel
     panels = (
-        chain(dir(bpy.types), _hidden_panels.keys())
+        chain(dir(bpy_types), _hidden_panels.keys())
         if include_hidden
-        else dir(bpy.types)
+        else dir(bpy_types)
     )
     for tp_name in panels:
         tp = (
             _hidden_panels[tp_name]
             if tp_name in _hidden_panels
-            else getattr(bpy.types, tp_name, None)
+            else getattr(bpy_types, tp_name, None)
         )
         if not tp or not isclass(tp):
             continue
@@ -413,7 +417,7 @@ def bl_panel_enum_items(include_hidden=True):
     return ret
 
 
-class PME_OT_panel_toggle(bpy.types.Operator):
+class PME_OT_panel_toggle(Operator):
     bl_idname = "pme.panel_toggle"
     bl_label = ""
     bl_description = "Show/hide the panel"
@@ -421,7 +425,7 @@ class PME_OT_panel_toggle(bpy.types.Operator):
 
     collapsed_panels = set()
 
-    panel_id: bpy.props.StringProperty()
+    panel_id: StringProperty()
 
     def execute(self, context):
         if self.panel_id in self.__class__.collapsed_panels:
@@ -431,40 +435,40 @@ class PME_OT_panel_toggle(bpy.types.Operator):
         return {'FINISHED'}
 
 
-class PME_OT_panel_reset(bpy.types.Operator):
+class PME_OT_panel_reset(Operator):
     bl_idname = "pme.panel_reset"
     bl_label = ""
     bl_description = "Reset panel"
     bl_options = {'INTERNAL'}
 
-    item_id: bpy.props.StringProperty()
+    item_id: StringProperty()
 
     def execute(self, context):
         PLayout.idx_map[self.item_id].clear()
         return {'FINISHED'}
 
 
-class PME_OT_panel_editor_toggle(bpy.types.Operator):
+class PME_OT_panel_editor_toggle(Operator):
     bl_idname = "pme.panel_editor_toggle"
     bl_label = ""
     bl_description = "Toggle editor"
     bl_options = {'INTERNAL'}
 
-    idx: bpy.props.IntProperty()
+    idx: IntProperty()
 
     def execute(self, context):
         PLayout.editor = not PLayout.editor
         return {'FINISHED'}
 
 
-class PME_OT_btn_hide(bpy.types.Operator):
+class PME_OT_btn_hide(Operator):
     bl_idname = "pme.btn_hide"
     bl_label = ""
     bl_description = "Hide the button"
     bl_options = {'INTERNAL'}
 
-    idx: bpy.props.IntProperty()
-    item_id: bpy.props.StringProperty()
+    idx: IntProperty()
+    item_id: StringProperty()
 
     def execute(self, context):
         indices = PLayout.idx_map[self.item_id]
@@ -490,8 +494,8 @@ class PLayout:
     def save(layout, item_id):
         PLayout.active = True
         PLayout.item_id = item_id
-        PLayout.real_getattribute = bpy.types.UILayout.__getattribute__
-        bpy.types.UILayout.__getattribute__ = PLayout.getattribute
+        PLayout.real_getattribute = UILayout.__getattribute__
+        UILayout.__getattribute__ = PLayout.getattribute
         PLayout.real_operator = layout.operator
         PLayout.idx = 0
         # Guard against addon being unregistered
@@ -503,11 +507,11 @@ class PLayout:
     @staticmethod
     def restore():
         PLayout.active = False
-        if bpy.types.UILayout.__getattribute__ == PLayout.getattribute:
-            bpy.types.UILayout.__getattribute__ = PLayout.real_getattribute
+        if UILayout.__getattribute__ == PLayout.getattribute:
+            UILayout.__getattribute__ = PLayout.real_getattribute
 
     def getattribute(self, attr):
-        bpy.types.UILayout.__getattribute__ = PLayout.real_getattribute
+        UILayout.__getattribute__ = PLayout.real_getattribute
         PLayout.real_operator = getattr(self, "operator")
 
         if hasattr(PLayout, attr):
@@ -521,7 +525,7 @@ class PLayout:
         else:
             ret = getattr(self, attr)
 
-        bpy.types.UILayout.__getattribute__ = PLayout.getattribute
+        UILayout.__getattribute__ = PLayout.getattribute
         return ret
 
     def empty(*args, **kwargs):
@@ -772,7 +776,7 @@ class PLayout:
 
 
 def panel_type(panel):
-    return hidden_panel(panel) or getattr(bpy.types, panel, None)
+    return hidden_panel(panel) or getattr(bpy_types, panel, None)
 
 
 def panel_label(panel):
@@ -793,13 +797,13 @@ def panel_label(panel):
     return utitle(label)
 
 
-class PME_OT_popup_panel_menu(bpy.types.Operator):
+class PME_OT_popup_panel_menu(Operator):
     bl_idname = "pme.popup_panel_menu"
     bl_label = "Menu"
     bl_description = "Menu"
     bl_options = {'INTERNAL'}
 
-    panel: bpy.props.StringProperty()
+    panel: StringProperty()
 
     def draw_popup_panel_menu(self, menu, context):
         layout = menu.layout
@@ -833,13 +837,13 @@ def panel(
         if pt in _hidden_panels:
             pt = _hidden_panels[pt]
         else:
-            if not hasattr(bpy.types, pt):
+            if not hasattr(bpy_types, pt):
                 row = pme.context.layout.row(align=True)
                 row.alert = True
                 p = row.operator("pme.message_box", text="Panel not found")
                 p.message = "Panel '%s' not found" % pt
                 return True
-            pt = getattr(bpy.types, pt)
+            pt = getattr(bpy_types, pt)
     else:
         header_id = pt.__name__
 
@@ -998,7 +1002,7 @@ def register():
     pme.context.add_global("panel", panel)
 
     global _prefs_panel_types, _prefs_panel_polls
-    bpy_types = bpy.types
+    bpy_types = bpy_types
     _prefs_panel_types = [v for v in dir(bpy_types) if "USERPREF_PT" in v]
 
     def sorter(tp_name):
@@ -1012,7 +1016,7 @@ def register():
 
     types = []
     for k in _prefs_panel_types:
-        tp = getattr(bpy.types, k, None)
+        tp = getattr(bpy_types, k, None)
         if not tp:
             continue
 
@@ -1031,7 +1035,7 @@ def register():
     if handle_view is not None:
         logw("PME: Stale view handler detected in register() - possible unexpected reload")
         try:
-            bpy.types.SpaceView3D.draw_handler_remove(handle_view, 'WINDOW')
+            bpy_types.SpaceView3D.draw_handler_remove(handle_view, 'WINDOW')
             logi("PME: Stale view handler removed successfully")
         except (ValueError, RuntimeError) as e:
             logw(f"PME: Stale view handler was already invalid: {e}")
@@ -1040,17 +1044,17 @@ def register():
     if handle_props is not None:
         logw("PME: Stale props handler detected in register() - possible unexpected reload")
         try:
-            bpy.types.SpaceProperties.draw_handler_remove(handle_props, 'WINDOW')
+            bpy_types.SpaceProperties.draw_handler_remove(handle_props, 'WINDOW')
             logi("PME: Stale props handler removed successfully")
         except (ValueError, RuntimeError) as e:
             logw(f"PME: Stale props handler was already invalid: {e}")
         handle_props = None
 
     # Register new handlers
-    handle_view = bpy.types.SpaceView3D.draw_handler_add(
+    handle_view = bpy_types.SpaceView3D.draw_handler_add(
         draw_callback_view, (), 'WINDOW', 'POST_VIEW'
     )
-    # handle_props = bpy.types.SpaceProperties.draw_handler_add(
+    # handle_props = bpy_types.SpaceProperties.draw_handler_add(
     #     draw_callback_props, (), 'WINDOW', 'POST_VIEW')
 
 
@@ -1069,7 +1073,7 @@ def unregister():
 
     types = []
     for k in _prefs_panel_types:
-        tp = getattr(bpy.types, k, None)
+        tp = getattr(bpy_types, k, None)
         if not tp:
             continue
 
@@ -1089,14 +1093,14 @@ def unregister():
     global handle_view, handle_props
     if handle_view:
         try:
-            bpy.types.SpaceView3D.draw_handler_remove(handle_view, 'WINDOW')
+            bpy_types.SpaceView3D.draw_handler_remove(handle_view, 'WINDOW')
         except (ValueError, RuntimeError) as e:
             # This is expected during Reload Scripts - handler was already invalidated
             pass
         handle_view = None
     if handle_props:
         try:
-            bpy.types.SpaceProperties.draw_handler_remove(handle_props, 'WINDOW')
+            bpy_types.SpaceProperties.draw_handler_remove(handle_props, 'WINDOW')
         except (ValueError, RuntimeError) as e:
             pass
         handle_props = None
