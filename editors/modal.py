@@ -8,7 +8,7 @@ LAYER = "editors"
 import bpy
 from .. import pme
 from ..core.constants import MODAL_CMD_MODES, W_PMI_HOTKEY, I_MODAL_PROP_MOVE, W_PMI_EXPR
-from ..core.props import props
+from ..core.schema import schema
 from ..bl_utils import uname
 from .base import EditorBase
 from ..addon import temp_prefs
@@ -30,9 +30,9 @@ class PME_OT_prop_data_reset(bpy.types.Operator):
         return {'FINISHED'}
 
 
-props.BoolProperty("mo", "confirm", False)
-props.BoolProperty("mo", "block_ui", True)
-props.BoolProperty("mo", "lock", True)
+schema.BoolProperty("mo", "confirm", False)
+schema.BoolProperty("mo", "block_ui", True)
+schema.BoolProperty("mo", "lock", True)
 
 
 class Editor(EditorBase):

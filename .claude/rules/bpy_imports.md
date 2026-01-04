@@ -89,28 +89,24 @@ PME には2つの「props」系システムが存在する:
 | `bpy.props` | Blender モジュール | PropertyGroup 定義 |
 | `pme.schema` | PME の SchemaRegistry | メニュースキーマ定義 |
 
-### 現在（後方互換）
-
-```python
-# PME スキーマ登録 (core/props.py)
-from ..core.props import props
-props.IntProperty("pm", "pm_radius", -1)  # ← PME 専用
-
-# Blender プロパティ作成 (bpy.props)
-import bpy
-bpy.props.IntProperty(name="Radius")  # ← Blender 標準
-```
-
-### 将来（Phase 8-C 以降）
+### 推奨パターン（Phase 8-C 完了）
 
 ```python
 # PME スキーマ登録 (core/schema.py)
 from ..core.schema import schema
-schema.IntProperty("pm", "pm_radius", -1)  # ← 明確に区別
+schema.IntProperty("pm", "pm_radius", -1)  # ← PME 専用
 
 # Blender プロパティ作成 (bpy.props)
 from bpy.props import IntProperty
-prop: IntProperty(name="Radius")
+prop: IntProperty(name="Radius")  # ← Blender 標準
+```
+
+### 後方互換（deprecated）
+
+```python
+# 旧パターン（動作するが非推奨）
+from ..core.props import props  # → core/schema.py から再エクスポート
+props.IntProperty("pm", "pm_radius", -1)
 ```
 
 **詳細**: `@_docs/design/schema-rename-plan.md`

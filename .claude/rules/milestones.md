@@ -11,6 +11,7 @@
 | Phase 4-A (alpha.3) | ✅ | `core/props.py` 分離、#64 解消 |
 | Phase 4-B | ✅ | 標準名前空間、外部 API ファサード |
 | Phase 5-A | ✅ | オペレーター分離（#74）、base.py 71%削減 |
+| Phase 8-C | ✅ | Schema リネーム（props → schema） |
 
 ## 基本方針
 
@@ -22,7 +23,9 @@
 
 ```
 core/namespace.py → Stability, NAMESPACE_*, PUBLIC_NAMES, is_public()
-core/props.py     → PMEProp, PMEProps, ParsedData, props
+core/schema.py    → SchemaProp, SchemaRegistry, ParsedData, schema
+                  → (後方互換: PMEProp, PMEProps, props)
+core/props.py     → 後方互換エイリアス（deprecated, v3.0で削除予定）
 pme.py            → PMEContext, UserData, context
                   → execute(), evaluate() (Experimental)
                   → find_pm(), list_pms(), invoke_pm() (Experimental)
@@ -77,6 +80,7 @@ pme.py            → PMEContext, UserData, context
 |---------|------|------|
 | Phase 5-B | pme_types LAYER 変更 | 17 → 13 件 (-4) ✅ |
 | Phase 7 | bl_idname リテラル化 | 13 → 12 件 (-1) ✅ |
+| Phase 8-C | Schema リネーム | props → schema ✅ |
 
 ## 保留中のフェーズ
 
@@ -115,11 +119,19 @@ pme.py            → PMEContext, UserData, context
 | `WM_OT_pme_user_pie_menu_call` 切り出し | `_draw_item` が 3 箇所から参照 | 未着手 |
 | `prefs` UI 分離 | draw 系メソッドの依存が複雑 | 未着手 |
 
-### 8-C: Schema リネーム
+### 8-C: Schema リネーム ✅
 
 | タスク | 内容 | 状態 |
 |--------|------|------|
-| `pme.props` → `pme.schema` | 混乱防止のためリネーム | 未着手 |
+| `pme.props` → `pme.schema` | 混乱防止のためリネーム | ✅ 完了 |
+
+**完了内容**:
+- [x] `core/props.py` → `core/schema.py` リネーム
+- [x] `PMEProps` → `SchemaRegistry`, `PMEProp` → `SchemaProp`
+- [x] `props` → `schema` インスタンス
+- [x] 全 editors/ モジュールの import 更新
+- [x] pme.py, pme_types.py, operators/, ui/ の更新
+- [x] 後方互換エイリアスの維持
 
 **詳細**: `@_docs/design/schema-rename-plan.md`
 

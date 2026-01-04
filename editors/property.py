@@ -11,7 +11,7 @@ from bpy import types as bpy_types
 from bpy.props import BoolProperty, EnumProperty, IntProperty, StringProperty
 from bpy.types import Operator
 from .. import pme
-from ..core.props import props as pme_props
+from ..core.schema import schema as pme_schema
 from .base import (
     EditorBase,
     PME_OT_pmi_add,
@@ -670,11 +670,11 @@ class PME_OT_prop_pmi_move(MoveItemOperator, Operator):
         tag_redraw()
 
 
-pme_props.IntProperty("prop", "vector", 1)
-pme_props.BoolProperty("prop", "mulsel", False)
-pme_props.BoolProperty("prop", "hor_exp", True)
-pme_props.BoolProperty("prop", "exp", True)
-pme_props.BoolProperty("prop", "save", True)
+pme_schema.IntProperty("prop", "vector", 1)
+pme_schema.BoolProperty("prop", "mulsel", False)
+pme_schema.BoolProperty("prop", "hor_exp", True)
+pme_schema.BoolProperty("prop", "exp", True)
+pme_schema.BoolProperty("prop", "save", True)
 
 
 class Editor(EditorBase):

@@ -13,7 +13,7 @@ LAYER = "ui"
 
 import bpy
 from .. import pme
-from ..core.props import props
+from ..core.schema import schema
 from .. import c_utils as CTU
 from ..addon import get_prefs, print_exc, ic
 from ..core.constants import SCALE_X, SPACER_SCALE_Y, F_CUSTOM_ICON
@@ -651,7 +651,7 @@ class Row:
         for i in range(self.a + 1, self.b):
             pmi = pm.pmis[i]
             if pmi.mode == 'EMPTY' and pmi.text.startswith("spacer"):
-                prop = props.parse(pmi.text)
+                prop = schema.parse(pmi.text)
                 if prop.hsep == 'COLUMN':
                     return True
 
@@ -663,7 +663,7 @@ class Row:
         for i in range(self.a + 1, self.b):
             pmi = pm.pmis[i]
             if pmi.mode == 'EMPTY':
-                prop = props.parse(pmi.text)
+                prop = schema.parse(pmi.text)
                 if prop.hsep == 'COLUMN':
                     self.num_columns += 1
                 if prop.hsep == 'ALIGNER':
@@ -677,7 +677,7 @@ class Row:
             self.num_columns += 1
 
     def remove_subrows(self, pm):
-        pp = props
+        pp = schema
         i = self.a + 1
         while i < self.b:
             pmi = pm.pmis[i]  # BUG

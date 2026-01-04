@@ -53,7 +53,7 @@ from ..debug_utils import *
 from ..macro_utils import execute_macro
 from ..modal_utils import decode_modal_data
 from .. import pme, operator_utils, keymap_helper
-from ..core.props import props
+from ..core.schema import schema
 from .. import screen_utils as SU
 from ..property_utils import PropertyData
 from ..infra.io import get_user_scripts_dir
@@ -388,7 +388,7 @@ class PME_OT_sticky_key_base:
                 return {'PASS_THROUGH'}
 
         pm = pr.pie_menus[self.pm_name]
-        prop = props.parse(pm.data)
+        prop = schema.parse(pm.data)
         self.block_ui = prop.sk_block_ui
         self.restart_flag = False
         self.result = None
@@ -1046,7 +1046,7 @@ class PME_OT_modal_base:
         self.prop_data.clear()
 
         self.confirm_key = None
-        prop = props.parse(self.pm.data)
+        prop = schema.parse(self.pm.data)
         if prop.confirm and event.value in {'PRESS', 'DOUBLE_CLICK'}:
             self.confirm_key = event.type
 
@@ -1467,7 +1467,7 @@ class WM_OT_pme_user_pie_menu_call(Operator):
     @staticmethod
     def _draw_slot(name, use_frame=None):
         pm = get_prefs().pie_menus[name]
-        # prop = props.parse(pm.data)
+        # prop = schema.parse(pm.data)
 
         lh.save()
         layout = lh.layout
@@ -1484,7 +1484,7 @@ class WM_OT_pme_user_pie_menu_call(Operator):
 
     def _draw_popup_dialog(self, menu, context):
         pm = get_prefs().pie_menus[self.pie_menu_name]
-        prop = props.parse(pm.data)
+        prop = schema.parse(pm.data)
 
         layout = menu.layout.menu_pie()
         layout.separator()
@@ -1684,7 +1684,7 @@ class WM_OT_pme_user_pie_menu_call(Operator):
 
         if (
             pm.mode == 'PMENU'
-            and not props.parse(pm.data).pm_flick
+            and not schema.parse(pm.data).pm_flick
             and (
                 self.invoke_mode == 'HOTKEY'
                 or self.invoke_mode == 'HOLD'
@@ -1746,10 +1746,10 @@ class WM_OT_pme_user_pie_menu_call(Operator):
         DBG_PM and logi("invoke_mode:", self.invoke_mode)
 
         if pm.mode == 'PMENU':
-            flick = props.parse(pm.data).pm_flick
+            flick = schema.parse(pm.data).pm_flick
             view = get_uprefs().view
             if context.space_data:
-                prop = props.parse(pm.data)
+                prop = schema.parse(pm.data)
                 radius = int(prop.pm_radius)
                 confirm = int(prop.pm_confirm)
                 threshold = int(prop.pm_threshold)
@@ -1805,14 +1805,14 @@ class WM_OT_pme_user_pie_menu_call(Operator):
             return {'CANCELLED'}
 
         elif pm.mode == 'RMENU':
-            prop = props.parse(pm.data)
+            prop = schema.parse(pm.data)
             if prop.rm_title:
                 context.window_manager.popup_menu(self._draw_rm, title=pm.name)
             else:
                 context.window_manager.popup_menu(self._draw_rm)
 
         elif pm.mode == 'DIALOG':
-            prop = props.parse(pm.data)
+            prop = schema.parse(pm.data)
             if prop.pd_panel:
                 bpy.ops.wm.pme_user_dialog_call(
                     'INVOKE_DEFAULT',
@@ -1836,7 +1836,7 @@ class WM_OT_pme_user_pie_menu_call(Operator):
             DBG_PM and logi("MACRO execution completed")
 
         elif pm.mode == 'MODAL':
-            prop = props.parse(pm.data)
+            prop = schema.parse(pm.data)
             if prop.lock:
                 bpy.ops.pme.modal_grab('INVOKE_DEFAULT', pm_name=pm.name)
             else:

@@ -1,8 +1,9 @@
 ---
 title: Schema Rename Plan - pme.props → pme.schema
-phase: Phase 8-C (予定)
-status: approved
+phase: Phase 8-C
+status: completed
 created: 2026-01-04
+completed: 2026-01-04
 ---
 
 # Schema Rename Plan: `pme.props` → `pme.schema`
@@ -177,15 +178,17 @@ PME のスクリプト内で `pme.props` を使っているユーザーは稀と
 
 ---
 
-## スケジュール
+## 完了ステータス
 
 | フェーズ | 内容 | 状態 |
 |---------|------|------|
-| 8-C-1 | `core/props.py` → `core/schema.py` リネーム | 未着手 |
-| 8-C-2 | クラス名・変数名更新 | 未着手 |
-| 8-C-3 | editors/ の import 更新 | 未着手 |
-| 8-C-4 | pme.py エクスポート更新 | 未着手 |
-| 8-C-5 | ドキュメント更新 | 未着手 |
+| 8-C-1 | `core/props.py` → `core/schema.py` リネーム | ✅ 完了 |
+| 8-C-2 | クラス名・変数名更新 | ✅ 完了 |
+| 8-C-3 | editors/ の import 更新 | ✅ 完了 |
+| 8-C-4 | pme.py エクスポート更新 | ✅ 完了 |
+| 8-C-5 | ドキュメント更新 | ✅ 完了 |
+
+**完了日**: 2026-01-04
 
 ---
 

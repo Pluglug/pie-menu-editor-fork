@@ -8,6 +8,11 @@
 #   - PMEProp, PMEProps, ParsedData moved to core/props.py
 #   - Re-exported here for backward compatibility
 #   - PMEContext and UserData remain here (runtime dependencies)
+#
+# Phase 8-C changes:
+#   - core/props.py renamed to core/schema.py
+#   - PMEProps → SchemaRegistry, props → schema
+#   - Old names kept as deprecated aliases
 
 LAYER = "infra"
 
@@ -18,10 +23,20 @@ import bpy
 
 from .addon import get_prefs, temp_prefs, print_exc
 
-# Import and re-export property schema classes from core layer
-# This provides backward compatibility for existing imports like:
-#   from . import pme; pme.props.parse(...)
-from .core.props import PMEProp, PMEProps, ParsedData, props
+# Import and re-export schema classes from core layer
+# New preferred names (Phase 8-C):
+#   from . import pme; pme.schema.parse(...)
+from .core.schema import (
+    # New names (preferred)
+    SchemaProp,
+    SchemaRegistry,
+    schema,
+    ParsedData,
+    # Deprecated aliases (backward compatibility)
+    PMEProp,
+    PMEProps,
+    props,
+)
 
 # Import and re-export namespace definitions for external API
 # External tools can use: from pie_menu_editor import pme; pme.is_public("C")

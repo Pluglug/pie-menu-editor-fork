@@ -25,7 +25,7 @@ from ..addon import get_prefs, ic_eye
 from ..ui.layout import lh, Col
 from ..ui import tag_redraw, shorten_str
 from ..core.constants import SPACER_SCALE_Y, SEPARATOR_SCALE_Y
-from ..core.props import props
+from ..core.schema import schema
 
 
 class WM_OT_rmi_add(Operator):
@@ -600,7 +600,7 @@ class WM_OT_rmi_specials_call(Operator):
         return {'FINISHED'}
 
 
-props.BoolProperty("rm", "rm_title", True)
+schema.BoolProperty("rm", "rm_title", True)
 
 
 class Editor(EditorBase):

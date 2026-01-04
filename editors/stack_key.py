@@ -7,14 +7,13 @@
 LAYER = "editors"
 
 import bpy
-from bpy import props
 from bpy.props import BoolProperty
-from ..core.props import props
+from ..core.schema import schema
 from .base import EditorBase
 
-props.BoolProperty("s", "s_undo")
-props.BoolProperty("s", "s_state")
-# props.BoolProperty("s", "s_scroll", True)
+schema.BoolProperty("s", "s_undo")
+schema.BoolProperty("s", "s_state")
+# schema.BoolProperty("s", "s_scroll", True)
 
 
 class Editor(EditorBase):

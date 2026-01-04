@@ -6,7 +6,7 @@
 LAYER = "editors"
 
 import bpy
-from ..core.props import props
+from ..core.schema import schema
 from .base import EditorBase
 from ..addon import get_prefs
 from ..ui import tag_redraw
@@ -52,7 +52,7 @@ class PME_OT_sticky_key_edit(bpy.types.Operator):
         return {'FINISHED'}
 
 
-props.BoolProperty("sk", "sk_block_ui", False)
+schema.BoolProperty("sk", "sk_block_ui", False)
 
 
 class Editor(EditorBase):
