@@ -47,14 +47,18 @@ _docs/              ← 参照ドキュメント（@参照でオンデマンド�
 - `api/pme_api_current.md` — 現行 API インベントリ
 - `core-layer/` — Core Layer 設計ドキュメント群
 - `schema-rename-plan.md` — pme.props → pme.schema リネーム計画
-- `user_pie_menu_call_analysis.md` — WM_OT_pme_user_pie_menu_call 詳細分析（NEW）
+- `user_pie_menu_call_analysis.md` — WM_OT_pme_user_pie_menu_call 詳細分析
+- `json_schema_v2.md` — **PME2 JSON スキーマ仕様（Phase 9）**
+- `schema_v2_analysis.md` — **スキーマ v2 の可能性と限界の分析（Phase 9）**
+- `PME2_FEATURE_REQUESTS.md` — **ユーザー要望調査レポート**
 
 ### guides/
 
 - `cleanup_workflow.md` — 違反クリーンアップ手順
 - `dependency_cleanup_plan.md` — レイヤ違反削減計画
 - `operators_reorganization.md` — operators/ 再編計画
-- `rc_roadmap.md` — RC までのロードマップ（NEW）
+- `rc_roadmap.md` — RC までのロードマップ
+- `phase9_implementation.md` — **Phase 9 実装ガイド（JSON Schema v2）**
 
 ### analysis/
 
@@ -81,4 +85,4 @@ _docs/              ← 参照ドキュメント（@参照でオンデマンド�
 
 ---
 
-*最終更新: 2026-01-04*
+*最終更新: 2026-01-05*

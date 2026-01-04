@@ -13,6 +13,56 @@
 | Phase 5-A | ✅ | オペレーター分離（#74）、base.py 71%削減 |
 | Phase 8-A | ✅ | Thin wrapper 削除 (PR#75)、違反 12→7 件 |
 | Phase 8-C | ✅ | Schema リネーム（props → schema） |
+| **Phase 9** | 🔄 | **JSON Schema v2 + dataclass 移行** |
+
+---
+
+## Phase 9: JSON Schema v2（2.0.0 の中核）
+
+> メンターアドバイス: 「いま動いているものを壊さずに、土台とスキーマを固める版」
+
+### 9-A: JSON v2 スキーマ確定 ⏳
+
+- [ ] `json_schema_v2.md` 最終化
+- [ ] Action.context 仕様決定
+- [ ] 後方互換範囲決定（1.19.x / 1.18.x）
+
+### 9-B: dataclass スキーマ実装 ⏳
+
+- [ ] `core/schemas/` ディレクトリ作成
+- [ ] `Action`, `MenuItemSchema`, `HotkeySchema`, `MenuSchema` dataclass
+- [ ] `PME2File` ルートオブジェクト
+
+### 9-C: コンバーター実装 ⏳
+
+- [ ] `infra/converter.py` 作成
+- [ ] PME1 → PME2 変換（インポート時）
+- [ ] バージョン検出ロジック
+
+### 9-D: シリアライザー実装 ⏳
+
+- [ ] `infra/serializer.py` 作成
+- [ ] v2 エクスポート（新形式）
+- [ ] v1/v2 デュアルインポート
+
+### 9-E: テストと検証 ⏳
+
+- [ ] 既存メニューの往復変換テスト
+- [ ] Blender 5.0+ での動作確認
+
+### やらないこと（2.0.1 へ）
+
+- WM_OT ステートマシン再設計
+- 動的オペレーター生成
+- 内部の完全 dataclass 化
+
+### 参照ドキュメント
+
+- `@_docs/design/json_schema_v2.md` — JSON 形式仕様
+- `@_docs/design/schema_v2_analysis.md` — 可能性と限界の分析
+- `@_docs/design/PME2_FEATURE_REQUESTS.md` — ユーザー要望
+
+---
 
 ## 基本方針
 
@@ -157,6 +207,46 @@ pme.py            → PMEContext, UserData, context
 - Reload Scripts が安定動作
 - 旧ローダー削除
 - マイグレーションガイド作成
+- **JSON Schema v2 エクスポート/インポート** ← Phase 9
+
+---
+
+## WM-1: _draw_item 分離（2.0.0 で許容される WM_OT 変更）
+
+> メンターアドバイス: 「責務の切り出しだけやる。挙動は 100%据え置き」
+
+### 目的
+
+- レイヤ違反を消す（operators → ui の依存を解消）
+- `_draw_item` を単体テストしやすくする
+- 将来の WM_OT 再設計（2.0.1）への準備
+
+### やること
+
+1. `ui/item_drawing.py` 新規作成
+2. `WM_OT_pme_user_pie_menu_call._draw_item` の中身を移動
+3. WM_OT 側は薄いラッパーに変更
+4. `editors/panel_group`, `ui/utils` の参照を直接呼び出しに変更
+
+### やらないこと
+
+- ステートマシン（invoke/modal/execute_menu）への変更
+- 動的オペレーター生成
+- `InvocationState` 導入
+
+---
+
+## 2.0.0 → 2.0.1 の境界
+
+| 2.0.0 でやる | 2.0.1 でやる |
+|-------------|-------------|
+| JSON Schema v2 | WM_OT ステートマシン再設計 |
+| dataclass スキーマ（エクスポート用） | 内部 dataclass 化 |
+| コンバーター実装 | 動的オペレーター生成 |
+| _draw_item 分離（WM-1） | InvocationState 導入 |
+| 許容リスト文書化 | テスター募集 |
+
+---
 
 ## 参照
 
@@ -166,3 +256,6 @@ pme.py            → PMEContext, UserData, context
 | `@_docs/guides/cleanup_workflow.md` | 違反整理手順 |
 | `@_docs/guides/rc_roadmap.md` | RC ロードマップ |
 | `@_docs/design/api/pme_api_plan.md` | API 設計 |
+| `@_docs/design/json_schema_v2.md` | JSON 形式仕様 |
+| `@_docs/design/schema_v2_analysis.md` | スキーマ分析 |
+| `@_docs/design/PME2_FEATURE_REQUESTS.md` | ユーザー要望 |
