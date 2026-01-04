@@ -115,6 +115,14 @@ pme.py            → PMEContext, UserData, context
 | `WM_OT_pme_user_pie_menu_call` 切り出し | `_draw_item` が 3 箇所から参照 | 未着手 |
 | `prefs` UI 分離 | draw 系メソッドの依存が複雑 | 未着手 |
 
+### 8-C: Schema リネーム
+
+| タスク | 内容 | 状態 |
+|--------|------|------|
+| `pme.props` → `pme.schema` | 混乱防止のためリネーム | 未着手 |
+
+**詳細**: `@_docs/design/schema-rename-plan.md`
+
 ## 次のステップ候補
 
 - **Phase 8-A**: 薄いラッパー移動（Codex タスク候補）

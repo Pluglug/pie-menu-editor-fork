@@ -80,24 +80,40 @@ def prop_by_type(prop_type):
 
 ---
 
-## PME 固有の props について
+## PME Schema と bpy.props の区別
 
-PME には2つの「props」が存在する:
+PME には2つの「props」系システムが存在する:
 
 | シンボル | 正体 | 用途 |
 |---------|------|------|
-| `bpy.props` | Blender モジュール | `IntProperty`, `BoolProperty` 等 |
-| `pme.props` / `from core.props import props` | PME の PMEProps | スキーマ登録 |
+| `bpy.props` | Blender モジュール | PropertyGroup 定義 |
+| `pme.schema` | PME の SchemaRegistry | メニュースキーマ定義 |
+
+### 現在（後方互換）
 
 ```python
-# PME プロパティスキーマ登録 (core/props.py の PMEProps)
-from ..core.props import props as pme_props
-pme_props.IntProperty("pm", "pm_radius", -1)  # ← これは PME 専用
+# PME スキーマ登録 (core/props.py)
+from ..core.props import props
+props.IntProperty("pm", "pm_radius", -1)  # ← PME 専用
 
 # Blender プロパティ作成 (bpy.props)
 import bpy
-bpy.props.IntProperty(name="Radius")  # ← これは Blender 標準
+bpy.props.IntProperty(name="Radius")  # ← Blender 標準
 ```
+
+### 将来（Phase 8-C 以降）
+
+```python
+# PME スキーマ登録 (core/schema.py)
+from ..core.schema import schema
+schema.IntProperty("pm", "pm_radius", -1)  # ← 明確に区別
+
+# Blender プロパティ作成 (bpy.props)
+from bpy.props import IntProperty
+prop: IntProperty(name="Radius")
+```
+
+**詳細**: `@_docs/design/schema-rename-plan.md`
 
 ---
 
