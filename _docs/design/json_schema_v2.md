@@ -558,51 +558,129 @@ def build_action(action_type: str, value: str) -> dict:
 
 ---
 
-## 将来拡張性（2.0.0 で追加検討）
+## 2.0.0 追加フィールド（確定）
 
-### extensions フィールド
+### 設計方針
 
-将来の機能拡張に備え、未知のフィールドを保持するための仕組み。
+1. **description は Python 評価可能**: `modal_item_custom` と同様、文字列を Python 式として評価
+2. **`\n` で改行**: 複数行の説明文に対応
+3. **category は既存の tags で十分**: 新規フィールド不要
+4. **extensions フィールド**: 将来拡張のプレースホルダー
+5. **action フィールドの柔軟性**: 将来の conditional action も対応可能
 
-```json
-{
-  "name": "My Menu",
-  "mode": "PMENU",
-  "extensions": {
-    "conditions": { ... },
-    "style": { ... },
-    "ai": { ... }
-  }
-}
-```
+---
 
-### MenuItem への description 追加
-
-```json
-{
-  "name": "Add Cube",
-  "action": { ... },
-  "description": "シーンに立方体プリミティブを追加",
-  "icon": "MESH_CUBE"
-}
-```
-
-**用途**:
-- ツールチップ表示（将来的に動的オペレーター/GPU 描画で実現）
-- AI によるアクション理解
-- 検索/フィルタリング
-
-### Menu への meta セクション追加（オプショナル）
+### Menu への追加
 
 ```json
 {
   "name": "My Pie Menu",
   "mode": "PMENU",
-  "meta": {
-    "description": "モデリング作業用のメインメニュー",
-    "author": "username",
-    "color": "#4A90D9",
-    "category": "modeling"
+
+  "description": "'Modeling tools for ' + context.mode",
+  "color": "#4A90D9",
+
+  "extensions": {}
+}
+```
+
+| フィールド | 型 | 必須 | 説明 |
+|-----------|-----|------|------|
+| `description` | string \| null | - | Python 評価可能な説明文（`\n` で改行） |
+| `color` | string \| null | - | メニューのテーマカラー（将来の Blender API 対応） |
+| `extensions` | object | - | 将来拡張用（未知フィールドの保持） |
+
+**Note**: `category` は既存の `tags` フィールドで表現可能。
+
+---
+
+### MenuItem への追加
+
+```json
+{
+  "name": "Add Cube",
+  "action": { "type": "command", "value": "..." },
+  "icon": "MESH_CUBE",
+
+  "description": "'Add a cube at ' + str(context.scene.cursor.location)",
+  "color": "#4CAF50",
+  "use_color_bar": true,
+
+  "extensions": {}
+}
+```
+
+| フィールド | 型 | 必須 | 説明 |
+|-----------|-----|------|------|
+| `description` | string \| null | - | Python 評価可能な説明文（ツールチップ用） |
+| `color` | string \| null | - | アイテムのカラー（分類用） |
+| `use_color_bar` | boolean | - | Split レイアウトでカラーバー表示 |
+| `extensions` | object | - | 将来拡張用 |
+
+---
+
+### description の Python 評価
+
+`modal_item_custom` と同様の仕組み:
+
+```python
+# 静的テキスト
+"description": "シーンに立方体を追加"
+
+# Python 評価（動的）
+"description": "'Selected: ' + str(len(context.selected_objects)) + ' objects'"
+
+# 複数行
+"description": "Line 1\\nLine 2\\nLine 3"
+
+# 条件付き
+"description": "'Edit Mode' if context.mode == 'EDIT_MESH' else 'Object Mode'"
+```
+
+---
+
+### extensions の設計
+
+将来の機能拡張を壊さずに追加するためのプレースホルダー:
+
+```python
+@dataclass
+class MenuSchema:
+    name: str
+    # ... 既存フィールド
+
+    extensions: dict[str, Any] = field(default_factory=dict)
+
+    @classmethod
+    def from_dict(cls, data: dict) -> "MenuSchema":
+        known_fields = {"name", "mode", ...}
+        extensions = {k: v for k, v in data.items() if k not in known_fields}
+        return cls(..., extensions=extensions)
+```
+
+**利点**:
+- 古いバージョンで作成した JSON が新機能を含んでいても読める
+- 新しいバージョンで追加したフィールドが古いバージョンで消えない
+
+---
+
+### 将来拡張の例（extensions 内）
+
+```json
+{
+  "extensions": {
+    "conditions": {
+      "when": "context.mode == 'EDIT_MESH'",
+      "fallback": "hidden"
+    },
+    "ai": {
+      "intent": "add_primitive",
+      "natural_language": ["add cube", "キューブ追加"]
+    },
+    "spatial": {
+      "anchor": "hand_right",
+      "scale": 1.5
+    }
   }
 }
 ```
