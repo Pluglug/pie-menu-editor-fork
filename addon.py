@@ -1,4 +1,5 @@
 from __future__ import annotations
+# pyright: reportInvalidTypeForm=false
 # addon.py - Host integration layer (アドオンライフサイクル管理)
 #
 # NOTE: addon is a FACADE module - it can be imported from any layer except core.
@@ -6,7 +7,9 @@ from __future__ import annotations
 # See architecture.md section 5.2 for details.
 
 import bpy
+from bpy import props, types as bpy_types
 from bpy.app import version as APP_VERSION
+from bpy.props import CollectionProperty, PointerProperty
 import os
 import sys
 import traceback
@@ -28,11 +31,11 @@ SAFE_MODE = "--pme-safe-mode" in sys.argv
 # This flag is intended for pme2-dev branch and can be overridden from __init__.py.
 USE_PME2_LOADER = True  # Default: False for safety, set True to opt-in
 ICON_ENUM_ITEMS = (
-    bpy.types.UILayout.bl_rna.functions["prop"].parameters["icon"].enum_items
+    bpy_types.UILayout.bl_rna.functions["prop"].parameters["icon"].enum_items
 )
 
 
-def get_uprefs(context: bpy.types.Context = bpy.context) -> bpy.types.Preferences:
+def get_uprefs(context: bpy_types.Context = bpy.context) -> bpy_types.Preferences:
     """
     Get user preferences
 
@@ -40,7 +43,7 @@ def get_uprefs(context: bpy.types.Context = bpy.context) -> bpy.types.Preference
         context: Blender context (defaults to bpy.context)
 
     Returns:
-        bpy.types.Preferences: User preferences
+        bpy_types.Preferences: User preferences
 
     Raises:
         AttributeError: If preferences cannot be accessed
@@ -51,7 +54,7 @@ def get_uprefs(context: bpy.types.Context = bpy.context) -> bpy.types.Preference
     raise AttributeError("Could not access preferences")
 
 
-def get_prefs(context: bpy.types.Context = bpy.context) -> PMEPreferences:
+def get_prefs(context: bpy_types.Context = bpy.context) -> PMEPreferences:
     """
     Get addon preferences
 
@@ -59,7 +62,7 @@ def get_prefs(context: bpy.types.Context = bpy.context) -> PMEPreferences:
         context: Blender context (defaults to bpy.context)
 
     Returns:
-        bpy.types.AddonPreferences: Addon preferences
+        bpy_types.AddonPreferences: Addon preferences
 
     Raises:
         KeyError: If addon is not found
@@ -99,7 +102,7 @@ def check_bl_version(version=None):
 
 
 def check_context():
-    return isinstance(bpy.context, bpy.types.Context)
+    return isinstance(bpy.context, bpy_types.Context)
 
 
 def print_exc(text=None):
@@ -682,7 +685,7 @@ def _analyze_dependencies(module_names: List[str]) -> Dict[str, Set[str]]:
     import_graph = _analyze_imports(module_names)
 
     graph = defaultdict(set)
-    pdtype = bpy.props._PropertyDeferred
+    pdtype = props._PropertyDeferred
 
     # Merge import dependencies
     # Note: import_graph is {dependent: {dependencies}}
@@ -700,8 +703,8 @@ def _analyze_dependencies(module_names: List[str]) -> Dict[str, Set[str]]:
         for _, cls in inspect.getmembers(mod, _is_bpy_class):
             for prop in getattr(cls, "__annotations__", {}).values():
                 if isinstance(prop, pdtype) and prop.function in [
-                    bpy.props.PointerProperty,
-                    bpy.props.CollectionProperty,
+                    PointerProperty,
+                    CollectionProperty,
                 ]:
                     dep_cls = prop.keywords.get("type")
                     if not dep_cls:
@@ -1020,7 +1023,7 @@ def _get_classes(force: bool = True) -> List[type]:
         return _class_cache
 
     class_deps = defaultdict(set)
-    pdtype = getattr(bpy.props, "_PropertyDeferred", tuple)
+    pdtype = getattr(props, "_PropertyDeferred", tuple)
 
     all_classes = []
     for mod_name in MODULE_NAMES:
@@ -1033,7 +1036,7 @@ def _get_classes(force: bool = True) -> List[type]:
             for prop in getattr(cls, "__annotations__", {}).values():
                 if isinstance(prop, pdtype):
                     pfunc = getattr(prop, "function", None) or prop[0]
-                    if pfunc in (bpy.props.PointerProperty, bpy.props.CollectionProperty):
+                    if pfunc in (PointerProperty, CollectionProperty):
                         if dep_cls := prop.keywords.get("type"):
                             if dep_cls.__module__.startswith(ADDON_ID):
                                 deps.add(dep_cls)
@@ -1071,8 +1074,8 @@ def _is_bpy_class(obj) -> bool:
     """
     return (
         inspect.isclass(obj)
-        and issubclass(obj, bpy.types.bpy_struct)
-        and obj.__base__ is not bpy.types.bpy_struct
+        and issubclass(obj, bpy_types.bpy_struct)
+        and obj.__base__ is not bpy_types.bpy_struct
         and obj.__module__.startswith(ADDON_ID)
     )
 
@@ -1086,7 +1089,7 @@ def _validate_class(cls: type) -> None:
     """
     if not hasattr(cls, "bl_rna"):
         raise ValueError(f"Class {cls.__name__} has no bl_rna attribute")
-    if not issubclass(cls, bpy.types.bpy_struct):
+    if not issubclass(cls, bpy_types.bpy_struct):
         raise TypeError(f"Invalid class type: {cls.__name__}")
 
 

@@ -1,7 +1,32 @@
-﻿# preferences.py - PMEPreferences and addon settings UI
+﻿# pyright: reportInvalidTypeForm=false
+# preferences.py - PMEPreferences and addon settings UI
 # LAYER = "prefs"
 
 import bpy
+from bpy import app, types as bpy_types
+from bpy.props import (
+    BoolProperty,
+    CollectionProperty,
+    EnumProperty,
+    FloatProperty,
+    IntProperty,
+    IntVectorProperty,
+    PointerProperty,
+    StringProperty,
+)
+from bpy.types import (
+    AddonPreferences,
+    Menu,
+    Operator,
+    Panel,
+    PropertyGroup,
+    UIList,
+    UILayout,
+    UI_UL_list,
+    USERPREF_PT_addons,
+    WM_MT_button_context,
+    WindowManager,
+)
 import os
 import json
 import re
@@ -190,7 +215,7 @@ def update_data(self, context):
 
 
 
-class WM_OT_pm_duplicate(bpy.types.Operator):
+class WM_OT_pm_duplicate(Operator):
     bl_idname = "wm.pm_duplicate"
     bl_label = ""
     bl_description = "Duplicate the active item"
@@ -218,13 +243,13 @@ class WM_OT_pm_duplicate(bpy.types.Operator):
         return len(get_prefs().pie_menus) > 0
 
 
-class PME_OT_pm_remove(ConfirmBoxHandler, bpy.types.Operator):
+class PME_OT_pm_remove(ConfirmBoxHandler, Operator):
     bl_idname = "pme.pm_remove"
     bl_label = "Remove Item(s)"
     bl_description = "Remove item(s)"
     bl_options = {'INTERNAL'}
 
-    mode: bpy.props.EnumProperty(
+    mode: EnumProperty(
         items=(
             ('ACTIVE', "Remove Active Item", "Remove active item"),
             ('ALL', "Remove All Items", "Remove all items"),
@@ -265,17 +290,17 @@ class PME_OT_pm_remove(ConfirmBoxHandler, bpy.types.Operator):
 
     def invoke(self, context, event):
         self.box = True
-        self.title = bpy.types.UILayout.enum_item_name(self, "mode", self.mode)
+        self.title = UILayout.enum_item_name(self, "mode", self.mode)
         return ConfirmBoxHandler.invoke(self, context, event)
 
 
-class PME_OT_pm_enable_all(bpy.types.Operator):
+class PME_OT_pm_enable_all(Operator):
     bl_idname = "wm.pm_enable_all"
     bl_label = ""
     bl_description = "Enable or disable all items"
     bl_options = {'INTERNAL'}
 
-    enable: bpy.props.BoolProperty(options={'SKIP_SAVE'})
+    enable: BoolProperty(options={'SKIP_SAVE'})
 
     def execute(self, context):
         for pm in get_prefs().pie_menus:
@@ -287,14 +312,14 @@ class PME_OT_pm_enable_all(bpy.types.Operator):
         return get_prefs().pie_menus
 
 
-class PME_OT_pm_enable_by_tag(bpy.types.Operator):
+class PME_OT_pm_enable_by_tag(Operator):
     bl_idname = "pme.pm_enable_by_tag"
     bl_label = ""
     bl_description = "Enable or disable items by tag"
     bl_options = {'INTERNAL'}
 
-    enable: bpy.props.BoolProperty(options={'SKIP_SAVE'})
-    tag: bpy.props.StringProperty(options={'SKIP_SAVE'})
+    enable: BoolProperty(options={'SKIP_SAVE'})
+    tag: StringProperty(options={'SKIP_SAVE'})
 
     def execute(self, context):
         if not self.tag:
@@ -316,13 +341,13 @@ class PME_OT_pm_enable_by_tag(bpy.types.Operator):
         return get_prefs().pie_menus
 
 
-class PME_OT_pm_remove_by_tag(bpy.types.Operator):
+class PME_OT_pm_remove_by_tag(Operator):
     bl_idname = "pme.pm_remove_by_tag"
     bl_label = ""
     bl_description = "Remove items by tag"
     bl_options = {'INTERNAL'}
 
-    tag: bpy.props.StringProperty(options={'SKIP_SAVE'})
+    tag: StringProperty(options={'SKIP_SAVE'})
 
     def execute(self, context):
         if not self.tag:
@@ -347,13 +372,13 @@ class PME_OT_pm_remove_by_tag(bpy.types.Operator):
         return get_prefs().pie_menus
 
 
-class WM_OT_pm_move(bpy.types.Operator):
+class WM_OT_pm_move(Operator):
     bl_idname = "wm.pm_move"
     bl_label = ""
     bl_description = "Move the active item"
     bl_options = {'INTERNAL'}
 
-    direction: bpy.props.IntProperty()
+    direction: IntProperty()
 
     def execute(self, context):
         pr = get_prefs()
@@ -407,13 +432,13 @@ class WM_OT_pm_move(bpy.types.Operator):
         return len(get_prefs().pie_menus) > 1
 
 
-class WM_OT_pm_sort(bpy.types.Operator):
+class WM_OT_pm_sort(Operator):
     bl_idname = "wm.pm_sort"
     bl_label = ""
     bl_description = "Sort items by"
     bl_options = {'INTERNAL'}
 
-    mode: bpy.props.EnumProperty(
+    mode: EnumProperty(
         items=(
             ('NONE', "None", ""),
             ('NAME', "Name", ""),
@@ -496,13 +521,13 @@ class WM_OT_pm_sort(bpy.types.Operator):
         return len(get_prefs().pie_menus) > 1
 
 
-class PME_OT_pmi_name_apply(bpy.types.Operator):
+class PME_OT_pmi_name_apply(Operator):
     bl_idname = "pme.pmi_name_apply"
     bl_label = ""
     bl_description = "Apply the suggested name"
     bl_options = {'INTERNAL'}
 
-    idx: bpy.props.IntProperty()
+    idx: IntProperty()
 
     def execute(self, context):
         data = get_prefs().pmi_data
@@ -510,7 +535,7 @@ class PME_OT_pmi_name_apply(bpy.types.Operator):
         return {'FINISHED'}
 
 
-# class WM_OT_icon_filter_clear(bpy.types.Operator):
+# class WM_OT_icon_filter_clear(Operator):
 #     bl_idname = "wm.icon_filter_clear"
 #     bl_label = ""
 #     bl_description = "Clear Filter"
@@ -521,7 +546,7 @@ class PME_OT_pmi_name_apply(bpy.types.Operator):
 #         return {'FINISHED'}
 
 
-class PME_OT_icons_refresh(bpy.types.Operator):
+class PME_OT_icons_refresh(Operator):
     bl_idname = "pme.icons_refresh"
     bl_label = ""
     bl_description = (
@@ -535,11 +560,11 @@ class PME_OT_icons_refresh(bpy.types.Operator):
         return {'FINISHED'}
 
 
-class PMEData(bpy.types.PropertyGroup):
+class PMEData(PropertyGroup):
     update_lock = False
     prop_data = PropertyData()
 
-    ed_props: bpy.props.PointerProperty(type=EdProperties)
+    ed_props: PointerProperty(type=EdProperties)
 
     def update_links_idx(self, context):
         if PMEData.update_lock:
@@ -589,16 +614,16 @@ class PMEData(bpy.types.PropertyGroup):
 
         PMEData.update_lock = False
 
-    tags: bpy.props.CollectionProperty(type=Tag)
-    links: bpy.props.CollectionProperty(type=PMLink)
-    links_idx: bpy.props.IntProperty(default=0, update=update_links_idx)
-    hidden_panels_idx: bpy.props.IntProperty()
-    pie_menus: bpy.props.CollectionProperty(type=BaseCollectionItem)
-    # modal_item_hk: bpy.props.EnumProperty(
+    tags: CollectionProperty(type=Tag)
+    links: CollectionProperty(type=PMLink)
+    links_idx: IntProperty(default=0, update=update_links_idx)
+    hidden_panels_idx: IntProperty()
+    pie_menus: CollectionProperty(type=BaseCollectionItem)
+    # modal_item_hk: EnumProperty(
     #     items=keymap_helper.key_items,
     #     description="Key pressed", update=update_modal_item_hk)
-    modal_item_hk: bpy.props.PointerProperty(type=keymap_helper.Hotkey)
-    modal_item_prop_mode: bpy.props.EnumProperty(
+    modal_item_hk: PointerProperty(type=keymap_helper.Hotkey)
+    modal_item_prop_mode: EnumProperty(
         items=(
             (
                 'KEY',
@@ -614,27 +639,27 @@ class PMEData(bpy.types.PropertyGroup):
         ),
         update=update_modal_item_prop_mode,
     )
-    modal_item_prop_min: bpy.props.FloatProperty(name="Min Value", step=100)
-    modal_item_prop_max: bpy.props.FloatProperty(name="Max Value", step=100)
+    modal_item_prop_min: FloatProperty(name="Min Value", step=100)
+    modal_item_prop_max: FloatProperty(name="Max Value", step=100)
 
     def update_modal_item_prop_step(self, context):
         self.modal_item_prop_step_is_set = True
 
-    modal_item_prop_step: bpy.props.FloatProperty(
+    modal_item_prop_step: FloatProperty(
         name="Step",
         min=0,
         step=100,
         update=update_modal_item_prop_step,
     )
-    modal_item_prop_step_is_set: bpy.props.BoolProperty()
-    # modal_item_custom_use: bpy.props.BoolProperty(
+    modal_item_prop_step_is_set: BoolProperty()
+    # modal_item_custom_use: BoolProperty(
     #     name="Display Custom Value",
     #     description="Display custom value")
 
     def modal_item_custom_update(self, context):
         update_pmi_data(self, context, reset_prop_data=False)
 
-    modal_item_custom: bpy.props.StringProperty(
+    modal_item_custom: StringProperty(
         description="Custom value to display", update=modal_item_custom_update
     )
 
@@ -644,18 +669,18 @@ class PMEData(bpy.types.PropertyGroup):
     def modal_item_show_set(self, value):
         self.modal_item_custom = "" if value else 'HIDDEN'
 
-    modal_item_show: bpy.props.BoolProperty(
+    modal_item_show: BoolProperty(
         description="Show the hotkey", get=modal_item_show_get, set=modal_item_show_set
     )
 
-    settings_tab: bpy.props.EnumProperty(
+    settings_tab: EnumProperty(
         items=CC.SETTINGS_TAB_ITEMS,
         name="Settings",
         description="Settings",
         # options={'ENUM_FLAG'},
         default=CC.SETTINGS_TAB_DEFAULT,
     )
-    icons_tab: bpy.props.EnumProperty(
+    icons_tab: EnumProperty(
         name="Icons",
         description="Icons",
         items=(
@@ -698,7 +723,7 @@ class PMEData(bpy.types.PropertyGroup):
             item.name = pm
 
 
-class WM_UL_panel_list(bpy.types.UIList):
+class WM_UL_panel_list(UIList):
 
     def draw_item(
         self, context, layout, data, item, icon, active_data, active_propname, index
@@ -724,7 +749,7 @@ class WM_UL_panel_list(bpy.types.UIList):
             )
 
 
-class WM_UL_pm_list(bpy.types.UIList):
+class WM_UL_pm_list(UIList):
 
     def draw_filter(self, context, layout):
         pr = get_prefs()
@@ -809,7 +834,7 @@ class WM_UL_pm_list(bpy.types.UIList):
     def filter_items(self, context, data, propname):
         pr = get_prefs()
         pie_menus = getattr(data, propname)
-        helper_funcs = bpy.types.UI_UL_list
+        helper_funcs = UI_UL_list
 
         filtered = []
         ordered = []
@@ -833,7 +858,7 @@ class WM_UL_pm_list(bpy.types.UIList):
         return filtered, ordered
 
 
-class PME_UL_pm_tree(bpy.types.UIList):
+class PME_UL_pm_tree(UIList):
     locked = False
     groups = []
     collapsed_groups = set()
@@ -1367,14 +1392,14 @@ class PME_UL_pm_tree(bpy.types.UIList):
         return filtered, []
 
 
-class PME_OT_tree_folder_toggle(bpy.types.Operator):
+class PME_OT_tree_folder_toggle(Operator):
     bl_idname = "pme.tree_folder_toggle"
     bl_label = ""
     bl_description = "Expand or collapse"
     bl_options = {'INTERNAL'}
 
-    folder: bpy.props.StringProperty()
-    idx: bpy.props.IntProperty()
+    folder: StringProperty()
+    idx: IntProperty()
 
     def execute(self, context):
         temp_prefs().links_idx = self.idx
@@ -1388,7 +1413,7 @@ class PME_OT_tree_folder_toggle(bpy.types.Operator):
         return {'FINISHED'}
 
 
-class PME_OT_tree_folder_toggle_all(bpy.types.Operator):
+class PME_OT_tree_folder_toggle_all(Operator):
     bl_idname = "pme.tree_folder_toggle_all"
     bl_label = ""
     bl_description = "Expand or collapse all items"
@@ -1406,15 +1431,15 @@ class PME_OT_tree_folder_toggle_all(bpy.types.Operator):
         return {'FINISHED'}
 
 
-class PME_OT_tree_group_toggle(bpy.types.Operator):
+class PME_OT_tree_group_toggle(Operator):
     bl_idname = "pme.tree_group_toggle"
     bl_label = ""
     bl_description = "Expand or collapse groups"
     bl_options = {'INTERNAL'}
 
-    group: bpy.props.StringProperty(options={'SKIP_SAVE'})
-    idx: bpy.props.IntProperty(options={'SKIP_SAVE'})
-    all: bpy.props.BoolProperty(options={'SKIP_SAVE'})
+    group: StringProperty(options={'SKIP_SAVE'})
+    idx: IntProperty(options={'SKIP_SAVE'})
+    all: BoolProperty(options={'SKIP_SAVE'})
 
     def execute(self, context):
         tpr = temp_prefs()
@@ -1474,7 +1499,7 @@ class PMIClipboard:
         return self.mode is not None
 
 
-class PME_OT_list_specials(bpy.types.Operator):
+class PME_OT_list_specials(Operator):
     bl_idname = "pme.list_specials"
     bl_label = ""
     bl_description = "Extra tools"
@@ -1543,7 +1568,7 @@ class PME_OT_list_specials(bpy.types.Operator):
         return {'FINISHED'}
 
 
-class PMIData(bpy.types.PropertyGroup):
+class PMIData(PropertyGroup):
     _kmi = None
     errors = []
     infos = []
@@ -1572,48 +1597,48 @@ class PMIData(bpy.types.PropertyGroup):
 
         self.check_pmi_errors(context)
 
-    mode: bpy.props.EnumProperty(
+    mode: EnumProperty(
         items=CC.EMODE_ITEMS, description="Type of the item", update=mode_update
     )
-    cmd: bpy.props.StringProperty(
+    cmd: StringProperty(
         description="Python code", maxlen=CC.MAX_STR_LEN, update=update_data
     )
-    cmd_ctx: bpy.props.EnumProperty(
+    cmd_ctx: EnumProperty(
         items=CC.OP_CTX_ITEMS, name="Execution Context", description="Execution context"
     )
-    cmd_undo: bpy.props.BoolProperty(
+    cmd_undo: BoolProperty(
         name="Undo Flag", description="'Undo' positional argument"
     )
-    custom: bpy.props.StringProperty(
+    custom: StringProperty(
         description="Python code", maxlen=CC.MAX_STR_LEN, update=update_data
     )
-    prop: bpy.props.StringProperty(description="Property", update=update_data)
-    menu: bpy.props.StringProperty(description="Menu's name", update=update_data)
-    expand_menu: bpy.props.BoolProperty(description="Expand Menu")
-    use_cb: bpy.props.BoolProperty(
+    prop: StringProperty(description="Property", update=update_data)
+    menu: StringProperty(description="Menu's name", update=update_data)
+    expand_menu: BoolProperty(description="Expand Menu")
+    use_cb: BoolProperty(
         name="Use Checkboxes instead of Toggle Buttons",
         description="Use checkboxes instead of toggle buttons",
     )
-    use_frame: bpy.props.BoolProperty(name="Use Frame", description="Use frame")
-    icon: bpy.props.StringProperty(description="Icon")
-    name: bpy.props.StringProperty(description="Name")
+    use_frame: BoolProperty(name="Use Frame", description="Use frame")
+    icon: StringProperty(description="Icon")
+    name: StringProperty(description="Name")
 
     def sname_update(self, context):
         if not self.name:
             self.name = self.sname
 
-    sname: bpy.props.StringProperty(description="Suggested name", update=sname_update)
-    key: bpy.props.EnumProperty(
+    sname: StringProperty(description="Suggested name", update=sname_update)
+    key: EnumProperty(
         items=keymap_helper.key_items, description="Key pressed", update=update_data
     )
-    any: bpy.props.BoolProperty(description="Any key pressed", update=update_data)
-    ctrl: bpy.props.BoolProperty(description="Ctrl key pressed", update=update_data)
-    shift: bpy.props.BoolProperty(description="Shift key pressed", update=update_data)
-    alt: bpy.props.BoolProperty(description="Alt key pressed", update=update_data)
-    oskey: bpy.props.BoolProperty(
+    any: BoolProperty(description="Any key pressed", update=update_data)
+    ctrl: BoolProperty(description="Ctrl key pressed", update=update_data)
+    shift: BoolProperty(description="Shift key pressed", update=update_data)
+    alt: BoolProperty(description="Alt key pressed", update=update_data)
+    oskey: BoolProperty(
         description="Operating system key pressed", update=update_data
     )
-    key_mod: bpy.props.EnumProperty(
+    key_mod: EnumProperty(
         items=keymap_helper.key_items,
         description="Regular key pressed as a modifier",
         update=update_data,
@@ -1725,7 +1750,7 @@ class InvalidPMEPreferences:
         row.label(text="Please update Blender to the latest version", icon=ic('ERROR'))
 
 
-class PMEPreferences(bpy.types.AddonPreferences):
+class PMEPreferences(AddonPreferences):
     bl_idname = ADDON_ID
 
     _mode = 'ADDON'
@@ -1742,9 +1767,9 @@ class PMEPreferences(bpy.types.AddonPreferences):
     rmc_clipboard = []
     window_kmis = []
 
-    version: bpy.props.IntVectorProperty(size=3)
-    pie_menus: bpy.props.CollectionProperty(type=PMItem)
-    props: bpy.props.PointerProperty(type=UserProperties)
+    version: IntVectorProperty(size=3)
+    pie_menus: CollectionProperty(type=PMItem)
+    props: PointerProperty(type=UserProperties)
 
     def update_active_pie_menu_idx(self, context):
         self.pmi_data.info()
@@ -1756,12 +1781,12 @@ class PMEPreferences(bpy.types.AddonPreferences):
             if ed:
                 ed.on_pm_select(self.selected_pm)
 
-    active_pie_menu_idx: bpy.props.IntProperty(
+    active_pie_menu_idx: IntProperty(
         default=0, update=update_active_pie_menu_idx
     )
 
-    overlay: bpy.props.PointerProperty(type=OverlayPrefs)
-    list_size: bpy.props.IntProperty(
+    overlay: PointerProperty(type=OverlayPrefs)
+    list_size: IntProperty(
         name="List Width",
         description="Width of the list",
         default=40,
@@ -1769,7 +1794,7 @@ class PMEPreferences(bpy.types.AddonPreferences):
         max=80,
         subtype='PERCENTAGE',
     )
-    num_list_rows: bpy.props.IntProperty(
+    num_list_rows: IntProperty(
         name="List Rows Number",
         description="Number of list rows",
         default=10,
@@ -1815,23 +1840,23 @@ class PMEPreferences(bpy.types.AddonPreferences):
 
         tag_redraw(True)
 
-    interactive_panels: bpy.props.BoolProperty(
+    interactive_panels: BoolProperty(
         name="Interactive Panels",
         description="Interactive panels",
         update=update_interactive_panels,
     )
 
-    auto_backup: bpy.props.BoolProperty(
+    auto_backup: BoolProperty(
         name="Auto Backup", description="Auto backup menus", default=True
     )
-    expand_item_menu: bpy.props.BoolProperty(
+    expand_item_menu: BoolProperty(
         name="Expand Slot Tools", description="Expand slot tools"
     )
-    icon_filter: bpy.props.StringProperty(
+    icon_filter: StringProperty(
         description="Filter", options={'TEXTEDIT_UPDATE'}
     )
-    hotkey: bpy.props.PointerProperty(type=keymap_helper.Hotkey)
-    hold_time: bpy.props.IntProperty(
+    hotkey: PointerProperty(type=keymap_helper.Hotkey)
+    hold_time: IntProperty(
         name="Hold Mode Timeout",
         description="Hold timeout (ms)",
         default=200,
@@ -1839,7 +1864,7 @@ class PMEPreferences(bpy.types.AddonPreferences):
         max=1000,
         step=10,
     )
-    chord_time: bpy.props.IntProperty(
+    chord_time: IntProperty(
         name="Chord Mode Timeout",
         description="Chord timeout (ms)",
         default=300,
@@ -1847,12 +1872,12 @@ class PMEPreferences(bpy.types.AddonPreferences):
         max=1000,
         step=10,
     )
-    use_chord_hint: bpy.props.BoolProperty(
+    use_chord_hint: BoolProperty(
         name="Show Next Key Chord",
         description="Show next key chord in the sequence",
         default=True,
     )
-    tab: bpy.props.EnumProperty(
+    tab: EnumProperty(
         items=(
             ('EDITOR', "Editor", ""),
             ('SETTINGS', "Settings", ""),
@@ -1864,7 +1889,7 @@ class PMEPreferences(bpy.types.AddonPreferences):
         if not self.show_names and not self.show_hotkeys:
             self.show_hotkeys = True
 
-    show_names: bpy.props.BoolProperty(
+    show_names: BoolProperty(
         default=True, description="Show names", update=update_show_names
     )
 
@@ -1872,7 +1897,7 @@ class PMEPreferences(bpy.types.AddonPreferences):
         if not self.show_hotkeys and not self.show_names:
             self.show_names = True
 
-    show_hotkeys: bpy.props.BoolProperty(
+    show_hotkeys: BoolProperty(
         default=True, description="Show hotkeys", update=update_show_hotkeys
     )
 
@@ -1886,7 +1911,7 @@ class PMEPreferences(bpy.types.AddonPreferences):
     #             PME_UL_pm_tree.collapsed_groups.clear()
     #         self.tree.update()
 
-    show_keymap_names: bpy.props.BoolProperty(
+    show_keymap_names: BoolProperty(
         name="Keymap Names", default=False, description="Show keymap names"
     )
 
@@ -1897,7 +1922,7 @@ class PMEPreferences(bpy.types.AddonPreferences):
     #             PME_UL_pm_tree.collapsed_groups.clear()
     #         self.tree.update()
 
-    show_tags: bpy.props.BoolProperty(
+    show_tags: BoolProperty(
         name="Tags", default=False, description="Show tags"
     )
 
@@ -1911,7 +1936,7 @@ class PMEPreferences(bpy.types.AddonPreferences):
 
             PME_UL_pm_tree.save_state()
 
-    group_by: bpy.props.EnumProperty(
+    group_by: EnumProperty(
         name="Group by",
         description="Group items by",
         items=(
@@ -1924,56 +1949,56 @@ class PMEPreferences(bpy.types.AddonPreferences):
         update=update_group_by,
     )
 
-    num_icons_per_row: bpy.props.IntProperty(
+    num_icons_per_row: IntProperty(
         name="Icons per Row", description="Icons per row", default=30, min=1, max=100
     )
-    pie_extra_slot_gap_size: bpy.props.IntProperty(
+    pie_extra_slot_gap_size: IntProperty(
         name="Extra Pie Slot Gap Size",
         description="Extra pie slot gap size",
         default=5,
         min=3,
         max=100,
     )
-    show_custom_icons: bpy.props.BoolProperty(
+    show_custom_icons: BoolProperty(
         default=False, description="Show custom icons"
     )
-    show_advanced_settings: bpy.props.BoolProperty(
+    show_advanced_settings: BoolProperty(
         default=False, description="Advanced settings"
     )
-    show_experimental_open_modes: bpy.props.BoolProperty(
+    show_experimental_open_modes: BoolProperty(
         name="Show Experimental Hotkey Modes",
         description="Reveal experimental Click/Click Drag modes in Hotkey Mode picker",
         default=False,
     )
-    show_list: bpy.props.BoolProperty(default=True, description="Show the list")
-    show_sidepanel_prefs: bpy.props.BoolProperty(
+    show_list: BoolProperty(default=True, description="Show the list")
+    show_sidepanel_prefs: BoolProperty(
         name="Show PME Preferences in 3DView's N-panel",
         description="Show PME preferences in 3D View N-panel",
     )
 
-    use_filter: bpy.props.BoolProperty(description="Use filters", update=update_tree)
-    mode_filter: bpy.props.EnumProperty(
+    use_filter: BoolProperty(description="Use filters", update=update_tree)
+    mode_filter: EnumProperty(
         items=CC.PM_ITEMS_M,
         default=CC.PM_ITEMS_M_DEFAULT,
         description="Show items",
         options={'ENUM_FLAG'},
         update=update_tree,
     )
-    tag_filter: bpy.props.StringProperty(update=update_tree)
-    auto_tag_on_add: bpy.props.BoolProperty(
+    tag_filter: StringProperty(update=update_tree)
+    auto_tag_on_add: BoolProperty(
         name="Tag New Menus with Active Filter",
         default=False,
         description="When a tag filter is active, automatically assign that tag to newly created menus",
     )
-    show_only_new_pms: bpy.props.BoolProperty(
+    show_only_new_pms: BoolProperty(
         description="Show only new menus", update=update_tree
     )
-    cache_scripts: bpy.props.BoolProperty(
+    cache_scripts: BoolProperty(
         name="Cache External Scripts",
         description="Cache external scripts",
         default=True,
     )
-    panel_info_visibility: bpy.props.EnumProperty(
+    panel_info_visibility: EnumProperty(
         name="Panel Info",
         description="Show panel info",
         items=(
@@ -1985,37 +2010,37 @@ class PMEPreferences(bpy.types.AddonPreferences):
         default={'NAME', 'CLASS'},
         options={'ENUM_FLAG'},
     )
-    show_pm_title: bpy.props.BoolProperty(
+    show_pm_title: BoolProperty(
         name="Show Title", description="Show pie menu title", default=True
     )
-    restore_mouse_pos: bpy.props.BoolProperty(
+    restore_mouse_pos: BoolProperty(
         name="Restore Mouse Position",
         description=("Restore mouse position " "after releasing the pie menu's hotkey"),
     )
-    use_spacer: bpy.props.BoolProperty(
+    use_spacer: BoolProperty(
         name="Use 'Spacer' Separator by Default",
         description="Use 'Spacer' separator by default",
         default=False,
     )
-    default_popup_mode: bpy.props.EnumProperty(
+    default_popup_mode: EnumProperty(
         description="Default popup mode",
         items=CC.PD_MODE_ITEMS,
         default='PANEL',
         update=lambda s, c: s.ed('DIALOG').update_default_pmi_data(),
     )
-    use_cmd_editor: bpy.props.BoolProperty(
+    use_cmd_editor: BoolProperty(
         name="Use Operator Properties Editor",
         description="Use operator properties editor in Command tab",
         default=True,
     )
 
-    toolbar_width: bpy.props.IntProperty(
+    toolbar_width: IntProperty(
         name="Max Width",
         description="Maximum width of vertical toolbars",
         subtype='PIXEL',
         default=60,
     )
-    toolbar_height: bpy.props.IntProperty(
+    toolbar_height: IntProperty(
         name="Max Height",
         description="Maximum height of horizontal toolbars",
         subtype='PIXEL',
@@ -2023,21 +2048,21 @@ class PMEPreferences(bpy.types.AddonPreferences):
     )
 
     def get_debug_mode(self):
-        return bpy.app.debug_wm
+        return app.debug_wm
 
     def set_debug_mode(self, value):
-        bpy.app.debug_wm = value
+        app.debug_wm = value
 
-    debug_mode: bpy.props.BoolProperty(
+    debug_mode: BoolProperty(
         name="Debug Mode",
         description=(
-            "Enables extended debug information (via bpy.app.debug_wm),\n"
+            "Enables extended debug information (via app.debug_wm),\n"
             "including operator logs for building custom PMEs."
         ),
         get=get_debug_mode,
         set=set_debug_mode,
     )
-    show_error_trace: bpy.props.BoolProperty(
+    show_error_trace: BoolProperty(
         name="Show Error Trace",
         description=(
             "Displays error traces for custom items and more.\n"
@@ -2053,13 +2078,13 @@ class PMEPreferences(bpy.types.AddonPreferences):
             PME_UL_pm_tree.collapsed_groups.clear()
             PME_UL_pm_tree.update_tree()
 
-    tree_mode: bpy.props.BoolProperty(description="Tree Mode", update=update_tree_mode)
+    tree_mode: BoolProperty(description="Tree Mode", update=update_tree_mode)
 
     def save_tree_update(self, context):
         if self.save_tree and self.tree_mode:
             PME_UL_pm_tree.save_state()
 
-    save_tree: bpy.props.BoolProperty(
+    save_tree: BoolProperty(
         name="Save and Restore Tree View State",
         description=("Save and restore tree view state\n" "from %s/data/tree.json file")
         % ADDON_ID,
@@ -2068,7 +2093,7 @@ class PMEPreferences(bpy.types.AddonPreferences):
     )
 
     def get_maximize_prefs(self):
-        return bpy.types.USERPREF_PT_addons.draw == draw_addons_maximized
+        return USERPREF_PT_addons.draw == draw_addons_maximized
 
     def set_maximize_prefs(self, value):
         if value and not is_userpref_maximized():
@@ -2077,56 +2102,56 @@ class PMEPreferences(bpy.types.AddonPreferences):
         elif not value and is_userpref_maximized():
             bpy.ops.pme.userpref_restore()
 
-    maximize_prefs: bpy.props.BoolProperty(
+    maximize_prefs: BoolProperty(
         description="Maximize preferences area",
         get=get_maximize_prefs,
         set=set_maximize_prefs,
     )
 
-    # use_square_buttons: bpy.props.BoolProperty(
+    # use_square_buttons: BoolProperty(
     #     name="Use Square Icon-Only Buttons",
     #     description="Use square icon-only buttons")
-    pmi_data: bpy.props.PointerProperty(type=PMIData)
-    scripts_filepath: bpy.props.StringProperty(subtype='FILE_PATH', default=SCRIPT_PATH)
+    pmi_data: PointerProperty(type=PMIData)
+    scripts_filepath: StringProperty(subtype='FILE_PATH', default=SCRIPT_PATH)
 
     def _update_mouse_threshold(self, context):
         OPS.PME_OT_modal_base.prop_data.clear()
 
-    mouse_threshold_float: bpy.props.IntProperty(
+    mouse_threshold_float: IntProperty(
         name="Slider (Float)",
         description="Slider (Float)",
         subtype='PIXEL',
         default=10,
         update=_update_mouse_threshold,
     )
-    mouse_threshold_int: bpy.props.IntProperty(
+    mouse_threshold_int: IntProperty(
         name="Slider (Int)",
         description="Slider (Integer)",
         subtype='PIXEL',
         default=20,
         update=_update_mouse_threshold,
     )
-    mouse_threshold_bool: bpy.props.IntProperty(
+    mouse_threshold_bool: IntProperty(
         name="Checkbox (Bool)",
         description="Checkbox (Boolean)",
         subtype='PIXEL',
         default=40,
         update=_update_mouse_threshold,
     )
-    mouse_threshold_enum: bpy.props.IntProperty(
+    mouse_threshold_enum: IntProperty(
         name="Drop-Down List (Enum)",
         description="Drop-down list (Enum)",
         subtype='PIXEL',
         default=40,
         update=_update_mouse_threshold,
     )
-    use_mouse_threshold_bool: bpy.props.BoolProperty(
+    use_mouse_threshold_bool: BoolProperty(
         description="Use mouse movement to change the value", default=True
     )
-    use_mouse_threshold_enum: bpy.props.BoolProperty(
+    use_mouse_threshold_enum: BoolProperty(
         description="Use mouse movement to change the value", default=True
     )
-    mouse_dir_mode: bpy.props.EnumProperty(
+    mouse_dir_mode: EnumProperty(
         name="Mode",
         description="Mode",
         items=(
@@ -2628,7 +2653,7 @@ class PMEPreferences(bpy.types.AddonPreferences):
             idx = 0
 
             for k, i in (
-                bpy.types.UILayout.bl_rna.functions["prop"]
+                UILayout.bl_rna.functions["prop"]
                 .parameters["icon"]
                 .enum_items.items()
             ):
@@ -3240,7 +3265,7 @@ class PMEPreferences(bpy.types.AddonPreferences):
         return self.editors[id]
 
 
-class PME_PT_preferences(bpy.types.Panel):
+class PME_PT_preferences(Panel):
     bl_space_type = "VIEW_3D"
     bl_region_type = "UI"
     bl_label = "Pie Menu Editor"
@@ -3261,15 +3286,15 @@ class PME_MT_button_context:
         self.layout.separator()
 
 
-class PME_OT_context_menu(bpy.types.Operator):
+class PME_OT_context_menu(Operator):
     bl_idname = "pme.context_menu"
     bl_label = ""
     bl_description = ""
     bl_options = {'INTERNAL'}
 
-    prop: bpy.props.StringProperty(options={'SKIP_SAVE'})
-    operator: bpy.props.StringProperty(options={'SKIP_SAVE'})
-    name: bpy.props.StringProperty(options={'SKIP_SAVE'})
+    prop: StringProperty(options={'SKIP_SAVE'})
+    operator: StringProperty(options={'SKIP_SAVE'})
+    name: StringProperty(options={'SKIP_SAVE'})
 
     def draw_menu(self, menu, context):
         layout = menu.layout
@@ -3371,16 +3396,16 @@ def button_context_menu(self, context):
 
 
 def add_rmb_menu():
-    if not hasattr(bpy.types, "WM_MT_button_context"):
-        tp = type("WM_MT_button_context", (PME_MT_button_context, bpy.types.Menu), {})
+    if not hasattr(bpy_types, "WM_MT_button_context"):
+        tp = type("WM_MT_button_context", (PME_MT_button_context, Menu), {})
         bpy.utils.register_class(tp)
 
-    bpy.types.WM_MT_button_context.append(button_context_menu)
+    WM_MT_button_context.append(button_context_menu)
 
 
 def register():
-    if not hasattr(bpy.types.WindowManager, "pme"):
-        bpy.types.WindowManager.pme = bpy.props.PointerProperty(type=PMEData)
+    if not hasattr(WindowManager, "pme"):
+        WindowManager.pme = PointerProperty(type=PMEData)
         bpy.context.window_manager.pme.modal_item_hk.setvar(
             "update", PMEData.update_modal_item_hk
         )
@@ -3476,8 +3501,8 @@ def unregister():
 
     PMIData._kmi = None
 
-    if hasattr(bpy.types, "WM_MT_button_context"):
-        bpy.types.WM_MT_button_context.remove(button_context_menu)
+    if hasattr(bpy_types, "WM_MT_button_context"):
+        WM_MT_button_context.remove(button_context_menu)
 
     # Run unregister scripts (system first, then user)
     for script_dir in iter_script_dirs(ADDON_PATH, "unregister"):

@@ -1,3 +1,4 @@
+# pyright: reportInvalidTypeForm=false
 # editors/panel_group.py - Panel Group editor
 # LAYER = "editors"
 #
@@ -6,6 +7,9 @@
 LAYER = "editors"
 
 import bpy
+from bpy import types as bpy_types
+from bpy.props import BoolProperty, EnumProperty, IntProperty, StringProperty
+from bpy_types import Header, Operator, Panel
 from ..core import constants as CC
 from ..infra.collections import MoveItemOperator
 from .base import EditorBase, PME_OT_pm_edit, PME_OT_pm_add
@@ -30,13 +34,13 @@ from .. import pme
 from ..core.props import props
 
 
-class PME_OT_panel_sub_toggle(bpy.types.Operator):
+class PME_OT_panel_sub_toggle(Operator):
     bl_idname = "pme.panel_sub_toggle"
     bl_label = "Toggle Panel/Sub-panel"
     bl_description = "Toggle panel/sub-panel"
     bl_options = {'INTERNAL'}
 
-    idx: bpy.props.IntProperty(options={'SKIP_SAVE'})
+    idx: IntProperty(options={'SKIP_SAVE'})
 
     def execute(self, context):
         if self.idx == 0:
@@ -51,13 +55,13 @@ class PME_OT_panel_sub_toggle(bpy.types.Operator):
         return {'FINISHED'}
 
 
-class PME_OT_toolbar_menu(bpy.types.Operator):
+class PME_OT_toolbar_menu(Operator):
     bl_idname = "pme.toolbar_menu"
     bl_label = "Toolbar Menu"
     bl_description = "Toolbar menu"
     bl_options = {'INTERNAL'}
 
-    name: bpy.props.StringProperty(options={'SKIP_SAVE'})
+    name: StringProperty(options={'SKIP_SAVE'})
 
     def draw_toolbar_menu(self, menu, context):
         lh.lt(menu.layout)
@@ -94,7 +98,7 @@ class PME_OT_toolbar_menu(bpy.types.Operator):
         return {'FINISHED'}
 
 
-class PME_PT_toolbar(bpy.types.Panel):
+class PME_PT_toolbar(Panel):
     bl_label = "PME Toolbar"
     bl_space_type = 'PREFERENCES'
     bl_region_type = 'WINDOW'
@@ -162,7 +166,7 @@ def draw_pme_panel(self, context):
     pr = get_prefs()
     if self.pme_data in pr.pie_menus:
         pm = pr.pie_menus[self.pme_data]
-        if issubclass(self.__class__, bpy.types.Header):
+        if issubclass(self.__class__, Header):
             if not self.__class__.poll(context):
                 return
             self.layout.separator()
@@ -181,7 +185,7 @@ def draw_pme_panel(self, context):
         )
 
     else:
-        tp = PAU.hidden_panel(self.pme_data) or getattr(bpy.types, self.pme_data, None)
+        tp = PAU.hidden_panel(self.pme_data) or getattr(bpy_types, self.pme_data, None)
         if not tp:
             return
         pme.context.layout = self.layout
@@ -197,14 +201,14 @@ def poll_pme_panel(cls, context):
     return pm.poll(cls, context)
 
 
-class PME_OT_panel_menu(bpy.types.Operator):
+class PME_OT_panel_menu(Operator):
     bl_idname = "pme.panel_menu"
     bl_label = ""
     bl_description = ""
     bl_options = {'INTERNAL'}
 
-    panel: bpy.props.StringProperty()
-    is_right_region: bpy.props.BoolProperty()
+    panel: StringProperty()
+    is_right_region: BoolProperty()
 
     def extend_ui_operator(self, label, icon, mode, pm_name):
         pr = get_prefs()
@@ -255,7 +259,7 @@ class PME_OT_panel_menu(bpy.types.Operator):
         pm = pr.selected_pm
 
         if pm:
-            tp = getattr(bpy.types, self.panel, None)
+            tp = getattr(bpy_types, self.panel, None)
             label = tp and getattr(tp, "bl_label", None) or self.panel
 
             if pm.mode in {'PMENU', 'RMENU', 'DIALOG'}:
@@ -311,7 +315,7 @@ class PME_OT_panel_menu(bpy.types.Operator):
         )
 
         if pm:
-            tp = PAU.hidden_panel(self.panel) or getattr(bpy.types, self.panel, None)
+            tp = PAU.hidden_panel(self.panel) or getattr(bpy_types, self.panel, None)
             label = tp and getattr(tp, "bl_label", None) or self.panel
 
             if pm.mode in {'PMENU', 'RMENU', 'DIALOG', 'SCRIPT'}:
@@ -412,7 +416,7 @@ class PME_OT_panel_menu(bpy.types.Operator):
         return {'FINISHED'}
 
 
-class PME_OT_interactive_panels_toggle(bpy.types.Operator):
+class PME_OT_interactive_panels_toggle(Operator):
     bl_idname = "pme.interactive_panels_toggle"
     bl_label = "Toggle Interactive Panels (PME)"
     bl_description = "Toggle panel tools"
@@ -421,7 +425,7 @@ class PME_OT_interactive_panels_toggle(bpy.types.Operator):
     active = False
     enabled = True
 
-    action: bpy.props.EnumProperty(
+    action: EnumProperty(
         items=(
             ('TOGGLE', "Toggle", ""),
             ('ENABLE', "Enable", ""),
@@ -513,7 +517,7 @@ class PME_OT_interactive_panels_toggle(bpy.types.Operator):
         return {'FINISHED'}
 
 
-class PME_OT_panel_add(bpy.types.Operator):
+class PME_OT_panel_add(Operator):
     bl_idname = "pme.panel_add"
     bl_label = "Add Panel"
     bl_description = "Add panel"
@@ -556,10 +560,10 @@ class PME_OT_panel_add(bpy.types.Operator):
 
         return PME_OT_panel_add.enum_items
 
-    item: bpy.props.EnumProperty(items=get_items, options={'SKIP_SAVE'})
-    index: bpy.props.IntProperty(default=-1, options={'SKIP_SAVE'})
-    mode: bpy.props.StringProperty(options={'SKIP_SAVE'})
-    panel: bpy.props.StringProperty(options={'SKIP_SAVE'})
+    item: EnumProperty(items=get_items, options={'SKIP_SAVE'})
+    index: IntProperty(default=-1, options={'SKIP_SAVE'})
+    mode: StringProperty(options={'SKIP_SAVE'})
+    panel: StringProperty(options={'SKIP_SAVE'})
 
     def execute(self, context):
         pr = get_prefs()
@@ -569,7 +573,7 @@ class PME_OT_panel_add(bpy.types.Operator):
         pm = pr.selected_pm
 
         if self.mode == 'BLENDER' or self.mode == 'DIALOG':
-            tp = PAU.hidden_panel(self.panel) or getattr(bpy.types, self.panel, None)
+            tp = PAU.hidden_panel(self.panel) or getattr(bpy_types, self.panel, None)
             if not tp:
                 return {'CANCELLED'}
 
@@ -641,7 +645,7 @@ class PME_OT_panel_add(bpy.types.Operator):
         return {'FINISHED'}
 
 
-class PME_OT_panel_item_move(MoveItemOperator, bpy.types.Operator):
+class PME_OT_panel_item_move(MoveItemOperator, Operator):
     bl_idname = "pme.panel_item_move"
 
     def get_icon(self, item, idx):
@@ -660,13 +664,13 @@ class PME_OT_panel_item_move(MoveItemOperator, bpy.types.Operator):
         tag_redraw()
 
 
-class PME_OT_panel_item_remove(bpy.types.Operator):
+class PME_OT_panel_item_remove(Operator):
     bl_idname = "pme.panel_item_remove"
     bl_label = "Remove Panel"
     bl_description = "Remove the panel"
     bl_options = {'INTERNAL'}
 
-    idx: bpy.props.IntProperty(options={'SKIP_SAVE'})
+    idx: IntProperty(options={'SKIP_SAVE'})
 
     def execute(self, context):
         pr = get_prefs()

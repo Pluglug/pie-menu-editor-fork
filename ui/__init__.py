@@ -1,3 +1,4 @@
+# pyright: reportInvalidTypeForm=false
 # ui/ - UI描画ヘルパーパッケージ
 # LAYER = "ui"
 #
@@ -14,6 +15,9 @@
 LAYER = "ui"
 
 import bpy
+from bpy import types as bpy_types
+from bpy.props import StringProperty
+from bpy_types import Operator
 import traceback
 from ..core import constants as CC
 from ..infra.debug import *
@@ -24,7 +28,7 @@ from ..addon import get_uprefs, ic
 # Note: bp imported lazily in gen_prop_name() to avoid circular import
 # (bl_utils -> screen_utils -> ui/__init__ -> bl_utils)
 
-uilayout_getattribute = bpy.types.UILayout.__getattribute__
+uilayout_getattribute = bpy_types.UILayout.__getattribute__
 draw_addons_default = None
 
 
@@ -142,15 +146,15 @@ def draw_addons_maximized(self, context):
     del prefs_class.layout
 
 
-class PME_OT_userpref_show(bpy.types.Operator):
+class PME_OT_userpref_show(Operator):
     bl_idname = "pme.userpref_show"
     bl_label = "User Preferences"
     bl_options = {'INTERNAL'}
 
     mod = None
 
-    tab: bpy.props.StringProperty(options={'SKIP_SAVE'})
-    addon: bpy.props.StringProperty(options={'SKIP_SAVE'})
+    tab: StringProperty(options={'SKIP_SAVE'})
+    addon: StringProperty(options={'SKIP_SAVE'})
 
     def execute(self, context):
         if context.area.type != 'PREFERENCES':
@@ -158,11 +162,11 @@ class PME_OT_userpref_show(bpy.types.Operator):
 
         if self.addon:
             PME_OT_userpref_show.mod = self.addon
-            bpy.types.USERPREF_PT_addons.draw = draw_addons_maximized
+            bpy_types.USERPREF_PT_addons.draw = draw_addons_maximized
             self.tab = 'ADDONS'
 
         else:
-            bpy.types.USERPREF_PT_addons.draw = draw_addons_default
+            bpy_types.USERPREF_PT_addons.draw = draw_addons_default
 
         if self.tab:
             get_uprefs().active_section = self.tab
@@ -171,12 +175,12 @@ class PME_OT_userpref_show(bpy.types.Operator):
         return {'FINISHED'}
 
 
-class PME_OT_userpref_restore(bpy.types.Operator):
+class PME_OT_userpref_restore(Operator):
     bl_idname = "pme.userpref_restore"
     bl_label = "Restore User Preferences Area"
 
     def execute(self, context):
-        bpy.types.USERPREF_PT_addons.draw = draw_addons_default
+        bpy_types.USERPREF_PT_addons.draw = draw_addons_default
         return {'FINISHED'}
 
 
@@ -209,18 +213,18 @@ def pme_uilayout_getattribute(self, attr):
 
 
 def is_userpref_maximized():
-    return bpy.types.USERPREF_PT_addons.draw == draw_addons_maximized
+    return bpy_types.USERPREF_PT_addons.draw == draw_addons_maximized
 
 
 def register():
-    # bpy.types.UILayout.__getattribute__ = pme_uilayout_getattribute
+    # bpy_types.UILayout.__getattribute__ = pme_uilayout_getattribute
     global draw_addons_default
-    draw_addons_default = bpy.types.USERPREF_PT_addons.draw
+    draw_addons_default = bpy_types.USERPREF_PT_addons.draw
 
     pme.context.add_global("tag_redraw", tag_redraw_windows)
 
 
 def unregister():
-    # bpy.types.UILayout.__getattribute__ = uilayout_getattribute
-    if bpy.types.USERPREF_PT_addons.draw == draw_addons_maximized:
-        bpy.types.USERPREF_PT_addons.draw = draw_addons_default
+    # bpy_types.UILayout.__getattribute__ = uilayout_getattribute
+    if bpy_types.USERPREF_PT_addons.draw == draw_addons_maximized:
+        bpy_types.USERPREF_PT_addons.draw = draw_addons_default

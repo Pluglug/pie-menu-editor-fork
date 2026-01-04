@@ -1,3 +1,4 @@
+# pyright: reportInvalidTypeForm=false
 # bl_utils.py - Blender API utilities and wrappers
 # LAYER = "infra"
 #
@@ -7,6 +8,9 @@
 LAYER = "infra"
 
 import bpy
+from bpy import types as bpy_types
+from bpy.props import BoolProperty, IntProperty, StringProperty
+from bpy.types import Brush, Operator, Space, WindowManager
 import _bpy
 import re
 from .addon import print_exc, ic, get_uprefs
@@ -365,29 +369,29 @@ bp = BlProp()
 class PopupOperator:
     active = 0
 
-    width: bpy.props.IntProperty(
+    width: IntProperty(
         name="Width",
         description="Width of the popup",
         default=300,
         options={'SKIP_SAVE'},
     )
-    auto_close: bpy.props.BoolProperty(
+    auto_close: BoolProperty(
         default=True,
         name="Auto Close",
         description="Auto close the popup",
         options={'SKIP_SAVE'},
     )
-    hide_title: bpy.props.BoolProperty(
+    hide_title: BoolProperty(
         default=False, name="Hide Title",
         description=(
             "Hide title.\n"
             "  Used when Auto Close is enabled.\n"
         ), options={'SKIP_SAVE'},
     )
-    center: bpy.props.BoolProperty(
+    center: BoolProperty(
         name="Center", description="Center", options={'SKIP_SAVE'}
     )
-    title: bpy.props.StringProperty(
+    title: StringProperty(
         name="Title",
         description=(
             "Title of the popup.\n"
@@ -487,8 +491,8 @@ class PopupOperator:
 
 class ConfirmBoxHandler:
     bl_label = "Confirm"
-    confirm: bpy.props.BoolProperty(default=True, options={'SKIP_SAVE'})
-    box: bpy.props.BoolProperty(default=False, options={'SKIP_SAVE'})
+    confirm: BoolProperty(default=True, options={'SKIP_SAVE'})
+    box: BoolProperty(default=False, options={'SKIP_SAVE'})
 
     def on_input(self, value):
         self.confirm_value = value
@@ -531,16 +535,16 @@ class ConfirmBoxHandler:
         return {'FINISHED'}
 
 
-class PME_OT_confirm_box(bpy.types.Operator):
+class PME_OT_confirm_box(Operator):
     bl_idname = "pme.confirm_box"
     bl_label = "Pie Menu Editor"
     bl_options = {'INTERNAL'}
 
     func = None
 
-    message: bpy.props.StringProperty(default="Confirm", options={'SKIP_SAVE'})
-    icon: bpy.props.StringProperty(default='QUESTION', options={'SKIP_SAVE'})
-    width: bpy.props.IntProperty(default=0, options={'SKIP_SAVE'})
+    message: StringProperty(default="Confirm", options={'SKIP_SAVE'})
+    icon: StringProperty(default='QUESTION', options={'SKIP_SAVE'})
+    width: IntProperty(default=0, options={'SKIP_SAVE'})
 
     def draw(self, context):
         row = self.layout.row(align=True)
@@ -573,15 +577,15 @@ def confirm_box(message, func=None, icon='QUESTION', width=0):
     )
 
 
-class PME_OT_message_box(bpy.types.Operator):
+class PME_OT_message_box(Operator):
     bl_idname = "pme.message_box"
     bl_label = ""
     bl_description = "Message Box"
     bl_options = {'INTERNAL'}
 
-    title: bpy.props.StringProperty(default="Pie Menu Editor", options={'SKIP_SAVE'})
-    message: bpy.props.StringProperty(options={'SKIP_SAVE'})
-    icon: bpy.props.StringProperty(default='INFO', options={'SKIP_SAVE'})
+    title: StringProperty(default="Pie Menu Editor", options={'SKIP_SAVE'})
+    message: StringProperty(options={'SKIP_SAVE'})
+    icon: StringProperty(default='INFO', options={'SKIP_SAVE'})
 
     def draw_message_box(self, menu, context):
         lines = self.message.split("\n")
@@ -600,7 +604,7 @@ def message_box(text, icon='INFO', title="Pie Menu Editor"):
     return True
 
 
-class PME_OT_input_box(bpy.types.Operator):
+class PME_OT_input_box(Operator):
     bl_idname = "pme.input_box"
     bl_label = "Input Box"
     bl_options = {'INTERNAL'}
@@ -608,8 +612,8 @@ class PME_OT_input_box(bpy.types.Operator):
     func = None
     prev_value = ""
 
-    value: bpy.props.StringProperty()
-    prop: bpy.props.StringProperty(options={'SKIP_SAVE'})
+    value: StringProperty()
+    prop: StringProperty(options={'SKIP_SAVE'})
 
     def draw(self, context):
         if self.prop:
@@ -656,10 +660,10 @@ def _gen_prop_path(ptr, prop, prefix):
 
 
 def gen_prop_path(ptr, prop):
-    if isinstance(ptr, bpy.types.Space):
+    if isinstance(ptr, Space):
         return _gen_prop_path(ptr, prop, "C.space_data")
 
-    if isinstance(ptr, bpy.types.Brush):
+    if isinstance(ptr, Brush):
         return "paint_settings().brush." + prop.identifier
 
     ptr_clname = ptr.__class__.__name__
@@ -698,7 +702,7 @@ def gen_prop_path(ptr, prop):
     return None
 
 
-class PME_OT_popup_close(bpy.types.Operator):
+class PME_OT_popup_close(Operator):
     bl_idname = "pme.popup_close"
     bl_label = "Close All Popups"
 
@@ -726,8 +730,8 @@ def is_read_only():
     try:
         # bpy.utils.register_class(PME_OT_popup_close)
         # bpy.utils.unregister_class(PME_OT_popup_close)
-        bpy.types.WindowManager.pme_temp = bpy.props.BoolProperty()
-        del bpy.types.WindowManager.pme_temp
+        WindowManager.pme_temp = BoolProperty()
+        del WindowManager.pme_temp
     except:
         return True
 

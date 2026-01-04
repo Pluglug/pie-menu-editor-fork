@@ -1,3 +1,4 @@
+# pyright: reportInvalidTypeForm=false
 # pme_types.py - Core data models (Tag, PMItem, PMIItem, PMLink, etc.)
 # LAYER = "core"
 #
@@ -6,6 +7,14 @@
 LAYER = "core"
 
 import bpy
+from bpy.props import (
+    BoolProperty,
+    CollectionProperty,
+    EnumProperty,
+    IntProperty,
+    StringProperty,
+)
+from bpy.types import PropertyGroup
 from . import bl_utils as BU
 from .core import constants as CC
 from .ui import utils as UU
@@ -22,15 +31,15 @@ from .ui import tag_redraw
 from .operators import WM_OT_pme_user_pie_menu_call
 
 
-class UserProperties(bpy.types.PropertyGroup):
+class UserProperties(PropertyGroup):
     pass
 
 
-class EdProperties(bpy.types.PropertyGroup):
+class EdProperties(PropertyGroup):
     pass
 
 
-class Tag(bpy.types.PropertyGroup):
+class Tag(PropertyGroup):
     filtered_pms = None
 
     @staticmethod
@@ -79,12 +88,12 @@ class Tag(bpy.types.PropertyGroup):
         return Tag.filtered_pms is None or pm.name in Tag.filtered_pms
 
 
-class PMLink(bpy.types.PropertyGroup):
-    pm_name: bpy.props.StringProperty()
-    is_folder: bpy.props.BoolProperty()
-    label: bpy.props.StringProperty()
-    folder: bpy.props.StringProperty()
-    group: bpy.props.StringProperty()
+class PMLink(PropertyGroup):
+    pm_name: StringProperty()
+    is_folder: BoolProperty()
+    label: StringProperty()
+    folder: StringProperty()
+    group: StringProperty()
 
     idx = 0
     paths = {}
@@ -130,13 +139,13 @@ class PMLink(bpy.types.PropertyGroup):
         return ret
 
 
-class PMIItem(bpy.types.PropertyGroup):
+class PMIItem(PropertyGroup):
     expandable_props = {}
 
-    mode: bpy.props.EnumProperty(items=CC.MODE_ITEMS, description="Type of the item")
-    text: bpy.props.StringProperty(maxlen=CC.MAX_STR_LEN)
-    icon: bpy.props.StringProperty(description="Icon")
-    enabled: bpy.props.BoolProperty(
+    mode: EnumProperty(items=CC.MODE_ITEMS, description="Type of the item")
+    text: StringProperty(maxlen=CC.MAX_STR_LEN)
+    icon: StringProperty(description="Icon")
+    enabled: BoolProperty(
         name="Enable/Disable", description="Enable/Disable", default=True
     )
 
@@ -150,7 +159,7 @@ class PMIItem(bpy.types.PropertyGroup):
         pm = get_prefs().selected_pm
         pm.ed.on_pmi_rename(pm, self, self.name, value)
 
-    label: bpy.props.StringProperty(
+    label: StringProperty(
         description="Label", get=get_pmi_label, set=set_pmi_label
     )
 
@@ -260,7 +269,7 @@ class PMIItem(bpy.types.PropertyGroup):
         return self.expandable_props[prop]
 
 
-class PMItem(bpy.types.PropertyGroup):
+class PMItem(PropertyGroup):
     poll_methods = {}
     kmis_map = {}
     _km_name_update_lock = False
@@ -314,7 +323,7 @@ class PMItem(bpy.types.PropertyGroup):
         finally:
             PMItem._km_name_update_lock = False
 
-    km_name: bpy.props.StringProperty(
+    km_name: StringProperty(
         default="Window",
         description="Keymap names",
         update=update_pm_km_name,
@@ -336,13 +345,13 @@ class PMItem(bpy.types.PropertyGroup):
 
         self.ed.on_pm_rename(self, value)
 
-    label: bpy.props.StringProperty(
+    label: StringProperty(
         get=get_pm_name, set=set_pm_name, description="Menu name"
     )
 
-    pmis: bpy.props.CollectionProperty(type=PMIItem)
-    mode: bpy.props.EnumProperty(items=CC.PM_ITEMS)
-    tag: bpy.props.StringProperty()
+    pmis: CollectionProperty(type=PMIItem)
+    mode: EnumProperty(items=CC.PM_ITEMS)
+    tag: StringProperty()
 
     def update_keymap_item(self, context):
         if not self.ed.has_hotkey:
@@ -390,7 +399,7 @@ class PMItem(bpy.types.PropertyGroup):
 
         self.update_keymap_item(context)
 
-    open_mode: bpy.props.EnumProperty(
+    open_mode: EnumProperty(
         name="Hotkey Mode", items=CC.OPEN_MODE_ITEMS, update=update_open_mode
     )
 
@@ -400,31 +409,31 @@ class PMItem(bpy.types.PropertyGroup):
         if pr.group_by == 'KEY':
             pr.tree.update()
 
-    key: bpy.props.EnumProperty(
+    key: EnumProperty(
         items=KH.key_items,
         description="Key pressed",
         update=update_pm_key,
         default='NONE',
     )
 
-    chord: bpy.props.EnumProperty(items=KH.key_items, description="Chord pressed")
-    any: bpy.props.BoolProperty(
+    chord: EnumProperty(items=KH.key_items, description="Chord pressed")
+    any: BoolProperty(
         description="Any key pressed", update=update_keymap_item
     )
-    ctrl: bpy.props.BoolProperty(
+    ctrl: BoolProperty(
         description="Ctrl key pressed", update=update_keymap_item
     )
-    shift: bpy.props.BoolProperty(
+    shift: BoolProperty(
         description="Shift key pressed", update=update_keymap_item
     )
-    alt: bpy.props.BoolProperty(
+    alt: BoolProperty(
         description="Alt key pressed", update=update_keymap_item
     )
-    oskey: bpy.props.BoolProperty(
+    oskey: BoolProperty(
         description="Operating system key pressed", update=update_keymap_item
     )
 
-    drag_dir: bpy.props.EnumProperty(
+    drag_dir: EnumProperty(
         items=CC.DRAG_DIR_ITEMS,
         name="Direction",
         description="Direction filter for Click Drag",
@@ -451,7 +460,7 @@ class PMItem(bpy.types.PropertyGroup):
 
         PMItem._prev_key_mod_map[self.name] = curr
 
-    key_mod: bpy.props.EnumProperty(
+    key_mod: EnumProperty(
         items=KH.key_items,
         description="Regular key pressed as a modifier",
         update=update_pm_key_mod,
@@ -462,7 +471,7 @@ class PMItem(bpy.types.PropertyGroup):
         self.ed.on_pm_enabled(self, self.enabled)
         self.update_keymap_item(context)
 
-    enabled: bpy.props.BoolProperty(
+    enabled: BoolProperty(
         description="Enable or disable the menu",
         default=True,
         update=update_pm_enabled,
@@ -480,13 +489,13 @@ class PMItem(bpy.types.PropertyGroup):
             except:
                 self.poll_methods[self.name] = None
 
-    poll_cmd: bpy.props.StringProperty(
+    poll_cmd: StringProperty(
         description=("Poll method\nTest if the item can be called/displayed or not"),
         default=CC.DEFAULT_POLL,
         maxlen=CC.MAX_STR_LEN,
         update=update_poll_cmd,
     )
-    data: bpy.props.StringProperty(maxlen=CC.MAX_STR_LEN)
+    data: StringProperty(maxlen=CC.MAX_STR_LEN)
 
     def update_panel_group(self):
         self.ed.update_panel_group(self)
@@ -506,7 +515,7 @@ class PMItem(bpy.types.PropertyGroup):
         self.data = props.encode(self.data, "pg_context", value)
         self.update_panel_group()
 
-    panel_context: bpy.props.EnumProperty(
+    panel_context: EnumProperty(
         items=PAU.panel_context_items,
         name="Context",
         description="Panel context",
@@ -525,7 +534,7 @@ class PMItem(bpy.types.PropertyGroup):
         self.data = props.encode(self.data, "pg_category", value)
         self.update_panel_group()
 
-    panel_category: bpy.props.StringProperty(
+    panel_category: StringProperty(
         default="",
         description="Panel category (tab)",
         get=get_panel_category,
@@ -547,7 +556,7 @@ class PMItem(bpy.types.PropertyGroup):
         self.data = props.encode(self.data, "pg_region", value)
         self.update_panel_group()
 
-    panel_region: bpy.props.EnumProperty(
+    panel_region: EnumProperty(
         items=CC.REGION_ITEMS,
         name="Region",
         description="Panel region",
@@ -570,7 +579,7 @@ class PMItem(bpy.types.PropertyGroup):
         self.data = props.encode(self.data, "pg_space", value)
         self.update_panel_group()
 
-    panel_space: bpy.props.EnumProperty(
+    panel_space: EnumProperty(
         items=CC.SPACE_ITEMS,
         name="Space",
         description="Panel space",
@@ -578,14 +587,14 @@ class PMItem(bpy.types.PropertyGroup):
         set=set_panel_space,
     )
 
-    panel_wicons: bpy.props.BoolProperty(
+    panel_wicons: BoolProperty(
         name="Use Wide Icon Buttons",
         description="Use wide icon buttons",
         get=lambda s: s.get_data("pg_wicons"),
         set=lambda s, v: s.set_data("pg_wicons", v),
     )
 
-    pm_radius: bpy.props.IntProperty(
+    pm_radius: IntProperty(
         subtype='PIXEL',
         description="Radius of the pie menu (-1 - use default value)",
         get=lambda s: s.get_data("pm_radius"),
@@ -595,7 +604,7 @@ class PMItem(bpy.types.PropertyGroup):
         min=-1,
         max=1000,
     )
-    pm_threshold: bpy.props.IntProperty(
+    pm_threshold: IntProperty(
         subtype='PIXEL',
         description=(
             "Distance from center needed "
@@ -608,7 +617,7 @@ class PMItem(bpy.types.PropertyGroup):
         min=-1,
         max=1000,
     )
-    pm_confirm: bpy.props.IntProperty(
+    pm_confirm: IntProperty(
         subtype='PIXEL',
         description=(
             "Distance threshold after which selection is made "
@@ -621,31 +630,31 @@ class PMItem(bpy.types.PropertyGroup):
         min=-1,
         max=1000,
     )
-    pm_flick: bpy.props.BoolProperty(
+    pm_flick: BoolProperty(
         name="Confirm on Release",
         description="Confirm selection when releasing the hotkey",
         get=lambda s: s.get_data("pm_flick"),
         set=lambda s, v: s.set_data("pm_flick", v),
     )
-    pd_title: bpy.props.BoolProperty(
+    pd_title: BoolProperty(
         name="Show Title",
         description="Show title",
         get=lambda s: s.get_data("pd_title"),
         set=lambda s, v: s.set_data("pd_title", v),
     )
-    pd_box: bpy.props.BoolProperty(
+    pd_box: BoolProperty(
         name="Use Frame",
         description="Use a frame",
         get=lambda s: s.get_data("pd_box"),
         set=lambda s, v: s.set_data("pd_box", v),
     )
-    pd_auto_close: bpy.props.BoolProperty(
+    pd_auto_close: BoolProperty(
         name="Auto Close on Mouse Out",
         description="Auto close on mouse out",
         get=lambda s: s.get_data("pd_auto_close"),
         set=lambda s, v: s.set_data("pd_auto_close", v),
     )
-    pd_expand: bpy.props.BoolProperty(
+    pd_expand: BoolProperty(
         name="Expand Sub Popup Dialogs",
         description=(
             "Expand all sub popup dialogs instead of using them as a button"
@@ -653,14 +662,14 @@ class PMItem(bpy.types.PropertyGroup):
         get=lambda s: s.get_data("pd_expand"),
         set=lambda s, v: s.set_data("pd_expand", v),
     )
-    pd_panel: bpy.props.EnumProperty(
+    pd_panel: EnumProperty(
         name="Mode",
         description="Popup dialog mode",
         items=CC.PD_MODE_ITEMS,
         get=lambda s: s.get_data("pd_panel"),
         set=lambda s, v: s.set_data("pd_panel", v),
     )
-    pd_width: bpy.props.IntProperty(
+    pd_width: IntProperty(
         name="Width",
         description="Width of the popup",
         subtype='PIXEL',
@@ -669,18 +678,18 @@ class PMItem(bpy.types.PropertyGroup):
         min=100,
         max=2000,
     )
-    rm_title: bpy.props.BoolProperty(
+    rm_title: BoolProperty(
         name="Show Title",
         description="Show title",
         get=lambda s: s.get_data("rm_title"),
         set=lambda s, v: s.set_data("rm_title", v),
     )
-    # s_scroll: bpy.props.BoolProperty(
+    # s_scroll: BoolProperty(
     #     description="Use both WheelUp and WheelDown hotkeys",
     #     get=lambda s: s.get_data("s_scroll"),
     #     set=lambda s, v: s.set_data("s_scroll", v),
     #     update=update_keymap_item)
-    sk_block_ui: bpy.props.BoolProperty(
+    sk_block_ui: BoolProperty(
         name="Block UI",
         description=(
             "Block other tools, while the Sticky Key is active.\n"
@@ -689,13 +698,13 @@ class PMItem(bpy.types.PropertyGroup):
         get=lambda s: s.get_data("sk_block_ui"),
         set=lambda s, v: s.set_data("sk_block_ui", v),
     )
-    mo_confirm_on_release: bpy.props.BoolProperty(
+    mo_confirm_on_release: BoolProperty(
         name="Confirm On Release",
         description="Confirm on release",
         get=lambda s: s.get_data("confirm"),
         set=lambda s, v: s.set_data("confirm", v),
     )
-    mo_block_ui: bpy.props.BoolProperty(
+    mo_block_ui: BoolProperty(
         name="Block UI",
         description="Block other hotkeys",
         get=lambda s: s.get_data("block_ui"),
@@ -712,7 +721,7 @@ class PMItem(bpy.types.PropertyGroup):
                     if menu_name == self.name:
                         MAU.update_macro(pm)
 
-    mo_lock: bpy.props.BoolProperty(
+    mo_lock: BoolProperty(
         name="Lock Mouse",
         description="Lock the mouse in the current area",
         get=lambda s: s.get_data("lock"),

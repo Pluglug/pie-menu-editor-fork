@@ -1,3 +1,4 @@
+# pyright: reportInvalidTypeForm=false
 # editors/popup.py - Popup Dialog editor
 # LAYER = "editors"
 #
@@ -6,6 +7,8 @@
 LAYER = "editors"
 
 import bpy
+from bpy.props import BoolProperty, IntProperty, StringProperty
+from bpy.types import Menu, Operator
 import re
 from .base import (
     EditorBase,
@@ -125,15 +128,15 @@ def merge_empties(pm, idx):
     return idx, ret
 
 
-class PME_OT_pdi_add(bpy.types.Operator):
+class PME_OT_pdi_add(Operator):
     bl_idname = "pme.pdi_add"
     bl_label = "Add Row or Button"
     bl_description = "Add a row or a button"
     bl_options = {'INTERNAL'}
 
-    mode: bpy.props.StringProperty()
-    idx: bpy.props.IntProperty()
-    row_idx: bpy.props.IntProperty(options={'SKIP_SAVE'})
+    mode: StringProperty()
+    idx: IntProperty()
+    row_idx: IntProperty(options={'SKIP_SAVE'})
 
     def execute(self, context):
         pr = get_prefs()
@@ -163,14 +166,14 @@ class PME_OT_pdi_add(bpy.types.Operator):
         return {'FINISHED'}
 
 
-class PME_OT_pdi_move(bpy.types.Operator):
+class PME_OT_pdi_move(Operator):
     bl_idname = "pme.pdi_move"
     bl_label = ""
     bl_description = "Move an item"
     bl_options = {'INTERNAL'}
 
-    pm_item: bpy.props.IntProperty()
-    idx: bpy.props.IntProperty()
+    pm_item: IntProperty()
+    idx: IntProperty()
 
     def _draw(self, menu, context):
         pm = get_prefs().selected_pm
@@ -221,14 +224,14 @@ class PME_OT_pdi_move(bpy.types.Operator):
         return {'FINISHED'}
 
 
-class PME_OT_pdi_remove(ConfirmBoxHandler, bpy.types.Operator):
+class PME_OT_pdi_remove(ConfirmBoxHandler, Operator):
     bl_idname = "pme.pdi_remove"
     bl_label = "Remove"
     bl_description = "Remove the item"
     bl_options = {'INTERNAL'}
 
-    pm_item: bpy.props.IntProperty()
-    delete: bpy.props.BoolProperty()
+    pm_item: IntProperty()
+    delete: BoolProperty()
 
     def on_confirm(self, value):
         if not value:
@@ -264,14 +267,14 @@ class PME_OT_pdi_remove(ConfirmBoxHandler, bpy.types.Operator):
         return {'FINISHED'}
 
 
-class PME_OT_pdr_fixed_col_set(bpy.types.Operator):
+class PME_OT_pdr_fixed_col_set(Operator):
     bl_idname = "pme.pdr_fixed_col_set"
     bl_label = ""
     bl_description = "Use columns with fixed width"
     bl_options = {'INTERNAL'}
 
-    row_idx: bpy.props.IntProperty()
-    value: bpy.props.BoolProperty()
+    row_idx: IntProperty()
+    value: BoolProperty()
 
     def execute(self, context):
         pm = get_prefs().selected_pm
@@ -283,14 +286,14 @@ class PME_OT_pdr_fixed_col_set(bpy.types.Operator):
         return {'FINISHED'}
 
 
-class PME_OT_pdr_fixed_but_set(bpy.types.Operator):
+class PME_OT_pdr_fixed_but_set(Operator):
     bl_idname = "pme.pdr_fixed_but_set"
     bl_label = ""
     bl_description = "Use buttons with fixed width"
     bl_options = {'INTERNAL'}
 
-    row_idx: bpy.props.IntProperty()
-    value: bpy.props.BoolProperty()
+    row_idx: IntProperty()
+    value: BoolProperty()
 
     def execute(self, context):
         pm = get_prefs().selected_pm
@@ -302,15 +305,15 @@ class PME_OT_pdr_fixed_but_set(bpy.types.Operator):
         return {'FINISHED'}
 
 
-class PME_OT_pdr_prop_set(bpy.types.Operator):
+class PME_OT_pdr_prop_set(Operator):
     bl_idname = "pme.pdr_prop_set"
     bl_label = ""
     bl_options = {'INTERNAL'}
 
-    mode: bpy.props.StringProperty()
-    prop: bpy.props.StringProperty()
-    value: bpy.props.StringProperty(options={'SKIP_SAVE'})
-    toggle: bpy.props.BoolProperty(options={'SKIP_SAVE'})
+    mode: StringProperty()
+    prop: StringProperty()
+    value: StringProperty(options={'SKIP_SAVE'})
+    toggle: BoolProperty(options={'SKIP_SAVE'})
 
     def execute(self, context):
         pr = get_prefs()
@@ -452,14 +455,14 @@ class PME_OT_pdr_prop_set(bpy.types.Operator):
         return {'FINISHED'}
 
 
-class PME_OT_pdr_copy(bpy.types.Operator):
+class PME_OT_pdr_copy(Operator):
     bl_idname = "pme.pdr_copy"
     bl_label = "Copy Row"
     bl_description = "Copy the row"
     bl_options = {'INTERNAL'}
 
-    row_idx: bpy.props.IntProperty()
-    row_last_idx: bpy.props.IntProperty()
+    row_idx: IntProperty()
+    row_last_idx: IntProperty()
 
     def execute(self, context):
         pr = get_prefs()
@@ -477,14 +480,14 @@ class PME_OT_pdr_copy(bpy.types.Operator):
         return {'FINISHED'}
 
 
-class PME_OT_pdr_paste(bpy.types.Operator):
+class PME_OT_pdr_paste(Operator):
     bl_idname = "pme.pdr_paste"
     bl_label = "Paste Row"
     bl_description = "Paste the row"
     bl_options = {'INTERNAL'}
 
-    row_idx: bpy.props.IntProperty()
-    row_last_idx: bpy.props.IntProperty()
+    row_idx: IntProperty()
+    row_last_idx: IntProperty()
 
     def execute(self, context):
         pr = get_prefs()
@@ -513,7 +516,7 @@ class PME_OT_pdr_paste(bpy.types.Operator):
         return get_prefs().pdr_clipboard is not None
 
 
-class PME_OT_pdr_move(bpy.types.Operator, MoveItemOperator):
+class PME_OT_pdr_move(Operator, MoveItemOperator):
     bl_idname = "pme.pdr_move"
     bl_label = ""
     bl_description = "Move the row"
@@ -645,7 +648,7 @@ class PME_OT_pdr_move(bpy.types.Operator, MoveItemOperator):
     #     return {'FINISHED'}
 
 
-class PME_OT_pdr_remove(ConfirmBoxHandler, bpy.types.Operator):
+class PME_OT_pdr_remove(ConfirmBoxHandler, Operator):
     bl_idname = "pme.pdr_remove"
     bl_label = "Remove Row"
     bl_description = "Remove the row"
@@ -653,9 +656,9 @@ class PME_OT_pdr_remove(ConfirmBoxHandler, bpy.types.Operator):
 
     title = "Remove Row"
 
-    row_idx: bpy.props.IntProperty()
-    row_last_idx: bpy.props.IntProperty()
-    mode: bpy.props.StringProperty()
+    row_idx: IntProperty()
+    row_last_idx: IntProperty()
+    mode: StringProperty()
 
     def on_confirm(self, value):
         if not value:
@@ -692,13 +695,13 @@ class PME_OT_pdr_remove(ConfirmBoxHandler, bpy.types.Operator):
         tag_redraw()
 
 
-class PME_OT_pdi_alignment(bpy.types.Operator):
+class PME_OT_pdi_alignment(Operator):
     bl_idname = "pme.pdi_alignment"
     bl_label = ""
     bl_options = {'INTERNAL'}
 
-    idx: bpy.props.IntProperty()
-    value: bpy.props.StringProperty()
+    idx: IntProperty()
+    value: StringProperty()
 
     def execute(self, context):
         pr = get_prefs()
@@ -818,7 +821,7 @@ class PME_OT_pdi_alignment(bpy.types.Operator):
         return {'FINISHED'}
 
 
-class PME_MT_pdr_alignment(bpy.types.Menu):
+class PME_MT_pdr_alignment(Menu):
     bl_label = "Row Alignment"
 
     def draw(self, context):
@@ -885,7 +888,7 @@ class PME_MT_pdr_alignment(bpy.types.Menu):
         #         value=item[0])
 
 
-class PME_MT_pdr_size(bpy.types.Menu):
+class PME_MT_pdr_size(Menu):
     bl_label = "Row Size"
 
     def draw(self, context):
@@ -944,7 +947,7 @@ class PME_MT_pdr_size(bpy.types.Menu):
             )
 
 
-class PME_MT_pdr_spacer(bpy.types.Menu):
+class PME_MT_pdr_spacer(Menu):
     bl_label = "Row Spacer"
 
     def draw(self, context):
@@ -992,7 +995,7 @@ class PME_MT_pdr_spacer(bpy.types.Menu):
             )
 
 
-# class WM_MT_pdi_separator(bpy.types.Menu):
+# class WM_MT_pdi_separator(Menu):
 #     bl_label = "Spacer"
 
 #     def draw(self, context):
@@ -1016,14 +1019,14 @@ class PME_MT_pdr_spacer(bpy.types.Menu):
 #                 value=item[0])
 
 
-class PME_OT_pdi_subrow_set(bpy.types.Operator):
+class PME_OT_pdi_subrow_set(Operator):
     bl_idname = "pme.pdi_subrow_set"
     bl_label = ""
     bl_description = "Mark as a subrow"
     bl_options = {'INTERNAL'}
 
-    mode: bpy.props.StringProperty()
-    value: bpy.props.StringProperty()
+    mode: StringProperty()
+    value: StringProperty()
 
     def execute(self, context):
         pm = get_prefs().selected_pm
@@ -1080,7 +1083,7 @@ class PME_OT_pdi_subrow_set(bpy.types.Operator):
         return {'FINISHED'}
 
 
-class PME_OT_pdi_menu(bpy.types.Operator):
+class PME_OT_pdi_menu(Operator):
     bl_idname = "pme.pdi_menu"
     bl_label = ""
     bl_description = (
@@ -1096,7 +1099,7 @@ class PME_OT_pdi_menu(bpy.types.Operator):
     )
     bl_options = {'INTERNAL'}
 
-    idx: bpy.props.IntProperty()
+    idx: IntProperty()
 
     def _draw(self, menu, context):
         pr = get_prefs()
@@ -1477,7 +1480,7 @@ class PME_OT_pdi_menu(bpy.types.Operator):
         return {'FINISHED'}
 
 
-class PME_OT_pdr_menu(bpy.types.Operator):
+class PME_OT_pdr_menu(Operator):
     bl_idname = "pme.pdr_menu"
     bl_label = ""
     bl_description = (
@@ -1488,7 +1491,7 @@ class PME_OT_pdr_menu(bpy.types.Operator):
     )
     bl_options = {'INTERNAL'}
 
-    row_idx: bpy.props.IntProperty()
+    row_idx: IntProperty()
 
     def _draw(self, menu, context):
         pr = get_prefs()

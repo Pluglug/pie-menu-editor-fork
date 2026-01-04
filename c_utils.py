@@ -1,3 +1,4 @@
+# pyright: reportInvalidTypeForm=false
 # c_utils.py - Context and Blender utilities
 # LAYER = "infra"
 

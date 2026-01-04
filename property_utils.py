@@ -1,3 +1,4 @@
+# pyright: reportInvalidTypeForm=false
 # property_utils.py - Property parsing and manipulation utilities
 # LAYER = "infra"
 #
@@ -6,7 +7,18 @@
 LAYER = "infra"
 
 import bpy
+from bpy import types as bpy_types
 from bpy.app import version as APP_VERSION
+from bpy.props import BoolVectorProperty, CollectionProperty, PointerProperty
+from bpy.types import (
+    BoolProperty,
+    EnumProperty,
+    FloatProperty,
+    IntProperty,
+    OperatorProperties,
+    PropertyGroup,
+    WindowManager,
+)
 from types import BuiltinFunctionType
 from mathutils import Euler
 from math import pi as PI
@@ -15,9 +27,9 @@ from .addon import get_prefs, temp_prefs, print_exc
 from . import operator_utils
 
 
-bpy.types.WindowManager.pme_temp = bpy.props.BoolVectorProperty(size=3)
+WindowManager.pme_temp = BoolVectorProperty(size=3)
 BPyPropArray = type(bpy.context.window_manager.pme_temp)
-del bpy.types.WindowManager.pme_temp
+del WindowManager.pme_temp
 
 
 class PropertyData:
@@ -88,28 +100,28 @@ class PropertyData:
                 if value is None:
                     value = rna_prop.default
 
-                if rna_prop_type == bpy.types.EnumProperty:
+                if rna_prop_type == EnumProperty:
                     self.threshold = pr.get_threshold('ENUM')
 
-                elif rna_prop_type == bpy.types.IntProperty:
+                elif rna_prop_type == IntProperty:
                     self.threshold = pr.get_threshold('INT')
 
-                elif rna_prop_type == bpy.types.FloatProperty:
+                elif rna_prop_type == FloatProperty:
                     self.threshold = pr.get_threshold('FLOAT')
                     self.is_float = True
 
-                elif rna_prop_type == bpy.types.BoolProperty:
+                elif rna_prop_type == BoolProperty:
                     self.threshold = pr.get_threshold('BOOL')
 
                 if (
-                    rna_prop_type == bpy.types.IntProperty
-                    or rna_prop_type == bpy.types.FloatProperty
+                    rna_prop_type == IntProperty
+                    or rna_prop_type == FloatProperty
                 ):
                     self.min = rna_prop.soft_min
                     self.max = rna_prop.soft_max
                     self._step = rna_prop.step
 
-                    if rna_prop_type == bpy.types.FloatProperty:
+                    if rna_prop_type == FloatProperty:
                         self._step *= 0.01
                     if rna_prop.subtype == 'ANGLE':
                         self._step = 180 * self._step / PI
@@ -124,14 +136,14 @@ class PropertyData:
                 value_type = type(value)
                 if value_type is int:
                     self.threshold = pr.get_threshold('INT')
-                    self.rna_type = bpy.types.IntProperty
+                    self.rna_type = IntProperty
                 elif value_type is float:
                     self.threshold = pr.get_threshold('FLOAT')
                     self.is_float = True
-                    self.rna_type = bpy.types.FloatProperty
+                    self.rna_type = FloatProperty
                 elif value_type is bool:
                     self.threshold = pr.get_threshold('BOOL')
-                    self.rna_type = bpy.types.BoolProperty
+                    self.rna_type = BoolProperty
             else:
                 self.threshold = pr.get_threshold()
 
@@ -152,7 +164,7 @@ class _PGVars:
         return _PGVars.instances[item.name]
 
 
-class DynamicPG(bpy.types.PropertyGroup):
+class DynamicPG(PropertyGroup):
 
     def getvar(self, var):
         pgvars = _PGVars.get(self)
@@ -181,7 +193,7 @@ def to_dict(obj):
     if not hasattr(obj.__class__, "__annotations__"):
         return dct
 
-    pdtype = getattr(bpy.props, "_PropertyDeferred", tuple)
+    pdtype = getattr(props, "_PropertyDeferred", tuple)
     for k in obj.__class__.__annotations__:
         pd = obj.__class__.__annotations__[k]
         pfunc = getattr(pd, "function", None) or pd[0]
@@ -195,8 +207,8 @@ def to_dict(obj):
 
         try:
             if (
-                pfunc is bpy.props.CollectionProperty
-                or pfunc is bpy.props.PointerProperty
+                pfunc is CollectionProperty
+                or pfunc is PointerProperty
             ):
                 value = getattr(obj, k)
             else:
@@ -207,10 +219,10 @@ def to_dict(obj):
 
             value = getattr(obj, k)
 
-        if pfunc is bpy.props.PointerProperty:
+        if pfunc is PointerProperty:
             dct[k] = to_dict(value)
 
-        elif pfunc is bpy.props.CollectionProperty:
+        elif pfunc is CollectionProperty:
             dct[k] = []
             for item in value.values():
                 dct[k].append(to_dict(item))
@@ -254,10 +266,10 @@ def from_dict(obj, dct):
 
 
 def to_py_value(data, key, value):
-    if isinstance(value, bpy.types.PropertyGroup):
+    if isinstance(value, PropertyGroup):
         return None
 
-    if isinstance(value, bpy.types.OperatorProperties):
+    if isinstance(value, OperatorProperties):
         rna_type = operator_utils.get_rna_type(operator_utils.to_bl_idname(key))
         if not rna_type:
             return None
@@ -271,7 +283,7 @@ def to_py_value(data, key, value):
 
         return d
 
-    is_bool = isinstance(data.properties[key], bpy.types.BoolProperty)
+    is_bool = isinstance(data.properties[key], BoolProperty)
 
     if hasattr(value, "to_list"):
         value = value.to_list()
@@ -308,7 +320,7 @@ def get_rna_prop(data, prop):
 
 
 def is_enum(data, key):
-    return isinstance(data.bl_rna.properties[key], bpy.types.EnumProperty)
+    return isinstance(data.bl_rna.properties[key], EnumProperty)
 
 
 def enum_id_to_value(data, key, id):

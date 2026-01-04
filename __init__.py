@@ -1,3 +1,4 @@
+# pyright: reportInvalidTypeForm=false
 bl_info = {
     "name": "Pie Menu Editor Fork (PME2 Experimental)",
     "author": "pluglug (maintainer), original author: roaoao",
@@ -24,8 +25,20 @@ use_reload = False
 
 import bpy
 import _bpy
+from bpy import props, types as bpy_types
 from bpy.app.handlers import persistent
 from bpy.app import version as APP_VERSION
+from bpy.props import (
+    BoolProperty,
+    CollectionProperty,
+    EnumProperty,
+    FloatProperty,
+    FloatVectorProperty,
+    IntProperty,
+    PointerProperty,
+    StringProperty,
+)
+from bpy_types import AddonPreferences, Operator, WindowManager
 import sys
 import inspect
 from .infra.debug import *
@@ -80,10 +93,10 @@ CLASSES = []
 def legacy_get_classes():
     """Get all bpy_struct classes from MODULES for legacy registration."""
     ret = set()
-    bpy_struct = bpy.types.bpy_struct
-    cprop = bpy.props.CollectionProperty
-    pprop = bpy.props.PointerProperty
-    pdtype = getattr(bpy.props, "_PropertyDeferred", tuple)
+    bpy_struct = bpy_types.bpy_struct
+    cprop = CollectionProperty
+    pprop = PointerProperty
+    pdtype = getattr(props, "_PropertyDeferred", tuple)
     mems = set()
     mem_data = []
     for mod in MODULES:
@@ -354,18 +367,18 @@ def on_context():
     bpy.app.handlers.load_post.append(load_post_handler)
 
     pme.context.add_global("D", bpy.data)
-    pme.context.add_global("T", bpy.types)
+    pme.context.add_global("T", bpy_types)
     pme.context.add_global("O", bpy.ops)
-    pme.context.add_global("P", bpy.props)
+    pme.context.add_global("P", props)
     pme.context.add_global("sys", sys)
-    pme.context.add_global("BoolProperty", bpy.props.BoolProperty)
-    pme.context.add_global("IntProperty", bpy.props.IntProperty)
-    pme.context.add_global("FloatProperty", bpy.props.FloatProperty)
-    pme.context.add_global("StringProperty", bpy.props.StringProperty)
-    pme.context.add_global("EnumProperty", bpy.props.EnumProperty)
-    pme.context.add_global("CollectionProperty", bpy.props.CollectionProperty)
-    pme.context.add_global("PointerProperty", bpy.props.PointerProperty)
-    pme.context.add_global("FloatVectorProperty", bpy.props.FloatVectorProperty)
+    pme.context.add_global("BoolProperty", BoolProperty)
+    pme.context.add_global("IntProperty", IntProperty)
+    pme.context.add_global("FloatProperty", FloatProperty)
+    pme.context.add_global("StringProperty", StringProperty)
+    pme.context.add_global("EnumProperty", EnumProperty)
+    pme.context.add_global("CollectionProperty", CollectionProperty)
+    pme.context.add_global("PointerProperty", PointerProperty)
+    pme.context.add_global("FloatVectorProperty", FloatVectorProperty)
 
     for k, v in globals().items():
         if k.startswith("__"):
@@ -443,7 +456,7 @@ def load_post_context(scene):
     on_context()
 
 
-class PME_OT_wait_context(bpy.types.Operator):
+class PME_OT_wait_context(bpy_types.Operator):
     bl_idname = "pme.wait_context"
     bl_label = "Internal (PME)"
     bl_options = {'INTERNAL'}
@@ -485,7 +498,7 @@ class PME_OT_wait_context(bpy.types.Operator):
         return {'RUNNING_MODAL'}
 
 
-class PME_OT_wait_keymaps(bpy.types.Operator):
+class PME_OT_wait_keymaps(bpy_types.Operator):
     bl_idname = "pme.wait_keymaps"
     bl_label = "Internal (PME)"
     bl_options = {'INTERNAL'}
@@ -584,7 +597,7 @@ def register():
         from .preferences import InvalidPMEPreferences
 
         invalid_prefs = type(
-            "PMEPreferences", (InvalidPMEPreferences, bpy.types.AddonPreferences), {}
+            "PMEPreferences", (InvalidPMEPreferences, bpy_types.AddonPreferences), {}
         )
         bpy.utils.register_class(invalid_prefs)
 
@@ -639,8 +652,8 @@ def unregister():
         legacy_unregister_module()
 
     # Common cleanup (regardless of loader)
-    if hasattr(bpy.types.WindowManager, "pme"):
-        delattr(bpy.types.WindowManager, "pme")
+    if hasattr(bpy_types.WindowManager, "pme"):
+        delattr(bpy_types.WindowManager, "pme")
 
     if load_pre_handler in bpy.app.handlers.load_pre:
         bpy.app.handlers.load_pre.remove(load_pre_handler)

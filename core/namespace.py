@@ -1,3 +1,4 @@
+# pyright: reportInvalidTypeForm=false
 # core/namespace.py - Standard namespace definitions for PME execution context
 # LAYER = "core"
 #

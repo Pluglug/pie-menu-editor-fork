@@ -1,7 +1,10 @@
+# pyright: reportInvalidTypeForm=false
 # keymap_helper.py - Keymap management utilities
 # LAYER = "infra"
 
 import bpy
+from bpy.props import BoolProperty, EnumProperty, IntProperty, StringProperty
+from bpy.types import Event, Operator
 
 LAYER = "infra"
 
@@ -36,7 +39,7 @@ OSKEY = 1 << 3
 
 key_items = []
 key_names = {}
-for i in bpy.types.Event.bl_rna.properties["type"].enum_items.values():
+for i in Event.bl_rna.properties["type"].enum_items.values():
     key_items.append((i.identifier, i.name, "", i.value))
     key_names[i.identifier] = i.description or i.name
 
@@ -370,7 +373,7 @@ def parse_hotkey(hotkey):
     key_mod = 'NONE' if len(parts) == 1 else parts[0]
     key = parts[-1]
 
-    enum_items = bpy.types.Event.bl_rna.properties["type"].enum_items
+    enum_items = Event.bl_rna.properties["type"].enum_items
     if key_mod not in enum_items:
         key_mod = 'NONE'
     if key not in enum_items:
@@ -788,18 +791,18 @@ class Hotkey(DynamicPG):
             for kmi in kmis:
                 self.to_kmi(kmi)
 
-    key: bpy.props.EnumProperty(
+    key: EnumProperty(
         items=key_items, description="Key pressed", update=_hotkey_update
     )
-    ctrl: bpy.props.BoolProperty(description="Ctrl key pressed", update=_hotkey_update)
-    shift: bpy.props.BoolProperty(
+    ctrl: BoolProperty(description="Ctrl key pressed", update=_hotkey_update)
+    shift: BoolProperty(
         description="Shift key pressed", update=_hotkey_update
     )
-    alt: bpy.props.BoolProperty(description="Alt key pressed", update=_hotkey_update)
-    oskey: bpy.props.BoolProperty(
+    alt: BoolProperty(description="Alt key pressed", update=_hotkey_update)
+    oskey: BoolProperty(
         description="Operating system key pressed", update=_hotkey_update
     )
-    key_mod: bpy.props.EnumProperty(
+    key_mod: EnumProperty(
         items=key_items,
         description="Regular key pressed as a modifier",
         update=_hotkey_update,
@@ -874,15 +877,15 @@ class Hotkey(DynamicPG):
         kmi.key_modifier = self.key_mod
 
 
-class PME_OT_mouse_state(bpy.types.Operator):
+class PME_OT_mouse_state(Operator):
     bl_idname = "pme.mouse_state"
     bl_label = ""
     bl_options = {'INTERNAL'}
 
     inst = None
 
-    cancelled: bpy.props.BoolProperty(options={'SKIP_SAVE'})
-    key: bpy.props.StringProperty(options={'SKIP_SAVE'})
+    cancelled: BoolProperty(options={'SKIP_SAVE'})
+    key: StringProperty(options={'SKIP_SAVE'})
 
     def stop(self):
         self.cancelled = True
@@ -939,14 +942,14 @@ class PME_OT_mouse_state(bpy.types.Operator):
         return {'RUNNING_MODAL'}
 
 
-class PME_OT_mouse_state_wait(bpy.types.Operator):
+class PME_OT_mouse_state_wait(Operator):
     bl_idname = "pme.mouse_state_wait"
     bl_label = ""
     bl_options = {'INTERNAL'}
 
     inst = None
 
-    key: bpy.props.StringProperty(options={'SKIP_SAVE'})
+    key: StringProperty(options={'SKIP_SAVE'})
 
     def stop(self):
         self.cancelled = True
@@ -982,12 +985,12 @@ class PME_OT_mouse_state_wait(bpy.types.Operator):
         return {'RUNNING_MODAL'}
 
 
-class PME_OT_mouse_state_init(bpy.types.Operator):
+class PME_OT_mouse_state_init(Operator):
     bl_idname = "pme.mouse_state_init"
     bl_label = "Mouse State (PME)"
     bl_options = {'INTERNAL'}
 
-    key: bpy.props.StringProperty(options={'SKIP_SAVE'})
+    key: StringProperty(options={'SKIP_SAVE'})
 
     def invoke(self, context, event):
         if PME_OT_mouse_state.inst:
@@ -1003,15 +1006,15 @@ class PME_OT_mouse_state_init(bpy.types.Operator):
         return {'PASS_THROUGH'}
 
 
-class PME_OT_key_state(bpy.types.Operator):
+class PME_OT_key_state(Operator):
     bl_idname = "pme.key_state"
     bl_label = ""
     bl_options = {'INTERNAL'}
 
     inst = None
 
-    cancelled: bpy.props.BoolProperty(options={'SKIP_SAVE'})
-    key: bpy.props.StringProperty(options={'SKIP_SAVE'})
+    cancelled: BoolProperty(options={'SKIP_SAVE'})
+    key: StringProperty(options={'SKIP_SAVE'})
 
     def stop(self):
         self.cancelled = True
@@ -1083,12 +1086,12 @@ class PME_OT_key_state(bpy.types.Operator):
         return {'RUNNING_MODAL'}
 
 
-class PME_OT_key_state_init(bpy.types.Operator):
+class PME_OT_key_state_init(Operator):
     bl_idname = "pme.key_state_init"
     bl_label = "Key State Init (PME)"
     bl_options = {'INTERNAL'}
 
-    key: bpy.props.StringProperty(options={'SKIP_SAVE'})
+    key: StringProperty(options={'SKIP_SAVE'})
 
     def invoke(self, context, event):
         if PME_OT_key_state.inst:
@@ -1097,7 +1100,7 @@ class PME_OT_key_state_init(bpy.types.Operator):
         return {'PASS_THROUGH'}
 
 
-class PME_OT_mouse_btn_state(bpy.types.Operator, CTU.HeadModalHandler):
+class PME_OT_mouse_btn_state(Operator, CTU.HeadModalHandler):
     bl_idname = "pme.mouse_btn_state"
     bl_label = "Internal (PME)"
     bl_options = {'REGISTER'}
@@ -1184,7 +1187,7 @@ def remove_mouse_button(key, kh, km="Screen Editing"):
                 break
 
 
-class PME_OT_key_is_pressed(bpy.types.Operator):
+class PME_OT_key_is_pressed(Operator):
     bl_idname = "pme.key_is_pressed"
     bl_label = ""
     bl_options = {'INTERNAL'}
@@ -1193,7 +1196,7 @@ class PME_OT_key_is_pressed(bpy.types.Operator):
     instance = None
     idx = 1
 
-    key: bpy.props.StringProperty(options={'SKIP_SAVE'})
+    key: StringProperty(options={'SKIP_SAVE'})
 
     def add_timer(self, step=0):
         if self.timer:
