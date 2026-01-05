@@ -384,17 +384,17 @@ def _get_namespace_report() -> str:
 def register():
     """Register the API module.
 
-    Delegates to infra.runtime_context.register() which initializes
-    the 'U' (UserData) global.
+    NOTE: This is intentionally empty. The actual registration is handled by
+    infra.runtime_context.register() which is called directly by the module loader.
+
+    api/ is a thin facade and does not need its own registration logic.
     """
-    from ..infra.runtime_context import register as rc_register
-    rc_register()
+    pass
 
 
 def unregister():
     """Unregister the API module."""
-    from ..infra.runtime_context import unregister as rc_unregister
-    rc_unregister()
+    pass
 
 
 # =============================================================================

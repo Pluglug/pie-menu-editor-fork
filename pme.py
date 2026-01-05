@@ -118,7 +118,15 @@ def get_namespace_report():
 def register():
     """Register the pme module.
 
-    Delegates to api.register() which initializes the runtime context.
+    NOTE: This is intentionally empty. The actual registration is handled by
+    api.register() which is called directly by the module loader.
+
+    pme.py is a legacy shim for backward compatibility and will be removed
+    in a future version.
     """
-    from .api import register as api_register
-    api_register()
+    pass
+
+
+def unregister():
+    """Unregister the pme module."""
+    pass

@@ -159,6 +159,8 @@ PME2_MODULE_PATTERNS = [
     "core.*",
     "infra",
     "infra.*",
+    "api",        # Phase 8-D: public API facade
+    "api.*",
     "ui",
     "ui.*",
     "editors",
@@ -167,7 +169,7 @@ PME2_MODULE_PATTERNS = [
     # NOTE: "addon" is intentionally excluded - it's the bootstrap module
     # that is already loaded/reloaded in __init__.py's use_reload block.
     # Reloading it again in init_addon() would reset VERSION to None.
-    "pme",
+    "pme",        # Legacy shim (Phase 8-D), will be removed in future
     "c_utils",
     "keymap_helper",
     "operator_utils",
