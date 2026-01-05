@@ -160,25 +160,25 @@ def get_system_scripts_dir(addon_path: str) -> str:
     """
     Get PME system scripts directory.
 
-    Location: {addon_path}/scripts/
+    Location: {addon_path}/assets/scripts/
 
     Contains:
       - command_*.py    Command templates
       - custom_*.py     Custom templates
       - autorun/functions.py  PME system functions (DO NOT EDIT)
     """
-    return os.path.join(addon_path, "scripts")
+    return os.path.join(addon_path, "assets", "scripts")
 
 
 def get_system_icons_dir(addon_path: str) -> str:
     """
     Get PME system icons directory.
 
-    Location: {addon_path}/icons/
+    Location: {addon_path}/assets/icons/
 
     Contains system icons (p*.png, brush.*.dat, etc.)
     """
-    return os.path.join(addon_path, "icons")
+    return os.path.join(addon_path, "assets", "icons")
 
 
 def iter_script_dirs(addon_path: str, category: str):
@@ -242,7 +242,7 @@ def get_user_icons_path(addon_path: str) -> str:
     DEPRECATED: Use get_user_icons_dir() instead.
     Currently returns legacy path (addon directory).
     """
-    return os.path.join(addon_path, "icons")
+    return os.path.join(addon_path, "assets", "icons")
 
 
 # =============================================================================

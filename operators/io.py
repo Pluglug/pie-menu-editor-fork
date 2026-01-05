@@ -39,7 +39,7 @@ from ..infra.io import (
 
 # Global state for file dialogs
 # Import starts from bundled examples (read-only)
-import_filepath = os.path.join(ADDON_PATH, "examples", "examples.json")
+import_filepath = os.path.join(ADDON_PATH, "assets", "examples", "examples.json")
 # Export starts from user directory (initialized lazily to avoid bpy dependency at module load)
 export_filepath = None  # Will be set to get_user_exports_dir() on first use
 

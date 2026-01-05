@@ -194,11 +194,11 @@ def test_icon_path(results):
     from pie_menu_editor.infra.previews import PreviewsHelper
 
     ph = PreviewsHelper()
-    # scripts/test_namespace.py → scripts/ → pie_menu_editor/
-    addon_root = os.path.dirname(os.path.dirname(__file__))
+    # assets/scripts/test_namespace.py → assets/scripts/ → assets/ → pie_menu_editor/
+    addon_root = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
 
-    # Path should point to addon_root/icons, not infra/icons
-    expected_path = os.path.join(addon_root, "icons")
+    # Path should point to addon_root/assets/icons
+    expected_path = os.path.join(addon_root, "assets", "icons")
     actual_path = ph.path
 
     # Normalize paths for comparison

@@ -14,7 +14,7 @@ from .io import get_user_icons_dir, get_system_icons_dir
 
 class PreviewsHelper:
 
-    def __init__(self, folder="icons"):
+    def __init__(self, folder="assets/icons"):
         # Get addon root (parent of infra/)
         _addon_root = os.path.dirname(os.path.dirname(__file__))
         # Legacy: single path (system icons only)
