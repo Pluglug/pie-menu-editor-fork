@@ -303,15 +303,20 @@ _LAYER_ORDER = {
 # Facade modules: Can be imported from any layer except core.
 # See architecture.md section 5.2 for details.
 # These modules don't have LAYER constants because they are cross-cutting.
-_FACADE_MODULES = {"addon"}
+# "api" is excluded from violation checks as it's a public API facade.
+_FACADE_MODULES = {"addon", "api"}
 
 
 def _is_facade_module(module_name: str, addon_id: Optional[str] = None) -> bool:
-    """Check if the module is a facade module (e.g., addon)."""
+    """Check if the module is a facade module (e.g., addon, api).
+
+    Also matches submodules: api.dev, api._types, etc.
+    """
     addon_prefix = addon_id or _DEFAULT_ADDON_ID
-    # Check for exact match: pie_menu_editor.addon
     for facade in _FACADE_MODULES:
-        if module_name == f"{addon_prefix}.{facade}":
+        facade_full = f"{addon_prefix}.{facade}"
+        # Check for exact match or submodule
+        if module_name == facade_full or module_name.startswith(f"{facade_full}."):
             return True
     return False
 
