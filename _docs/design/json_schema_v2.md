@@ -4,6 +4,19 @@
 > Status: **Design Finalized**
 > Last Updated: 2026-01-05
 > Design Review: Mentor feedback incorporated
+> GitHub Milestone: [2.0.0 - JSON Schema v2](https://github.com/Pluglug/pie-menu-editor-fork/milestone/1)
+> Tracking Issue: [#78](https://github.com/Pluglug/pie-menu-editor-fork/issues/78)
+
+---
+
+## 関連 Issue
+
+| Issue | タイトル |
+|-------|---------|
+| #79 | PME2: Menu name/uid separation and reference redesign |
+| #80 | PME2: Style system - Color bar visualization like Node Pie |
+| #81 | PME2: description / description_expr implementation |
+| #82 | PME2: Action.context implementation for operator context override |
 
 ---
 

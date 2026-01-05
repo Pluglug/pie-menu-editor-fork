@@ -3,12 +3,26 @@
 > Date: 2026-01-05
 > Status: Finalized for 2.0.0
 > Mentor Review: Incorporated
+> GitHub Milestone: [2.0.0 - JSON Schema v2](https://github.com/Pluglug/pie-menu-editor-fork/milestone/1)
+> Tracking Issue: [#78 PME2: JSON Schema v2 for 2.0.0](https://github.com/Pluglug/pie-menu-editor-fork/issues/78)
 
 ---
 
 ## 概要
 
 メンターレビューを踏まえた JSON Schema v2 の設計判断を記録する。
+
+## 関連 Issue
+
+| Issue | タイトル |
+|-------|---------|
+| #78 | PME2: JSON Schema v2 for 2.0.0 (トラッキング) |
+| #79 | PME2: Menu name/uid separation and reference redesign |
+| #80 | PME2: Style system - Color bar visualization like Node Pie |
+| #81 | PME2: description / description_expr implementation |
+| #82 | PME2: Action.context implementation for operator context override |
+| #83 | Schema v2: PME1 to PME2 converter |
+| #84 | Schema v2: Implement dataclass schemas |
 
 ---
 

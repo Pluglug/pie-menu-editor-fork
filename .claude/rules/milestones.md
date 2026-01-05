@@ -20,7 +20,19 @@
 ## Phase 9: JSON Schema v2（2.0.0 の中核）
 
 > メンターアドバイス: 「いま動いているものを壊さずに、土台とスキーマを固める版」
-> トラッキング Issue: #78
+> GitHub Milestone: [2.0.0 - JSON Schema v2](https://github.com/Pluglug/pie-menu-editor-fork/milestone/1)
+
+### トラッキング Issue
+
+| Issue | タイトル | 状態 |
+|-------|---------|------|
+| **#78** | PME2: JSON Schema v2 for 2.0.0 | 🔄 トラッキング |
+| #79 | PME2: Menu name/uid separation and reference redesign | ⏳ |
+| #80 | PME2: Style system - Color bar visualization like Node Pie | ⏳ |
+| #81 | PME2: description / description_expr implementation | ⏳ |
+| #82 | PME2: Action.context implementation for operator context override | ⏳ |
+| #83 | Schema v2: PME1 to PME2 converter | ⏳ |
+| #84 | Schema v2: Implement dataclass schemas | ⏳ |
 
 ### 9-A: JSON v2 スキーマ確定 🔄 (レビュー中)
 
@@ -40,13 +52,13 @@
 | Settings | D7: キー名ルール, D17: 接頭辞変換方針 |
 | その他 | D11-D13: poll/DragDirection/accent_usage, D16: icon flags |
 
-### 9-B: dataclass スキーマ実装 ⏳
+### 9-B: dataclass スキーマ実装 ⏳ → #84
 
 - [ ] `core/schemas/` ディレクトリ作成
 - [ ] `Action`, `MenuItemSchema`, `HotkeySchema`, `MenuSchema` dataclass
 - [ ] `PME2File` ルートオブジェクト
 
-### 9-C: コンバーター実装 ⏳
+### 9-C: コンバーター実装 ⏳ → #83
 
 - [ ] `infra/converter.py` 作成
 - [ ] PME1 → PME2 変換（インポート時）
@@ -73,9 +85,6 @@
 
 - `@_docs/design/json_schema_v2.md` — JSON 形式仕様
 - `@_docs/design/design_decisions.md` — 設計判断の記録（D1-D18）
-- `@_docs/design/schema_v2_analysis.md` — 可能性と限界の分析
-- `@_docs/design/schema_v2_future_extensibility.md` — 将来拡張性の検討
-- `@_docs/design/PME2_FEATURE_REQUESTS.md` — ユーザー要望
 - `@_docs/guides/phase9_implementation.md` — 実装ガイド
 
 ---

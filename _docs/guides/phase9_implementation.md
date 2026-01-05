@@ -3,6 +3,22 @@
 > **目的**: 2.0.0 の中核機能である JSON Schema v2 の実装手順
 > **期間**: 2026-01-05 〜 今月中
 > **方針**: 「いま動いているものを壊さずに、土台とスキーマを固める」
+> **GitHub Milestone**: [2.0.0 - JSON Schema v2](https://github.com/Pluglug/pie-menu-editor-fork/milestone/1)
+> **Tracking Issue**: [#78](https://github.com/Pluglug/pie-menu-editor-fork/issues/78)
+
+---
+
+## 関連 Issue
+
+| Issue | タイトル | フェーズ |
+|-------|---------|---------|
+| #78 | PME2: JSON Schema v2 for 2.0.0 | トラッキング |
+| #79 | PME2: Menu name/uid separation and reference redesign | 9-B, 9-C |
+| #80 | PME2: Style system - Color bar visualization | 9-B |
+| #81 | PME2: description / description_expr implementation | 9-B |
+| #82 | PME2: Action.context implementation | 9-B |
+| #83 | Schema v2: PME1 to PME2 converter | 9-C |
+| #84 | Schema v2: Implement dataclass schemas | 9-B |
 
 ---
 
