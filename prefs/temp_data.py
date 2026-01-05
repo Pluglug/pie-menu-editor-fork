@@ -4,7 +4,24 @@
 """
 PMEData PropertyGroup と関連する update 関数
 
-temp_prefs() で取得される一時データを管理する
+temp_prefs() で取得される一時データを管理する。
+
+責務分類:
+- 派生キャッシュ: tags (pie_menus から算出), pie_menus (サブメニュー候補)
+- UI 状態: links, links_idx, settings_tab, icons_tab
+- セッション状態: modal_item_*, ed_props, prop_data
+
+設計意図:
+- PMEData は「編集セッション」のコンテナ
+- tags と pie_menus はメニュー定義から派生するキャッシュ（init_tags(), update_pie_menus()）
+- links は TreeState と連携してツリービューを構成
+
+将来の拡張ポイント:
+- modal_item_* 系フィールドが多い。ModalEditingState クラスへの分離で可読性向上
+- update_pmi_data() の責務が広い。編集モード別の処理分離を検討
+- tags/pie_menus の更新タイミングが散在。一元管理の余地あり
+
+詳細: @_docs/design/prefs_data_analysis.md
 """
 
 import bpy
@@ -109,6 +126,16 @@ class PMEData(PropertyGroup):
     """セッション/一時データを保持する PropertyGroup
 
     temp_prefs() で取得される。モーダル編集、タグ、リンクなどの状態を管理。
+
+    フィールド分類:
+    - 派生キャッシュ: tags, pie_menus (メニュー定義から算出)
+    - UI 状態: links, links_idx, hidden_panels_idx, settings_tab, icons_tab
+    - セッション状態: modal_item_*, ed_props, prop_data
+
+    設計ノート:
+    - update_lock はクラス変数（全インスタンス共有）で再帰防止
+    - tags は Collection だが、init_tags() で毎回再構築される
+    - links は PMLink (pme_types.py) の Collection で、tree.py と密結合
     """
 
     update_lock = False

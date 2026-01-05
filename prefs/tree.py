@@ -2,12 +2,25 @@
 # prefs/tree.py - Tree システム
 # LAYER = "prefs"
 """
-Tree View システム
+Tree View システム - ツリービューの UI 状態管理
 
-- TreeState: ツリー状態管理（新規）
+コンポーネント:
+- TreeState: UI 状態シングルトン（展開/折りたたみ）
 - PME_UL_pm_tree: ツリー UIList
-- TreeView: ツリー操作ファサード
+- TreeView: ツリー操作ファサード (pr.tree)
 - Tree オペレーター群
+
+設計意図:
+- TreeState は UIList のライフサイクルから独立して状態を保持
+- groups は pr.pie_menus と pr.group_by から動的に算出される派生データ
+- collapsed_groups / expanded_folders は tree.json に永続化される UI 設定
+
+将来の拡張ポイント:
+- update_tree() のグループ化ロジックは複雑。将来的に GroupingStrategy パターンで分離可能
+- PMLink (pme_types.py) との結合が強い。TreeNode 抽象化の余地あり
+- filter_items() の条件分岐が多い。フィルタリングロジックの分離を検討
+
+詳細: @_docs/design/prefs_data_analysis.md
 """
 
 import os
@@ -31,6 +44,18 @@ class TreeState:
 
     ツリーの展開/折りたたみ状態、グループ情報を一元管理する。
     UIList のライフサイクルから独立して状態を保持。
+
+    フィールド:
+    - locked: 更新中フラグ（バッチ操作時の再帰防止）
+    - groups: 現在の group_by から算出されたグループ名リスト（派生）
+    - collapsed_groups: 折りたたまれたグループ名 (UI 状態, tree.json)
+    - expanded_folders: 展開されたフォルダパス (UI 状態, tree.json)
+    - has_folders: フォルダが存在するか（派生）
+
+    設計ノート:
+    - groups はメニュー定義ではなく「現在のビューのグループ化結果」
+    - P1-P8 で PME_UL_pm_tree のクラス変数から分離済み
+    - シングルトンパターン: tree_state インスタンスをモジュールレベルで保持
     """
 
     def __init__(self):

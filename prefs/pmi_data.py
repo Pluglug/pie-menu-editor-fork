@@ -2,9 +2,28 @@
 # prefs/pmi_data.py - メニューアイテム編集用データ
 # LAYER = "prefs"
 """
-PMIData PropertyGroup
+PMIData PropertyGroup - メニューアイテムの編集バッファ
 
-メニューアイテムの編集状態を保持する
+選択中のメニューアイテムを編集するための「フォーム」データ。
+View Model / Edit Buffer パターンを使用:
+
+    [PMIItem]  ────load────>  [PMIData]  ────save────>  [PMIItem]
+    (永続定義)               (編集バッファ)            (永続定義)
+
+ユーザーが PMI を選択すると、その値が PMIData にロードされ、
+UI で編集後、保存時に PMIItem に書き戻される。
+
+設計意図:
+- PMIData は「編集中の一時状態」を保持するビューモデル
+- 永続定義 (PMIItem) と分離することで、編集のキャンセルが可能
+- エラー/インフォはクラス変数で全インスタンス共有（単一編集を前提）
+
+将来の拡張ポイント:
+- mode 別の編集フィールドが混在。ModeSpecificFields への分離で可読性向上
+- check_pmi_errors() は pm.ed.on_pmi_check() に委譲。バリデーション戦略の統一を検討
+- _kmi はオペレーター引数編集用の特殊ケース。より明示的な分離が望ましい
+
+詳細: @_docs/design/prefs_data_analysis.md
 """
 
 from bpy.props import (
@@ -26,6 +45,18 @@ class PMIData(PropertyGroup):
     """メニューアイテムの編集状態を保持する PropertyGroup
 
     pr.pmi_data で取得される。アイテムの mode, cmd, icon などの編集状態を管理。
+
+    フィールド分類:
+    - 編集バッファ: mode, cmd, custom, prop, menu, icon, name, sname,
+                    key, ctrl, shift, alt, oskey, key_mod, any,
+                    expand_menu, use_cb, use_frame, cmd_ctx, cmd_undo
+    - エフェメラル: errors, infos (バリデーション結果)
+    - ランタイム: _kmi (オペレーター引数編集用)
+
+    設計ノート:
+    - _kmi は KeymapHelper 経由で生成される一時的な KeyMapItem
+    - errors/infos はクラス変数（複数インスタンス間で共有）
+    - update_data() は temp_data.py の update_pmi_data() を呼び出す
     """
 
     _kmi = None
