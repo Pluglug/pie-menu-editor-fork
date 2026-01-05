@@ -18,7 +18,7 @@ from bpy.types import Operator
 from bpy.props import StringProperty, IntProperty, EnumProperty
 
 from ..addon import get_prefs, ADDON_PATH
-from ..infra.io import get_user_scripts_dir
+from ..infra.io import get_user_scripts_dir, get_system_scripts_dir
 
 
 class PME_OT_script_open(Operator):
@@ -56,14 +56,29 @@ class PME_OT_script_open(Operator):
         filepath = os.path.normpath(self.filepath)
         pr.scripts_filepath = filepath
 
-        if filepath.startswith(ADDON_PATH):
+        # Convert to portable "scripts/foo.py" format
+        # This works regardless of whether user or system script was selected
+        user_scripts = os.path.normpath(get_user_scripts_dir())
+        system_scripts = os.path.normpath(get_system_scripts_dir(ADDON_PATH))
+
+        if filepath.startswith(user_scripts + os.sep):
+            # User script: scripts/foo.py
+            relative = os.path.relpath(filepath, user_scripts)
+            filepath = "scripts/" + relative.replace("\\", "/")
+        elif filepath.startswith(system_scripts + os.sep):
+            # System script: also scripts/foo.py (execute_script searches user first)
+            relative = os.path.relpath(filepath, system_scripts)
+            filepath = "scripts/" + relative.replace("\\", "/")
+        elif filepath.startswith(ADDON_PATH):
+            # Other addon paths: keep as relative (legacy compatibility)
             filepath = os.path.relpath(filepath, ADDON_PATH)
+            filepath = filepath.replace("\\", "/")
+        # else: absolute path, keep as-is
 
         filename = os.path.basename(filepath)
         filename, _, _ = filename.rpartition(".")
         name = filename.replace("_", " ").strip().title()
 
-        filepath = filepath.replace("\\", "/")
         cmd = "execute_script(\"%s\")" % filepath
 
         pm = pr.selected_pm

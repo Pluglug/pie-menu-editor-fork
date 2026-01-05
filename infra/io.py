@@ -9,6 +9,7 @@ from __future__ import annotations
 import json
 import os
 import re
+import shutil
 from dataclasses import dataclass
 from datetime import datetime
 from typing import TYPE_CHECKING, Any, Callable
@@ -22,7 +23,7 @@ if TYPE_CHECKING:
 # Path Helpers
 # =============================================================================
 
-from ..addon import ADDON_ID
+from ..addon import ADDON_ID, ADDON_PATH
 
 
 def _get_addon_id_from_path(addon_path: str) -> str:
@@ -148,6 +149,70 @@ def get_user_exports_dir(create: bool = False) -> str:
         os.makedirs(exports_dir, exist_ok=True)
 
     return exports_dir
+
+
+def initialize_user_resources(addon_path: str) -> dict[str, int]:
+    """
+    Initialize user resource directories by copying bundled templates.
+
+    Called at addon registration to ensure user directories exist with
+    starter templates. Only copies files that don't already exist.
+
+    Copies:
+      - assets/scripts/*.py -> user_config/scripts/ (except autorun/functions.py)
+      - assets/examples/*.json -> user_config/exports/examples/
+
+    Args:
+        addon_path: Path to the addon root directory.
+
+    Returns:
+        Dict with counts: {"scripts": N, "examples": M} of copied files.
+    """
+    result = {"scripts": 0, "examples": 0}
+
+    # --- Copy scripts (except autorun/functions.py) ---
+    system_scripts = get_system_scripts_dir(addon_path)
+    user_scripts = get_user_scripts_dir(create=True)
+
+    if os.path.isdir(system_scripts):
+        for filename in os.listdir(system_scripts):
+            src = os.path.join(system_scripts, filename)
+            dst = os.path.join(user_scripts, filename)
+
+            # Skip autorun directory (contains system-only functions.py)
+            if filename == "autorun":
+                continue
+
+            # Skip if destination already exists
+            if os.path.exists(dst):
+                continue
+
+            if os.path.isfile(src) and filename.endswith(".py"):
+                shutil.copy2(src, dst)
+                result["scripts"] += 1
+
+    # --- Copy examples to exports/examples/ ---
+    system_examples = os.path.join(addon_path, "assets", "examples")
+    user_examples = os.path.join(get_user_exports_dir(create=True), "examples")
+
+    if os.path.isdir(system_examples):
+        # Create examples subdirectory if needed
+        if not os.path.exists(user_examples):
+            os.makedirs(user_examples, exist_ok=True)
+
+        for filename in os.listdir(system_examples):
+            src = os.path.join(system_examples, filename)
+            dst = os.path.join(user_examples, filename)
+
+            # Skip if destination already exists
+            if os.path.exists(dst):
+                continue
+
+            if os.path.isfile(src) and filename.endswith(".json"):
+                shutil.copy2(src, dst)
+                result["examples"] += 1
+
+    return result
 
 
 # -----------------------------------------------------------------------------
@@ -676,7 +741,14 @@ def parse_json_data(json_data: str | bytes) -> tuple[dict[str, Any] | None, str 
 # =============================================================================
 
 def register():
-    pass
+    # Initialize user resources (copy templates on first run)
+    result = initialize_user_resources(ADDON_PATH)
+    if result["scripts"] or result["examples"]:
+        from .debug import dbg_log
+        dbg_log(
+            "init",
+            f"Copied user resources: {result['scripts']} scripts, {result['examples']} examples"
+        )
 
 
 def unregister():

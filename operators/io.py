@@ -469,3 +469,16 @@ class PME_OT_backup(Operator):
     def invoke(self, context, event):
         get_prefs().backup_menus(operator=self)
         return {'FINISHED'}
+
+
+def register():
+    global import_filepath
+    # Set import path to user examples directory (created by infra/io.py)
+    user_examples = os.path.join(get_user_exports_dir(), "examples")
+    if os.path.isdir(user_examples):
+        import_filepath = user_examples
+    # else: keep bundled examples path as fallback
+
+
+def unregister():
+    pass
