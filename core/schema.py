@@ -311,12 +311,11 @@ class ParsedData:
 
 
 # -----------------------------------------------------------------------------
-# Backward compatibility aliases (deprecated, will be removed in v3.0)
+# Backward compatibility aliases (DEPRECATED - removed in Phase 8-E)
 # -----------------------------------------------------------------------------
-
-# Class aliases
-PMEProp = SchemaProp
-PMEProps = SchemaRegistry
-
-# Instance alias
-props = schema
+# These aliases caused confusion with pme.props (user properties).
+# Use SchemaProp, SchemaRegistry, and schema instead.
+#
+# PMEProp = SchemaProp      # Removed: use SchemaProp
+# PMEProps = SchemaRegistry  # Removed: use SchemaRegistry
+# props = schema            # Removed: pme.props now refers to user properties

@@ -13,27 +13,20 @@
 
 LAYER = "core"
 
-# Re-export everything from schema for backward compatibility
+# Re-export from schema for backward compatibility
 from .schema import (
-    # New names (preferred)
     SchemaProp,
     SchemaRegistry,
     schema,
     ParsedData,
-    # Old names (deprecated aliases)
-    PMEProp,
-    PMEProps,
-    props,
 )
 
 __all__ = [
-    # New names
     "SchemaProp",
     "SchemaRegistry",
     "schema",
     "ParsedData",
-    # Deprecated names
-    "PMEProp",
-    "PMEProps",
-    "props",
 ]
+
+# NOTE: PMEProp, PMEProps, props aliases removed in Phase 8-E
+# pme.props now refers to user properties (PropertyGroup), not SchemaRegistry

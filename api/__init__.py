@@ -46,7 +46,6 @@ import bpy
 # =============================================================================
 # Public API exports
 # =============================================================================
-# Note: PMEContext, UserData, context are NOT in __all__ (internal)
 
 __all__ = [
     # Execution
@@ -58,21 +57,14 @@ __all__ = [
     "find_pm",
     "list_pms",
     "invoke_pm",
-    # Schema
-    "schema",
-    "SchemaRegistry",
-    "SchemaProp",
-    "ParsedData",
-    # Deprecated aliases (backward compat)
-    "props",
-    "PMEProp",
-    "PMEProps",
-    # Stability / Namespace introspection
-    "Stability",
-    "get_stability",
-    "is_public",
-    "is_internal",
-    "get_public_names_by_stability",
+    # User Properties
+    "props",  # User-defined properties container (PropertyGroup)
+    # Preferences
+    "preferences",  # PME preferences access
+    # Context (backward compat)
+    "context",  # PMEContext singleton for add_global()
+    # Developer utilities (submodule)
+    "dev",  # pme.dev.* - namespace introspection, debugging
 ]
 
 # =============================================================================
@@ -90,30 +82,19 @@ from ..infra.runtime_context import (
     PMEContext as PMEContext,  # For pme.PMEContext backward compat
 )
 
-# Schema (public)
+# Schema (internal - used by debug utilities)
 from ..core.schema import (
-    # New names (preferred)
     SchemaProp,
     SchemaRegistry,
     schema,
     ParsedData,
-    # Deprecated aliases (backward compatibility)
-    PMEProp,
-    PMEProps,
-    props,
-)
-
-# Namespace definitions (public)
-from ..core.namespace import (
-    Stability,
-    is_public,
-    is_internal,
-    get_stability,
-    get_public_names_by_stability,
 )
 
 # Addon utilities (internal)
 from ..addon import get_prefs as _get_prefs
+
+# Developer utilities submodule
+from . import dev
 
 
 # =============================================================================
@@ -308,72 +289,81 @@ def invoke_pm(pm_or_name: PMHandle | str) -> bool:
 
 
 # =============================================================================
-# Debug Utilities (Internal)
+# Preferences & Properties Access (Experimental)
 # =============================================================================
-# These are NOT exported in __all__ but can be accessed directly
-# for debugging purposes.
 
+
+class _PreferencesProxy:
+    """Lazy proxy for PME preferences access.
+
+    This allows `pme.preferences` and `pme.props` to work even when
+    the addon is not yet fully registered.
+    """
+
+    @property
+    def preferences(self):
+        """Access PME addon preferences.
+
+        Returns:
+            PMEPreferences object, or None if addon not registered.
+
+        Example:
+            >>> prefs = pme.preferences
+            >>> prefs.debug_mode = True
+
+        Stability: Experimental
+        """
+        return _get_prefs()
+
+    @property
+    def props(self):
+        """Access user-defined properties container.
+
+        This is the PropertyGroup where user-defined properties
+        (created via Property Editor) are stored.
+
+        Returns:
+            PropertyGroup with user properties, or None if addon not registered.
+
+        Example:
+            >>> pme.props.MyCounter = 10
+            >>> value = pme.props.MyCounter
+
+        Stability: Experimental
+        """
+        prefs = _get_prefs()
+        return getattr(prefs, "props", None) if prefs else None
+
+
+_proxy = _PreferencesProxy()
+
+# Module-level properties (accessed as pme.preferences, pme.props)
+# These are defined as module attributes that delegate to the proxy
+
+
+def __getattr__(name: str):
+    """Module-level __getattr__ for lazy property access."""
+    if name == "preferences":
+        return _proxy.preferences
+    if name == "props":
+        return _proxy.props
+    raise AttributeError(f"module 'pme' has no attribute '{name}'")
+
+
+# =============================================================================
+# Debug Utilities - moved to dev submodule
+# =============================================================================
+# Use pme.dev.validate_namespace() and pme.dev.namespace_report() instead.
+# Legacy aliases for backward compatibility:
 
 def _validate_public_namespace(globals_dict: dict[str, Any] | None = None) -> dict[str, list[str]]:
-    """Validate that the public namespace is correctly configured.
-
-    Internal debug utility. Not part of the public API.
-    """
-    from ..core.namespace import PUBLIC_NAMES, NAMESPACE_PUBLIC
-
-    if globals_dict is None:
-        globals_dict = context.gen_globals()
-
-    present_names = set(globals_dict.keys())
-
-    # Check for missing public variables
-    missing = [name for name in PUBLIC_NAMES if name not in present_names]
-
-    # Check for potential confusion (internal vars that look important)
-    warnings = []
-    suspicious_internal = {"PME", "PREFS", "pme_context"}
-    for name in suspicious_internal:
-        if name in present_names and is_internal(name):
-            warnings.append(f"'{name}' is internal but exposed (document as internal)")
-
-    return {"missing": missing, "warnings": warnings}
+    """DEPRECATED: Use pme.dev.validate_namespace() instead."""
+    return dev.validate_namespace(globals_dict)
 
 
 def _get_namespace_report() -> str:
-    """Generate a human-readable report of the current namespace configuration.
-
-    Internal debug utility. Not part of the public API.
-    """
-    from ..core.namespace import PUBLIC_NAMES, NAMESPACE_PUBLIC
-
-    globals_dict = context.gen_globals()
-    present = set(globals_dict.keys())
-
-    lines = ["=== PME Namespace Report ===", ""]
-
-    # Public variables
-    lines.append("Public (Experimental):")
-    for name in sorted(PUBLIC_NAMES):
-        status = "✓" if name in present else "✗ MISSING"
-        info = NAMESPACE_PUBLIC.get(name, {})
-        desc = info.get("desc", "")
-        lines.append(f"  {status} {name}: {desc}")
-
-    lines.append("")
-
-    # Internal variables present
-    lines.append("Internal (present in globals):")
-    internal_present = [n for n in present if is_internal(n)]
-    for name in sorted(internal_present)[:10]:  # Limit to first 10
-        lines.append(f"  - {name}")
-    if len(internal_present) > 10:
-        lines.append(f"  ... and {len(internal_present) - 10} more")
-
-    lines.append("")
-    lines.append(f"Total variables in namespace: {len(present)}")
-    lines.append(f"Public: {len(PUBLIC_NAMES)}, Internal: {len(internal_present)}")
-
-    return "\n".join(lines)
+    """DEPRECATED: Use pme.dev.namespace_report() instead."""
+    return dev.namespace_report()
 
 
 # =============================================================================

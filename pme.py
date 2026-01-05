@@ -46,16 +46,18 @@ from .api import (
     find_pm,
     list_pms,
     invoke_pm,
-    # Schema
-    schema,
-    SchemaRegistry,
-    SchemaProp,
-    ParsedData,
-    # Deprecated aliases (backward compat)
-    props,
-    PMEProp,
-    PMEProps,
-    # Stability / Namespace introspection
+)
+
+# Preferences access (delegate to api module)
+from .api import _proxy as _api_proxy
+
+# Developer utilities submodule
+from .api import dev
+
+# Internal imports (kept for backward compat of internal code)
+# New code should import directly from core.schema or core.namespace
+from .core.schema import schema, SchemaRegistry, SchemaProp, ParsedData
+from .core.namespace import (
     Stability,
     get_stability,
     is_public,
@@ -130,3 +132,44 @@ def register():
 def unregister():
     """Unregister the pme module."""
     pass
+
+
+# =============================================================================
+# Autocomplete control
+# =============================================================================
+# Match the behavior of api/__init__.py for consistency
+
+# Public API surface (what shows in autocomplete)
+__all__ = [
+    # Execution
+    "execute",
+    "evaluate",
+    "ExecuteResult",
+    # Menu API
+    "PMHandle",
+    "find_pm",
+    "list_pms",
+    "invoke_pm",
+    # User Properties
+    "props",
+    # Preferences
+    "preferences",
+    # Context (backward compat)
+    "context",
+    # Developer utilities (submodule)
+    "dev",
+]
+
+
+def __dir__():
+    """Control what appears in dir() and autocomplete."""
+    return __all__
+
+
+def __getattr__(name: str):
+    """Module-level __getattr__ for lazy property access."""
+    if name == "preferences":
+        return _api_proxy.preferences
+    if name == "props":
+        return _api_proxy.props
+    raise AttributeError(f"module 'pme' has no attribute '{name}'")
