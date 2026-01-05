@@ -406,6 +406,30 @@
 
 ---
 
+### D19: extend_target フィールドの追加
+
+| 決定 | 採用 |
+|------|------|
+| 旧 | `name` が表示名と Blender type ID の両方を兼務 |
+| 新 | `extend_target` フィールドで Blender Panel/Header/Menu ID を指定 |
+
+**根拠**:
+- `pm.name` が「My Panel Extension」のような表示名の場合、`bpy.types` 検索が失敗
+- Reload Scripts 後に既存の Extend Panel/Header が動作しない問題 (#69)
+- `uid` と `name` の分離 (D2) と同様のパターン
+
+**使い方**:
+```json
+{
+  "name": "My Panel Extension",      // 表示名
+  "extend_target": "VIEW3D_PT_tools" // Blender type ID
+}
+```
+
+**Issue**: #69
+
+---
+
 ## 2.0.0 実装の最小スコープ
 
 | 項目 | 状態 |
@@ -428,6 +452,7 @@
 | D16: アイコンフラグ記号の正確な定義 | ✅ 確定 |
 | D17: Settings プロパティ名の変換方針 | ✅ 確定 |
 | D18: type:custom から undo/use_try 削除 | ✅ 確定 |
+| D19: extend_target フィールド追加 | ✅ 確定 |
 
 | 項目 | 状態 |
 |------|------|
@@ -449,4 +474,5 @@
 
 ---
 
-*Last Updated: 2026-01-05*
+*Last Updated: 2026-01-06*
+*Added: D19 (extend_target) per Issue #69*

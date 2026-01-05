@@ -98,6 +98,7 @@
 
   "poll": null,
   "tags": ["modeling"],
+  "extend_target": null,
 
   "items": [MenuItem, ...],
 
@@ -121,6 +122,7 @@
 | `poll` | string | - | "return True" | ポーリング条件（Python式） |
 | `tags` | string[] | - | [] | タグの配列 |
 | `items` | MenuItem[] | ✓ | [] | メニューアイテムの配列 |
+| `extend_target` | string \| null | - | null | 拡張対象の Blender Panel/Header/Menu ID |
 | `extensions` | object | - | {} | 拡張フィールド |
 
 ### uid の形式
