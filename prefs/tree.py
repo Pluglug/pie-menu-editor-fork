@@ -128,36 +128,10 @@ class PME_UL_pm_tree(UIList):
 
     グループ化、フォルダ展開、永続化をサポートする UIList。
     状態は TreeState インスタンス (tree_state) で管理。
+
+    注: クラス変数（locked, groups, collapsed_groups, expanded_folders, has_folders）
+    は tree_state に移動した。呼び出し側は tree_state.xxx を直接使用すること。
     """
-
-    # 後方互換のためのクラス変数（TreeState への委譲）
-    @property
-    def locked(self):
-        return tree_state.locked
-
-    @locked.setter
-    def locked(self, value):
-        tree_state.locked = value
-
-    @property
-    def groups(self):
-        return tree_state.groups
-
-    @property
-    def collapsed_groups(self):
-        return tree_state.collapsed_groups
-
-    @property
-    def expanded_folders(self):
-        return tree_state.expanded_folders
-
-    @property
-    def has_folders(self):
-        return tree_state.has_folders
-
-    @has_folders.setter
-    def has_folders(self, value):
-        tree_state.has_folders = value
 
     @staticmethod
     def save_state():
@@ -215,7 +189,7 @@ class PME_UL_pm_tree(UIList):
         elif pr.group_by == 'KEYMAP':
             pms.sort(key=lambda pm: pm.km_name)
         elif pr.group_by == 'TYPE':
-            pms.sort(key=lambda pm: pm.ed.default_name)
+            pms.sort(key=lambda pm: pm.ed.default_name if pm.ed else "")
         elif pr.group_by == 'KEY':
             pms.sort(key=lambda pm: to_key_name(pm.key))
         else:
@@ -239,9 +213,10 @@ class PME_UL_pm_tree(UIList):
                         groups[km] = []
                     groups[km].append(pm)
             elif pr.group_by == 'TYPE':
-                if pm.ed.default_name not in groups:
-                    groups[pm.ed.default_name] = []
-                groups[pm.ed.default_name].append(pm)
+                type_name = pm.ed.default_name if pm.ed else ""
+                if type_name not in groups:
+                    groups[type_name] = []
+                groups[type_name].append(pm)
             elif pr.group_by == 'KEY':
                 key_name = to_key_name(pm.key)
                 if key_name not in groups:

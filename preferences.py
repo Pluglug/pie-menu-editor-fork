@@ -498,8 +498,8 @@ class PMEPreferences(AddonPreferences):
 
     def update_group_by(self, context=None):
         if self.tree_mode:
-            PME_UL_pm_tree.expanded_folders.clear()
-            PME_UL_pm_tree.collapsed_groups.clear()
+            tree_state.expanded_folders.clear()
+            tree_state.collapsed_groups.clear()
             self.tree.update()
             if self.group_by != 'NONE':
                 bpy.ops.pme.tree_group_toggle(all=True)
@@ -645,7 +645,7 @@ class PMEPreferences(AddonPreferences):
         if self.tree_mode:
             # if self.show_keymap_names and self.show_tags:
             #     self["show_keymap_names"] = False
-            PME_UL_pm_tree.collapsed_groups.clear()
+            tree_state.collapsed_groups.clear()
             PME_UL_pm_tree.update_tree()
 
     tree_mode: BoolProperty(description="Tree Mode", update=update_tree_mode)
@@ -810,8 +810,8 @@ class PMEPreferences(AddonPreferences):
             elif link.pm_name and link.pm_name in self.pie_menus:
                 pm.km_name = self.pie_menus[link.pm_name].km_name
 
-            if pm.km_name in PME_UL_pm_tree.collapsed_groups:
-                PME_UL_pm_tree.collapsed_groups.remove(pm.km_name)
+            if pm.km_name in tree_state.collapsed_groups:
+                tree_state.collapsed_groups.remove(pm.km_name)
 
         pm.data = pm.ed.default_pmi_data
 
@@ -820,8 +820,8 @@ class PMEPreferences(AddonPreferences):
 
             pm.mode = apm.mode
             pm.km_name = apm.km_name
-            if pm.km_name in PME_UL_pm_tree.collapsed_groups:
-                PME_UL_pm_tree.collapsed_groups.remove(pm.km_name)
+            if pm.km_name in tree_state.collapsed_groups:
+                tree_state.collapsed_groups.remove(pm.km_name)
 
             pm.data = apm.data
             pm.open_mode = apm.open_mode
@@ -1386,17 +1386,17 @@ class PMEPreferences(AddonPreferences):
             lh.operator(PME_OT_pm_enable_all.bl_idname, "", CC.ICON_ON).enable = True
             lh.operator(PME_OT_pm_enable_all.bl_idname, "", CC.ICON_OFF).enable = False
 
-            if pr.tree_mode and PME_UL_pm_tree.has_folders:
+            if pr.tree_mode and tree_state.has_folders:
                 lh.sep(group='EXP_COL_ALL')
-                icon = 'TRIA_RIGHT' if PME_UL_pm_tree.expanded_folders else 'TRIA_DOWN'
+                icon = 'TRIA_RIGHT' if tree_state.expanded_folders else 'TRIA_DOWN'
                 lh.operator(PME_OT_tree_folder_toggle_all.bl_idname, "", icon)
 
             if pr.use_groups and len(pr.pie_menus):
                 lh.sep(group='EXP_COL_ALL')
                 icon = (
                     'TRIA_LEFT_BAR'
-                    if len(PME_UL_pm_tree.collapsed_groups)
-                    != len(PME_UL_pm_tree.groups)
+                    if len(tree_state.collapsed_groups)
+                    != len(tree_state.groups)
                     else 'TRIA_DOWN_BAR'
                 )
                 lh.operator(
