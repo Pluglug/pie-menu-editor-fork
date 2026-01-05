@@ -20,12 +20,25 @@
 ## Phase 9: JSON Schema v2（2.0.0 の中核）
 
 > メンターアドバイス: 「いま動いているものを壊さずに、土台とスキーマを固める版」
+> トラッキング Issue: #76 (予定)
 
-### 9-A: JSON v2 スキーマ確定 ⏳
+### 9-A: JSON v2 スキーマ確定 🔄 (レビュー中)
 
-- [ ] `json_schema_v2.md` 最終化
-- [ ] Action.context 仕様決定
-- [ ] 後方互換範囲決定（1.19.x / 1.18.x）
+- [x] `json_schema_v2.md` 初版作成
+- [x] `design_decisions.md` 作成（D1-D18 確定）
+- [x] メンターレビュー反映
+- [x] 保守的レビュー反映（Modal ActionType, Hotkey fields, icon flags 等）
+- [ ] 最終レビュー・承認待ち
+
+**確定した設計判断 (18件)**:
+| カテゴリ | 決定事項 |
+|---------|---------|
+| 基本構造 | D1: $schema/version 分離, D2: uid 導入, D5: extensions 2階層 |
+| MenuItem | D3: description/description_expr 分離, D4: Style オブジェクト化 |
+| Hotkey | D6: keymaps 配列化, D15: any/key_mod/chord 追加 |
+| Action | D8-D10: operator 削除/undo 削除/menu uid のみ, D14: Modal モード追加, D18: custom 修正 |
+| Settings | D7: キー名ルール, D17: 接頭辞変換方針 |
+| その他 | D11-D13: poll/DragDirection/accent_usage, D16: icon flags |
 
 ### 9-B: dataclass スキーマ実装 ⏳
 
@@ -59,8 +72,11 @@
 ### 参照ドキュメント
 
 - `@_docs/design/json_schema_v2.md` — JSON 形式仕様
+- `@_docs/design/design_decisions.md` — 設計判断の記録（D1-D18）
 - `@_docs/design/schema_v2_analysis.md` — 可能性と限界の分析
+- `@_docs/design/schema_v2_future_extensibility.md` — 将来拡張性の検討
 - `@_docs/design/PME2_FEATURE_REQUESTS.md` — ユーザー要望
+- `@_docs/guides/phase9_implementation.md` — 実装ガイド
 
 ---
 

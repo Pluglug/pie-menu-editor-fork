@@ -1,8 +1,9 @@
-# PME2 JSON Schema Design
+# PME2 JSON Schema Design v2.0
 
-> Version: 2.0.0-draft
-> Status: Design Phase
-> Copied from: pme_mini/.claude/design/json_schema_v2.md
+> Version: 2.0.0-rc1
+> Status: **Design Finalized**
+> Last Updated: 2026-01-05
+> Design Review: Mentor feedback incorporated
 
 ---
 
@@ -11,9 +12,11 @@
 | 原則 | 説明 |
 |------|------|
 | **名前付きキー** | 位置ベースのタプルではなくオブジェクトを使用 |
-| **フラット設定** | mode でスキーマが決まるため settings はネストしない |
-| **分離されたフラグ** | icon フラグ等は別フィールドに展開 |
-| **null 許容** | オプショナルな値は null を許容 |
+| **ID と Name の分離** | 参照用 uid と表示用 name を分ける |
+| **暗黙のデフォルトゼロ** | 全フィールドに明示的なデフォルト値を定義 |
+| **静的/動的の分離** | description (静的) と description_expr (Python式) を分ける |
+| **Style オブジェクト化** | 色・装飾は style にまとめ、継承モデルを適用 |
+| **vendor/feature 拡張** | extensions は 2 階層構造で管理 |
 | **後方互換** | PME1 形式からのインポート変換をサポート |
 
 ---
@@ -22,21 +25,26 @@
 
 ```json
 {
-  "$schema": "PME2",
-  "version": "2.0.0",
-  "exported_at": "2026-01-03T12:00:00Z",
+  "$schema": "https://pluglug.github.io/pme/schema/pme2-2.0.json",
+  "schema_version": "2.0",
+  "addon_version": "2.0.0",
+  "exported_at": "2026-01-05T12:00:00Z",
+
   "menus": [Menu, ...],
-  "tags": ["tag1", "tag2"]
+  "tags": ["modeling", "sculpting"],
+  "extensions": {}
 }
 ```
 
-| フィールド | 型 | 必須 | 説明 |
-|-----------|-----|------|------|
-| `$schema` | string | ✓ | スキーマ識別子 `"PME2"` |
-| `version` | string | ✓ | エクスポートしたアドオンのバージョン |
-| `exported_at` | string | - | ISO 8601 形式のタイムスタンプ |
-| `menus` | Menu[] | ✓ | メニューの配列 |
-| `tags` | string[] | - | 使用されているタグの一覧 |
+| フィールド | 型 | 必須 | デフォルト | 説明 |
+|-----------|-----|------|----------|------|
+| `$schema` | string | ✓ | - | スキーマ URL（将来の JSONSchema 検証用） |
+| `schema_version` | string | ✓ | - | スキーマのバージョン（`"2.0"`, `"2.1"` 等） |
+| `addon_version` | string | ✓ | - | エクスポートしたアドオンのバージョン |
+| `exported_at` | string | - | null | RFC 3339 形式のタイムスタンプ |
+| `menus` | Menu[] | ✓ | - | メニューの配列 |
+| `tags` | string[] | - | [] | 使用されているタグの一覧（検索/フィルタ用） |
+| `extensions` | object | - | {} | ファイルレベルの拡張フィールド |
 
 ---
 
@@ -44,6 +52,7 @@
 
 ```json
 {
+  "uid": "pm_9f7c2k3h",
   "name": "My Pie Menu",
   "mode": "PMENU",
   "enabled": true,
@@ -54,7 +63,7 @@
     "shift": true,
     "alt": false,
     "oskey": false,
-    "keymap": "Window",
+    "keymaps": ["Window", "3D View"],
     "activation": "PRESS",
     "drag_direction": null
   },
@@ -66,40 +75,82 @@
     "threshold": -1
   },
 
+  "description": "モデリング作業用のメインメニュー",
+  "description_expr": null,
+
+  "style": {
+    "accent_color": "#4A90D9",
+    "accent_usage": "none"
+  },
+
   "poll": null,
   "tags": ["modeling"],
 
-  "items": [MenuItem, ...]
+  "items": [MenuItem, ...],
+
+  "extensions": {}
 }
 ```
 
 ### Menu フィールド
 
-| フィールド | 型 | 必須 | 説明 |
-|-----------|-----|------|------|
-| `name` | string | ✓ | メニュー名（一意） |
-| `mode` | MenuMode | ✓ | メニュータイプ |
-| `enabled` | boolean | ✓ | 有効/無効 |
-| `hotkey` | Hotkey | ✓ | ホットキー設定 |
-| `settings` | object | ✓ | モード別設定（フラット） |
-| `poll` | string \| null | - | ポーリング条件（Python式） |
-| `tags` | string[] | - | タグの配列 |
-| `items` | MenuItem[] | ✓ | メニューアイテムの配列 |
+| フィールド | 型 | 必須 | デフォルト | 説明 |
+|-----------|-----|------|----------|------|
+| `uid` | string | ✓ | - | 一意 ID（`{mode_prefix}_{base32_random}`）|
+| `name` | string | ✓ | - | 表示名（重複可、ただし UI で警告） |
+| `mode` | MenuMode | ✓ | - | メニュータイプ |
+| `enabled` | boolean | ✓ | true | 有効/無効 |
+| `hotkey` | Hotkey \| null | - | null | ホットキー設定 |
+| `settings` | object | ✓ | {} | モード別設定（フラット） |
+| `description` | string \| null | - | null | 静的な説明文（`\n` で改行） |
+| `description_expr` | string \| null | - | null | Python 式による動的説明文 |
+| `style` | Style \| null | - | null | スタイル設定 |
+| `poll` | string | - | "return True" | ポーリング条件（Python式） |
+| `tags` | string[] | - | [] | タグの配列 |
+| `items` | MenuItem[] | ✓ | [] | メニューアイテムの配列 |
+| `extensions` | object | - | {} | 拡張フィールド |
+
+### uid の形式
+
+```
+{mode_prefix}_{random_id}
+
+mode_prefix:
+  pm  - Pie Menu (PMENU)
+  rm  - Regular Menu (RMENU)
+  pd  - Pop-up Dialog (DIALOG)
+  pg  - Panel Group (PANEL)
+  hp  - Hiding Panel (HPANEL)
+  sk  - Stack Key (SCRIPT)
+  mc  - Macro Operator (MACRO)
+  md  - Modal Operator (MODAL)
+  st  - Sticky Key (STICKY)
+  pr  - Property (PROPERTY)
+
+random_id:
+  uuid4 を base32 エンコードした 8 文字（例: 9f7c2k3h）
+```
+
+**uid 生成ルール**:
+- メニュー作成時に一度だけ生成
+- 複製時は新しい uid を生成
+- インポート時は既存 uid を維持（衝突時は再生成）
+- 編集不可（UI で変更できない）
 
 ### MenuMode 列挙
 
-```
-PMENU    - Pie Menu
-RMENU    - Regular Menu
-DIALOG   - Pop-up Dialog
-PANEL    - Side Panel (Panel Group)
-HPANEL   - Hiding Unused Panels
-SCRIPT   - Stack Key
-MACRO    - Macro Operator
-MODAL    - Modal Operator
-STICKY   - Sticky Key
-PROPERTY - Property
-```
+| 値 | 説明 | uid prefix |
+|----|------|-----------|
+| `PMENU` | Pie Menu | pm |
+| `RMENU` | Regular Menu | rm |
+| `DIALOG` | Pop-up Dialog | pd |
+| `PANEL` | Side Panel (Panel Group) | pg |
+| `HPANEL` | Hiding Unused Panels | hp |
+| `SCRIPT` | Stack Key | sk |
+| `MACRO` | Macro Operator | mc |
+| `MODAL` | Modal Operator | md |
+| `STICKY` | Sticky Key | st |
+| `PROPERTY` | Property | pr |
 
 ---
 
@@ -112,50 +163,121 @@ PROPERTY - Property
   "shift": true,
   "alt": false,
   "oskey": false,
-  "keymap": "Window",
+  "any": false,
+  "key_mod": "NONE",
+  "chord": "NONE",
+  "keymaps": ["Window", "3D View"],
   "activation": "PRESS",
-  "drag_direction": null
+  "drag_direction": "ANY"
 }
 ```
 
-| フィールド | 型 | 必須 | 説明 |
-|-----------|-----|------|------|
-| `key` | string | ✓ | キー名 (`"A"`, `"SPACE"`, `"F1"` 等) |
-| `ctrl` | boolean | ✓ | Ctrl 修飾キー |
-| `shift` | boolean | ✓ | Shift 修飾キー |
-| `alt` | boolean | ✓ | Alt 修飾キー |
-| `oskey` | boolean | ✓ | OS キー (Cmd/Super) |
-| `keymap` | string | ✓ | キーマップ名 |
-| `activation` | ActivationMode | ✓ | アクティベーションモード |
-| `drag_direction` | DragDirection \| null | - | ドラッグ方向（CLICK_DRAG時のみ） |
+| フィールド | 型 | 必須 | デフォルト | 説明 |
+|-----------|-----|------|----------|------|
+| `key` | string | ✓ | "NONE" | キー名 (`"A"`, `"SPACE"`, `"F1"` 等) |
+| `ctrl` | boolean | - | false | Ctrl 修飾キー |
+| `shift` | boolean | - | false | Shift 修飾キー |
+| `alt` | boolean | - | false | Alt 修飾キー |
+| `oskey` | boolean | - | false | OS キー (Cmd/Super) |
+| `any` | boolean | - | false | Any キー（すべての修飾キーを無視） |
+| `key_mod` | string | - | "NONE" | 通常キーを修飾キーとして使用 |
+| `chord` | string | - | "NONE" | Key Chords の 2 番目のキー（CHORDS モード時） |
+| `keymaps` | string[] | - | ["Window"] | 登録先キーマップ（複数可） |
+| `activation` | ActivationMode | - | "PRESS" | アクティベーションモード |
+| `drag_direction` | DragDirection | - | "ANY" | ドラッグ方向（CLICK_DRAG時のみ有効） |
+
+**Note**:
+- `keymaps` は既存の `km_name` の `;` 区切りと互換
+- PME1 インポート時は `"Window; 3D View"` → `["Window", "3D View"]` に変換
+- `any` は Blender の kmi.any に対応（全修飾キーを無視）
+- `key_mod` は通常キー（A, B, etc.）を修飾キーとして使うための設定
+- `chord` は CHORDS アクティベーション時のみ有効（連続キー入力の 2 番目）
 
 ### ActivationMode 列挙
 
-```
-PRESS        - キーを押した瞬間
-HOLD         - キーを押し続けている間
-CLICK        - クリック（押して離す）
-CLICK_DRAG   - クリックドラッグ
-DOUBLE_CLICK - ダブルクリック
-ONE_SHOT     - ワンショット
-CHORDS       - コード（複数キー）
-```
+> 準拠: `constants.OPEN_MODE_ITEMS`
+
+| 値 | 説明 |
+|----|------|
+| `PRESS` | キーを押した瞬間 |
+| `HOLD` | キーを押し続けている間 |
+| `DOUBLE_CLICK` | ダブルクリック |
+| `TWEAK` | Click Drag（ホールド＆ドラッグ） |
+| `CHORDS` | Key Chords（2キー連続） |
+| `CLICK` | Click (Experimental) |
+| `CLICK_DRAG` | Click Drag (Experimental) |
 
 ### DragDirection 列挙
 
+> 準拠: `constants.DRAG_DIR_ITEMS`
+
+| 値 | 説明 |
+|----|------|
+| `ANY` | 任意の方向 |
+| `NORTH` | 北（上） |
+| `NORTH_EAST` | 北東 |
+| `EAST` | 東（右） |
+| `SOUTH_EAST` | 南東 |
+| `SOUTH` | 南（下） |
+| `SOUTH_WEST` | 南西 |
+| `WEST` | 西（左） |
+| `NORTH_WEST` | 北西 |
+
+---
+
+## Style オブジェクト
+
+Menu と MenuItem で共通の構造。MenuItem は Menu の style を継承し、上書きできる。
+
+```json
+{
+  "accent_color": "#4CAF50",
+  "accent_usage": "bar-left"
+}
 ```
-ANY   - 任意の方向
-UP    - 上
-DOWN  - 下
-LEFT  - 左
-RIGHT - 右
-```
+
+| フィールド | 型 | 必須 | デフォルト | 説明 |
+|-----------|-----|------|----------|------|
+| `accent_color` | string \| null | - | null | 直接指定の色（`#RRGGBB`） |
+| `accent_usage` | AccentUsage | - | "none" | 色の表示方法 |
+
+**色の解決順序**:
+1. `accent_color` が指定されていればそれを使用
+2. どちらもなければ親（Menu）の style を継承
+3. 親もなければデフォルト（色なし）
+
+### AccentUsage 列挙
+
+| 値 | 説明 |
+|----|------|
+| `none` | 色を表示しない |
+| `bar-left` | 左端にカラーバー表示 |
+| `bar-right` | 右端にカラーバー表示 |
+| `dot` | アイコン横にドット表示(将来のAPI期待) |
+| `background` | 背景色として表示(将来のAPI期待) |
 
 ---
 
 ## Settings（モード別プロパティ）
 
 settings はフラット構造で、mode に応じて異なるプロパティが入る。
+
+### 内部形式との変換
+
+> **重要**: 内部形式（`core/schema.py`）はプロパティ名に接頭辞が付く（例: `pm_radius`）。
+> スキーマでは簡潔な名前を使用し、変換レイヤーで吸収する。
+
+| スキーマ | 内部形式 | 変換方向 |
+|---------|----------|---------|
+| `radius` | `pm_radius` | エクスポート時: `pm_` を除去 |
+| `flick` | `pm_flick` | インポート時: `pm_` を付加 |
+
+### キー名ルール
+
+| パターン | 用途 | 例 |
+|---------|------|-----|
+| 短い名前 | モード固有の設定 | `radius`, `flick` |
+| 接頭辞付き | 複数モードで共有したい設定 | `pm_confirm`, `dlg_confirm` |
 
 ### PMENU (Pie Menu)
 
@@ -172,8 +294,8 @@ settings はフラット構造で、mode に応じて異なるプロパティが
 |-----------|-----|----------|------|
 | `radius` | integer | -1 | 半径（-1 = デフォルト） |
 | `flick` | boolean | true | フリック確定 |
-| `confirm` | integer | -1 | 確定時間 |
-| `threshold` | integer | -1 | しきい値 |
+| `confirm` | integer | -1 | 確定時間（-1 = デフォルト） |
+| `threshold` | integer | -1 | しきい値（-1 = デフォルト） |
 
 ### RMENU (Regular Menu)
 
@@ -182,6 +304,10 @@ settings はフラット構造で、mode に応じて異なるプロパティが
   "title": true
 }
 ```
+
+| プロパティ | 型 | デフォルト | 説明 |
+|-----------|-----|----------|------|
+| `title` | boolean | true | タイトルを表示 |
 
 ### DIALOG (Pop-up Dialog)
 
@@ -196,6 +322,15 @@ settings はフラット構造で、mode に応じて異なるプロパティが
 }
 ```
 
+| プロパティ | 型 | デフォルト | 説明 |
+|-----------|-----|----------|------|
+| `title` | boolean | true | タイトルを表示 |
+| `box` | boolean | false | ボックス表示 |
+| `width` | integer | 300 | ダイアログ幅 |
+| `auto_close` | boolean | true | 自動クローズ |
+| `expand` | boolean | false | 展開表示 |
+| `panel` | boolean | false | パネルモード |
+
 ### PANEL (Panel Group)
 
 ```json
@@ -208,6 +343,14 @@ settings はフラット構造で、mode に応じて異なるプロパティが
 }
 ```
 
+| プロパティ | 型 | デフォルト | 説明 |
+|-----------|-----|----------|------|
+| `space` | string | "VIEW_3D" | スペースタイプ |
+| `region` | string | "UI" | リージョンタイプ |
+| `context` | string | "NONE" | コンテキスト |
+| `category` | string | "" | カテゴリ名 |
+| `icons` | boolean | false | アイコン表示 |
+
 ### MODAL (Modal Operator)
 
 ```json
@@ -217,6 +360,12 @@ settings はフラット構造で、mode に応じて異なるプロパティが
   "lock": true
 }
 ```
+
+| プロパティ | 型 | デフォルト | 説明 |
+|-----------|-----|----------|------|
+| `confirm` | boolean | false | 確認ダイアログ |
+| `block_ui` | boolean | true | UI ブロック |
+| `lock` | boolean | true | ロック |
 
 ### SCRIPT / STICKY
 
@@ -228,6 +377,40 @@ settings はフラット構造で、mode に応じて異なるプロパティが
 }
 ```
 
+| プロパティ | 型 | デフォルト | 説明 |
+|-----------|-----|----------|------|
+| `undo` | boolean | false | Undo 有効 |
+| `state` | boolean | false | 状態保持 |
+| `block_ui` | boolean | false | UI ブロック |
+
+### PROPERTY
+
+```json
+{
+  "vector": 1,
+  "mulsel": false,
+  "hor_exp": true,
+  "exp": true,
+  "save": true
+}
+```
+
+| プロパティ | 型 | デフォルト | 説明 |
+|-----------|-----|----------|------|
+| `vector` | integer | 1 | ベクトル次元 |
+| `mulsel` | boolean | false | 複数選択対応 |
+| `hor_exp` | boolean | true | 水平展開 |
+| `exp` | boolean | true | 展開表示 |
+| `save` | boolean | true | 設定を保存 |
+
+### MACRO
+
+追加設定なし（内部データタイプ: `m?`）
+
+### HPANEL (Hiding Panel)
+
+追加設定なし（内部データタイプ: `hpg?`）
+
 ---
 
 ## MenuItem オブジェクト
@@ -238,24 +421,62 @@ settings はフラット構造で、mode に応じて異なるプロパティが
   "action": {
     "type": "command",
     "value": "bpy.ops.mesh.primitive_cube_add()",
-    "undo": true,
     "context": null
   },
   "icon": "MESH_CUBE",
   "icon_only": false,
   "hidden": false,
-  "enabled": true
+  "enabled": true,
+
+  "description": "シーンに立方体プリミティブを追加",
+  "description_expr": null,
+
+  "style": {
+    "accent_color": "#4CAF50",
+    "accent_usage": "bar-left"
+  },
+
+  "extensions": {}
 }
 ```
 
-| フィールド | 型 | 必須 | 説明 |
-|-----------|-----|------|------|
-| `name` | string | ✓ | 表示名 |
-| `action` | Action | ✓ | 実行アクション（空スロットの場合も必須） |
-| `icon` | string | - | アイコン名 |
-| `icon_only` | boolean | - | アイコンのみ表示 |
-| `hidden` | boolean | - | 非表示 |
-| `enabled` | boolean | ✓ | 有効/無効 |
+| フィールド | 型 | 必須 | デフォルト | 説明 |
+|-----------|-----|------|----------|------|
+| `name` | string | ✓ | - | 表示名 |
+| `action` | Action | ✓ | - | 実行アクション |
+| `icon` | string \| null | - | null | アイコン名 |
+| `icon_only` | boolean | - | false | アイコンのみ表示 |
+| `hidden` | boolean | - | false | 非表示 |
+| `enabled` | boolean | ✓ | true | 有効/無効 |
+| `description` | string \| null | - | null | 静的な説明文 |
+| `description_expr` | string \| null | - | null | Python 式による動的説明文 |
+| `style` | Style \| null | - | null | スタイル設定（親 Menu から継承） |
+| `extensions` | object | - | {} | 拡張フィールド |
+
+### description と description_expr の使い分け
+
+```json
+// 静的テキストのみ
+{
+  "description": "シーンに立方体を追加します",
+  "description_expr": null
+}
+
+// 動的テキストのみ
+{
+  "description": null,
+  "description_expr": "'Selected: ' + str(len(C.selected_objects)) + ' objects'"
+}
+
+// 両方（description_expr の結果を description の後に追加）
+{
+  "description": "立方体を追加",
+  "description_expr": "'（カーソル位置: ' + str(C.scene.cursor.location) + '）'"
+}
+// → "立方体を追加（カーソル位置: <0, 0, 0>）"
+```
+
+**i18n への配慮**: `description` は翻訳可能な静的テキスト。`description_expr` は翻訳対象外。
 
 ---
 
@@ -268,53 +489,57 @@ settings はフラット構造で、mode に応じて異なるプロパティが
 | フィールド | 型 | 必須 | 説明 |
 |-----------|-----|------|------|
 | `type` | ActionType | ✓ | アクションの種類 |
-| `value` | string | ✓ | 実行内容（コマンド/スクリプト/パス等） |
+| `value` | string | ✓ | 実行内容 |
 
 ### ActionType 列挙
 
-```
-command  - Blender オペレーター
-custom   - カスタム Python スクリプト
-prop     - プロパティ表示/編集
-menu     - サブメニュー
-hotkey   - ホットキー実行
-operator - オペレーター（UI設定付き）
-empty    - 空スロット
-```
+> 準拠: `constants.MODE_ITEMS` / `constants.EMODE_ITEMS`
 
-### type: "command" (Blender オペレーター)
+| 値 | 説明 | 用途 |
+|----|------|------|
+| `command` | Blender オペレーター / Python コード | 全メニュー |
+| `custom` | カスタムレイアウト Python コード | 全メニュー |
+| `prop` | プロパティ表示/編集 | 全メニュー |
+| `menu` | サブメニュー | 全メニュー |
+| `hotkey` | ホットキー実行 | 全メニュー |
+| `empty` | 空スロット | 全メニュー |
+| `invoke` | Modal: On Invoke | MODAL のみ |
+| `finish` | Modal: On Confirm | MODAL のみ |
+| `cancel` | Modal: On Cancel | MODAL のみ |
+| `update` | Modal: On Update | MODAL のみ |
+
+**Note**: `invoke`, `finish`, `cancel`, `update` は `MODAL_CMD_MODES` に含まれる Modal Operator 専用モード。
+
+### type: "command"
 
 ```json
 {
   "type": "command",
   "value": "bpy.ops.mesh.primitive_cube_add()",
-  "undo": true,
   "context": null
 }
 ```
 
 | フィールド | 型 | デフォルト | 説明 |
 |-----------|-----|----------|------|
-| `undo` | boolean | true | Undo 履歴に追加 |
-| `context` | string \| null | null | コンテキストオーバーライド（Python式） |
+| `context` | string \| null | null | コンテキストオーバーライド（Python式、with 構文用） |
 
-### type: "custom" (カスタムスクリプト)
+### type: "custom"
+
+カスタム UI レイアウトを描画する Python コード。
 
 ```json
 {
   "type": "custom",
-  "value": "print('Hello')\nbpy.ops.mesh.primitive_cube_add()",
-  "undo": false,
-  "use_try": true
+  "value": "L.label(text, icon=icon)\nL.operator('mesh.primitive_cube_add')"
 }
 ```
 
 | フィールド | 型 | デフォルト | 説明 |
 |-----------|-----|----------|------|
-| `undo` | boolean | false | Undo 履歴に追加 |
-| `use_try` | boolean | true | try-except でエラーをキャッチ |
+| `value` | string | - | レイアウト描画コード |
 
-### type: "prop" (プロパティ)
+### type: "prop"
 
 ```json
 {
@@ -332,21 +557,27 @@ empty    - 空スロット
 | `slider` | boolean | false | スライダー表示 |
 | `toggle` | boolean | false | トグルボタン表示 |
 
-### type: "menu" (サブメニュー)
+### type: "menu"
 
 ```json
 {
   "type": "menu",
-  "value": "Other Menu Name",
+  "value": "pm_9f7c2k3h",
   "mode": "inherit"
 }
 ```
 
 | フィールド | 型 | デフォルト | 説明 |
 |-----------|-----|----------|------|
-| `mode` | string | "inherit" | 表示モード（"inherit", "popup", "pie"） |
+| `value` | string | - | 参照先メニューの **uid** |
+| `mode` | string | "inherit" | 表示モード（`"inherit"`, `"popup"`, `"pie"`） |
 
-### type: "hotkey" (ホットキー実行)
+**PME1 変換時の注意**:
+- PME1 では `value` が name（表示名）で参照されている
+- インポート時に name → uid への参照解決が必要
+- 解決できない場合はエラーまたは警告を出力
+
+### type: "hotkey"
 
 ```json
 {
@@ -355,24 +586,13 @@ empty    - 空スロット
 }
 ```
 
-### type: "operator" (オペレーター with UI)
-
-```json
-{
-  "type": "operator",
-  "value": "mesh.primitive_cube_add",
-  "properties": {
-    "size": 2.0,
-    "enter_editmode": true
-  }
-}
-```
-
 | フィールド | 型 | デフォルト | 説明 |
 |-----------|-----|----------|------|
-| `properties` | object | {} | オペレータープロパティ |
+| `value` | string | - | ホットキー文字列（`"CTRL+Z"`, `"SHIFT+A"` 等） |
 
-### type: "empty" (空スロット)
+**Note**: 2.1.0+ でより構造化された形式を検討予定。
+
+### type: "empty"
 
 ```json
 {
@@ -385,15 +605,53 @@ empty    - 空スロット
 
 ---
 
+## extensions の設計
+
+extensions は **vendor/feature の 2 階層構造**で管理する。
+
+```json
+{
+  "extensions": {
+    "pme": {
+      "conditions": {
+        "when": "context.mode == 'EDIT_MESH'",
+        "fallback": "hidden"
+      }
+    },
+    "other_addon": {
+      "custom_feature": { "enabled": true }
+    }
+  }
+}
+```
+
+### 構造ルール
+
+| 階層 | 説明 | 例 |
+|------|------|-----|
+| vendor | 拡張の提供者 | `"pme"`, `"other_addon"` |
+| feature | 機能名 | `"conditions"`, `"spatial"` |
+
+### 昇格ポリシー
+
+extensions 内で試験的に導入した機能は、安定後に first-class フィールドに昇格できる。
+
+**昇格時のマイグレーション**:
+1. 新スキーマバージョンで first-class フィールドを追加
+2. 読み込み時: first-class フィールドがなければ `extensions.pme.{feature}` から引き継ぐ
+3. 書き出し時: 新スキーマのみ（extensions から削除）
+
+---
+
 ## PME1 からの変換マッピング
 
 ### Menu タプル → Menu オブジェクト
 
 | PME1 Index | PME1 Field | PME2 Field |
 |------------|-----------|------------|
-| 0 | name | `name` |
-| 1 | km_name | `hotkey.keymap` |
-| 2 | hotkey | `hotkey.*` (パース) |
+| 0 | name | `name` (+ uid 自動生成) |
+| 1 | km_name | `hotkey.keymaps` (`;` 区切り → 配列) |
+| 2 | hotkey | `hotkey.*` (パース、下記参照) |
 | 3 | items | `items` (変換) |
 | 4 | mode | `mode` |
 | 5 | data | `settings` (パース) |
@@ -402,6 +660,28 @@ empty    - 空スロット
 | 8 | tag | `tags` (分割) |
 | 9 | enabled | `enabled` (v1.19.x+) |
 | 10 | drag_dir | `hotkey.drag_direction` (v1.19.x+) |
+
+### Hotkey 文字列のパース
+
+PME1 の `hotkey` は encode された文字列形式。以下のフィールドを含む：
+
+| PME1 エンコード | PME2 Field |
+|----------------|------------|
+| key | `hotkey.key` |
+| ctrl | `hotkey.ctrl` |
+| shift | `hotkey.shift` |
+| alt | `hotkey.alt` |
+| oskey | `hotkey.oskey` |
+| any | `hotkey.any` |
+| key_mod | `hotkey.key_mod` |
+| chord | `hotkey.chord` |
+
+### uid の自動生成
+
+PME1 からのインポート時:
+1. mode から prefix を決定
+2. uuid4 を base32 エンコードして 8 文字の random_id を生成
+3. `{prefix}_{random_id}` を uid として設定
 
 ### MenuItem タプル → MenuItem オブジェクト
 
@@ -415,135 +695,24 @@ empty    - 空スロット
 
 ### アイコンフラグの分離
 
+> 準拠: `constants.F_ICON_ONLY`, `F_HIDDEN`, `F_EXPAND`, `F_CB`
+
 ```
-PME1: "!@MESH_CUBE"
+PME1: "#!MESH_CUBE"
 ↓
 PME2: {
   "icon": "MESH_CUBE",
-  "icon_only": true,   // !
-  "hidden": true       // @
+  "icon_only": true,   // # (F_ICON_ONLY)
+  "hidden": true       // ! (F_HIDDEN)
 }
 ```
 
-### Action オブジェクトへの変換
-
-```
-PME1: mode="COMMAND", text="bpy.ops.mesh.primitive_cube_add()"
-↓
-PME2: {
-  "action": {
-    "type": "command",
-    "value": "bpy.ops.mesh.primitive_cube_add()",
-    "undo": true,
-    "context": null
-  }
-}
-```
-
-mode から type への変換表：
-| PME1 mode | PME2 action.type |
-|-----------|-----------------|
-| COMMAND | command |
-| CUSTOM | custom |
-| PROP | prop |
-| MENU | menu |
-| HOTKEY | hotkey |
-| OPERATOR | operator |
-| EMPTY | empty |
-
-### data 文字列のパース
-
-```
-PME1: "pm?pm_radius=100&pm_flick=False"
-↓
-PME2: {
-  "radius": 100,
-  "flick": false
-}
-```
-
-- プレフィックス（`pm_`, `pd_`, `pg_` 等）を除去
-- 型を復元（`"True"` → `true`, `"100"` → `100`）
-
----
-
-## 変換コード例（Python）
-
-```python
-# PME1 mode → PME2 action.type
-MODE_MAP = {
-    "COMMAND": "command",
-    "CUSTOM": "custom",
-    "PROP": "prop",
-    "MENU": "menu",
-    "HOTKEY": "hotkey",
-    "OPERATOR": "operator",
-    "EMPTY": "empty",
-}
-
-def convert_pme1_menu(pme1_tuple: list) -> dict:
-    """PME1 タプル → PME2 オブジェクト"""
-    name, km_name, hotkey_str, items, mode, data, open_mode, poll_cmd, tag, *rest = pme1_tuple
-
-    enabled = rest[0] if len(rest) > 0 else True
-    drag_dir = rest[1] if len(rest) > 1 else None
-
-    return {
-        "name": name,
-        "mode": mode,
-        "enabled": enabled,
-        "hotkey": parse_hotkey(hotkey_str, km_name, open_mode, drag_dir),
-        "settings": parse_data_string(data),
-        "poll": poll_cmd if poll_cmd else None,
-        "tags": tag.split(",") if tag else [],
-        "items": [convert_pme1_item(item) for item in items],
-    }
-
-def convert_pme1_item(pme1_tuple: list) -> dict:
-    """PME1 アイテムタプル → PME2 オブジェクト"""
-    if len(pme1_tuple) == 1:
-        # EMPTY モード
-        return {
-            "name": pme1_tuple[0],
-            "action": {"type": "empty", "value": ""},
-            "enabled": True,
-        }
-
-    name, mode, icon_str, text, flags = pme1_tuple
-    icon, icon_only, hidden = parse_icon_flags(icon_str)
-    action_type = MODE_MAP.get(mode, "command")
-
-    return {
-        "name": name,
-        "action": build_action(action_type, text),
-        "icon": icon,
-        "icon_only": icon_only,
-        "hidden": hidden,
-        "enabled": not (flags & 1),
-    }
-
-def build_action(action_type: str, value: str) -> dict:
-    """アクションタイプに応じたデフォルトメタデータを付与"""
-    action = {"type": action_type, "value": value}
-
-    # タイプ別のデフォルトメタデータ
-    if action_type == "command":
-        action["undo"] = True
-        action["context"] = None
-    elif action_type == "custom":
-        action["undo"] = False
-        action["use_try"] = True
-    elif action_type == "prop":
-        action["expand"] = False
-        action["slider"] = False
-        action["toggle"] = False
-    elif action_type == "menu":
-        action["mode"] = "inherit"
-    elif action_type == "operator":
-        action["properties"] = {}
-
-    return action
-```
+| フラグ文字 | 定数 | PME2 フィールド |
+|-----------|------|-----------------|
+| `#` | F_ICON_ONLY | `icon_only: true` |
+| `!` | F_HIDDEN | `hidden: true` |
+| `@` | F_EXPAND / F_CUSTOM_ICON | `expand: true`（custom 用） |
+| `^` | F_CB | 未エクスポート（checkbox mode） |
 
 ---
 
@@ -552,149 +721,26 @@ def build_action(action_type: str, value: str) -> dict:
 | バージョン | 形式 | 検出方法 |
 |-----------|------|---------|
 | < 1.13.6 | リスト（タプルの配列） | `isinstance(data, list)` |
-| 1.13.6 - 1.18.x | dict + version | `"menus" in data` |
+| 1.13.6 - 1.18.x | dict + version | `"menus" in data` and no `$schema` |
 | 1.19.x (PME-F) | dict + version + 11項目 | `len(menu) >= 11` |
-| 2.0.0+ (PME2) | dict + $schema | `data.get("$schema") == "PME2"` |
+| 2.0.0+ (PME2) | dict + $schema | `"$schema" in data` |
+
+### スキーマバージョン
+
+| schema_version | 変更点 |
+|---------------|--------|
+| 2.0 | 初版（uid, style, description/description_expr） |
+| 2.1 | conditions 昇格予定 |
 
 ---
 
-## 2.0.0 追加フィールド（確定）
+## 参照
 
-### 設計方針
-
-1. **description は Python 評価可能**: `modal_item_custom` と同様、文字列を Python 式として評価
-2. **`\n` で改行**: 複数行の説明文に対応
-3. **category は既存の tags で十分**: 新規フィールド不要
-4. **extensions フィールド**: 将来拡張のプレースホルダー
-5. **action フィールドの柔軟性**: 将来の conditional action も対応可能
+- `@_docs/design/design_decisions.md` — 設計判断の記録
+- `@_docs/design/schema_v2_analysis.md` — 可能性と限界の分析
+- `@_docs/design/schema_v2_future_extensibility.md` — 将来拡張性の検討
 
 ---
 
-### Menu への追加
-
-```json
-{
-  "name": "My Pie Menu",
-  "mode": "PMENU",
-
-  "description": "'Modeling tools for ' + context.mode",
-  "color": "#4A90D9",
-
-  "extensions": {}
-}
-```
-
-| フィールド | 型 | 必須 | 説明 |
-|-----------|-----|------|------|
-| `description` | string \| null | - | Python 評価可能な説明文（`\n` で改行） |
-| `color` | string \| null | - | メニューのテーマカラー（将来の Blender API 対応） |
-| `extensions` | object | - | 将来拡張用（未知フィールドの保持） |
-
-**Note**: `category` は既存の `tags` フィールドで表現可能。
-
----
-
-### MenuItem への追加
-
-```json
-{
-  "name": "Add Cube",
-  "action": { "type": "command", "value": "..." },
-  "icon": "MESH_CUBE",
-
-  "description": "'Add a cube at ' + str(context.scene.cursor.location)",
-  "color": "#4CAF50",
-  "use_color_bar": true,
-
-  "extensions": {}
-}
-```
-
-| フィールド | 型 | 必須 | 説明 |
-|-----------|-----|------|------|
-| `description` | string \| null | - | Python 評価可能な説明文（ツールチップ用） |
-| `color` | string \| null | - | アイテムのカラー（分類用） |
-| `use_color_bar` | boolean | - | Split レイアウトでカラーバー表示 |
-| `extensions` | object | - | 将来拡張用 |
-
----
-
-### description の Python 評価
-
-`modal_item_custom` と同様の仕組み:
-
-```python
-# 静的テキスト
-"description": "シーンに立方体を追加"
-
-# Python 評価（動的）
-"description": "'Selected: ' + str(len(context.selected_objects)) + ' objects'"
-
-# 複数行
-"description": "Line 1\\nLine 2\\nLine 3"
-
-# 条件付き
-"description": "'Edit Mode' if context.mode == 'EDIT_MESH' else 'Object Mode'"
-```
-
----
-
-### extensions の設計
-
-将来の機能拡張を壊さずに追加するためのプレースホルダー:
-
-```python
-@dataclass
-class MenuSchema:
-    name: str
-    # ... 既存フィールド
-
-    extensions: dict[str, Any] = field(default_factory=dict)
-
-    @classmethod
-    def from_dict(cls, data: dict) -> "MenuSchema":
-        known_fields = {"name", "mode", ...}
-        extensions = {k: v for k, v in data.items() if k not in known_fields}
-        return cls(..., extensions=extensions)
-```
-
-**利点**:
-- 古いバージョンで作成した JSON が新機能を含んでいても読める
-- 新しいバージョンで追加したフィールドが古いバージョンで消えない
-
----
-
-### 将来拡張の例（extensions 内）
-
-```json
-{
-  "extensions": {
-    "conditions": {
-      "when": "context.mode == 'EDIT_MESH'",
-      "fallback": "hidden"
-    },
-    "ai": {
-      "intent": "add_primitive",
-      "natural_language": ["add cube", "キューブ追加"]
-    },
-    "spatial": {
-      "anchor": "hand_right",
-      "scale": 1.5
-    }
-  }
-}
-```
-
-**詳細**: `@_docs/design/schema_v2_future_extensibility.md`
-
----
-
-## 今後の拡張
-
-1. **JSONSchema 定義**: 正式な JSONSchema ファイルを作成しバリデーション可能に
-2. **差分エクスポート**: 変更されたメニューのみをエクスポート
-3. **参照解決**: サブメニュー参照の整合性チェック
-4. **圧縮形式**: 大量のメニュー用にバイナリ形式を検討
-5. **条件付きロジック**: Context Sensitive Menu のスキーマ化（2.1.0+）
-6. **VR/空間 UI**: 位置/サイズ/インタラクション情報（将来）
-7. **AI 統合**: 意図/自然言語/パラメータ情報（将来）
+*Last Updated: 2026-01-05*
+*Design Review: Mentor feedback incorporated*
