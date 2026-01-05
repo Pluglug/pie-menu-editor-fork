@@ -313,7 +313,7 @@ class WM_OT_pm_import(Operator, ImportHelper):
 
         temp_prefs().init_tags()
         # Lazy import to avoid circular dependency
-        from ..preferences import PME_UL_pm_tree
+        from ..prefs.tree import PME_UL_pm_tree
         PME_UL_pm_tree.update_tree()
 
         if select_pm_flag:
