@@ -201,6 +201,58 @@ MODULE_NAMES: List[str] = []  # Load-order resolved module list
 MODULE_PATTERNS: List[Pattern] = []  # Patterns for target modules
 _class_cache: List[type] = None
 
+# sys.modules["pme"] alias management (Phase 8-D)
+_pme_alias_module = None
+
+
+def _install_pme_alias():
+    """Install sys.modules["pme"] alias for the api package.
+
+    This allows external tools to use `import pme` regardless of
+    the underlying package path (including Blender Extensions).
+
+    Phase 8-D: Issue #85
+    """
+    global _pme_alias_module
+    try:
+        from . import api
+        _pme_alias_module = api
+        sys.modules["pme"] = api
+        dbg_log(
+            "deps",
+            "Installed sys.modules['pme'] alias",
+            location="addon._install_pme_alias",
+        )
+        return api
+    except ImportError as e:
+        dbg_log(
+            "deps",
+            "Failed to install pme alias",
+            data={"error": str(e)},
+            level="warn",
+            location="addon._install_pme_alias",
+        )
+        return None
+
+
+def _uninstall_pme_alias():
+    """Uninstall sys.modules["pme"] alias.
+
+    Called during unregister to clean up the module alias.
+
+    Phase 8-D: Issue #85
+    """
+    global _pme_alias_module
+    if _pme_alias_module is not None:
+        if sys.modules.get("pme") is _pme_alias_module:
+            del sys.modules["pme"]
+            dbg_log(
+                "deps",
+                "Uninstalled sys.modules['pme'] alias",
+                location="addon._uninstall_pme_alias",
+            )
+        _pme_alias_module = None
+
 # Operator prefix (for dynamic operator ID generation)
 ADDON_PREFIX = "PME"
 ADDON_PREFIX_PY = "pme"
@@ -418,12 +470,16 @@ def register_modules() -> None:
     Register all modules with Blender.
 
     This function:
-    1. Sorts all classes by dependency order
-    2. Registers each class with Blender
-    3. Calls each module's register() function
+    1. Installs sys.modules["pme"] alias (Phase 8-D)
+    2. Sorts all classes by dependency order
+    3. Registers each class with Blender
+    4. Calls each module's register() function
     """
     if bpy.app.background:
         return
+
+    # Install sys.modules["pme"] alias early (Phase 8-D)
+    _install_pme_alias()
 
     with dbg_scope("profile", "register_modules.classes", location="addon.register_modules"):
         classes = _get_classes()
@@ -497,6 +553,7 @@ def unregister_modules() -> None:
     This function:
     1. Calls each module's unregister() function (reverse order)
     2. Unregisters each class from Blender (reverse order)
+    3. Uninstalls sys.modules["pme"] alias (Phase 8-D)
     """
     if bpy.app.background:
         return
@@ -567,6 +624,9 @@ def unregister_modules() -> None:
             print_success("PME2 Addon unregistered successfully")
         else:
             print_failure("Some components failed to unregister")
+
+    # Uninstall sys.modules["pme"] alias (Phase 8-D)
+    _uninstall_pme_alias()
 
 
 # ======================================================
