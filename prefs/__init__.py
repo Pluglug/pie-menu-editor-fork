@@ -9,6 +9,8 @@ P3: pmi_data.py - PMIData
 P4: lists.py - WM_UL_panel_list, WM_UL_pm_list
 P5: pm_ops.py - PM 操作オペレーター
 P6: tree.py - TreeState, PME_UL_pm_tree, TreeView, tree_ops
+P7: context_menu.py - コンテキストメニュー
+P8: operators.py - 小オペレーター、パネル
 """
 
 from .helpers import PMIClipboard, PieMenuPrefs, PieMenuRadius
@@ -32,6 +34,19 @@ from .tree import (
     PME_OT_tree_folder_toggle,
     PME_OT_tree_folder_toggle_all,
     PME_OT_tree_group_toggle,
+)
+from .context_menu import (
+    PME_OT_list_specials,
+    PME_MT_button_context,
+    PME_OT_context_menu,
+    button_context_menu,
+    add_rmb_menu,
+)
+from .operators import (
+    PME_OT_pmi_name_apply,
+    PME_OT_icons_refresh,
+    InvalidPMEPreferences,
+    PME_PT_preferences,
 )
 
 __all__ = [
@@ -64,4 +79,15 @@ __all__ = [
     "PME_OT_tree_folder_toggle",
     "PME_OT_tree_folder_toggle_all",
     "PME_OT_tree_group_toggle",
+    # P7
+    "PME_OT_list_specials",
+    "PME_MT_button_context",
+    "PME_OT_context_menu",
+    "button_context_menu",
+    "add_rmb_menu",
+    # P8
+    "PME_OT_pmi_name_apply",
+    "PME_OT_icons_refresh",
+    "InvalidPMEPreferences",
+    "PME_PT_preferences",
 ]

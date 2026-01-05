@@ -169,6 +169,22 @@ from .prefs.tree import (
     PME_OT_tree_group_toggle,
 )
 
+# P7: Context menu (moved to prefs/context_menu.py)
+from .prefs.context_menu import (
+    PME_OT_list_specials,
+    PME_MT_button_context,
+    PME_OT_context_menu,
+    button_context_menu,
+    add_rmb_menu,
+)
+
+# P8: Small operators and panel (moved to prefs/operators.py)
+from .prefs.operators import (
+    PME_OT_pmi_name_apply,
+    PME_OT_icons_refresh,
+    InvalidPMEPreferences,
+    PME_PT_preferences,
+)
 
 # update_pmi_data, update_data moved to prefs/temp_data.py
 
@@ -180,144 +196,15 @@ from .prefs.tree import (
 
 
 # PM operators moved to prefs/pm_ops.py
-
-
-class PME_OT_pmi_name_apply(Operator):
-    bl_idname = "pme.pmi_name_apply"
-    bl_label = ""
-    bl_description = "Apply the suggested name"
-    bl_options = {'INTERNAL'}
-
-    idx: IntProperty()
-
-    def execute(self, context):
-        data = get_prefs().pmi_data
-        data.name = data.sname
-        return {'FINISHED'}
-
-
-# class WM_OT_icon_filter_clear(Operator):
-#     bl_idname = "wm.icon_filter_clear"
-#     bl_label = ""
-#     bl_description = "Clear Filter"
-#     bl_options = {'INTERNAL'}
-
-#     def execute(self, context):
-#        get_prefs().icon_filter = ""
-#         return {'FINISHED'}
-
-
-class PME_OT_icons_refresh(Operator):
-    bl_idname = "pme.icons_refresh"
-    bl_label = ""
-    bl_description = (
-        "Reload icons from disk.\n"
-        "Use this after adding or changing icon files"
-    )
-    bl_options = {'INTERNAL'}
-
-    def execute(self, context):
-        ph.refresh()
-        return {'FINISHED'}
-
-
+# PME_OT_pmi_name_apply, PME_OT_icons_refresh moved to prefs/operators.py
 # PMEData moved to prefs/temp_data.py
-
-
 # WM_UL_panel_list, WM_UL_pm_list moved to prefs/lists.py
-
 # PME_UL_pm_tree, TreeView, tree_ops moved to prefs/tree.py
-
-
 # PMIClipboard moved to prefs/helpers.py
-
-
-class PME_OT_list_specials(Operator):
-    bl_idname = "pme.list_specials"
-    bl_label = ""
-    bl_description = "Extra tools"
-    bl_options = {'INTERNAL'}
-
-    def draw_menu(self, menu, context):
-        layout = menu.layout
-        layout.operator_context = 'INVOKE_DEFAULT'
-        operator(
-            layout,
-            PME_OT_pm_enable_by_tag.bl_idname,
-            "Enable by Tag",
-            CC.ICON_ON,
-            enable=True,
-        )
-        operator(
-            layout,
-            PME_OT_pm_enable_by_tag.bl_idname,
-            "Disable by Tag",
-            CC.ICON_OFF,
-            enable=False,
-        )
-
-        layout.separator()
-
-        operator(
-            layout,
-            PME_OT_tags.bl_idname,
-            "Tag Enabled Items",
-            'SOLO_ON',
-            group=True,
-            action='TAG',
-        )
-        operator(
-            layout,
-            PME_OT_tags.bl_idname,
-            "Untag Enabled Items",
-            'SOLO_OFF',
-            group=True,
-            action='UNTAG',
-        )
-
-        layout.separator()
-
-        operator(layout, PME_OT_pm_remove_by_tag.bl_idname, "Remove Items by Tag", 'X')
-        operator(
-            layout,
-            PME_OT_pm_remove.bl_idname,
-            "Remove Enabled Items",
-            'X',
-            mode='ENABLED',
-        )
-        operator(
-            layout,
-            PME_OT_pm_remove.bl_idname,
-            "Remove Disabled Items",
-            'X',
-            mode='DISABLED',
-        )
-        operator(
-            layout, PME_OT_pm_remove.bl_idname, "Remove All Items", 'X', mode='ALL'
-        )
-
-    def execute(self, context):
-        context.window_manager.popup_menu(self.draw_menu)
-        return {'FINISHED'}
-
-
+# PME_OT_list_specials moved to prefs/context_menu.py
 # PMIData moved to prefs/pmi_data.py
-
-
 # PieMenuPrefs, PieMenuRadius moved to prefs/helpers.py
-
-
-# TreeView moved to prefs/tree.py
-
-
-class InvalidPMEPreferences:
-    bl_idname = ADDON_ID
-
-    def draw(self, context):
-        col = self.layout.column(align=True)
-        row = col.row()
-        row.alignment = 'CENTER'
-        row.label(text="Please update Blender to the latest version", icon=ic('ERROR'))
+# InvalidPMEPreferences moved to prefs/operators.py
 
 
 class PMEPreferences(AddonPreferences):
@@ -1835,142 +1722,10 @@ class PMEPreferences(AddonPreferences):
         return self.editors[id]
 
 
-class PME_PT_preferences(Panel):
-    bl_space_type = "VIEW_3D"
-    bl_region_type = "UI"
-    bl_label = "Pie Menu Editor"
-    bl_category = "PME"
+# PME_PT_preferences moved to prefs/operators.py
 
-    @classmethod
-    def poll(cls, context):
-        return get_prefs().show_sidepanel_prefs
-
-    def draw(self, context):
-        get_prefs().draw_prefs(context, self.layout)
-
-
-class PME_MT_button_context:
-    bl_label = "Button Context Menu"
-
-    def draw(self, context):
-        self.layout.separator()
-
-
-class PME_OT_context_menu(Operator):
-    bl_idname = "pme.context_menu"
-    bl_label = ""
-    bl_description = ""
-    bl_options = {'INTERNAL'}
-
-    prop: StringProperty(options={'SKIP_SAVE'})
-    operator: StringProperty(options={'SKIP_SAVE'})
-    name: StringProperty(options={'SKIP_SAVE'})
-
-    def draw_menu(self, menu, context):
-        layout = menu.layout
-        layout.operator_context = 'INVOKE_DEFAULT'
-        pr = get_prefs()
-        pm = pr.selected_pm
-        if pm:
-            if self.prop or self.operator:
-                operator(
-                    layout,
-                    PME_OT_context_menu.bl_idname,
-                    "Add to " + pm.name,
-                    icon=ic('ADD'),
-                    prop=self.prop,
-                    operator=self.operator,
-                    name=self.name,
-                )
-            else:
-                row = layout.row()
-                row.enabled = False
-                row.label(text="Can't Add This Widget", icon=ic('ADD'))
-            layout.separator()
-
-        operator(
-            layout,
-            OPS.WM_OT_pm_select.bl_idname,
-            None,
-            'COLLAPSEMENU',
-            pm_name="",
-            use_mode_icons=False,
-        )
-        operator(layout, OPS.PME_OT_pm_search_and_select.bl_idname, None, 'VIEWZOOM')
-
-        layout.separator()
-
-        layout.prop(pr, "debug_mode")
-        layout.prop(pr, "interactive_panels")
-
-    def execute(self, context):
-        if self.prop:
-            bpy.ops.pme.pm_edit(
-                'INVOKE_DEFAULT', text=self.prop, name=self.name, auto=False
-            )
-            return {'FINISHED'}
-
-        if self.operator:
-            bpy.ops.pme.pm_edit(
-                'INVOKE_DEFAULT', text=self.operator, name=self.name, auto=False
-            )
-            return {'FINISHED'}
-
-        button_pointer = getattr(context, "button_pointer", None)
-        button_prop = getattr(context, "button_prop", None)
-        if button_prop and button_pointer:
-            path = gen_prop_path(button_pointer, button_prop)
-            if path:
-                value = pme.context.eval(path)
-                if value is not None:
-                    path = "%s = %s" % (path, repr(value))
-
-                self.prop = path
-                # self.name = button_prop.name or utitle(
-                #     button_prop.identifier)
-
-        button_operator = getattr(context, "button_operator", None)
-        if button_operator:
-            tpname = button_operator.__class__.__name__
-            idname = operator_utils.to_bl_idname(tpname)
-            args = ""
-            keys = button_operator.keys()
-            if keys:
-                args = []
-                for k in keys:
-                    v = getattr(button_operator, k)
-                    value = to_py_value(button_operator.rna_type, k, v)
-                    if value is None or isinstance(value, dict) and not value:
-                        continue
-                    args.append("%s=%s" % (k, repr(value)))
-
-                args = ", ".join(args)
-            cmd = "bpy.ops.%s(%s)" % (idname, args)
-
-            self.operator = cmd
-
-        context.window_manager.popup_menu(self.draw_menu, title="Pie Menu Editor")
-        return {'FINISHED'}
-
-
-def button_context_menu(self, context):
-    layout = self.layout
-
-    button_pointer = getattr(context, "button_pointer", None)
-    button_prop = getattr(context, "button_prop", None)
-    button_operator = getattr(context, "button_operator", None)
-
-    layout.operator(
-        PME_OT_context_menu.bl_idname, text="Pie Menu Editor", icon=ic('COLOR')
-    )
-
-
-def add_rmb_menu():
-    if not hasattr(bpy_types, "WM_MT_button_context"):
-        tp = type("WM_MT_button_context", (PME_MT_button_context, Menu), {})
-        bpy.utils.register_class(tp)
-
-    WM_MT_button_context.append(button_context_menu)
+# PME_MT_button_context, PME_OT_context_menu, button_context_menu, add_rmb_menu
+# moved to prefs/context_menu.py
 
 
 def register():
