@@ -532,8 +532,19 @@ class PMEPreferences(AddonPreferences):
         if self.tree_mode:
             # if self.show_keymap_names and self.show_tags:
             #     self["show_keymap_names"] = False
-            tree_state.collapsed_groups.clear()
-            PME_UL_pm_tree.update_tree()
+            if self.save_tree:
+                # Build tree first to populate groups, then restore saved state
+                PME_UL_pm_tree.update_tree()
+                PME_UL_pm_tree.load_state()
+            else:
+                # No saved state, start fresh
+                tree_state.collapsed_groups.clear()
+                tree_state.expanded_folders.clear()
+                PME_UL_pm_tree.update_tree()
+        else:
+            # Save state when tree_mode is turned OFF
+            if self.save_tree:
+                PME_UL_pm_tree.save_state()
 
     tree_mode: BoolProperty(description="Tree Mode", update=update_tree_mode)
 
