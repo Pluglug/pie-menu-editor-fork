@@ -362,6 +362,10 @@ class PMItem(PropertyGroup):
         if not self.ed.has_hotkey:
             return
 
+        # Guard: During import, keymap may not be registered yet
+        if self.name not in self.kmis_map:
+            return
+
         pr = get_prefs()
         kmis = self.kmis_map[self.name]
 

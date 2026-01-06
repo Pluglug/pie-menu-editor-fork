@@ -402,6 +402,7 @@ settings はフラット構造で、mode に応じて異なるプロパティが
 
 ```json
 {
+  "prop_type": "FLOAT",
   "vector": 1,
   "mulsel": false,
   "hor_exp": true,
@@ -412,11 +413,24 @@ settings はフラット構造で、mode に応じて異なるプロパティが
 
 | プロパティ | 型 | デフォルト | 説明 |
 |-----------|-----|----------|------|
+| `prop_type` | string | "BOOL" | プロパティタイプ（必須） |
 | `vector` | integer | 1 | ベクトル次元 |
 | `mulsel` | boolean | false | 複数選択対応 |
 | `hor_exp` | boolean | true | 水平展開 |
 | `exp` | boolean | true | 展開表示 |
 | `save` | boolean | true | 設定を保存 |
+
+**prop_type の値**:
+| 値 | 説明 |
+|----|------|
+| `BOOL` | Boolean プロパティ |
+| `INT` | Integer プロパティ |
+| `FLOAT` | Float プロパティ |
+| `STRING` | String プロパティ |
+| `ENUM` | Enum プロパティ |
+
+> **PME1 互換性**: PME1 では `poll_cmd` フィールドが PROPERTY モードでプロパティタイプを格納していた。
+> PME2 では `settings.prop_type` に分離し、`poll` は常に poll 条件として使用する。
 
 ### MACRO
 
@@ -671,10 +685,17 @@ extensions 内で試験的に導入した機能は、安定後に first-class �
 | 4 | mode | `mode` |
 | 5 | data | `settings` (パース) |
 | 6 | open_mode | `hotkey.activation` |
-| 7 | poll_cmd | `poll` |
+| 7 | poll_cmd | `poll` または `settings.prop_type`（※） |
 | 8 | tag | `tags` (分割) |
 | 9 | enabled | `enabled` (v1.19.x+) |
 | 10 | drag_dir | `hotkey.drag_direction` (v1.19.x+) |
+
+> **※ poll_cmd の特殊処理**:
+> - 通常モード: `poll_cmd` → `poll`（poll 条件）
+> - PROPERTY モード: `poll_cmd` → `settings.prop_type`（プロパティタイプ）
+>
+> PME1 では PROPERTY モードで `poll_cmd` フィールドがプロパティタイプ
+> (`"BOOL"`, `"INT"`, `"FLOAT"`, `"STRING"`, `"ENUM"`) を格納していた。
 
 ### Hotkey 文字列のパース
 
