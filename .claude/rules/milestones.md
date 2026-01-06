@@ -64,11 +64,80 @@
 - [ ] PME1 → PME2 変換（インポート時）
 - [ ] バージョン検出ロジック
 
-### 9-D: シリアライザー実装 ⏳
+### 9-D: シリアライザー実装 🚫 ブロック中 → #88
 
-- [ ] `infra/serializer.py` 作成
-- [ ] v2 エクスポート（新形式）
-- [ ] v1/v2 デュアルインポート
+**状態**: `work/phase9d-io` ブランチで実装試行 → 往復テストでクラッシュ
+
+**ブロッキング Issue**: [#88 Phase 9-D Post-mortem](https://github.com/Pluglug/pie-menu-editor-fork/issues/88)
+
+#### 調査タスク（#88 解消のため）
+
+| ID | タスク | 主戦場 | 状態 |
+|----|--------|--------|------|
+| 9-D-1 | PROPERTY mode クラッシュ調査 | `editors/property.py:369-400` | ⏳ |
+| 9-D-2 | type=hpg の謎 | `editors/hpanel_group.py`, データ実例 | ⏳ |
+| 9-D-3 | extend_target 再設計 | `_docs/design/`, スキーマ定義 | ⏳ |
+| 9-D-4 | Editor.export/import_settings() 設計 | `editors/base.py`, 全 Editor | ⏳ |
+
+#### 9-D-1: PROPERTY mode クラッシュ調査
+
+**症状**: `AttributeError: 'Return TrueProperty'`
+
+**主戦場**:
+- `editors/property.py:369` — `prop_by_type()` クラッシュ箇所
+- `editors/property.py:392` — `register_user_property()` 呼び出し元
+- `editors/property.py:680` — `class Editor(EditorBase)`
+
+**調査項目**:
+- [ ] `prop_by_type()` にガード追加、無効な prop_type をログ出力
+- [ ] エクスポートした v2 JSON を検証（`settings.prop_type` の有無）
+- [ ] PME1 PROPERTY メニューの `poll_cmd` 実際の値を確認
+
+#### 9-D-2: type=hpg の謎
+
+**症状**: `late-bound prop via __getattr__, type=hpg, prop=extend_target`
+
+**主戦場**:
+- `editors/hpanel_group.py` — HPANEL Editor
+- `core/schema.py` — プロパティ登録
+- ユーザーの HPANEL メニュー — `pm.data` の実際の値
+
+**調査項目**:
+- [ ] HPANEL **メニュー** の `pm.data` が `hp?` か `hpg?` か確認
+- [ ] `hpg` プレフィックスがどこで使われるか（アイテム専用？）
+- [ ] `extend_target` がどのタイプに登録されているか確認
+
+#### 9-D-3: extend_target 再設計
+
+**問題**: トップレベルフィールドになっているが、PANEL/HPANEL 専用
+
+**主戦場**:
+- `_docs/design/json_schema_v2.md` — 現在の設計
+- `core/schemas/menu.py` — MenuSchema dataclass
+
+**調査項目**:
+- [ ] どのモードで extend_target を使うか確認（PANEL/HPANEL? RMENU/DIALOG?）
+- [ ] `settings` に移動すべきか、トップレベルに残すか決定
+- [ ] Menu.name との関係性を整理
+
+#### 9-D-4: Editor.export/import_settings() 設計
+
+**問題**: serializer に全モードのロジックが集中
+
+**主戦場**:
+- `editors/base.py` — EditorBase
+- `editors/property.py` — 特殊処理が必要な例
+- `editors/panel_group.py` — 特殊処理が必要な例
+
+**設計選択肢**:
+1. **Editor にメソッド追加**: デフォルト実装 + 必要なものだけオーバーライド
+2. **別ファイルに分離**: `infra/mode_settings/*.py`
+3. **現状維持**: serializer 内で if 分岐
+
+**懸念点**:
+- import 時に `pm.ed` が存在しない可能性
+- 10 種類の Editor すべてに影響
+- Editor の責務増加
 
 ### 9-E: テストと検証 ⏳
 
