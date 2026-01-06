@@ -6,6 +6,22 @@
 
 ---
 
+## ワークツリー
+
+**作業前に必ずワークツリーに移動してください。**
+
+```
+ワークツリー: E:/0339_Blender version archive/blender-5.0.1-D/portable/scripts/addons/pie_menu_editor
+Blender起動: E:/0187_Pie-Menu-Editor/common_scripts_dir/blender_D.cmd
+```
+
+```bash
+cd "E:/0339_Blender version archive/blender-5.0.1-D/portable/scripts/addons/pie_menu_editor"
+git status  # investigate/9d4-editor-io であることを確認
+```
+
+---
+
 ## 背景
 
 Phase 9-D で `infra/serializer.py` にすべてのモード固有ロジックが集中した。

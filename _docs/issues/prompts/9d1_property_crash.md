@@ -6,6 +6,22 @@
 
 ---
 
+## ワークツリー
+
+**作業前に必ずワークツリーに移動してください。**
+
+```
+ワークツリー: E:/0339_Blender version archive/blender-5.0.1-A/portable/scripts/addons/pie_menu_editor
+Blender起動: E:/0187_Pie-Menu-Editor/common_scripts_dir/blender_A.cmd
+```
+
+```bash
+cd "E:/0339_Blender version archive/blender-5.0.1-A/portable/scripts/addons/pie_menu_editor"
+git status  # investigate/9d1-property-crash であることを確認
+```
+
+---
+
 ## 背景
 
 Phase 9-D (JSON Schema v2 I/O 統合) の往復テストで、PROPERTY mode メニューのインポート時にクラッシュが発生した。

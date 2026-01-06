@@ -6,6 +6,22 @@
 
 ---
 
+## ワークツリー
+
+**作業前に必ずワークツリーに移動してください。**
+
+```
+ワークツリー: E:/0339_Blender version archive/blender-5.0.1-C/portable/scripts/addons/pie_menu_editor
+Blender起動: E:/0187_Pie-Menu-Editor/common_scripts_dir/blender_C.cmd
+```
+
+```bash
+cd "E:/0339_Blender version archive/blender-5.0.1-C/portable/scripts/addons/pie_menu_editor"
+git status  # investigate/9d3-extend-target であることを確認
+```
+
+---
+
 ## 背景
 
 Phase 9-D で `extend_target` を MenuSchema のトップレベルフィールドにしたが、これが適切かどうか疑問が生じた。

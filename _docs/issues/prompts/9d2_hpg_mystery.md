@@ -6,6 +6,22 @@
 
 ---
 
+## ワークツリー
+
+**作業前に必ずワークツリーに移動してください。**
+
+```
+ワークツリー: E:/0339_Blender version archive/blender-5.0.1-B/portable/scripts/addons/pie_menu_editor
+Blender起動: E:/0187_Pie-Menu-Editor/common_scripts_dir/blender_B.cmd
+```
+
+```bash
+cd "E:/0339_Blender version archive/blender-5.0.1-B/portable/scripts/addons/pie_menu_editor"
+git status  # investigate/9d2-hpg-mystery であることを確認
+```
+
+---
+
 ## 背景
 
 Phase 9-D の v2 エクスポート時に以下の警告が発生：
