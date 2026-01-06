@@ -107,7 +107,84 @@ core       (0)  Blender 非依存のロジック
 
 ---
 
-## 7. 参照ドキュメント
+## 7. GitHub 運用 (`gh` コマンド)
+
+### Issue 作成
+
+```bash
+gh issue create --title "タイトル" --body "本文" --label "ラベル"
+```
+
+- **言語**: Issue 本文は**英語**で書く（国際化・検索性のため）
+- **関連 Issue**: 本文に `Related: #XX, #YY` を含める
+- **ブランチ情報**: 作業ブランチがあれば末尾に記載
+
+### トラッキング Issue
+
+複数のサブタスクを束ねる親 Issue。タイトルに `[Tracking]` を付ける。
+
+```markdown
+## Overview
+Brief description of the feature/phase.
+
+## Sub-issues
+- [ ] #101 - Sub-task 1
+- [ ] #102 - Sub-task 2
+- [ ] #103 - Sub-task 3
+
+## Acceptance Criteria
+- [ ] All sub-issues closed
+- [ ] Tests passing
+- [ ] Documentation updated
+```
+
+### マイルストーン
+
+| ID | 名前 | 用途 |
+|----|------|------|
+| 1 | **2.0.0 - JSON Schema v2** | PME2 初回リリース |
+| 2 | Phase 8-D: pme API facade | API ファサード実装 |
+
+Issue 作成時: `--milestone "2.0.0 - JSON Schema v2"`
+
+### 主要ラベル
+
+| ラベル | 用途 |
+|--------|------|
+| `bug` | バグ報告 |
+| `enhancement` | 新機能・改善 |
+| `schema` | JSON Schema v2 関連 |
+| `core` | Core 層の変更 |
+| `api` | API 変更・追加 |
+| `migration` | データ移行・互換性 |
+| `ui/ux` | UI/UX 改善 |
+| `documentation` | ドキュメント |
+| `ideas` | PME 使用例の共有 |
+
+複数ラベル: `--label "bug,schema"`
+
+### よく使うコマンド
+
+```bash
+# Issue 一覧
+gh issue list --state open
+
+# Issue 詳細
+gh issue view 88
+
+# Issue 編集
+gh issue edit 88 --body "新しい本文"
+
+# マイルストーン付きで作成
+gh issue create --title "Title" --body "Body" --label "schema" --milestone "2.0.0 - JSON Schema v2"
+
+# Issue をクローズ
+gh issue close 88 --reason completed
+```
+
+---
+
+## 8. 参照ドキュメント
 
 詳細は `_docs/` に配置。必要時に `@_docs/...` で参照。
 
