@@ -402,6 +402,41 @@ Reduces manual coordination.
 | Added "Confirmed Decisions" to Issue body | Single source of truth |
 | Added "Under Review" section | Flag items needing human decision |
 
+### Context Usage Analysis
+
+| Agent | Context Used | Status | Notes |
+|-------|-------------|--------|-------|
+| pme2-dev (composer) | 70% | OK | Coordination overhead |
+| 9d1 | 74% | OK | PROPERTY mode deep dive |
+| 9d2 | 80% | Near limit | HPANEL investigation |
+| 9d3 | 90% | Critical | Most complex analysis (extend_target + uid) |
+| 9d4 | 60% | OK | Lighter scope (retracted early) |
+
+**Key Observations**:
+
+1. **Distributed context is real**: 5 agents × ~75% avg = ~375% of single-agent capacity
+2. **Specialization has cost**: 9d3's deep analysis consumed 90% - near the limit
+3. **Manual compact timing matters**: Auto-compact disabled; human decides when to compact
+
+**Compact Strategy (Human Composer)**:
+
+```
+Timing considerations:
+- Before major implementation phase
+- After consensus reached (diagnosis context less critical)
+- Preserve: confirmed decisions, file locations, function signatures
+- Discard: exploration dead-ends, rejected approaches, verbose logs
+```
+
+**Trade-off**:
+
+| Approach | Context Cost | Quality | Human Burden |
+|----------|-------------|---------|--------------|
+| Single agent | 100% | Limited depth | Low |
+| Distributed (5 agents) | ~375% | Deep specialization | High (compact timing) |
+
+The distributed approach trades **context tokens** for **specialization depth**. Human must manage compact timing to prevent context exhaustion before task completion.
+
 ### Evaluation Against Criteria
 
 | Criterion | Result |
@@ -412,8 +447,9 @@ Reduces manual coordination.
 | Explicit handoff | ✅ |
 | Knowledge integration | ✅ |
 | Human could follow | ✅ |
+| Context management | △ (9d3 at 90%, requires careful compact) |
 
-**Overall**: First experiment **successful with minor issues**. The coordination model is viable for investigation-to-implementation handoff.
+**Overall**: First experiment **successful with minor issues**. The coordination model is viable for investigation-to-implementation handoff. Context management is a hidden cost requiring human attention.
 
 ---
 
