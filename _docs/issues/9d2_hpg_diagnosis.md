@@ -1,80 +1,133 @@
 # 9-D-2: type=hpg の謎 - 診断結果
 
-> **調査日**: 2026-01-07
+> **調査日**: 2026-01-07 (初版), 2026-01-08 (改訂)
 > **ブランチ**: `investigate/9d2-hpg-mystery`
-> **関連 Issue**: #88
+> **関連 Issue**: #88, #89
 
 ---
 
-## 診断結果
+## 診断結果 (改訂版)
 
-### 原因
+### 真の原因: serializer の設計ミス
 
-`type=hpg` が出る原因は **2 つの問題の組み合わせ** です:
-
-#### 問題 1: HPANEL メニューの `pm.data` が `hpg?` になっている
+**初期診断** では `hpg?` プレフィックスの問題と考えていましたが、深い調査により**真の原因は serializer が HPANEL に不適切に `extend_target` を要求したこと**と判明しました。
 
 ```python
-# editors/hpanel_group.py:74
-self.default_pmi_data = "hpg?"
-
-# editors/base.py:262-264
-def init_pm(self, pm):
-    if not pm.data:
-        pm.data = self.default_pmi_data  # ← ここで pm.data = "hpg?" が設定される
+# work/phase9d-io:infra/serializer.py:109-114 (問題箇所)
+if pm.mode in ('PANEL', 'HPANEL'):  # ← HPANEL を含めるべきではない！
+    extend_target = getattr(pm, 'extend_target', None)
 ```
 
-`default_pmi_data` は本来「アイテム用のデフォルトデータ」ですが、`EditorBase.init_pm()` がこれを「メニューのデータ」にも使用しています。
+**HPANEL は「パネルを隠す」機能であり、「拡張する」機能ではありません。**
 
-#### 問題 2: `extend_target` は `pg` タイプにのみ登録されている
+### 修正案
 
 ```python
-# editors/panel_group.py:688 (work/phase9d-io ブランチ)
-schema.StringProperty("pg", "extend_target", "")
-# → "hpg" タイプには未登録！
+# 正しい実装
+if pm.mode in ('PANEL', 'DIALOG', 'RMENU'):  # extend 系モードのみ
+    extend_target = getattr(pm, 'extend_target', None)
 ```
 
-#### 発生フロー
+---
 
-1. HPANEL メニューの `pm.extend_target` にアクセス
-2. `get_data("extend_target")` が呼ばれる (`pme_types.py:610`)
-3. `schema.parse("hpg?...")` で `ParsedData(type="hpg")` が生成される
-4. `__init__` では `extend_target` が設定されない（`hpg` タイプに未登録）
-5. `getattr(parsed_data, "extend_target")` で `__getattr__` がトリガー
-6. `prop_map` に `extend_target` が存在するので警告が出る (`core/schema.py:278`)
+## HPANEL の特殊性
+
+### 発見: HPANEL は pm.data を使用しない
+
+詳細な調査により、以下が判明:
+
+| 確認項目 | 結果 |
+|----------|------|
+| HPANEL Editor が `schema.parse()` を呼ぶか | ❌ 呼ばない |
+| HPANEL Editor が `get_data()`/`set_data()` を呼ぶか | ❌ 呼ばない |
+| 他コードが HPANEL の pm.data をパースするか | ❌ しない |
+| `has_extra_settings` フラグ | `False` |
+
+**結論**: `default_pmi_data = "hpg?"` は**事実上デッドコード**です。
+
+### HPANEL のデータ構造
+
+```python
+# HPANEL が実際に使用するデータ
+pm.name      # ユーザー定義の「隠すパネルグループ」名
+pm.pmis[]    # 隠すパネルのリスト
+  .text      # Blender パネル ID (例: "VIEW3D_PT_tools")
+  .name      # 表示名
+
+# HPANEL が使用しないデータ
+pm.data      # 設定されるが読まれない ("hpg?")
+```
 
 ---
 
-### 正しい状態
+## プレフィックス問題の再評価
 
-| モード | メニュー (`pm.data`) | アイテム (`pmi.text` prefix) | `extend_target` 必要？ |
-|--------|---------------------|------------------------------|----------------------|
-| PANEL | `pg?` | `pg?` | ✅ はい |
-| HPANEL | `hp?` または `hpg?` | `hpg?` | ❌ いいえ（パネルを隠すだけ） |
+### 不整合の存在
 
-**HPANEL は「パネルを隠す」機能であり、「拡張する」機能ではないため、`extend_target` は不要です。**
+| モード | UID_PREFIX | prefix_map | default_pmi_data |
+|--------|------------|------------|------------------|
+| PANEL | `pg` | `pg_` | `pg?` ✅ |
+| HPANEL | `hp` | `hp_` | `hpg?` ❌ |
+
+### 影響評価
+
+| 影響 | 評価 |
+|------|------|
+| 現在の動作 | **なし** (pm.data は読まれない) |
+| v2 エクスポート | **なし** (serializer 修正後) |
+| 一貫性 | **あり** (コードの可読性低下) |
+
+### 推奨対応
+
+| 優先度 | アクション | 理由 |
+|--------|-----------|------|
+| **P0** | serializer から HPANEL を除外 | 根本原因の修正 |
+| **P2** | プレフィックス問題を文書化 | 現状は実害なし |
+| **P3** | 2.0.1 以降で整理を検討 | migration 設計が必要 |
 
 ---
 
-### データ不整合の有無
+## #89 との関係
 
-**コードの問題（データ不整合ではない）:**
+Issue #89 は「pm.data が settings キャリア」と定義していますが、**HPANEL は例外**です。
 
-1. `default_pmi_data` がメニューとアイテム両方に使われている設計上の混乱
-2. `extend_target` が PANEL 専用なのに、HPANEL メニューからもアクセスされる
+### 追記すべき内容
+
+```markdown
+### HPANEL Mode Exception
+
+HPANEL does NOT use `pm.data` for settings. It stores:
+- `pm.name`: User-defined group name
+- `pm.pmis[].text`: Blender panel IDs to hide
+
+**Serializer must NOT:**
+- Include HPANEL in `extend_target` handling
+- Register schema properties for "hpg" or "hp" types
+
+**JSON v2 for HPANEL:**
+{
+  "uid": "hp_abc123",
+  "name": "My Hidden Panels",
+  "mode": "HPANEL",
+  "settings": {},  // Always empty
+  "items": [{"text": "VIEW3D_PT_tools"}]
+}
+```
 
 ---
 
-### 推奨対策（参考）
+## 初期診断の振り返り
 
-| 対策 | 説明 | リスク |
-|------|------|--------|
-| **A. HPANEL のプレフィックスを `hp` に変更** | `default_pmi_data = "hp?"` に修正、またはメニュー用の `default_pm_data` を別途定義 | 既存データとの互換性 |
-| **B. `extend_target` を PANEL/HPANEL 両方に登録** | `schema.StringProperty("hpg", "extend_target", "")` を追加 | 不要なプロパティが HPANEL に追加される |
-| **C. HPANEL から `extend_target` アクセスをガード** | `PMItem.extend_target` の getter で mode チェック | 一時的な回避策 |
-| **D. メニューとアイテムのプレフィックスを分離** | `default_pm_data` と `default_pmi_data` を別々に定義 | 大きなリファクタリング |
+### 初期診断 (2026-01-07)
 
-**推奨**: **対策 A** - HPANEL のメニュープレフィックスを明確に定義し、`extend_target` は PANEL 専用として維持。
+> `type=hpg` が出る原因は `default_pmi_data = "hpg?"` と `extend_target` の `pg` 専用登録の組み合わせ
+
+### 改訂診断 (2026-01-08)
+
+> 真の原因は **serializer が HPANEL に `extend_target` を不適切に要求したこと**。
+> プレフィックス問題は表面的な症状であり、根本原因ではない。
+
+**"Amicus Plato, sed magis amica veritas"** - 初期診断を修正し、真の原因を特定。
 
 ---
 
@@ -84,36 +137,27 @@ schema.StringProperty("pg", "extend_target", "")
 
 | ファイル | 確認内容 |
 |----------|----------|
-| `core/schema.py:268-278` | `ParsedData.__getattr__()` - 警告発生箇所 |
-| `editors/hpanel_group.py:74` | `default_pmi_data = "hpg?"` |
-| `editors/panel_group.py:683-688` | `pg` タイプのプロパティ登録 |
+| `editors/hpanel_group.py` | Editor 実装、`has_extra_settings=False` |
 | `editors/base.py:262-264` | `init_pm()` で `pm.data` を設定 |
-| `pme_types.py:606-612` | `extend_target` プロパティ定義 |
-| `pme_types.py:905-910` | `get_data()` / `set_data()` 実装 |
+| `work/phase9d-io:infra/serializer.py:109-114` | **HPANEL 含む extend_target 処理 (バグ)** |
+| `work/phase9d-io:infra/converter.py` | UID_PREFIX['HPANEL'] = 'hp' |
+| `operators/__init__.py` | モードチェック後にプロパティアクセス (正しいパターン) |
 
-### Schema 登録状況
+### キーファインディング
 
-**登録されているタイプ**: `pm`, `rm`, `pg`, `mo`, `sk`, `s`, `prop`, `row`, `spacer`, `pd`
-
-**登録されていないタイプ**: `hp`, `hpg`
-
-### プレフィックス対応表
-
-| モード | UID_PREFIX (converter.py) | default_pmi_data | schema 登録 |
-|--------|---------------------------|------------------|-------------|
-| PMENU | `pm` | - | `pm` ✅ |
-| RMENU | `rm` | - | `rm` ✅ |
-| DIALOG | `pd` | - | `pd` ✅ |
-| PANEL | `pg` | `pg?` | `pg` ✅ |
-| HPANEL | `hp` | `hpg?` ⚠️ | なし ❌ |
-| MODAL | `md` | - | `mo` ✅ |
-
-**不整合**: HPANEL の UID_PREFIX は `hp` だが、`default_pmi_data` は `hpg?`。
+1. **HPANEL Editor は pm.data を一切読み書きしない**
+2. **既存コードはモードチェック後にモード固有プロパティにアクセスする**
+3. **serializer のみが全モードに一律で extend_target を要求していた**
 
 ---
 
 ## 結論
 
-`type=hpg` の謎は解明されました。これは HPANEL モードの設計上の不整合であり、`default_pmi_data` がメニューとアイテム両方に使われていることが原因です。
+`type=hpg` 警告の謎は完全に解明されました。
 
-修正は Issue #88 の一部として、Phase 9-D の I/O 実装と合わせて行うべきです。
+| 問題 | 対応 |
+|------|------|
+| serializer の HPANEL 含有 | **修正必須** (1行変更) |
+| プレフィックス不整合 | 文書化のみ (2.0.1 で検討) |
+
+修正は Phase 9-D serializer 実装時に適用すべきです。
