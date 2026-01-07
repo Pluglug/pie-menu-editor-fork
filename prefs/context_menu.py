@@ -14,7 +14,8 @@ Context Menu 関連のクラス群
 import bpy
 from bpy import types as bpy_types
 from bpy.props import StringProperty
-from bpy.types import Menu, Operator, WM_MT_button_context
+from bpy.types import Menu, Operator
+# WM_MT_button_context: use getattr() at runtime for portable Blender compatibility
 
 from ..addon import get_prefs, ic
 from ..bl_utils import gen_prop_path
@@ -222,4 +223,4 @@ def add_rmb_menu():
         tp = type("WM_MT_button_context", (PME_MT_button_context, Menu), {})
         bpy.utils.register_class(tp)
 
-    WM_MT_button_context.append(button_context_menu)
+    getattr(bpy_types, "WM_MT_button_context").append(button_context_menu)

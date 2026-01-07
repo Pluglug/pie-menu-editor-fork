@@ -24,7 +24,7 @@ from bpy.types import (
     UILayout,
     UI_UL_list,
     USERPREF_PT_addons,
-    WM_MT_button_context,
+    # WM_MT_button_context: use getattr() at runtime for portable Blender compatibility
     WindowManager,
 )
 import os
@@ -1838,7 +1838,7 @@ def unregister():
     PMIData._kmi = None
 
     if hasattr(bpy_types, "WM_MT_button_context"):
-        WM_MT_button_context.remove(button_context_menu)
+        getattr(bpy_types, "WM_MT_button_context").remove(button_context_menu)
 
     # Run unregister scripts (system first, then user)
     for script_dir in iter_script_dirs(ADDON_PATH, "unregister"):
