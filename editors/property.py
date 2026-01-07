@@ -394,6 +394,18 @@ def register_user_property(pm):
     if not pm.enabled:
         return
 
+    # Validate poll_cmd contains a valid property type
+    # PROPERTY mode uses poll_cmd for property type, not poll condition
+    valid_prop_types = {'BOOL', 'INT', 'FLOAT', 'STRING', 'ENUM'}
+    if pm.poll_cmd not in valid_prop_types:
+        logw(
+            "PME: invalid property type in poll_cmd",
+            f"pm={pm.name}",
+            f"poll_cmd={pm.poll_cmd!r}",
+            "defaulting to BOOL"
+        )
+        pm.poll_cmd = 'BOOL'
+
     pr = get_prefs()
 
     size = pm.get_data("vector")
