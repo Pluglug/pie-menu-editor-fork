@@ -62,28 +62,30 @@ pm.data      # 設定されるが読まれない ("hpg?")
 
 ## プレフィックス問題の再評価
 
-### 不整合の存在
+### 正式実装の確認
 
-| モード | UID_PREFIX | prefix_map | default_pmi_data |
-|--------|------------|------------|------------------|
-| PANEL | `pg` | `pg_` | `pg?` ✅ |
-| HPANEL | `hp` | `hp_` | `hpg?` ❌ |
+`hpg?` は **PME v1 の正式実装** です（Initial commit から存在）。
 
-### 影響評価
+| モード | 正式実装 (PME v1) | converter.py |
+|--------|-------------------|--------------|
+| PANEL | `pg?` | `pg` ✅ |
+| HPANEL | **`hpg?`** ✅ | `hp` ❌ **誤り** |
 
-| 影響 | 評価 |
-|------|------|
-| 現在の動作 | **なし** (pm.data は読まれない) |
-| v2 エクスポート | **なし** (serializer 修正後) |
-| 一貫性 | **あり** (コードの可読性低下) |
+### 修正が必要な箇所
+
+converter.py の `hp` が誤った推測であり、正式実装 `hpg` に修正すべきです：
+
+| 場所 | 現状 (誤り) | 修正後 |
+|------|-------------|--------|
+| `infra/converter.py` UID_PREFIX | `'HPANEL': 'hp'` | `'HPANEL': 'hpg'` |
+| `infra/converter.py` prefix_map | `'HPANEL': 'hp_'` | `'HPANEL': 'hpg_'` |
 
 ### 推奨対応
 
 | 優先度 | アクション | 理由 |
 |--------|-----------|------|
-| **P0** | serializer から HPANEL を除外 | 根本原因の修正 |
-| **P2** | プレフィックス問題を文書化 | 現状は実害なし |
-| **P3** | 2.0.1 以降で整理を検討 | migration 設計が必要 |
+| **P0** | serializer から HPANEL を除外 | 設計ミスの修正 |
+| **P0** | converter の `hp` → `hpg` | PME v1 正式実装との整合 |
 
 ---
 
@@ -106,7 +108,7 @@ HPANEL does NOT use `pm.data` for settings. It stores:
 
 **JSON v2 for HPANEL:**
 {
-  "uid": "hp_abc123",
+  "uid": "hpg_abc123",   // 正式プレフィックス: hpg
   "name": "My Hidden Panels",
   "mode": "HPANEL",
   "settings": {},  // Always empty
@@ -158,6 +160,11 @@ HPANEL does NOT use `pm.data` for settings. It stores:
 | 問題 | 対応 |
 |------|------|
 | serializer の HPANEL 含有 | **修正必須** (1行変更) |
-| プレフィックス不整合 | 文書化のみ (2.0.1 で検討) |
+| converter の `hp` (誤り) | **修正必須** → `hpg` に変更 |
 
-修正は Phase 9-D serializer 実装時に適用すべきです。
+### 修正アクション
+
+1. **serializer.py**: HPANEL を extend_target 対象から除外
+2. **converter.py**: `UID_PREFIX['HPANEL']` = `'hpg'`, `prefix_map['HPANEL']` = `'hpg_'`
+
+**`hpg?` は PME v1 の正式実装であり、維持すべきです。**
