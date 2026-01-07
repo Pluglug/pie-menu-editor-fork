@@ -281,48 +281,48 @@ Phase 9 順序変更案:
 
 ### Concrete Implementation
 
-```python
-# pme_types.py PMItem に追加
+> **REVISED per #89**: 9-D-1 agent correctly identified that `extend_target` should use
+> `pm.data` via schema (existing PME1 pattern), NOT direct PMItem fields.
 
-# uid (全メニュー)
+```python
+# uid: PMItem 直接フィールド (全モード共通 identity)
+# pme_types.py PMItem に追加
 uid: StringProperty(
     name="UID",
     description="Unique identifier",
     default="",
 )
 
-# extend_target (PANEL/DIALOG/RMENU のみ)
-extend_target: StringProperty(
-    name="Extend Target",
-    description="Blender Panel/Menu/Header ID to extend",
-    default="",
-)
-
-extend_position: EnumProperty(
-    name="Position",
-    items=[
-        ('APPEND', "Append", ""),
-        ('PREPEND', "Prepend", ""),
-    ],
-    default='APPEND',
-)
+# extend_target, extend_position: pm.data 経由 (モード固有設定)
+# editors/panel_group.py 等で schema 登録
+schema.StringProperty("pg", "extend_target", "")   # PANEL
+schema.EnumProperty("pg", "extend_position", "append")
+schema.StringProperty("pd", "extend_target", "")   # DIALOG
+schema.StringProperty("rm", "extend_target", "")   # RMENU
 ```
+
+**Field Categorization**:
+
+| Category | Location | Examples |
+|----------|----------|----------|
+| **Identity** (全モード) | PMItem 直接 | `name`, `mode`, `uid`, `enabled` |
+| **Mode-specific** | `pm.data` via schema | `radius`, `space`, `extend_target` |
 
 ### Migration Strategy
 
 ```python
 # 起動時に既存データを変換
 def migrate_menu(pm):
-    # uid がなければ生成
+    # uid がなければ生成 (PMItem 直接)
     if not pm.uid:
         pm.uid = generate_uid(pm.mode)
 
-    # extend モードの場合、pm.name から分離
+    # extend モードの場合、pm.name から分離 (pm.data 経由)
     if pm.mode in ('PANEL', 'DIALOG', 'RMENU'):
         tp_name, right, pre = extract_str_flags_b(pm.name, F_RIGHT, F_PRE)
-        if tp_name.startswith(('VIEW3D_PT_', 'VIEW3D_MT_', 'VIEW3D_HT_', ...)):
-            pm.extend_target = tp_name
-            pm.extend_position = 'PREPEND' if pre else 'APPEND'
+        if is_blender_type_id(tp_name):
+            pm.set_data("extend_target", tp_name)
+            pm.set_data("extend_position", "prepend" if pre else "append")
             # pm.name はそのまま（表示名として使用）
 ```
 
@@ -343,14 +343,31 @@ def migrate_menu(pm):
 6. **uid also required**: `uid` (D2) も同じ問題を抱えており、基盤として先に実装すべき
 7. **Phase 9 reorder**: 9-A 設計 → **9-X 内部実装** → 9-C converter → 9-D serializer
 8. **Migration required**: 既存 `pm.name` から `uid` / `extend_target` を分離する migration が必要
+9. **REVISED per #89**: `extend_target` は PMItem 直接フィールドではなく、`pm.data` 経由で実装
 
 ### Key Insight
 
 ```
 pm.name の多重責務を解消することが PME2 の核心：
-  - 表示名 → name (変更可)
-  - 識別子 → uid (自動生成、不変)
-  - Blender ID → settings.extend_target (モード固有)
+  - 表示名 → name (PMItem 直接)
+  - 識別子 → uid (PMItem 直接、自動生成)
+  - Blender ID → pm.data.extend_target (モード固有、schema 経由)
+```
+
+### Architecture (per #89)
+
+```
+JSON v2 settings = pm.data の構造化表現
+
+Export:
+  pm.data = "pg?pg_extend_target=VIEW3D_PT_tools"
+       ↓ parse
+  settings = {"extend_target": "VIEW3D_PT_tools"}
+
+Import:
+  settings = {"extend_target": "VIEW3D_PT_tools"}
+       ↓ encode
+  pm.data = "pg?pg_extend_target=VIEW3D_PT_tools"
 ```
 
 ---
@@ -362,3 +379,4 @@ pm.name の多重責務を解消することが PME2 の核心：
 - `core/constants.py:25-26` - `F_RIGHT`, `F_PRE`
 - `_docs/design/design_decisions.md:409-429` - D19 specification
 - `_docs/design/json_schema_v2.md:125` - `extend_target` field definition
+- **#89** - Phase 9-X: Internal Implementation Strategy (pm.data as settings carrier)
