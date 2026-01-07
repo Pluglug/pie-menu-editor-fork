@@ -437,6 +437,40 @@ Timing considerations:
 
 The distributed approach trades **context tokens** for **specialization depth**. Human must manage compact timing to prevent context exhaustion before task completion.
 
+### Distributed Compact as Advantage
+
+Paradoxically, context management is also a **benefit** of distributed relay:
+
+| Aspect | Single Agent | Distributed Relay |
+|--------|-------------|-------------------|
+| Compact granularity | All or nothing | Per-agent selective |
+| Compact timing | Forced at 100% | Human-controlled per agent |
+| Information loss risk | High (entire context) | Low (other agents retain) |
+| External backup | None | Issue body preserves decisions |
+| Natural checkpoints | None | Phase transitions (investigation → implementation) |
+
+**Why this matters**:
+
+1. **Selective compact**: 9d3 at 90% can be compacted while 9d4 at 60% retains full context
+2. **Safe compact**: Confirmed decisions live in Issue #89, not just in agent memory
+3. **Phase-aligned**: "Investigation complete" is a natural compact point - discard exploration, keep conclusions
+4. **Parallel preservation**: While one agent compacts, others maintain continuity
+
+**Example**:
+```
+Before 9d3 compact:
+  - 90% used on extend_target exploration
+  - Dead ends: direct PMItem field approach (rejected)
+  - Keep: pm.data decision, schema registration plan
+
+After 9d3 compact:
+  - Freed context for uid implementation
+  - Lost: why PMItem direct was rejected (but Issue #89 has summary)
+  - Retained: what to implement, where, how
+```
+
+This is a form of **distributed memory** - the system's knowledge is spread across agents + Issue, making individual agent compact less catastrophic.
+
 ### Evaluation Against Criteria
 
 | Criterion | Result |
