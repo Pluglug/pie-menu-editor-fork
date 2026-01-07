@@ -185,30 +185,116 @@ Responsibilities #2-4 require valid Blender identifiers.
 
 ---
 
-## Position Encoding (F_PRE, F_RIGHT)
+## Position Encoding (F_PRE, F_RIGHT) - Extended Analysis
 
 ### Current PME1 Approach
 
 Position is encoded in `pm.name` suffix:
-- `_pre` → prepend
-- `_right` → right region
+- `F_PRE = "_pre"` → prepend (core/constants.py:26)
+- `F_RIGHT = "_right"` → right region (core/constants.py:25)
 - No suffix → append, default region
 
-### PME2 Recommendation
-
-All extend-related fields should be in `settings`:
-
-```json
-{
-  "settings": {
-    "extend_target": "VIEW3D_PT_tools",
-    "extend_position": "prepend",   // or "append"
-    "extend_region": "right"        // optional, for header right region
-  }
-}
+**Usage Pattern**:
+```python
+# editors/base.py:143
+tp_name, right, pre = extract_str_flags_b(pm.name, F_RIGHT, F_PRE)
+f = tp.prepend if pre else tp.append  # Line 163
 ```
 
-This keeps all mode-specific configuration together and avoids suffix parsing.
+### Critical Finding: pm.name as Dictionary Key
+
+`pm.name` is used as dictionary key in multiple places:
+
+| Dictionary | Location | Purpose |
+|------------|----------|---------|
+| `EXTENDED_PANELS` | editors/base.py | Extend 描画関数キャッシュ |
+| `pr.props` | editors/property.py | PROPERTY モード |
+| `_macros` | infra/macro.py | MACRO モード |
+| `poll_methods` | editors/base.py | Poll キャッシュ |
+| `sk_states` | keymap_helper.py | Stack Key 状態 |
+
+**EXTENDED_PANELS の特殊性**:
+```python
+# Key includes suffix for disambiguation
+EXTENDED_PANELS["VIEW3D_PT_tools_pre"] = gen_header_draw(...)
+EXTENDED_PANELS["VIEW3D_PT_tools"] = gen_panel_draw(...)  # Same panel, different position
+```
+
+### Implementation Options
+
+| Option | pm.name | pm.data | Dictionary Key | Risk |
+|--------|---------|---------|----------------|------|
+| **A: Status Quo** | `TARGET_pre` | extend_* 追加のみ | pm.name | 低 |
+| **B: Full Migration** | 表示名のみ | extend_* 使用 | uid | 高 |
+| **C: Incremental** | 段階的移行 | 段階的使用 | 段階的 | 中 |
+| **D: URL脱却** | 表示名のみ | 廃止 | PropertyGroup | 非常に高 |
+
+### 9-D-3 Recommendation: Option C (Incremental)
+
+**Rationale**:
+1. #89 方針（pm.data 使用）と整合
+2. 将来的な URL 形式脱却への道を残す
+3. 各フェーズで検証可能、リスク分散
+
+**Proposed Phases**:
+```
+Phase C-1: uid 追加
+  - PMItem に uid: StringProperty
+  - Migration で既存メニューに uid 生成
+
+Phase C-2: extend_* を pm.data に追加
+  - schema.StringProperty("pg", "extend_target", "")
+  - schema.EnumProperty("pg", "extend_position", "append")
+  - pm.name サフィックスと共存（fallback）
+
+Phase C-3: extend_panel() を pm.data から読み取り
+  - extend_target = pm.get_data("extend_target") or extract_from_name()
+  - pre = pm.get_data("extend_position") == "prepend"
+
+Phase C-4: EXTENDED_PANELS キーを uid に移行
+  - EXTENDED_PANELS[pm.uid] = ...
+
+Phase C-5: pm.name サフィックス削除
+  - F_PRE/F_RIGHT 依存を完全除去
+  - pm.name は純粋な表示名に
+```
+
+**Cost/Benefit**:
+- 変更ファイル数: 各フェーズ 2-4
+- 破壊リスク: 中（段階的検証）
+- 技術的負債: 移行期間中は共存（許容可能）
+- 将来コスト: 低（URL脱却への道が開ける）
+
+### URL 形式脱却への展望
+
+#89 では pm.data 維持を確認したが、将来的な脱却は可能：
+
+```
+Current (pm.data URL):
+  pm.data = "pg?pg_extend_target=VIEW3D_PT_tools"
+
+Future (PropertyGroup direct):
+  pm.extend_target = "VIEW3D_PT_tools"  # Direct field
+```
+
+Option C の Phase C-3 完了後、`pm.get_data()` を PropertyGroup アクセサに置換可能。
+I/O レイヤーで吸収すれば、内部アーキテクチャの変更は透過的。
+
+### JSON v2 settings との対応
+
+```
+Export:
+  pm.data = "pg?pg_extend_target=VIEW3D_PT_tools&pg_extend_position=prepend"
+       ↓ parse_data_string()
+  settings = {"extend_target": "VIEW3D_PT_tools", "extend_position": "prepend"}
+
+Import:
+  settings = {...}
+       ↓ encode_data_string()
+  pm.data = "pg?..."
+```
+
+pm.data と JSON settings は構造的に等価。変換レイヤーで吸収。
 
 ---
 
