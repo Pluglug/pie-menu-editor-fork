@@ -122,7 +122,7 @@
 | `poll` | string | - | "return True" | ポーリング条件（Python式） |
 | `tags` | string[] | - | [] | タグの配列 |
 | `items` | MenuItem[] | ✓ | [] | メニューアイテムの配列 |
-| `extend_target` | string \| null | - | null | 拡張対象の Blender Panel/Header/Menu ID |
+| `extend_target` | string \| null | - | null | 拡張対象の Blender Panel/Header/Menu ID (PANEL/DIALOG/RMENU のみ) |
 | `extensions` | object | - | {} | 拡張フィールド |
 
 ### uid の形式
@@ -135,7 +135,7 @@ mode_prefix:
   rm  - Regular Menu (RMENU)
   pd  - Pop-up Dialog (DIALOG)
   pg  - Panel Group (PANEL)
-  hp  - Hiding Panel (HPANEL)
+  hpg - Hiding Panel (HPANEL)  # Note: hpg not hp (PME v1 official)
   sk  - Stack Key (SCRIPT)
   mc  - Macro Operator (MACRO)
   md  - Modal Operator (MODAL)
@@ -160,7 +160,7 @@ random_id:
 | `RMENU` | Regular Menu | rm |
 | `DIALOG` | Pop-up Dialog | pd |
 | `PANEL` | Side Panel (Panel Group) | pg |
-| `HPANEL` | Hiding Unused Panels | hp |
+| `HPANEL` | Hiding Unused Panels | hpg |
 | `SCRIPT` | Stack Key | sk |
 | `MACRO` | Macro Operator | mc |
 | `MODAL` | Modal Operator | md |
@@ -437,6 +437,9 @@ settings はフラット構造で、mode に応じて異なるプロパティが
 追加設定なし（内部データタイプ: `m?`）
 
 ### HPANEL (Hiding Panel)
+
+> **Note (9-D-2)**: HPANEL は Blender UI を「隠す」機能であり、「拡張する」機能ではない。
+> そのため `extend_target` は HPANEL には適用されない。内部プレフィックスは `hpg` が正式。
 
 追加設定なし（内部データタイプ: `hpg?`）
 
