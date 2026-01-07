@@ -334,6 +334,89 @@ Reduces manual coordination.
 
 ---
 
+## Experiment Results: Issue #89 Coordination (2026-01-08)
+
+### Overview
+
+| Metric | Result |
+|--------|--------|
+| Participating agents | 5 (composer, 9d1, 9d2, 9d3, 9d4) |
+| Total comments | 4 (after duplicate removal) |
+| Time to consensus | ~2 hours |
+| Outcome | Success - 7 decisions confirmed |
+
+### Comment Flow
+
+```
+1. [pme2-dev-composer] - Review & coordination rules proposal
+2. [9d3-agent] - Agreement + Option C (Incremental) proposal
+3. [9d2-agent] - HPANEL exception clarification
+4. [9d4-agent] - Self-retraction, pm.data sufficient
+```
+
+### Confirmed Decisions
+
+| Item | Decision | Agreed By |
+|------|----------|-----------|
+| `uid` | PMItem direct field | All |
+| `extend_target` | pm.data via schema (pg, pd, rm) | All |
+| `extend_position` | pm.data via schema | 9d3, composer |
+| `prop_type` | pm.data via schema (prop) | 9d1, composer |
+| HPANEL | No extend_target, settings `{}` | 9d2, composer |
+| HPANEL prefix | `hpg` (fix converter.py) | 9d2, composer |
+| Editor I/O methods | NOT needed | 9d4 (retracted) |
+
+### What Worked
+
+1. **Convergence**: 4 comments reached consensus on 7 decisions
+2. **Knowledge integration**: Each specialist contributed unique insights
+   - 9d1: pm.data as carrier concept
+   - 9d2: HPANEL exception discovery
+   - 9d3: EXTENDED_PANELS key problem
+   - 9d4: Self-correction (over-engineering recognition)
+3. **Explicit handoff**: "Waiting for [agent]" pattern helped flow
+4. **Reference-based**: Commit IDs and file paths avoided code bloat
+
+### Issues Encountered
+
+1. **Agent ID inconsistency**: 9d3, 9d2 initially forgot `**[agent-id]**` prefix
+   - **Fix**: Composer edited comments post-hoc via gh api
+2. **Duplicate comment**: 9d2 posted twice (correction attempt)
+   - **Fix**: Composer deleted duplicate via gh api
+3. **Scope creep**: 9d3's C-4, C-5 phases exceeded #89 scope
+   - **Status**: Marked "Under Review" in Issue body for human decision
+
+### Lessons Learned
+
+1. **Issue body as contract works**: "Confirmed Decisions" section provided clarity
+2. **Self-correction is valuable**: 9d4 retracting own diagnosis shows agents can peer-review
+3. **Human intervention still needed**: C-4/C-5 scope decision requires human judgment
+4. **gh api is powerful**: Comment editing, deletion enabled Issue cleanup
+
+### Process Adjustments Made
+
+| Adjustment | Reason |
+|------------|--------|
+| Added `**[agent-id]**` to all comments | Prevent confusion |
+| Removed duplicate 9d2 comment | Clean Issue history |
+| Added "Confirmed Decisions" to Issue body | Single source of truth |
+| Added "Under Review" section | Flag items needing human decision |
+
+### Evaluation Against Criteria
+
+| Criterion | Result |
+|-----------|--------|
+| 3-comment convergence | ✅ (4 comments, acceptable) |
+| Agent ID compliance | △ (required post-hoc fix) |
+| Reference-based communication | ✅ |
+| Explicit handoff | ✅ |
+| Knowledge integration | ✅ |
+| Human could follow | ✅ |
+
+**Overall**: First experiment **successful with minor issues**. The coordination model is viable for investigation-to-implementation handoff.
+
+---
+
 ## Evaluation Criteria
 
 At experiment end, evaluate:
