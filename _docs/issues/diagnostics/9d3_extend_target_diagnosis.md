@@ -11,7 +11,7 @@
 
 `extend_target` is a **proposed new field** (D19) in JSON Schema v2 that does NOT yet exist in code.
 PME1 encodes the Blender Panel/Menu/Header ID within `pm.name` using suffix conventions.
-The D19 proposal to add `extend_target` at the top level is **sound**.
+The D19 concept is sound, but **placement should be in `settings`**, not top-level.
 
 ---
 
@@ -112,62 +112,76 @@ Responsibilities #2-4 require valid Blender identifiers.
 
 ## Recommended Placement
 
-### Decision: **Top-level** (Current D19 Design)
+### Decision: **Settings** (Revises D19 Design)
 
 | Criteria | Settings | Top-level | Winner |
 |----------|----------|-----------|--------|
-| Semantic meaning | Behavior/config | Identity | **Top-level** |
-| Modes using it | 3 specific modes | 3 specific modes | Tie |
-| Relationship to name | Unrelated | Closely related | **Top-level** |
-| Precedent | radius, width, etc. | uid, name, mode | **Top-level** |
-| Null handling | Absent for unused modes | Explicit null | **Top-level** |
+| Mode-specific? | Yes (3 of 10 modes) | All 10 modes | **Settings** |
+| Semantic meaning | Config/behavior | Identity | **Settings** |
+| Precedent | radius, prop_type, space | uid, name, mode | **Settings** |
+| Schema cleanliness | Absent for unused modes | null for 7 modes | **Settings** |
+| Consistency | Matches other mode-specific fields | Exception | **Settings** |
 
 ### Rationale
 
-1. **Semantic fit**: `extend_target` is about **identity** (what Blender UI element to extend), not **behavior** (how to display it). It belongs with `name`, `uid`, `mode`.
+1. **Mode-specific by definition**: `extend_target` is used by only 3 modes (PANEL, DIALOG, RMENU). The `settings` object is explicitly defined as "mode に応じて異なるプロパティ" — this is exactly what `extend_target` is.
 
-2. **Multi-mode usage**: Used by PANEL, DIALOG, RMENU. Putting in settings would require documenting it in 3 places.
+2. **Consistency with existing patterns**:
+   - PMENU: `radius`, `flick`, `confirm` → in settings
+   - PROPERTY: `prop_type` → in settings
+   - PANEL: `space`, `region`, `category` → in settings
+   - `extend_target` should follow the same pattern.
 
-3. **Explicit over implicit**: Having `extend_target: null` for non-extending modes is clearer than absent keys.
+3. **Schema cleanliness**: Having `extend_target: null` in 7 modes (PMENU, HPANEL, SCRIPT, MACRO, MODAL, STICKY, PROPERTY) is noise. Settings naturally handles this by omission.
 
-4. **D19 rationale is sound**: The separation of concerns (`name` for display, `extend_target` for Blender ID) makes the design robust.
+4. **Semantic correction**: `extend_target` is **configuration** (which Blender UI to extend), not **identity** (like `uid`, `name`). Configuration belongs in settings.
+
+5. **D19 core insight preserved**: The separation of display name from Blender ID is correct. Moving `extend_target` to settings doesn't change this benefit.
+
+### Why Top-level Was Initially Considered (Rejected)
+
+| Argument | Counter |
+|----------|---------|
+| "It's about identity" | No — it's about target configuration, not menu identity |
+| "Related to `name`" | Related ≠ same category. `name` is identity, `extend_target` is config |
+| "Explicit null is clearer" | 7 nulls is schema pollution, not clarity |
 
 ---
 
 ## Menu.name Relationship Clarification
 
-### PME2 Schema Design
+### PME2 Schema Design (Revised)
 
 ```json
 {
   "uid": "pg_abc123",
   "name": "My Custom Panel",        // Display name (user-editable)
   "mode": "PANEL",
-  "extend_target": "VIEW3D_PT_tools",  // Blender ID (required for extend)
   "settings": {
     "space": "VIEW_3D",
     "region": "UI",
-    "category": "PME"
+    "category": "PME",
+    "extend_target": "VIEW3D_PT_tools",  // Blender ID (in settings!)
+    "extend_position": "append"          // or "prepend"
   }
 }
 ```
 
 ### Role Separation
 
-| Field | Purpose | Editable | Required | Valid Values |
-|-------|---------|----------|----------|-------------|
-| `name` | Display name | Yes | Yes | Any string |
-| `extend_target` | Blender type ID | Yes* | No | Valid bl_idname or null |
-| `uid` | Internal ID | No | Yes | `{mode}_{random}` |
-
-\* Editable but must be valid Blender ID if set
+| Field | Location | Purpose | Valid Values |
+|-------|----------|---------|-------------|
+| `name` | top-level | Display name | Any string |
+| `uid` | top-level | Internal ID | `{mode}_{random}` |
+| `extend_target` | **settings** | Blender type ID | Valid bl_idname (or absent) |
+| `extend_position` | **settings** | Insert position | "append" / "prepend" |
 
 ### Migration from PME1
 
 | PME1 | PME2 | Notes |
 |------|------|-------|
-| `pm.name = "VIEW3D_PT_tools_pre"` | `name`: "VIEW3D_PT_tools", `extend_target`: "VIEW3D_PT_tools" | Initial default keeps name = extend_target |
-| N/A | `name`: "My Panel", `extend_target`: "VIEW3D_PT_tools" | User can now have different display name |
+| `pm.name = "VIEW3D_PT_tools_pre"` | `name`: "VIEW3D_PT_tools", `settings.extend_target`: "VIEW3D_PT_tools", `settings.extend_position`: "prepend" | サフィックスを分離 |
+| N/A | `name`: "My Panel", `settings.extend_target`: "VIEW3D_PT_tools" | ユーザーは自由な表示名を設定可能 |
 
 ---
 
@@ -182,33 +196,29 @@ Position is encoded in `pm.name` suffix:
 
 ### PME2 Recommendation
 
-Consider moving position encoding to separate fields:
+All extend-related fields should be in `settings`:
 
 ```json
 {
-  "extend_target": "VIEW3D_PT_tools",
-  "extend_position": "prepend",   // or "append"
-  "extend_region": "right"        // or "left" / null
+  "settings": {
+    "extend_target": "VIEW3D_PT_tools",
+    "extend_position": "prepend",   // or "append"
+    "extend_region": "right"        // optional, for header right region
+  }
 }
 ```
 
-**Alternative**: Keep in `extend_target` as suffixes for backward compatibility:
-```json
-{
-  "extend_target": "VIEW3D_PT_tools_right_pre"
-}
-```
-
-**Note**: This is a design question for D19 refinement, not a diagnosis finding.
+This keeps all mode-specific configuration together and avoids suffix parsing.
 
 ---
 
 ## Conclusions
 
-1. **D19 design is correct**: `extend_target` at top-level is appropriate
-2. **No code changes needed**: `extend_target` is a schema-only concept until Phase 9-C converter implementation
-3. **Position encoding**: Consider separate fields or maintain suffix convention
-4. **Migration path**: Clear transformation from PME1 `pm.name` to PME2 `name` + `extend_target`
+1. **D19 concept is valid**: Separating display name from Blender ID is correct
+2. **Placement revised**: `extend_target` should be in **`settings`**, not top-level
+3. **Position encoding**: Also move to settings (`extend_position`, `extend_region`)
+4. **Schema consistency**: Matches other mode-specific fields (`radius`, `prop_type`, `space`)
+5. **Migration path**: PME1 `pm.name` → PME2 `name` + `settings.extend_target`
 
 ---
 
