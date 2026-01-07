@@ -212,13 +212,146 @@ This keeps all mode-specific configuration together and avoids suffix parsing.
 
 ---
 
+## Implementation Priority Recommendation
+
+### The Core Problem
+
+Phase 9-D attempted I/O implementation without internal data structure support:
+
+```
+JSON Schema v2 (設計):
+  settings.extend_target = "VIEW3D_PT_tools"
+
+PMItem (PropertyGroup):
+  extend_target = ???  ← 存在しない！
+
+serializer.py:
+  getattr(pm, 'extend_target', None)  ← 常に None
+```
+
+**I/O を先に進めても「存在しないフィールドを読み書き」する状態**
+
+### Why I/O-First Fails
+
+| Approach | Problem |
+|----------|---------|
+| I/O → Internal | serializer に一時的変換ロジック、後で書き直し |
+| Editor I/O | 責務混乱、`pm.ed` タイミング問題 |
+| **Internal → I/O** | フィールドが存在するので素直に実装可能 |
+
+### uid との関連性
+
+`uid` (D2) も同じ問題を抱える：
+
+| Field | JSON v2 Design | Internal Implementation |
+|-------|---------------|------------------------|
+| `uid` | D2 で定義 | **存在しない** |
+| `extend_target` | D19 で定義 | **存在しない** |
+
+両方とも **`pm.name` の多重責務解消** という共通目標：
+
+```
+現在:     pm.name = 表示名 + 識別子 + Blender ID（全部兼務）
+
+PME2:     pm.name = 表示名のみ
+          pm.uid = 識別子
+          settings.extend_target = Blender ID
+```
+
+### Recommended Priority Order
+
+```
+Phase 9 順序変更案:
+
+  現在:   9-A 設計 → 9-B dataclass → 9-C converter → 9-D serializer
+                                                      ↑ ブロック中
+
+  提案:   9-A 設計 → 9-X 内部実装 → 9-C converter → 9-D serializer
+                     ↑ 新規追加
+```
+
+**9-X: Internal Implementation（新規フェーズ）**
+
+| Priority | Task | Scope | Rationale |
+|----------|------|-------|-----------|
+| 1 | `uid` implementation | 全10モード | 基盤（識別子） |
+| 2 | `extend_target` implementation | 3モード | 機能（拡張対象） |
+| 3 | Migration logic | 既存データ | `pm.name` からの分離 |
+| 4 | I/O implementation | serializer | 内部フィールドが存在するので素直 |
+
+### Concrete Implementation
+
+```python
+# pme_types.py PMItem に追加
+
+# uid (全メニュー)
+uid: StringProperty(
+    name="UID",
+    description="Unique identifier",
+    default="",
+)
+
+# extend_target (PANEL/DIALOG/RMENU のみ)
+extend_target: StringProperty(
+    name="Extend Target",
+    description="Blender Panel/Menu/Header ID to extend",
+    default="",
+)
+
+extend_position: EnumProperty(
+    name="Position",
+    items=[
+        ('APPEND', "Append", ""),
+        ('PREPEND', "Prepend", ""),
+    ],
+    default='APPEND',
+)
+```
+
+### Migration Strategy
+
+```python
+# 起動時に既存データを変換
+def migrate_menu(pm):
+    # uid がなければ生成
+    if not pm.uid:
+        pm.uid = generate_uid(pm.mode)
+
+    # extend モードの場合、pm.name から分離
+    if pm.mode in ('PANEL', 'DIALOG', 'RMENU'):
+        tp_name, right, pre = extract_str_flags_b(pm.name, F_RIGHT, F_PRE)
+        if tp_name.startswith(('VIEW3D_PT_', 'VIEW3D_MT_', 'VIEW3D_HT_', ...)):
+            pm.extend_target = tp_name
+            pm.extend_position = 'PREPEND' if pre else 'APPEND'
+            # pm.name はそのまま（表示名として使用）
+```
+
+---
+
 ## Conclusions
+
+### Schema Design
 
 1. **D19 concept is valid**: Separating display name from Blender ID is correct
 2. **Placement revised**: `extend_target` should be in **`settings`**, not top-level
 3. **Position encoding**: Also move to settings (`extend_position`, `extend_region`)
 4. **Schema consistency**: Matches other mode-specific fields (`radius`, `prop_type`, `space`)
-5. **Migration path**: PME1 `pm.name` → PME2 `name` + `settings.extend_target`
+
+### Implementation Strategy
+
+5. **Internal implementation first**: I/O 実装より内部データ構造を優先すべき
+6. **uid also required**: `uid` (D2) も同じ問題を抱えており、基盤として先に実装すべき
+7. **Phase 9 reorder**: 9-A 設計 → **9-X 内部実装** → 9-C converter → 9-D serializer
+8. **Migration required**: 既存 `pm.name` から `uid` / `extend_target` を分離する migration が必要
+
+### Key Insight
+
+```
+pm.name の多重責務を解消することが PME2 の核心：
+  - 表示名 → name (変更可)
+  - 識別子 → uid (自動生成、不変)
+  - Blender ID → settings.extend_target (モード固有)
+```
 
 ---
 
