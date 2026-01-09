@@ -229,41 +229,48 @@ EXTENDED_PANELS["VIEW3D_PT_tools"] = gen_panel_draw(...)  # Same panel, differen
 | **C: Incremental** | 段階的移行 | 段階的使用 | 段階的 | 中 |
 | **D: URL脱却** | 表示名のみ | 廃止 | PropertyGroup | 非常に高 |
 
-### 9-D-3 Recommendation: Option C (Incremental)
+### 9-D-3 Recommendation: 2.0.0 Implementation Plan (Revised)
 
 **Rationale**:
 1. #89 方針（pm.data 使用）と整合
 2. 将来的な URL 形式脱却への道を残す
-3. 各フェーズで検証可能、リスク分散
+3. 2.0.0 で pm.name 依存を解消
 
-**Proposed Phases**:
+**Proposed Phases (2.0.0 Scope)**:
 ```
-Phase C-1: uid 追加
-  - PMItem に uid: StringProperty
-  - Migration で既存メニューに uid 生成
-
-Phase C-2: extend_* を pm.data に追加
+Phase 1: extend_* を pm.data に追加
   - schema.StringProperty("pg", "extend_target", "")
   - schema.EnumProperty("pg", "extend_position", "append")
-  - pm.name サフィックスと共存（fallback）
+  - Also for "pd" (DIALOG) and "rm" (RMENU)
 
-Phase C-3: extend_panel() を pm.data から読み取り
-  - extend_target = pm.get_data("extend_target") or extract_from_name()
-  - pre = pm.get_data("extend_position") == "prepend"
+Phase 2: extend_panel() を pm.data から読み取り
+  - extend_target = pm.get_data("extend_target")
+  - position = pm.get_data("extend_position")
+  - EXTENDED_PANELS key = f"{extend_target}_{position}"
 
-Phase C-4: EXTENDED_PANELS キーを uid に移行
-  - EXTENDED_PANELS[pm.uid] = ...
-
-Phase C-5: pm.name サフィックス削除
+Phase 3: pm.name サフィックス削除
   - F_PRE/F_RIGHT 依存を完全除去
   - pm.name は純粋な表示名に
 ```
 
+**uid は別 Issue**: uid (D2) は extend とは独立した概念。メニュー識別用であり、
+EXTENDED_PANELS のキーには使用しない。
+
+**EXTENDED_PANELS キー設計**:
+```python
+# 旧: pm.name にサフィックス込み
+EXTENDED_PANELS["VIEW3D_PT_tools_pre"] = ...
+
+# 新: extend_target + position の複合キー
+key = f"{extend_target}_{position}"  # "VIEW3D_PT_tools_prepend"
+EXTENDED_PANELS[key] = ...
+```
+
 **Cost/Benefit**:
-- 変更ファイル数: 各フェーズ 2-4
+- 変更ファイル数: 5-8
 - 破壊リスク: 中（段階的検証）
-- 技術的負債: 移行期間中は共存（許容可能）
-- 将来コスト: 低（URL脱却への道が開ける）
+- 技術的負債: なし（クリーンな分離）
+- 2.0.0 で pm.name 依存解消: ✅
 
 ### URL 形式脱却への展望
 
