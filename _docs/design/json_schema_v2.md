@@ -507,15 +507,17 @@ settings はフラット構造で、mode に応じて異なるプロパティが
 
 | フィールド | 型 | 必須 | デフォルト | 説明 |
 |-----------|-----|------|----------|------|
-| `name` | string | ✓ | - | 表示名 |
+| `name` | string | - | "" | 表示名（layout 系は省略可） |
 | `action` | Action | ✓ | - | 実行アクション |
 | `icon` | string \| null | - | null | アイコン名 |
 | `icon_only` | boolean | - | false | アイコンのみ表示 |
 | `hidden` | boolean | - | false | 非表示 |
-| `enabled` | boolean | ✓ | true | 有効/無効 |
+| `enabled` | boolean | - | true | 有効/無効 |
 | `description` | string \| null | - | null | 静的な説明文 |
 | `description_expr` | string \| null | - | null | Python 式による動的説明文 |
 | `extensions` | object | - | {} | 拡張フィールド（`pme.style` など） |
+
+**Note**: `action.type` が `row` または `spacer` の場合、`name` は通常空文字となり省略可能。
 
 ### description と description_expr の使い分け
 
@@ -553,7 +555,9 @@ settings はフラット構造で、mode に応じて異なるプロパティが
 | フィールド | 型 | 必須 | 説明 |
 |-----------|-----|------|------|
 | `type` | ActionType | ✓ | アクションの種類 |
-| `value` | string | ✓ | 実行内容 |
+| `value` | string | ※ | 実行内容（`row`/`spacer`/`empty` は不要） |
+
+**Note**: `value` は `command`, `custom`, `prop`, `menu`, `hotkey` で必須。`row`, `spacer`, `empty` では不要。
 
 ### ActionType 列挙
 
@@ -566,13 +570,17 @@ settings はフラット構造で、mode に応じて異なるプロパティが
 | `prop` | プロパティ表示/編集 | 全メニュー |
 | `menu` | サブメニュー | 全メニュー |
 | `hotkey` | ホットキー実行 | 全メニュー |
-| `empty` | 空スロット | 全メニュー |
+| `empty` | 空スロット（Pie Menu 固定スロット用） | PMENU |
+| `row` | レイアウト: 行の開始 | DIALOG のみ |
+| `spacer` | レイアウト: 区切り/列/配置 | DIALOG のみ |
 | `invoke` | Modal: On Invoke | MODAL のみ |
 | `finish` | Modal: On Confirm | MODAL のみ |
 | `cancel` | Modal: On Cancel | MODAL のみ |
 | `update` | Modal: On Update | MODAL のみ |
 
-**Note**: `invoke`, `finish`, `cancel`, `update` は `MODAL_CMD_MODES` に含まれる Modal Operator 専用モード。
+**Note**:
+- `invoke`, `finish`, `cancel`, `update` は `MODAL_CMD_MODES` に含まれる Modal Operator 専用モード
+- `row`, `spacer` は DIALOG モードのレイアウト制御用（内部形式: `pmi.mode='EMPTY'` + `pmi.text`）
 
 ### type: "command"
 
@@ -666,6 +674,127 @@ settings はフラット構造で、mode に応じて異なるプロパティが
 ```
 
 空スロット用。Pie Menu の固定スロット数を維持するために使用。
+
+### type: "row"
+
+DIALOG モードのレイアウト制御。新しい行の開始を示す。
+
+```json
+{
+  "type": "row",
+  "align": "CENTER",
+  "size": "NORMAL",
+  "vspacer": "NORMAL",
+  "fixed_col": false,
+  "fixed_but": false
+}
+```
+
+| フィールド | 型 | デフォルト | 説明 |
+|-----------|-----|----------|------|
+| `align` | RowAlign | "CENTER" | 行内のアイテム配置 |
+| `size` | RowSize | "NORMAL" | 行の高さスケール |
+| `vspacer` | RowVSpacer | "NORMAL" | 行間の垂直スペース |
+| `fixed_col` | boolean | false | 固定幅の列を使用 |
+| `fixed_but` | boolean | false | 固定幅のボタンを使用 |
+
+#### RowAlign 列挙
+
+| 値 | 説明 |
+|----|------|
+| `CENTER` | 中央揃え |
+| `LEFT` | 左揃え |
+| `RIGHT` | 右揃え |
+
+#### RowSize 列挙
+
+| 値 | スケール | 説明 |
+|----|---------|------|
+| `NORMAL` | 1.0 | 通常サイズ |
+| `LARGE` | 1.25 | 大きめ |
+| `LARGER` | 1.5 | さらに大きめ |
+
+#### RowVSpacer 列挙
+
+| 値 | スケール | 説明 |
+|----|---------|------|
+| `NONE` | 0 | スペースなし |
+| `NORMAL` | 1 | 通常のスペース |
+| `LARGE` | 3 | 大きめ |
+| `LARGER` | 5 | さらに大きめ |
+
+**デフォルト値の省略**: エクスポート時、デフォルト値と同じ場合は省略可能。
+
+```json
+// 完全版
+{ "type": "row", "align": "CENTER", "size": "NORMAL", "vspacer": "NORMAL", "fixed_col": false, "fixed_but": false }
+
+// 省略版（全てデフォルト）
+{ "type": "row" }
+```
+
+### type: "spacer"
+
+DIALOG モードのレイアウト制御。アイテム間の区切りや列分割を示す。
+
+```json
+{
+  "type": "spacer",
+  "hsep": "NONE",
+  "subrow": "NONE"
+}
+```
+
+| フィールド | 型 | デフォルト | 説明 |
+|-----------|-----|----------|------|
+| `hsep` | SpacerHSep | "NONE" | 水平方向の区切りタイプ |
+| `subrow` | SpacerSubrow | "NONE" | サブ行の開始/終了 |
+
+#### SpacerHSep 列挙
+
+| 値 | 説明 |
+|----|------|
+| `NONE` | 区切りなし |
+| `SPACER` | 小さな水平スペース |
+| `COLUMN` | 列の区切り（縦に分割） |
+| `ALIGNER` | 左右分散配置用マーカー |
+
+#### SpacerSubrow 列挙
+
+| 値 | 説明 |
+|----|------|
+| `NONE` | サブ行なし |
+| `BEGIN` | サブ行の開始 |
+| `END` | サブ行の終了 |
+
+**レイアウト例**:
+
+```
+┌─────────────────────────────────────────────────────┐
+│ row                                                  │
+│ [Item1] [SPACER] [Item2] [SPACER] [Item3]           │
+├─────────────────────────────────────────────────────┤
+│ row                                                  │
+│ [Left Item] ←──[ALIGNER]──→ [Right Item]            │
+├─────────────────────────────────────────────────────┤
+│ row                                                  │
+├────────────[COLUMN]────────────[COLUMN]─────────────┤
+│ Col1 Item1  │  Col2 Item1  │  ┌─ subrow BEGIN ───┐  │
+│ Col1 Item2  │  Col2 Item2  │  │ Sub1   │   Sub2  │  │
+│ Col1 Item3  │  Col2 Item3  │  ├─ subrow END ─────┤  │
+│             │              │  │ Sub3   │   Sub4  │  │
+│             │              │  └──────────────────┘  │
+└─────────────────────────────────────────────────────┘
+```
+
+**内部形式との対応**:
+
+| JSON | 内部形式 (pmi.text) |
+|------|---------------------|
+| `{ "type": "row" }` | `"row?"` |
+| `{ "type": "row", "align": "LEFT" }` | `"row?align=LEFT"` |
+| `{ "type": "spacer", "hsep": "SPACER" }` | `"spacer?hsep=SPACER"` |
+| `{ "type": "spacer", "hsep": "COLUMN", "subrow": "BEGIN" }` | `"spacer?hsep=COLUMN&subrow=BEGIN"` |
 
 ---
 
@@ -785,6 +914,78 @@ PME2: {
 | `@` | F_EXPAND / F_CUSTOM_ICON | `expand: true`（custom 用） |
 | `^` | F_CB | 未エクスポート（checkbox mode） |
 
+### レイアウトアイテムの変換
+
+PME1 では layout アイテム（`row?`, `spacer?`）は単一要素の配列として格納される：
+
+```json
+// PME1
+["row?align=LEFT"]
+["spacer?hsep=SPACER"]
+```
+
+PME2 では MenuItem オブジェクトとして変換：
+
+```json
+// PME2
+{ "action": { "type": "row", "align": "LEFT" } }
+{ "action": { "type": "spacer", "hsep": "SPACER" } }
+```
+
+---
+
+## エクスポートポリシー
+
+### デフォルト値の省略
+
+ファイルサイズ削減と可読性向上のため、**デフォルト値と同一の場合はフィールドを省略可能**。
+
+```json
+// 省略前（完全版）
+{
+  "action": {
+    "type": "row",
+    "align": "CENTER",
+    "size": "NORMAL",
+    "vspacer": "NORMAL",
+    "fixed_col": false,
+    "fixed_but": false
+  },
+  "name": "",
+  "icon": null,
+  "icon_only": false,
+  "hidden": false,
+  "enabled": true
+}
+
+// 省略後（最小版）
+{
+  "action": { "type": "row" }
+}
+```
+
+### 省略可能なフィールド一覧
+
+| オブジェクト | フィールド | デフォルト値 |
+|-------------|-----------|-------------|
+| MenuItem | `name` | `""` |
+| MenuItem | `icon` | `null` |
+| MenuItem | `icon_only` | `false` |
+| MenuItem | `hidden` | `false` |
+| MenuItem | `enabled` | `true` |
+| Action (row) | `align` | `"CENTER"` |
+| Action (row) | `size` | `"NORMAL"` |
+| Action (row) | `vspacer` | `"NORMAL"` |
+| Action (row) | `fixed_col` | `false` |
+| Action (row) | `fixed_but` | `false` |
+| Action (spacer) | `hsep` | `"NONE"` |
+| Action (spacer) | `subrow` | `"NONE"` |
+| Hotkey | `ctrl`, `shift`, `alt`, `oskey`, `any` | `false` |
+
+### インポート時の処理
+
+省略されたフィールドはデフォルト値として扱う。スキーマバージョンによりデフォルト値が変わる可能性があるため、常に `schema_version` を確認すること。
+
 ---
 
 ## バージョン互換性
@@ -800,7 +1001,7 @@ PME2: {
 
 | schema_version | 変更点 |
 |---------------|--------|
-| 2.0 | 初版（uid, description/description_expr, extend_target in settings, style in extensions） |
+| 2.0 | 初版（uid, description/description_expr, extend_target in settings, style in extensions, row/spacer action types） |
 | 2.1 | conditions, style 昇格予定 |
 
 ---
@@ -814,4 +1015,4 @@ PME2: {
 ---
 
 *Last Updated: 2026-01-10*
-*Design Review: 9-D diagnosis incorporated*
+*Design Review: 9-D diagnosis incorporated, DIALOG layout types (row/spacer) added*
