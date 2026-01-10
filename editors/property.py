@@ -62,17 +62,33 @@ def get_prop_type(pm) -> str:
     """Get property type from pm.data (pr_prop_type).
 
     Returns validated property type, defaulting to 'BOOL' if invalid.
+    Falls back to poll_cmd for unmigrated data (with loud warning).
     """
     prop_type = pm.get_data("pr_prop_type")
-    if prop_type not in VALID_PROP_TYPES:
-        DBG_PROP and logw(
-            "PME: invalid pr_prop_type in pm.data",
-            f"pm={pm.name}",
-            f"prop_type={prop_type!r}",
-            "defaulting to BOOL"
+    if prop_type in VALID_PROP_TYPES:
+        return prop_type
+
+    # FALLBACK: Read from legacy poll_cmd (unmigrated data)
+    # This should NOT happen in normal operation - migration should have run.
+    # If this fires, something is wrong with the migration or load order.
+    if pm.poll_cmd in VALID_PROP_TYPES:
+        loge(
+            "!!! PME MIGRATION WARNING !!!",
+            f"Reading prop_type from LEGACY poll_cmd (should be in pm.data)",
+            f"pm={pm.name!r}",
+            f"poll_cmd={pm.poll_cmd!r}",
+            "This indicates migration did not run - please report this bug!"
         )
-        return 'BOOL'
-    return prop_type
+        return pm.poll_cmd
+
+    # Neither pm.data nor poll_cmd has valid prop_type
+    DBG_PROP and logw(
+        "PME: no valid pr_prop_type found",
+        f"pm={pm.name}",
+        f"prop_type={prop_type!r}",
+        "defaulting to BOOL"
+    )
+    return 'BOOL'
 
 
 def set_prop_type(pm, value: str):
