@@ -57,6 +57,8 @@ __all__ = [
     "find_pm",
     "list_pms",
     "invoke_pm",
+    # UID utilities
+    "validate_uid",
     # User Properties
     "props",  # User-defined properties container (PropertyGroup)
     # Preferences
@@ -73,6 +75,9 @@ __all__ = [
 
 # Types (public)
 from ._types import ExecuteResult, PMHandle
+
+# UID utilities (public, from core layer)
+from ..core.uid import validate_uid
 
 # Runtime context (internal, from infra layer)
 # Not exported in __all__, but available for backward compatibility
@@ -185,19 +190,25 @@ def evaluate(expr: str, *, extra_globals: dict[str, Any] | None = None) -> Any:
 # =============================================================================
 
 
-def find_pm(name: str) -> PMHandle | None:
-    """Find a Pie Menu by name.
+def find_pm(name: str | None = None, *, uid: str | None = None) -> PMHandle | None:
+    """Find a Pie Menu by name or uid.
 
     Args:
         name: The exact name of the menu to find.
+        uid: The unique identifier of the menu (e.g., "pm_9f7c2k3h").
+             If both name and uid are provided, uid takes precedence.
 
     Returns:
         PMHandle if found, None otherwise.
 
     Example:
+        >>> # By name
         >>> pm = pme.find_pm("My Pie Menu")
         >>> if pm:
         ...     print(f"Found: {pm.name} ({pm.mode})")
+
+        >>> # By uid (stable reference)
+        >>> pm = pme.find_pm(uid="pm_9f7c2k3h")
 
     Stability: Experimental
     """
@@ -206,14 +217,29 @@ def find_pm(name: str) -> PMHandle | None:
         return None
 
     pie_menus = getattr(prefs, "pie_menus", None)
-    if pie_menus is None or name not in pie_menus:
+    if pie_menus is None:
         return None
 
-    pm = pie_menus[name]
+    pm = None
+
+    # Search by uid first (stable reference)
+    if uid:
+        for p in pie_menus:
+            if getattr(p, "uid", "") == uid:
+                pm = p
+                break
+    # Fall back to name search
+    elif name and name in pie_menus:
+        pm = pie_menus[name]
+
+    if pm is None:
+        return None
+
     return PMHandle(
         name=pm.name,
         mode=getattr(pm, "mode", None),
         enabled=getattr(pm, "enabled", True),
+        uid=getattr(pm, "uid", ""),
     )
 
 
@@ -225,10 +251,13 @@ def list_pms(mode: str | None = None) -> list[PMHandle]:
               If None, returns all menus.
 
     Returns:
-        List of PMHandle objects.
+        List of PMHandle objects (includes uid for stable references).
 
     Example:
         >>> all_menus = pme.list_pms()
+        >>> for pm in all_menus:
+        ...     print(f"{pm.name} ({pm.uid})")
+
         >>> pie_menus = pme.list_pms(mode='PMENU')
 
     Stability: Experimental
@@ -249,24 +278,39 @@ def list_pms(mode: str | None = None) -> list[PMHandle]:
                 name=pm.name,
                 mode=pm_mode,
                 enabled=getattr(pm, "enabled", True),
+                uid=getattr(pm, "uid", ""),
             ))
     return result
 
 
-def invoke_pm(pm_or_name: PMHandle | str) -> bool:
+def invoke_pm(
+    pm_or_name: PMHandle | str | None = None,
+    *,
+    name: str | None = None,
+    uid: str | None = None,
+) -> bool:
     """Invoke (show) a Pie Menu.
 
     This opens the specified menu as if the user triggered its hotkey.
 
     Args:
-        pm_or_name: Either a PMHandle or the menu name as string.
+        pm_or_name: PMHandle, menu name, or None (for backward compatibility).
+        name: The menu name to invoke (keyword argument).
+        uid: The menu uid to invoke (keyword argument, e.g., "pm_9f7c2k3h").
+             If uid is provided, it takes precedence over name.
 
     Returns:
         True if the menu was invoked successfully, False otherwise.
 
     Example:
-        >>> # By name
+        >>> # By name (positional - backward compatible)
         >>> pme.invoke_pm("My Pie Menu")
+
+        >>> # By name (keyword)
+        >>> pme.invoke_pm(name="My Pie Menu")
+
+        >>> # By uid (stable reference)
+        >>> pme.invoke_pm(uid="pm_9f7c2k3h")
 
         >>> # By handle
         >>> pm = pme.find_pm("My Pie Menu")
@@ -279,10 +323,26 @@ def invoke_pm(pm_or_name: PMHandle | str) -> bool:
 
     Stability: Experimental
     """
-    name = pm_or_name.name if isinstance(pm_or_name, PMHandle) else pm_or_name
+    menu_name = None
+
+    # Resolve the menu name
+    if isinstance(pm_or_name, PMHandle):
+        menu_name = pm_or_name.name
+    elif isinstance(pm_or_name, str):
+        menu_name = pm_or_name
+    elif uid:
+        # Search by uid
+        pm = find_pm(uid=uid)
+        if pm:
+            menu_name = pm.name
+    elif name:
+        menu_name = name
+
+    if not menu_name:
+        return False
 
     try:
-        bpy.ops.wm.pme_user_pie_menu_call('INVOKE_DEFAULT', pie_menu_name=name)
+        bpy.ops.wm.pme_user_pie_menu_call('INVOKE_DEFAULT', pie_menu_name=menu_name)
         return True
     except Exception:
         return False

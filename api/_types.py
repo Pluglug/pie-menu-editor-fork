@@ -33,12 +33,14 @@ class PMHandle:
     without exposing the internal PMItem object directly.
 
     Attributes:
-        name: The unique name of the menu.
+        name: The display name of the menu (can be changed by user).
         mode: The menu type ('PMENU', 'RMENU', 'DIALOG', etc.)
         enabled: Whether the menu is enabled.
+        uid: Unique identifier (stable reference, e.g., "pm_9f7c2k3h").
 
     Note:
         More fields (hotkey, tag, etc.) may be added in future versions.
+        Use `uid` for stable references; `name` can change.
 
     Stability: Experimental
     """
@@ -46,3 +48,4 @@ class PMHandle:
     name: str
     mode: str | None = None
     enabled: bool = True
+    uid: str = ""
