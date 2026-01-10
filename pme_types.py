@@ -358,6 +358,16 @@ class PMItem(PropertyGroup):
     mode: EnumProperty(items=CC.PM_ITEMS)
     tag: StringProperty()
 
+    # uid: Unique identifier for JSON Schema v2 (Phase 9-X)
+    # Format: {mode_prefix}_{random_id}, e.g., "pm_9f7c2k3h"
+    # Generated automatically on menu creation, never edited by user
+    uid: StringProperty(
+        name="UID",
+        description="Unique identifier for the menu",
+        default="",
+        options={'HIDDEN'},
+    )
+
     def update_keymap_item(self, context):
         if not self.ed.has_hotkey:
             return

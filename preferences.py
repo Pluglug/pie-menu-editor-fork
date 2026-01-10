@@ -698,6 +698,12 @@ class PMEPreferences(AddonPreferences):
         pm = self.selected_pm
 
         pm.mode = mode
+
+        # Generate uid (Phase 9-X: uid implementation)
+        # Always generate new uid, even for duplicates
+        from .core.uid import generate_uid
+        pm.uid = generate_uid(mode)
+
         pm.name = self.unique_pm_name(name or pm.ed.default_name)
 
         if self.tree_mode and self.show_keymap_names and not duplicate and link:
@@ -800,6 +806,17 @@ class PMEPreferences(AddonPreferences):
 
     def unique_pm_name(self, name):
         return uname(self.pie_menus, name)
+
+    def is_uid_unique(self, uid: str) -> bool:
+        """Check if uid is unique among existing menus."""
+        for pm in self.pie_menus:
+            if pm.uid == uid:
+                return False
+        return True
+
+    def get_all_uids(self) -> set:
+        """Get set of all existing uids."""
+        return {pm.uid for pm in self.pie_menus if pm.uid}
 
     def from_dict(self, value):
         pass

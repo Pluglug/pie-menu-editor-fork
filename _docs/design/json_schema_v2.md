@@ -128,10 +128,10 @@ mode_prefix:
   pd  - Pop-up Dialog (DIALOG)
   pg  - Panel Group (PANEL)
   hpg - Hiding Panel (HPANEL)  # Note: hpg not hp (PME v1 official)
-  sk  - Stack Key (SCRIPT)
+  s   - Stack Key (SCRIPT)    # matches s_ settings prefix
   mc  - Macro Operator (MACRO)
   md  - Modal Operator (MODAL)
-  st  - Sticky Key (STICKY)
+  sk  - Sticky Key (STICKY)   # matches sk_ settings prefix
   pr  - Property (PROPERTY)
 
 random_id:
@@ -153,10 +153,10 @@ random_id:
 | `DIALOG` | Pop-up Dialog | pd |
 | `PANEL` | Side Panel (Panel Group) | pg |
 | `HPANEL` | Hiding Unused Panels | hpg |
-| `SCRIPT` | Stack Key | sk |
+| `SCRIPT` | Stack Key | s |
 | `MACRO` | Macro Operator | mc |
 | `MODAL` | Modal Operator | md |
-| `STICKY` | Sticky Key | st |
+| `STICKY` | Sticky Key | sk |
 | `PROPERTY` | Property | pr |
 
 ---
@@ -301,8 +301,8 @@ settings はフラット構造で、mode に応じて異なるプロパティが
 | DIALOG | `pd_` | pd | `pd_panel`, `pd_width` |
 | PANEL | `pg_` | pg | `pg_space`, `pg_wicons` |
 | MODAL | `md_` | md | `md_confirm`, `md_block_ui` |
-| SCRIPT | `s_` | sk | `s_undo`, `s_state` |
-| STICKY | `sk_` | st | `sk_block_ui` |
+| SCRIPT | `s_` | s | `s_undo`, `s_state` |
+| STICKY | `sk_` | sk | `sk_block_ui` |
 | PROPERTY | `pr_` | pr | `pr_vector`, `pr_prop_type` |
 
 ### PMENU (Pie Menu)

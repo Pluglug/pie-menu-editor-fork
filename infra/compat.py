@@ -177,6 +177,7 @@ def fix_json_2_0_0(pr, pm, menu):
 def fix_2_0_0(pr, pm):
     """
     Migrate MODAL and PROPERTY properties to use standardized prefixes.
+    Generate uid for menus without one.
 
     Uses the same helper functions as fix_json_2_0_0 for consistency.
     """
@@ -184,3 +185,8 @@ def fix_2_0_0(pr, pm):
         pm.data = _migrate_modal_data(pm.data)
     elif pm.mode == 'PROPERTY' and pm.data:
         pm.data = _migrate_property_data(pm.data)
+
+    # Generate uid for existing menus (Phase 9-X: uid implementation)
+    if not pm.uid:
+        from ..core.uid import generate_uid
+        pm.uid = generate_uid(pm.mode)
