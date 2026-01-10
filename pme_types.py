@@ -710,14 +710,14 @@ class PMItem(PropertyGroup):
     mo_confirm_on_release: BoolProperty(
         name="Confirm On Release",
         description="Confirm on release",
-        get=lambda s: s.get_data("confirm"),
-        set=lambda s, v: s.set_data("confirm", v),
+        get=lambda s: s.get_data("md_confirm"),
+        set=lambda s, v: s.set_data("md_confirm", v),
     )
     mo_block_ui: BoolProperty(
         name="Block UI",
         description="Block other hotkeys",
-        get=lambda s: s.get_data("block_ui"),
-        set=lambda s, v: s.set_data("block_ui", v),
+        get=lambda s: s.get_data("md_block_ui"),
+        set=lambda s, v: s.set_data("md_block_ui", v),
     )
 
     def mo_lock_update(self, context):
@@ -733,8 +733,8 @@ class PMItem(PropertyGroup):
     mo_lock: BoolProperty(
         name="Lock Mouse",
         description="Lock the mouse in the current area",
-        get=lambda s: s.get_data("lock"),
-        set=lambda s, v: s.set_data("lock", v),
+        get=lambda s: s.get_data("md_lock"),
+        set=lambda s, v: s.set_data("md_lock", v),
         update=mo_lock_update,
     )
 

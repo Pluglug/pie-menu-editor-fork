@@ -30,9 +30,14 @@ class PME_OT_prop_data_reset(bpy.types.Operator):
         return {'FINISHED'}
 
 
-schema.BoolProperty("mo", "confirm", False)
-schema.BoolProperty("mo", "block_ui", True)
-schema.BoolProperty("mo", "lock", True)
+# =============================================================================
+# Schema Definitions (MODAL)
+# =============================================================================
+# Type prefix: "mo" (internal), properties use md_ prefix for consistency.
+# This aligns with uid prefix "md" for MODAL mode.
+schema.BoolProperty("mo", "md_confirm", False)
+schema.BoolProperty("mo", "md_block_ui", True)
+schema.BoolProperty("mo", "md_lock", True)
 
 
 class Editor(EditorBase):

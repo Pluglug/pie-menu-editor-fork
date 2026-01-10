@@ -74,7 +74,7 @@ def _gen_op(tp, idx, **kwargs):
 
 
 def _gen_modal_op(pm, idx):
-    lock = pm.get_data("lock")
+    lock = pm.get_data("md_lock")
 
     tpname = _modal_op.__name__[:-5]
     bl_idname = _modal_op.bl_idname

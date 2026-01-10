@@ -31,11 +31,14 @@ from ..core.constants import MAX_STR_LEN
 # =============================================================================
 # Schema Definitions (PROPERTY)
 # =============================================================================
-# NOTE: prop_type is stored in pm.poll_cmd, not pm.data.
+# NOTE: pr_prop_type is stored in pm.poll_cmd, not pm.data.
 #       This schema definition is for JSON export/import consistency.
 #       The converter/serializer must handle this special case.
+#
+# Type prefix: "pr" (matches uid prefix for PROPERTY mode)
+# All properties use pr_ prefix for consistency with other modes.
 pme_schema.EnumProperty(
-    "prop", "prop_type", "BOOL",
+    "pr", "pr_prop_type", "BOOL",
     [
         ('BOOL', "Boolean", ""),
         ('INT', "Integer", ""),
@@ -44,11 +47,11 @@ pme_schema.EnumProperty(
         ('ENUM', "Enum", ""),
     ],
 )
-pme_schema.IntProperty("prop", "vector", 1)
-pme_schema.BoolProperty("prop", "mulsel", False)
-pme_schema.BoolProperty("prop", "hor_exp", True)
-pme_schema.BoolProperty("prop", "exp", True)
-pme_schema.BoolProperty("prop", "save", True)
+pme_schema.IntProperty("pr", "pr_vector", 1)
+pme_schema.BoolProperty("pr", "pr_mulsel", False)
+pme_schema.BoolProperty("pr", "pr_hor_exp", True)
+pme_schema.BoolProperty("pr", "pr_exp", True)
+pme_schema.BoolProperty("pr", "pr_save", True)
 
 
 PROP_GETTERS = dict()
@@ -83,13 +86,13 @@ del SUBTYPE_NUMBER_ITEMS
 
 
 def size_get(self):
-    return get_prefs().selected_pm.get_data("vector")
+    return get_prefs().selected_pm.get_data("pr_vector")
 
 
 def size_set(self, value):
     pr = get_prefs()
     pm = pr.selected_pm
-    pm.set_data("vector", value)
+    pm.set_data("pr_vector", value)
     pmi_remove(pm, "subtype")
     pmi_remove(pm, "unit")
     pmi_remove(pm, "default")
@@ -104,37 +107,37 @@ def size_set(self, value):
 
 
 def hor_exp_get(self):
-    return get_prefs().selected_pm.get_data("hor_exp")
+    return get_prefs().selected_pm.get_data("pr_hor_exp")
 
 
 def hor_exp_set(self, value):
-    get_prefs().selected_pm.set_data("hor_exp", value)
+    get_prefs().selected_pm.set_data("pr_hor_exp", value)
     tag_redraw()
 
 
 def save_get(self):
-    return not get_prefs().selected_pm.get_data("save")
+    return not get_prefs().selected_pm.get_data("pr_save")
 
 
 def save_set(self, value):
-    get_prefs().selected_pm.set_data("save", not value)
+    get_prefs().selected_pm.set_data("pr_save", not value)
 
 
 def exp_get(self):
-    return get_prefs().selected_pm.get_data("exp")
+    return get_prefs().selected_pm.get_data("pr_exp")
 
 
 def exp_set(self, value):
-    get_prefs().selected_pm.set_data("exp", value)
+    get_prefs().selected_pm.set_data("pr_exp", value)
 
 
 def multiselect_get(self):
-    return get_prefs().selected_pm.get_data("mulsel")
+    return get_prefs().selected_pm.get_data("pr_mulsel")
 
 
 def multiselect_set(self, value):
     pm = get_prefs().selected_pm
-    pm.set_data("mulsel", value)
+    pm.set_data("pr_mulsel", value)
     pmi_remove(pm, "default")
 
     pm.ed.register_default_enum_prop(pm)
@@ -274,7 +277,7 @@ def gen_prop_subtype_enum_items(prop_type, is_vector=False):
 def gen_pm_enum_items(pm):
     items = []
     i = 0
-    enum_flag = pm.get_data("mulsel")
+    enum_flag = pm.get_data("pr_mulsel")
     for pmi in pm.pmis:
         if pmi.mode != 'PROP':
             continue
@@ -324,7 +327,7 @@ def gen_arg_setter(name, ptype, update_dynamic_props=False):
         pm = get_prefs().selected_pm
         prop = self.bl_rna.properties["ed_" + name]
         if prop.__class__.__name__ == "EnumProperty":
-            if pm.get_data("mulsel"):
+            if pm.get_data("pr_mulsel"):
                 new_value = set()
                 for v in prop.enum_items:
                     if v.value & value:
@@ -372,7 +375,7 @@ def gen_default_value(pm, use_pmi=False):
         elif pm.poll_cmd == 'BOOL':
             value = False
         elif pm.poll_cmd == 'ENUM':
-            if pm.get_data("mulsel"):
+            if pm.get_data("pr_mulsel"):
                 return set()
 
             for pmi in pm.pmis:
@@ -382,7 +385,7 @@ def gen_default_value(pm, use_pmi=False):
             else:
                 return None
 
-        size = pm.get_data("vector")
+        size = pm.get_data("pr_vector")
         if size > 1:
             value = [value] * size
 
@@ -431,20 +434,20 @@ def register_user_property(pm):
 
     pr = get_prefs()
 
-    size = pm.get_data("vector")
+    size = pm.get_data("pr_vector")
     bpy_prop = prop_by_type(pm.poll_cmd, size > 1)
     kwargs = dict(name=pm.name)
     options = set()
     if pm.poll_cmd == 'ENUM':
         kwargs["items"] = []
-        if pm.get_data("mulsel"):
+        if pm.get_data("pr_mulsel"):
             options.add('ENUM_FLAG')
 
     if size > 1:
         kwargs["size"] = size
 
     i = 0
-    enum_flag = pm.get_data("mulsel")
+    enum_flag = pm.get_data("pr_mulsel")
     for pmi in pm.pmis:
         if pmi.mode == 'EMPTY':
             kwargs[pmi.name] = pmi_to_value(pmi)
@@ -657,7 +660,7 @@ class PME_OT_prop_script_set(Operator):
                 elif pm.poll_cmd == 'BOOL':
                     default_value = False
 
-                size = pm.get_data("vector")
+                size = pm.get_data("pr_vector")
                 if size > 1:
                     default_value = [default_value] * size
 
@@ -716,7 +719,7 @@ class Editor(EditorBase):
         self.has_hotkey = False
         self.copy_paste_slot = False
         self.editable_slots = False
-        self.default_pmi_data = "prop?"
+        self.default_pmi_data = "pr?"
         self.supported_slot_modes = {'EMPTY', 'COMMAND'}
         self.pmi_move_operator = PME_OT_prop_pmi_move.bl_idname
 
@@ -804,7 +807,7 @@ class Editor(EditorBase):
         DBG_PROP and logi("Reg Def Enum Prop")
         enum_items = gen_pm_enum_items(pm)
         options = set()
-        if pm.get_data("mulsel"):
+        if pm.get_data("pr_mulsel"):
             options.add('ENUM_FLAG')
 
         self.register_arg_prop(
@@ -817,7 +820,7 @@ class Editor(EditorBase):
         )
 
     def register_default_prop(self, pm):
-        size = pm.get_data("vector")
+        size = pm.get_data("pr_vector")
         bpy_prop = prop_by_type(pm.poll_cmd, size > 1)
         default_value = 0
         bpy_prop_name = bpy_prop.__name__
@@ -875,7 +878,7 @@ class Editor(EditorBase):
         # store_ed_generated_funcs(prop, get_, set_)
 
     def register_dynamic_props(self, pm):
-        size = pm.get_data("vector")
+        size = pm.get_data("pr_vector")
         bpy_prop = prop_by_type(pm.poll_cmd)
 
         self.update_preview_path(pm)
@@ -964,7 +967,7 @@ class Editor(EditorBase):
         register_user_property(pm)
 
         pr = get_prefs()
-        if not pm.get_data("save") and pm.name in pr.props:
+        if not pm.get_data("pr_save") and pm.name in pr.props:
             del pr.props[pm.name]
 
         if 'INIT' in pm.pmis:
@@ -1131,10 +1134,10 @@ class Editor(EditorBase):
 
         lh.box(layout)
         lh.column()
-        enum_flag = pm.get_data("mulsel")
-        hor_exp = pm.get_data("hor_exp")
-        exp = pm.get_data("exp")
-        size = pm.get_data("vector")
+        enum_flag = pm.get_data("pr_mulsel")
+        hor_exp = pm.get_data("pr_hor_exp")
+        exp = pm.get_data("pr_exp")
+        size = pm.get_data("pr_vector")
         # subtype = pm.pmis.get("subtype", "")
         # subtype = subtype and pmi_to_value(subtype)
         subtype = pm_to_value(pm, "subtype")

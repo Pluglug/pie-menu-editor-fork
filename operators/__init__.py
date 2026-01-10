@@ -1047,7 +1047,7 @@ class PME_OT_modal_base:
 
         self.confirm_key = None
         prop = schema.parse(self.pm.data)
-        if prop.confirm and event.value in {'PRESS', 'DOUBLE_CLICK'}:
+        if prop.md_confirm and event.value in {'PRESS', 'DOUBLE_CLICK'}:
             self.confirm_key = event.type
 
         self.last_mouse = event.mouse_x if pr.mouse_dir_mode == 'H' else event.mouse_y
@@ -1084,7 +1084,7 @@ class PME_OT_modal_base:
         self.overlay = ovl.Overlay(context.area.type)
         self.overlay.show()
 
-        if prop.lock:
+        if prop.md_lock:
             area_header_text_set(self.pm_name + ", Confirm: Enter/LMB, Cancel: Esc/RMB")
         context.window_manager.modal_handler_add(self)
         return {'RUNNING_MODAL'}
@@ -1254,9 +1254,9 @@ class WM_OT_pme_user_pie_menu_call(Operator):
                         lh.label(text or f"[{sub_pm.name}]", 'ERROR')
                     else:
                         is_enum = sub_pm.poll_cmd == 'ENUM'
-                        # enum_flag = sub_pm.get_data("mulsel")
-                        hor_exp = sub_pm.get_data("hor_exp")
-                        is_array = sub_pm.get_data("vector") > 1
+                        # enum_flag = sub_pm.get_data("pr_mulsel")
+                        hor_exp = sub_pm.get_data("pr_hor_exp")
+                        is_array = sub_pm.get_data("pr_vector") > 1
                         if (is_enum or is_array) and hor_exp:
                             lh.save()
                             sy = lh.layout.scale_y
@@ -1271,7 +1271,7 @@ class WM_OT_pme_user_pie_menu_call(Operator):
                             text,
                             icon,
                             toggle=True,
-                            expand=sub_pm.get_data("exp"),
+                            expand=sub_pm.get_data("pr_exp"),
                         )
                         # if is_enum and not enum_flag:
                         #     lh.prop(pr.props, sub_pm.name, "")
@@ -1837,7 +1837,7 @@ class WM_OT_pme_user_pie_menu_call(Operator):
 
         elif pm.mode == 'MODAL':
             prop = schema.parse(pm.data)
-            if prop.lock:
+            if prop.md_lock:
                 bpy.ops.pme.modal_grab('INVOKE_DEFAULT', pm_name=pm.name)
             else:
                 bpy.ops.pme.modal('INVOKE_DEFAULT', pm_name=pm.name)

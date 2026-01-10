@@ -242,21 +242,21 @@ class ParsedData:
         'pg_category': "My Category",
         'pg_space': "VIEW_3D",
         'pg_region': "TOOLS",
-        # ed_modal.py (type: mo)
-        'confirm': False,
-        'block_ui': True,
-        'lock': True,
+        # ed_modal.py (type: mo) - uses md_ prefix for consistency
+        'md_confirm': False,
+        'md_block_ui': True,
+        'md_lock': True,
         # ed_stack_key.py (type: s)
         's_undo': False,
         's_state': False,
         # ed_sticky_key.py (type: sk)
         'sk_block_ui': False,
-        # editors/property.py (type: prop)
-        'vector': 1,
-        'mulsel': False,
-        'hor_exp': True,
-        'exp': True,
-        'save': True,
+        # editors/property.py (type: pr)
+        'pr_vector': 1,
+        'pr_mulsel': False,
+        'pr_hor_exp': True,
+        'pr_exp': True,
+        'pr_save': True,
         # Legacy properties (may be used in old menu data)
         'layout': 'COLUMN',
         'width': 300,

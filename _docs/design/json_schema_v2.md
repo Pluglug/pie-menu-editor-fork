@@ -287,21 +287,23 @@ settings はフラット構造で、mode に応じて異なるプロパティが
 |-------------|-------------------|------|
 | `pm_radius` | `pm_radius` | 同一（変換不要） |
 | `pd_panel` | `pd_panel` | 同一（変換不要） |
-| `confirm` | `confirm` | MODAL は接頭辞なし |
-| `vector` | `vector` | PROPERTY は接頭辞なし |
+| `md_confirm` | `md_confirm` | 同一（変換不要） |
+| `pr_vector` | `pr_vector` | 同一（変換不要） |
 
 ### 接頭辞パターン
 
-| モード | 接頭辞 | 例 |
-|--------|--------|-----|
-| PMENU | `pm_` | `pm_radius`, `pm_flick` |
-| RMENU | `rm_` | `rm_title` |
-| DIALOG | `pd_` | `pd_panel`, `pd_width` |
-| PANEL | `pg_` | `pg_space`, `pg_wicons` |
-| MODAL | なし | `confirm`, `block_ui` |
-| SCRIPT | `s_` | `s_undo`, `s_state` |
-| STICKY | `sk_` | `sk_block_ui` |
-| PROPERTY | なし/混在 | `vector`, `prop_type` |
+> **統一ルール**: 全モードが uid prefix に対応した接頭辞を使用。
+
+| モード | 接頭辞 | uid prefix | 例 |
+|--------|--------|------------|-----|
+| PMENU | `pm_` | pm | `pm_radius`, `pm_flick` |
+| RMENU | `rm_` | rm | `rm_title` |
+| DIALOG | `pd_` | pd | `pd_panel`, `pd_width` |
+| PANEL | `pg_` | pg | `pg_space`, `pg_wicons` |
+| MODAL | `md_` | md | `md_confirm`, `md_block_ui` |
+| SCRIPT | `s_` | sk | `s_undo`, `s_state` |
+| STICKY | `sk_` | st | `sk_block_ui` |
+| PROPERTY | `pr_` | pr | `pr_vector`, `pr_prop_type` |
 
 ### PMENU (Pie Menu)
 
@@ -391,17 +393,19 @@ settings はフラット構造で、mode に応じて異なるプロパティが
 
 ```json
 {
-  "confirm": false,
-  "block_ui": true,
-  "lock": true
+  "md_confirm": false,
+  "md_block_ui": true,
+  "md_lock": true
 }
 ```
 
 | プロパティ | 型 | デフォルト | 説明 |
 |-----------|-----|----------|------|
-| `confirm` | boolean | false | 確認ダイアログ |
-| `block_ui` | boolean | true | UI ブロック |
-| `lock` | boolean | true | ロック |
+| `md_confirm` | boolean | false | 確認ダイアログ |
+| `md_block_ui` | boolean | true | UI ブロック |
+| `md_lock` | boolean | true | ロック |
+
+> **Note**: MODAL は `md_` 接頭辞を使用（uid prefix `md` と一致）。
 
 ### SCRIPT (Stack Key)
 
@@ -433,25 +437,27 @@ settings はフラット構造で、mode に応じて異なるプロパティが
 
 ```json
 {
-  "prop_type": "FLOAT",
-  "vector": 1,
-  "mulsel": false,
-  "hor_exp": true,
-  "exp": true,
-  "save": true
+  "pr_prop_type": "FLOAT",
+  "pr_vector": 1,
+  "pr_mulsel": false,
+  "pr_hor_exp": true,
+  "pr_exp": true,
+  "pr_save": true
 }
 ```
 
 | プロパティ | 型 | デフォルト | 説明 |
 |-----------|-----|----------|------|
-| `prop_type` | string | "BOOL" | プロパティタイプ（必須） |
-| `vector` | integer | 1 | ベクトル次元 |
-| `mulsel` | boolean | false | 複数選択対応 |
-| `hor_exp` | boolean | true | 水平展開 |
-| `exp` | boolean | true | 展開表示 |
-| `save` | boolean | true | 設定を保存 |
+| `pr_prop_type` | string | "BOOL" | プロパティタイプ（必須） |
+| `pr_vector` | integer | 1 | ベクトル次元 |
+| `pr_mulsel` | boolean | false | 複数選択対応 |
+| `pr_hor_exp` | boolean | true | 水平展開 |
+| `pr_exp` | boolean | true | 展開表示 |
+| `pr_save` | boolean | true | 設定を保存 |
 
-**prop_type の値**:
+> **Note**: PROPERTY は `pr_` 接頭辞を使用（uid prefix `pr` と一致）。
+
+**pr_prop_type の値**:
 | 値 | 説明 |
 |----|------|
 | `BOOL` | Boolean プロパティ |
@@ -461,9 +467,9 @@ settings はフラット構造で、mode に応じて異なるプロパティが
 | `ENUM` | Enum プロパティ |
 
 > **PME1 互換性**: PME1 では `poll_cmd` フィールドが PROPERTY モードでプロパティタイプを格納していた。
-> PME2 では `settings.prop_type` に分離し、`poll` は常に poll 条件として使用する。
+> PME2 では `settings.pr_prop_type` に分離し、`poll` は常に poll 条件として使用する。
 
-> **実装注意**: 内部実装では `prop_type` は `pm.poll_cmd` に直接格納されており、
+> **実装注意**: 内部実装では `pr_prop_type` は `pm.poll_cmd` に直接格納されており、
 > `pm.data` 経由ではない。converter/serializer で特別な処理が必要。
 
 ### MACRO
@@ -1014,5 +1020,5 @@ PME2 では MenuItem オブジェクトとして変換：
 
 ---
 
-*Last Updated: 2026-01-10*
-*Design Review: 9-D diagnosis incorporated, DIALOG layout types (row/spacer) added*
+*Last Updated: 2026-01-11*
+*Design Review: 9-D diagnosis incorporated, DIALOG layout types (row/spacer) added, prefix standardization (#92)*
