@@ -31,6 +31,9 @@ from ..core.schema import schema
 # Schema Definitions (RMENU)
 # =============================================================================
 schema.BoolProperty("rm", "rm_title", True)
+# Extend Menu properties (Phase 9-X: #89)
+schema.StringProperty("rm", "rm_extend_target", "")  # Blender Menu ID to extend
+schema.IntProperty("rm", "rm_extend_position", 0)    # <0: prepend, >=0: append
 
 
 class WM_OT_rmi_add(Operator):
