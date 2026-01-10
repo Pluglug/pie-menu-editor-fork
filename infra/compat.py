@@ -154,6 +154,49 @@ def _migrate_property_data(data):
     return data
 
 
+# Valid property types for JSON migration (defined here to avoid forward reference)
+_JSON_VALID_PROP_TYPES = {'BOOL', 'INT', 'FLOAT', 'STRING', 'ENUM'}
+
+
+def _migrate_json_property_poll_cmd(menu):
+    """Migrate PROPERTY prop_type from menu[7] to menu[5] in JSON import.
+
+    PME1 JSON format stores prop_type in menu[7] (poll_cmd field).
+    PME2 stores it in menu[5] (pm.data) as pr_prop_type.
+
+    This migration:
+    1. Reads prop_type from menu[7] if valid
+    2. Adds pr_prop_type to menu[5] (data string)
+    3. Clears menu[7] to use default poll condition
+    """
+    # Get prop_type from menu[7] if present
+    prop_type = 'BOOL'
+    if len(menu) > 7 and menu[7] in _JSON_VALID_PROP_TYPES:
+        prop_type = menu[7]
+
+    # Get current data string
+    data = menu[5] if len(menu) > 5 else ""
+    if not data:
+        data = "pr?"
+
+    # Add pr_prop_type to data if not already present
+    if "pr_prop_type" not in data:
+        # Parse and append to data string
+        if "?" in data:
+            prefix, _, params = data.partition("?")
+            if params:
+                data = f"{prefix}?pr_prop_type={prop_type}&{params}"
+            else:
+                data = f"{prefix}?pr_prop_type={prop_type}"
+        else:
+            data = f"pr?pr_prop_type={prop_type}"
+        menu[5] = data
+
+    # Clear menu[7] (poll_cmd) - use default poll condition
+    if len(menu) > 7:
+        menu[7] = ""
+
+
 def fix_json_2_0_0(pr, pm, menu):
     """
     Migrate MODAL and PROPERTY properties in JSON import.
@@ -161,6 +204,7 @@ def fix_json_2_0_0(pr, pm, menu):
     JSON menu structure (PME1 format):
       menu[4] = mode
       menu[5] = data (pm.data string)
+      menu[7] = poll_cmd (or prop_type for PROPERTY mode in PME1)
     """
     if len(menu) < 6:
         return
@@ -170,23 +214,69 @@ def fix_json_2_0_0(pr, pm, menu):
 
     if mode == 'MODAL' and data:
         menu[5] = _migrate_modal_data(data)
-    elif mode == 'PROPERTY' and data:
-        menu[5] = _migrate_property_data(data)
+    elif mode == 'PROPERTY':
+        if data:
+            menu[5] = _migrate_property_data(data)
+        # Migrate prop_type from menu[7] to menu[5] (pm.data)
+        _migrate_json_property_poll_cmd(menu)
 
 
 def fix_2_0_0(pr, pm):
     """
     Migrate MODAL and PROPERTY properties to use standardized prefixes.
     Generate uid for menus without one.
+    Migrate PROPERTY prop_type from poll_cmd to pm.data.
 
     Uses the same helper functions as fix_json_2_0_0 for consistency.
     """
     if pm.mode == 'MODAL' and pm.data:
         pm.data = _migrate_modal_data(pm.data)
-    elif pm.mode == 'PROPERTY' and pm.data:
-        pm.data = _migrate_property_data(pm.data)
+    elif pm.mode == 'PROPERTY':
+        if pm.data:
+            pm.data = _migrate_property_data(pm.data)
+        # Migrate prop_type from poll_cmd to pm.data (9-D-1)
+        _migrate_property_poll_cmd(pm)
 
     # Generate uid for existing menus (Phase 9-X: uid implementation)
     if not pm.uid:
         from ..core.uid import generate_uid
         pm.uid = generate_uid(pm.mode)
+
+
+# Valid property types for PROPERTY mode migration
+_VALID_PROP_TYPES = {'BOOL', 'INT', 'FLOAT', 'STRING', 'ENUM'}
+
+
+def _migrate_property_poll_cmd(pm):
+    """Migrate PROPERTY mode: move prop_type from poll_cmd to pm.data.
+
+    PME1 stored prop_type in poll_cmd (a field meant for poll conditions).
+    PME2 stores it in pm.data as pr_prop_type.
+
+    This migration:
+    1. Reads prop_type from poll_cmd if valid
+    2. Sets pr_prop_type in pm.data
+    3. Clears poll_cmd to prevent crash from invalid Python code compilation
+    """
+    # Check if pr_prop_type already exists in pm.data
+    if "pr_prop_type" in pm.data:
+        # Already migrated, just clear poll_cmd if it has old value
+        if pm.poll_cmd in _VALID_PROP_TYPES:
+            DBG_INIT and logi("PME: clearing legacy poll_cmd", f"pm={pm.name}")
+            pm.poll_cmd = CC.DEFAULT_POLL
+        return
+
+    # Read prop_type from poll_cmd
+    prop_type = pm.poll_cmd if pm.poll_cmd in _VALID_PROP_TYPES else 'BOOL'
+
+    # Set pr_prop_type in pm.data
+    pm.set_data("pr_prop_type", prop_type)
+    DBG_INIT and logi(
+        "PME: migrated prop_type to pm.data",
+        f"pm={pm.name}",
+        f"prop_type={prop_type}"
+    )
+
+    # Clear poll_cmd to prevent crash (#33 related)
+    # poll_cmd with "BOOL" etc. would cause compile() to fail
+    pm.poll_cmd = CC.DEFAULT_POLL
