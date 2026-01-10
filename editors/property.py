@@ -31,6 +31,19 @@ from ..core.constants import MAX_STR_LEN
 # =============================================================================
 # Schema Definitions (PROPERTY)
 # =============================================================================
+# NOTE: prop_type is stored in pm.poll_cmd, not pm.data.
+#       This schema definition is for JSON export/import consistency.
+#       The converter/serializer must handle this special case.
+pme_schema.EnumProperty(
+    "prop", "prop_type", "BOOL",
+    [
+        ('BOOL', "Boolean", ""),
+        ('INT', "Integer", ""),
+        ('FLOAT', "Float", ""),
+        ('STRING', "String", ""),
+        ('ENUM', "Enum", ""),
+    ],
+)
 pme_schema.IntProperty("prop", "vector", 1)
 pme_schema.BoolProperty("prop", "mulsel", False)
 pme_schema.BoolProperty("prop", "hor_exp", True)

@@ -91,14 +91,8 @@
   "description": "モデリング作業用のメインメニュー",
   "description_expr": null,
 
-  "style": {
-    "accent_color": "#4A90D9",
-    "accent_usage": "none"
-  },
-
   "poll": null,
   "tags": ["modeling"],
-  "extend_target": null,
 
   "items": [MenuItem, ...],
 
@@ -118,11 +112,9 @@
 | `settings` | object | ✓ | {} | モード別設定（フラット） |
 | `description` | string \| null | - | null | 静的な説明文（`\n` で改行） |
 | `description_expr` | string \| null | - | null | Python 式による動的説明文 |
-| `style` | Style \| null | - | null | スタイル設定 |
 | `poll` | string | - | "return True" | ポーリング条件（Python式） |
 | `tags` | string[] | - | [] | タグの配列 |
 | `items` | MenuItem[] | ✓ | [] | メニューアイテムの配列 |
-| `extend_target` | string \| null | - | null | 拡張対象の Blender Panel/Header/Menu ID (PANEL/DIALOG/RMENU のみ) |
 | `extensions` | object | - | {} | 拡張フィールド |
 
 ### uid の形式
@@ -240,14 +232,23 @@ random_id:
 
 ---
 
-## Style オブジェクト
+## Style オブジェクト（extensions 配下）
+
+> **Note**: Style は将来機能（Issue #80）のため、`extensions.pme.style` に配置。
+> 安定後に first-class フィールドに昇格予定。
 
 Menu と MenuItem で共通の構造。MenuItem は Menu の style を継承し、上書きできる。
 
 ```json
 {
-  "accent_color": "#4CAF50",
-  "accent_usage": "bar-left"
+  "extensions": {
+    "pme": {
+      "style": {
+        "accent_color": "#4CAF50",
+        "accent_usage": "bar-left"
+      }
+    }
+  }
 }
 ```
 
@@ -316,13 +317,17 @@ settings はフラット構造で、mode に応じて異なるプロパティが
 
 ```json
 {
-  "title": true
+  "title": true,
+  "extend_target": null,
+  "extend_position": "append"
 }
 ```
 
 | プロパティ | 型 | デフォルト | 説明 |
 |-----------|-----|----------|------|
 | `title` | boolean | true | タイトルを表示 |
+| `extend_target` | string \| null | null | 拡張対象の Blender Menu ID |
+| `extend_position` | string | "append" | 挿入位置（"append" / "prepend"） |
 
 ### DIALOG (Pop-up Dialog)
 
@@ -331,40 +336,48 @@ settings はフラット構造で、mode に応じて異なるプロパティが
   "title": true,
   "box": false,
   "width": 300,
-  "auto_close": true,
+  "auto_close": false,
   "expand": false,
-  "panel": false
+  "panel": 1,
+  "extend_target": null,
+  "extend_position": "append"
 }
 ```
 
 | プロパティ | 型 | デフォルト | 説明 |
 |-----------|-----|----------|------|
 | `title` | boolean | true | タイトルを表示 |
-| `box` | boolean | false | ボックス表示 |
+| `box` | boolean | true | ボックス表示 |
 | `width` | integer | 300 | ダイアログ幅 |
-| `auto_close` | boolean | true | 自動クローズ |
+| `auto_close` | boolean | false | 自動クローズ |
 | `expand` | boolean | false | 展開表示 |
-| `panel` | boolean | false | パネルモード |
+| `panel` | integer | 1 | 表示モード（0=PIE, 1=PANEL, 2=POPUP） |
+| `extend_target` | string \| null | null | 拡張対象の Blender Panel ID |
+| `extend_position` | string | "append" | 挿入位置（"append" / "prepend"） |
 
 ### PANEL (Panel Group)
 
 ```json
 {
   "space": "VIEW_3D",
-  "region": "UI",
-  "context": "NONE",
-  "category": "My Panel",
-  "icons": false
+  "region": "TOOLS",
+  "context": "ANY",
+  "category": "My Category",
+  "icons": false,
+  "extend_target": null,
+  "extend_position": "append"
 }
 ```
 
 | プロパティ | 型 | デフォルト | 説明 |
 |-----------|-----|----------|------|
 | `space` | string | "VIEW_3D" | スペースタイプ |
-| `region` | string | "UI" | リージョンタイプ |
-| `context` | string | "NONE" | コンテキスト |
-| `category` | string | "" | カテゴリ名 |
+| `region` | string | "TOOLS" | リージョンタイプ |
+| `context` | string | "ANY" | コンテキスト |
+| `category` | string | "My Category" | カテゴリ名 |
 | `icons` | boolean | false | アイコン表示 |
+| `extend_target` | string \| null | null | 拡張対象の Blender Panel ID |
+| `extend_position` | string | "append" | 挿入位置（"append" / "prepend"） |
 
 ### MODAL (Modal Operator)
 
@@ -432,14 +445,14 @@ settings はフラット構造で、mode に応じて異なるプロパティが
 > **PME1 互換性**: PME1 では `poll_cmd` フィールドが PROPERTY モードでプロパティタイプを格納していた。
 > PME2 では `settings.prop_type` に分離し、`poll` は常に poll 条件として使用する。
 
+> **実装注意**: 内部実装では `prop_type` は `pm.poll_cmd` に直接格納されており、
+> `pm.data` 経由ではない。converter/serializer で特別な処理が必要。
+
 ### MACRO
 
 追加設定なし（内部データタイプ: `m?`）
 
 ### HPANEL (Hiding Panel)
-
-> **Note (9-D-2)**: HPANEL は Blender UI を「隠す」機能であり、「拡張する」機能ではない。
-> そのため `extend_target` は HPANEL には適用されない。内部プレフィックスは `hpg` が正式。
 
 追加設定なし（内部データタイプ: `hpg?`）
 
@@ -463,12 +476,14 @@ settings はフラット構造で、mode に応じて異なるプロパティが
   "description": "シーンに立方体プリミティブを追加",
   "description_expr": null,
 
-  "style": {
-    "accent_color": "#4CAF50",
-    "accent_usage": "bar-left"
-  },
-
-  "extensions": {}
+  "extensions": {
+    "pme": {
+      "style": {
+        "accent_color": "#4CAF50",
+        "accent_usage": "bar-left"
+      }
+    }
+  }
 }
 ```
 
@@ -482,8 +497,7 @@ settings はフラット構造で、mode に応じて異なるプロパティが
 | `enabled` | boolean | ✓ | true | 有効/無効 |
 | `description` | string \| null | - | null | 静的な説明文 |
 | `description_expr` | string \| null | - | null | Python 式による動的説明文 |
-| `style` | Style \| null | - | null | スタイル設定（親 Menu から継承） |
-| `extensions` | object | - | {} | 拡張フィールド |
+| `extensions` | object | - | {} | 拡張フィールド（`pme.style` など） |
 
 ### description と description_expr の使い分け
 
@@ -768,8 +782,8 @@ PME2: {
 
 | schema_version | 変更点 |
 |---------------|--------|
-| 2.0 | 初版（uid, style, description/description_expr） |
-| 2.1 | conditions 昇格予定 |
+| 2.0 | 初版（uid, description/description_expr, extend_target in settings, style in extensions） |
+| 2.1 | conditions, style 昇格予定 |
 
 ---
 
@@ -781,5 +795,5 @@ PME2: {
 
 ---
 
-*Last Updated: 2026-01-05*
-*Design Review: Mentor feedback incorporated*
+*Last Updated: 2026-01-10*
+*Design Review: 9-D diagnosis incorporated*
