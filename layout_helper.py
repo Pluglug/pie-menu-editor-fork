@@ -718,6 +718,8 @@ cur_col = Col()
 
 
 def draw_pme_layout(pm, column, draw_pmi, rows=None, icon_btn_scale_x=-1):
+    # Set root_layout for CUSTOM mode scripts to access via ROOT_L
+    pme.context.root_layout = column
     CLayout.save()
 
     global num_btns, num_spacers, max_btns, max_spacers, al_l, al_r

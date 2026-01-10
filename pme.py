@@ -36,6 +36,7 @@ class PMEContext:
         self.exec_locals = None
         self.exec_user_locals = dict()
         self._layout = None
+        self._root_layout = None
         self._event = None
         self.edit_item_idx = None
 
@@ -65,6 +66,15 @@ class PMEContext:
     def layout(self, value):
         self._layout = value
         self._globals["L"] = value
+
+    @property
+    def root_layout(self):
+        return self._root_layout
+
+    @root_layout.setter
+    def root_layout(self, value):
+        self._root_layout = value
+        self._globals["ROOT_L"] = value
 
     @property
     def event(self):
