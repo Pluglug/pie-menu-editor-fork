@@ -86,17 +86,39 @@ from ..operators.ed import (
 EXTENDED_PANELS = {}
 
 
-def gen_header_draw(pm_name):
+def get_pm_by_uid(uid):
+    """Get pm by uid. Returns None if not found."""
+    if not uid:
+        return None
+    pr = get_prefs()
+    for pm in pr.pie_menus:
+        if pm.uid == uid:
+            return pm
+    return None
+
+
+def _get_extend_key(pm):
+    """Get the key for EXTENDED_PANELS. Uses uid if available, falls back to name."""
+    return pm.uid if pm.uid else pm.name
+
+
+def gen_header_draw(pm_uid_or_name, is_right_pm=False):
+    """Generate header draw function.
+
+    Args:
+        pm_uid_or_name: pm.uid (preferred) or pm.name (fallback)
+        is_right_pm: Whether this is for right region
+    """
     def _draw(self, context):
         is_right_region = context.region.alignment == 'RIGHT'
-        _, is_right_pm, _ = extract_str_flags_b(pm_name, F_RIGHT, F_PRE)
         if is_right_region and is_right_pm or not is_right_region and not is_right_pm:
-            try:
-                pm = get_prefs().pie_menus[pm_name]
-            except Exception:
-                # During app template / homefile reload PME prefs may be
-                # temporarily unavailable; skip drawing instead of raising.
-                return
+            # Try uid first, then fall back to name
+            pm = get_pm_by_uid(pm_uid_or_name)
+            if not pm:
+                try:
+                    pm = get_prefs().pie_menus[pm_uid_or_name]
+                except Exception:
+                    return
 
             draw_pme_layout(
                 pm,
@@ -104,78 +126,131 @@ def gen_header_draw(pm_name):
                 WM_OT_pme_user_pie_menu_call._draw_item,
                 icon_btn_scale_x=1,
             )
-
     return _draw
 
 
-def gen_menu_draw(pm_name):
+def gen_menu_draw(pm_uid_or_name):
+    """Generate menu draw function."""
     def _draw(self, context):
-        try:
-            pm = get_prefs().pie_menus[pm_name]
-        except Exception:
-            return
+        pm = get_pm_by_uid(pm_uid_or_name)
+        if not pm:
+            try:
+                pm = get_prefs().pie_menus[pm_uid_or_name]
+            except Exception:
+                return
 
         WM_OT_pme_user_pie_menu_call.draw_rm(pm, self.layout)
-
     return _draw
 
 
-def gen_panel_draw(pm_name):
+def gen_panel_draw(pm_uid_or_name):
+    """Generate panel draw function."""
     def _draw(self, context):
-        try:
-            pm = get_prefs().pie_menus[pm_name]
-        except Exception:
-            return
+        pm = get_pm_by_uid(pm_uid_or_name)
+        if not pm:
+            try:
+                pm = get_prefs().pie_menus[pm_uid_or_name]
+            except Exception:
+                return
 
         draw_pme_layout(
             pm,
             self.layout.column(align=True),
             WM_OT_pme_user_pie_menu_call._draw_item,
         )
-
     return _draw
 
 
 def extend_panel(pm):
-    if pm.name in EXTENDED_PANELS:
+    """Extend a Blender panel/menu/header with PME content.
+
+    Phase 9-X: Uses pm.data for extend_target, with pm.name fallback for compatibility.
+
+    Args:
+        pm: PMItem to extend from
+    """
+    key = _get_extend_key(pm)
+    if key in EXTENDED_PANELS:
         return
 
-    tp_name, right, pre = extract_str_flags_b(pm.name, F_RIGHT, F_PRE)
+    # Get extend_target from pm.data (Phase 9-X)
+    # Use appropriate prefix based on mode: pd for DIALOG, rm for RMENU
+    if pm.mode == 'DIALOG':
+        extend_target = pm.get_data("pd_extend_target")
+    elif pm.mode == 'RMENU':
+        extend_target = pm.get_data("rm_extend_target")
+    else:
+        extend_target = None
 
-    if (
-        tp_name.startswith("PME_PT")
-        or tp_name.startswith("PME_MT")
-        or tp_name.startswith("PME_HT")
-    ):
+    # Fallback: parse from pm.name (backward compatibility)
+    is_right = False
+    is_prepend = False
+    if not extend_target:
+        extend_target, is_right, is_prepend = extract_str_flags_b(pm.name, F_RIGHT, F_PRE)
+    else:
+        # Get position from pm.data
+        if pm.mode == 'DIALOG':
+            extend_position = pm.get_data("pd_extend_position", 0)
+        elif pm.mode == 'RMENU':
+            extend_position = pm.get_data("rm_extend_position", 0)
+        else:
+            extend_position = 0
+        is_prepend = extend_position < 0
+        # Note: is_right is deprecated, always False for new menus
+
+    if not extend_target:
         return
 
-    tp = getattr(bpy_types, tp_name, None)
+    # Skip PME's own panels
+    if extend_target.startswith("PME_"):
+        return
+
+    tp = getattr(bpy_types, extend_target, None)
     if not tp:
         return
 
-    if tp and issubclass(tp, (Panel, Menu, Header)):
-        if '_HT_' in pm.name:
-            EXTENDED_PANELS[pm.name] = gen_header_draw(pm.name)
-        elif '_MT_' in pm.name:
-            EXTENDED_PANELS[pm.name] = gen_menu_draw(pm.name)
-        else:
-            EXTENDED_PANELS[pm.name] = gen_panel_draw(pm.name)
-        f = tp.prepend if pre else tp.append
-        f(EXTENDED_PANELS[pm.name])
-        SU.redraw_screen()
+    if not issubclass(tp, (Panel, Menu, Header)):
+        return
+
+    # Generate draw function using uid (or name as fallback)
+    if '_HT_' in extend_target:
+        EXTENDED_PANELS[key] = gen_header_draw(key, is_right)
+    elif '_MT_' in extend_target:
+        EXTENDED_PANELS[key] = gen_menu_draw(key)
+    else:
+        EXTENDED_PANELS[key] = gen_panel_draw(key)
+
+    f = tp.prepend if is_prepend else tp.append
+    f(EXTENDED_PANELS[key])
+    SU.redraw_screen()
 
 
 def unextend_panel(pm):
-    if pm.name not in EXTENDED_PANELS:
+    """Remove extension from a Blender panel/menu/header.
+
+    Phase 9-X: Uses pm.uid as key, with pm.name fallback for compatibility.
+    """
+    key = _get_extend_key(pm)
+    if key not in EXTENDED_PANELS:
         return
 
-    tp_name, _, _ = extract_str_flags_b(pm.name, F_RIGHT, F_PRE)
+    # Get extend_target from pm.data or pm.name
+    if pm.mode == 'DIALOG':
+        extend_target = pm.get_data("pd_extend_target")
+    elif pm.mode == 'RMENU':
+        extend_target = pm.get_data("rm_extend_target")
+    else:
+        extend_target = None
 
-    tp = getattr(bpy_types, tp_name, None)
+    if not extend_target:
+        extend_target, _, _ = extract_str_flags_b(pm.name, F_RIGHT, F_PRE)
+
+    tp = getattr(bpy_types, extend_target, None)
     if tp:
-        tp.remove(EXTENDED_PANELS[pm.name])
-        del EXTENDED_PANELS[pm.name]
+        tp.remove(EXTENDED_PANELS[key])
+        del EXTENDED_PANELS[key]
         SU.redraw_screen()
+
 
 
 class EditorBase:
