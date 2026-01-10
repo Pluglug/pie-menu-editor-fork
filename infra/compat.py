@@ -11,6 +11,7 @@ from .. import addon
 from ..addon import get_prefs
 from .debug import *
 from ..core import constants as CC
+from .utils import extract_str_flags_b
 
 
 def fix(pms=None, version=None):
@@ -241,6 +242,54 @@ def fix_2_0_0(pr, pm):
     if not pm.uid:
         from ..core.uid import generate_uid
         pm.uid = generate_uid(pm.mode)
+
+    # Migrate extend_target from pm.name suffix to pm.data (Phase 9-X: #89)
+    if pm.mode in ('DIALOG', 'RMENU'):
+        _migrate_extend_target(pm)
+
+
+def _migrate_extend_target(pm):
+    """Migrate extend_target from pm.name suffix to pm.data.
+
+    PME1 encodes extend information in pm.name with suffixes:
+    - F_PRE ("_pre") → prepend position
+    - F_RIGHT ("_right") → right region (header only)
+
+    PME2 stores these in pm.data:
+    - pd_extend_target / rm_extend_target: Blender Panel/Menu ID
+    - pd_extend_position / rm_extend_position: int (<0: prepend, >=0: append)
+    """
+    # Get prefix based on mode
+    prefix = "pd" if pm.mode == 'DIALOG' else "rm"
+    extend_target_key = f"{prefix}_extend_target"
+    extend_position_key = f"{prefix}_extend_position"
+
+    # Skip if already migrated
+    if pm.get_data(extend_target_key):
+        return
+
+    # Parse pm.name for Blender ID and position flags
+    tp_name, is_right, is_prepend = extract_str_flags_b(
+        pm.name, CC.F_RIGHT, CC.F_PRE
+    )
+
+    # Check if tp_name is a valid Blender type ID
+    if not any(x in tp_name for x in ('_PT_', '_MT_', '_HT_')):
+        return
+
+    # Set extend_target
+    pm.set_data(extend_target_key, tp_name)
+
+    # Set extend_position: -1 for prepend, 0 for append
+    extend_position = -1 if is_prepend else 0
+    pm.set_data(extend_position_key, extend_position)
+
+    DBG_INIT and logi(
+        "PME: migrated extend_target",
+        f"pm={pm.name!r}",
+        f"extend_target={tp_name!r}",
+        f"extend_position={extend_position}"
+    )
 
 
 # Valid property types for PROPERTY mode migration
