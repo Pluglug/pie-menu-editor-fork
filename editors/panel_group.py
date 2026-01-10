@@ -27,6 +27,7 @@ from ..ui.panels import (
     PLayout,
 )
 from .. import pme
+from ..infra.utils import extract_str_flags_b
 
 # =============================================================================
 # Schema Definitions (PANEL)
@@ -205,6 +206,36 @@ def poll_pme_panel(cls, context):
     return pm.poll(cls, context)
 
 
+def find_pms_by_extend_target(extend_target, mode):
+    """Find existing pms with the same extend_target.
+
+    Args:
+        extend_target: Blender Panel/Menu/Header ID
+        mode: 'DIALOG' or 'RMENU'
+
+    Returns:
+        List of matching pms
+    """
+    pr = get_prefs()
+    prefix = "pd" if mode == 'DIALOG' else "rm"
+    target_key = f"{prefix}_extend_target"
+
+    results = []
+    for pm in pr.pie_menus:
+        if pm.mode != mode:
+            continue
+        # Check pm.data first
+        pm_target = pm.get_data(target_key)
+        if not pm_target:
+            # Fallback: check pm.name (for unmigrated data)
+            pm_target, _, _ = extract_str_flags_b(pm.name, F_RIGHT, F_PRE)
+
+        if pm_target == extend_target:
+            results.append(pm)
+
+    return results
+
+
 class PME_OT_panel_menu(Operator):
     bl_idname = "pme.panel_menu"
     bl_label = ""
@@ -215,10 +246,41 @@ class PME_OT_panel_menu(Operator):
     is_right_region: BoolProperty()
 
     def extend_ui_operator(self, label, icon, mode, pm_name):
+        """Draw extend UI operator button(s).
+
+        Phase 9-X: Uses pm.data (extend_target) for existing check.
+        If existing extend menus found for this target:
+            Show "Add" button and list of existing menus to go to
+        Otherwise:
+            Show only "Add" button
+        """
         pr = get_prefs()
-        if pm_name in pr.pie_menus:
-            lh.operator("wm.pm_select", label, icon, pm_name=pm_name)
+
+        # Parse pm_name to get extend_target
+        extend_target, _, _ = extract_str_flags_b(pm_name, F_RIGHT, F_PRE)
+
+        # Find existing pms with same target
+        existing = find_pms_by_extend_target(extend_target, mode)
+
+        if existing:
+            # Show "Add" button
+            lh.operator(
+                PME_OT_pm_add.bl_idname,
+                f"{label} (Add New)",
+                'ADD',
+                mode=mode,
+                name=pm_name
+            )
+            # Show go-to for each existing
+            for pm in existing:
+                lh.operator(
+                    "wm.pm_select",
+                    f"  → {pm.name}",
+                    icon,
+                    pm_name=pm.name
+                )
         else:
+            # No existing, just show Add
             lh.operator(PME_OT_pm_add.bl_idname, label, icon, mode=mode, name=pm_name)
 
     def draw_header_menu(self, menu, context):
