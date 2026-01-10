@@ -10,7 +10,8 @@ import bpy
 from bpy import types as bpy_types
 from bpy.props import BoolProperty, EnumProperty, IntProperty, StringProperty
 from bpy.types import Header, Operator, Panel
-from ..core import constants as CC
+from ..core.constants import PANEL_FOLDER, PANEL_FILE, F_RIGHT, F_PRE
+from ..core.schema import schema
 from ..infra.collections import MoveItemOperator
 from .base import EditorBase, PME_OT_pm_edit, PME_OT_pm_add
 from ..addon import get_prefs, ic, ic_cb
@@ -26,7 +27,15 @@ from ..ui.panels import (
     PLayout,
 )
 from .. import pme
-from ..core.schema import schema
+
+# =============================================================================
+# Schema Definitions (PANEL)
+# =============================================================================
+schema.BoolProperty("pg", "pg_wicons")
+schema.StringProperty("pg", "pg_context", "ANY")
+schema.StringProperty("pg", "pg_category", "My Category")
+schema.StringProperty("pg", "pg_space", "VIEW_3D")
+schema.StringProperty("pg", "pg_region", "TOOLS")
 
 
 class PME_OT_panel_sub_toggle(Operator):
@@ -44,7 +53,7 @@ class PME_OT_panel_sub_toggle(Operator):
         pr = get_prefs()
         pm = pr.selected_pm
         pmi = pm.pmis[self.idx]
-        pmi.icon = CC.PANEL_FOLDER if pmi.icon else CC.PANEL_FILE
+        pmi.icon = PANEL_FOLDER if pmi.icon else PANEL_FILE
 
         pm.update_panel_group()
         return {'FINISHED'}
@@ -218,9 +227,9 @@ class PME_OT_panel_menu(Operator):
         pr = get_prefs()
         pm = pr.selected_pm
 
-        right_suffix = CC.F_RIGHT if self.is_right_region else ""
+        right_suffix = F_RIGHT if self.is_right_region else ""
         self.extend_ui_operator(
-            "Extend Header", 'TRIA_LEFT', 'DIALOG', self.panel + right_suffix + CC.F_PRE
+            "Extend Header", 'TRIA_LEFT', 'DIALOG', self.panel + right_suffix + F_PRE
         )
 
         self.extend_ui_operator(
@@ -272,7 +281,7 @@ class PME_OT_panel_menu(Operator):
                 lh.sep()
 
         self.extend_ui_operator(
-            "Extend Menu", 'TRIA_UP', 'RMENU', self.panel + CC.F_PRE
+            "Extend Menu", 'TRIA_UP', 'RMENU', self.panel + F_PRE
         )
         self.extend_ui_operator("Extend Menu", 'TRIA_DOWN', 'RMENU', self.panel)
 
@@ -374,7 +383,7 @@ class PME_OT_panel_menu(Operator):
             lh.sep()
 
         self.extend_ui_operator(
-            "Extend Panel", 'TRIA_UP', 'DIALOG', self.panel + CC.F_PRE
+            "Extend Panel", 'TRIA_UP', 'DIALOG', self.panel + F_PRE
         )
         self.extend_ui_operator("Extend Panel", 'TRIA_DOWN', 'DIALOG', self.panel)
 
@@ -644,7 +653,7 @@ class PME_OT_panel_item_move(MoveItemOperator, Operator):
     bl_idname = "pme.panel_item_move"
 
     def get_icon(self, item, idx):
-        return 'FILE' if item.icon == CC.PANEL_FILE else 'FILE_FOLDER'
+        return 'FILE' if item.icon == PANEL_FILE else 'FILE_FOLDER'
 
     def get_collection(self):
         return get_prefs().selected_pm.pmis
@@ -653,7 +662,7 @@ class PME_OT_panel_item_move(MoveItemOperator, Operator):
         pr = get_prefs()
         pm = pr.selected_pm
         if self.new_idx == 0:
-            pm.pmis[0].icon = CC.PANEL_FOLDER
+            pm.pmis[0].icon = PANEL_FOLDER
 
         pm.update_panel_group()
         tag_redraw()
@@ -678,13 +687,6 @@ class PME_OT_panel_item_remove(Operator):
         pr.update_tree()
         tag_redraw()
         return {'CANCELLED'}
-
-
-schema.BoolProperty("pg", "pg_wicons")
-schema.StringProperty("pg", "pg_context", "ANY")
-schema.StringProperty("pg", "pg_category", "My Category")
-schema.StringProperty("pg", "pg_space", "VIEW_3D")
-schema.StringProperty("pg", "pg_region", "TOOLS")
 
 
 class Editor(EditorBase):
@@ -760,13 +762,13 @@ class Editor(EditorBase):
         for idx, pmi in enumerate(pm.pmis):
             lh.row(col)
 
-            if pmi.icon == CC.PANEL_FILE:
+            if pmi.icon == PANEL_FILE:
                 lh.operator("pme.panel_sub_toggle", "", 'BLANK1', idx=idx)
 
             lh.operator(
                 "pme.panel_sub_toggle",
                 "",
-                'FILE' if pmi.icon == CC.PANEL_FILE else 'FILE_FOLDER',
+                'FILE' if pmi.icon == PANEL_FILE else 'FILE_FOLDER',
                 idx=idx,
             )
             icon = (
@@ -800,7 +802,7 @@ class Editor(EditorBase):
         lh.operator(
             "pme.panel_sub_toggle",
             "Sub-Panel",
-            ic_cb(pmi.icon == CC.PANEL_FILE),
+            ic_cb(pmi.icon == PANEL_FILE),
             idx=idx,
         )
 

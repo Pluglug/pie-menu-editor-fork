@@ -27,6 +27,11 @@ from ..ui import tag_redraw, shorten_str
 from ..core.constants import SPACER_SCALE_Y, SEPARATOR_SCALE_Y
 from ..core.schema import schema
 
+# =============================================================================
+# Schema Definitions (RMENU)
+# =============================================================================
+schema.BoolProperty("rm", "rm_title", True)
+
 
 class WM_OT_rmi_add(Operator):
     bl_idname = "wm.rmi_add"
@@ -598,9 +603,6 @@ class WM_OT_rmi_specials_call(Operator):
     def execute(self, context):
         context.window_manager.popup_menu(self._draw)
         return {'FINISHED'}
-
-
-schema.BoolProperty("rm", "rm_title", True)
 
 
 class Editor(EditorBase):

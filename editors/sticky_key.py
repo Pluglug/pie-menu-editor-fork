@@ -12,6 +12,11 @@ from ..addon import get_prefs
 from ..ui import tag_redraw
 from ..operator_utils import find_statement
 
+# =============================================================================
+# Schema Definitions (STICKY)
+# =============================================================================
+schema.BoolProperty("sk", "sk_block_ui", False)
+
 
 class PME_OT_sticky_key_edit(bpy.types.Operator):
     bl_idname = "pme.sticky_key_edit"
@@ -50,9 +55,6 @@ class PME_OT_sticky_key_edit(bpy.types.Operator):
         tag_redraw()
 
         return {'FINISHED'}
-
-
-schema.BoolProperty("sk", "sk_block_ui", False)
 
 
 class Editor(EditorBase):

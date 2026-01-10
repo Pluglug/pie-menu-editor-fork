@@ -26,7 +26,17 @@ from ..ui import tag_redraw, shorten_str
 from ..bl_utils import uname
 from ..infra.collections import MoveItemOperator
 from .. import operator_utils
-from ..core import constants as CC
+from ..core.constants import MAX_STR_LEN
+
+# =============================================================================
+# Schema Definitions (PROPERTY)
+# =============================================================================
+pme_schema.IntProperty("prop", "vector", 1)
+pme_schema.BoolProperty("prop", "mulsel", False)
+pme_schema.BoolProperty("prop", "hor_exp", True)
+pme_schema.BoolProperty("prop", "exp", True)
+pme_schema.BoolProperty("prop", "save", True)
+
 
 PROP_GETTERS = dict()
 PROP_SETTERS = dict()
@@ -682,13 +692,6 @@ class PME_OT_prop_pmi_move(MoveItemOperator, Operator):
         tag_redraw()
 
 
-pme_schema.IntProperty("prop", "vector", 1)
-pme_schema.BoolProperty("prop", "mulsel", False)
-pme_schema.BoolProperty("prop", "hor_exp", True)
-pme_schema.BoolProperty("prop", "exp", True)
-pme_schema.BoolProperty("prop", "save", True)
-
-
 class Editor(EditorBase):
 
     def __init__(self):
@@ -737,7 +740,7 @@ class Editor(EditorBase):
         self.register_pmi_prop(
             "ed_text",
             StringProperty(
-                get=ed_text_get, set=ed_text_set, maxlen=CC.MAX_STR_LEN
+                get=ed_text_get, set=ed_text_set, maxlen=MAX_STR_LEN
             ),
         )
 

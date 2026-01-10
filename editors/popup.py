@@ -22,7 +22,8 @@ from .base import (
     unextend_panel,
 )
 from ..addon import get_prefs, ic, ic_cb, ic_eye
-from ..core import constants as CC
+from ..core.constants import F_ICON_ONLY, F_HIDDEN, SPACER_SCALE_Y
+from ..core.schema import schema
 from ..ui.layout import lh, draw_pme_layout, Row
 from ..ui import tag_redraw, shorten_str
 from ..infra.collections import MoveItemOperator, move_item, remove_item
@@ -30,7 +31,75 @@ from ..infra.debug import *
 from ..bl_utils import PME_OT_message_box, ConfirmBoxHandler, enum_item_idx
 from ..operators import popup_dialog_pie, WM_OT_pme_user_pie_menu_call
 from ..keymap_helper import CTRL, SHIFT, ALT, OSKEY, test_mods
-from ..core.schema import schema
+
+# =============================================================================
+# Schema Definitions (DIALOG / row / spacer)
+# =============================================================================
+# Row properties
+schema.EnumProperty(
+    "row",
+    "align",
+    'CENTER',
+    [
+        ('CENTER', "Center", 0),
+        ('LEFT', "Left", 0),
+        ('RIGHT', "Right", 0),
+    ],
+)
+schema.EnumProperty(
+    "row",
+    "size",
+    'NORMAL',
+    [
+        ('NORMAL', "Normal", 1),
+        ('LARGE', "Large", 1.25),
+        ('LARGER', "Larger", 1.5),
+    ],
+)
+schema.EnumProperty(
+    "row",
+    "vspacer",
+    'NORMAL',
+    [
+        ('NONE', "None", 0),
+        ('NORMAL', "Normal", 1),
+        ('LARGE', "Large", 3),
+        ('LARGER', "Larger", 5),
+    ],
+)
+schema.BoolProperty("row", "fixed_col", False)
+schema.BoolProperty("row", "fixed_but", False)
+
+# Spacer properties
+schema.EnumProperty(
+    "spacer",
+    "hsep",
+    'NONE',
+    [
+        ('NONE', "None", ""),
+        ('SPACER', "Spacer", ""),
+        ('COLUMN', "Column", ""),
+        ('ALIGNER', "Aligner", ""),
+    ],
+)
+schema.EnumProperty(
+    "spacer",
+    "subrow",
+    'NONE',
+    [
+        ('NONE', "None", 0),
+        ('BEGIN', "Begin", 0),
+        ('END', "End", 0),
+    ],
+)
+
+# DIALOG properties
+schema.BoolProperty("pd", "pd_title", True)
+schema.BoolProperty("pd", "pd_box", True)
+schema.BoolProperty("pd", "pd_expand")
+schema.IntProperty("pd", "pd_panel", 1)
+schema.BoolProperty("pd", "pd_auto_close", False)
+schema.IntProperty("pd", "pd_width", 300)
 
 
 current_pdi = 0
@@ -1143,17 +1212,17 @@ class PME_OT_pdi_menu(Operator):
             lh.operator(
                 WM_OT_pmi_icon_tag_toggle.bl_idname,
                 "Hide Text",
-                ic_cb(CC.F_ICON_ONLY in pmi.icon),
+                ic_cb(F_ICON_ONLY in pmi.icon),
                 idx=self.idx,
-                tag=CC.F_ICON_ONLY,
+                tag=F_ICON_ONLY,
             )
 
         lh.operator(
             WM_OT_pmi_icon_tag_toggle.bl_idname,
             "Visible",
-            ic_cb(CC.F_HIDDEN not in pmi.icon),
+            ic_cb(F_HIDDEN not in pmi.icon),
             idx=self.idx,
-            tag=CC.F_HIDDEN,
+            tag=F_HIDDEN,
         )
 
         lh.sep(check=True)
@@ -1429,7 +1498,7 @@ class PME_OT_pdi_menu(Operator):
         # Toggle Hide Text
         elif test_mods(event, ALT | SHIFT):
             bpy.ops.wm.pmi_icon_tag_toggle(
-                'INVOKE_DEFAULT', idx=self.idx, tag=CC.F_ICON_ONLY
+                'INVOKE_DEFAULT', idx=self.idx, tag=F_ICON_ONLY
             )
 
         # Remove Button
@@ -1649,69 +1718,6 @@ class PME_OT_pdr_menu(Operator):
         return {'FINISHED'}
 
 
-schema.EnumProperty(
-    "row",
-    "align",
-    'CENTER',
-    [
-        ('CENTER', "Center", 0),
-        ('LEFT', "Left", 0),
-        ('RIGHT', "Right", 0),
-    ],
-)
-schema.EnumProperty(
-    "row",
-    "size",
-    'NORMAL',
-    [
-        ('NORMAL', "Normal", 1),
-        ('LARGE', "Large", 1.25),
-        ('LARGER', "Larger", 1.5),
-    ],
-)
-schema.EnumProperty(
-    "row",
-    "vspacer",
-    'NORMAL',
-    [
-        ('NONE', "None", 0),
-        ('NORMAL', "Normal", 1),
-        ('LARGE', "Large", 3),
-        ('LARGER', "Larger", 5),
-    ],
-)
-schema.BoolProperty("row", "fixed_col", False)
-schema.BoolProperty("row", "fixed_but", False)
-schema.EnumProperty(
-    "spacer",
-    "hsep",
-    'NONE',
-    [
-        ('NONE', "None", ""),
-        ('SPACER', "Spacer", ""),
-        ('COLUMN', "Column", ""),
-        ('ALIGNER', "Aligner", ""),
-    ],
-)
-schema.EnumProperty(
-    "spacer",
-    "subrow",
-    'NONE',
-    [
-        ('NONE', "None", 0),
-        ('BEGIN', "Begin", 0),
-        ('END', "End", 0),
-    ],
-)
-
-schema.BoolProperty("pd", "pd_title", True)
-schema.BoolProperty("pd", "pd_box", True)
-schema.BoolProperty("pd", "pd_expand")
-schema.IntProperty("pd", "pd_panel", 1)
-schema.BoolProperty("pd", "pd_auto_close", False)
-schema.IntProperty("pd", "pd_width", 300)
-
-
 class Editor(EditorBase):
 
     def __init__(self):
@@ -1834,7 +1840,7 @@ class Editor(EditorBase):
                 for i in range(0, n):
                     lh.sep()
             row = lh.row(column2)
-            row.scale_y = r[1] * r[2] + CC.SPACER_SCALE_Y * r[3]
+            row.scale_y = r[1] * r[2] + SPACER_SCALE_Y * r[3]
             lh.operator(PME_OT_pdr_menu.bl_idname, "", 'COLLAPSEMENU', row_idx=r[0])
             prev_r = r
 
