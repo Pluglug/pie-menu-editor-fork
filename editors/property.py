@@ -31,12 +31,13 @@ from ..core.constants import MAX_STR_LEN
 # =============================================================================
 # Schema Definitions (PROPERTY)
 # =============================================================================
-# NOTE: pr_prop_type is stored in pm.poll_cmd, not pm.data.
-#       This schema definition is for JSON export/import consistency.
-#       The converter/serializer must handle this special case.
-#
 # Type prefix: "pr" (matches uid prefix for PROPERTY mode)
 # All properties use pr_ prefix for consistency with other modes.
+#
+# pr_prop_type: Property type (BOOL, INT, FLOAT, STRING, ENUM)
+#   - Stored in pm.data as pr_prop_type=BOOL etc.
+#   - Previously stored in pm.poll_cmd (PME1 legacy), now fully migrated
+#   - Access via get_prop_type(pm) / set_prop_type(pm, value)
 pme_schema.EnumProperty(
     "pr", "pr_prop_type", "BOOL",
     [
@@ -52,6 +53,39 @@ pme_schema.BoolProperty("pr", "pr_mulsel", False)
 pme_schema.BoolProperty("pr", "pr_hor_exp", True)
 pme_schema.BoolProperty("pr", "pr_exp", True)
 pme_schema.BoolProperty("pr", "pr_save", True)
+
+# Valid property types for PROPERTY mode
+VALID_PROP_TYPES = {'BOOL', 'INT', 'FLOAT', 'STRING', 'ENUM'}
+
+
+def get_prop_type(pm) -> str:
+    """Get property type from pm.data (pr_prop_type).
+
+    Returns validated property type, defaulting to 'BOOL' if invalid.
+    """
+    prop_type = pm.get_data("pr_prop_type")
+    if prop_type not in VALID_PROP_TYPES:
+        DBG_PROP and logw(
+            "PME: invalid pr_prop_type in pm.data",
+            f"pm={pm.name}",
+            f"prop_type={prop_type!r}",
+            "defaulting to BOOL"
+        )
+        return 'BOOL'
+    return prop_type
+
+
+def set_prop_type(pm, value: str):
+    """Set property type in pm.data (pr_prop_type)."""
+    if value not in VALID_PROP_TYPES:
+        logw(
+            "PME: attempt to set invalid prop_type",
+            f"pm={pm.name}",
+            f"value={value!r}",
+            "using BOOL instead"
+        )
+        value = 'BOOL'
+    pm.set_data("pr_prop_type", value)
 
 
 PROP_GETTERS = dict()
@@ -163,27 +197,30 @@ def ed_text_set(self, value):
 
 
 def ed_type_get(self):
+    pm = get_prefs().selected_pm
     return self.bl_rna.properties["ed_type"].enum_items.find(
-        get_prefs().selected_pm.poll_cmd
+        get_prop_type(pm)
     )
 
 
 def ed_type_set(self, value):
     pm = get_prefs().selected_pm
     items = self.bl_rna.properties["ed_type"].enum_items
-    v = items.find(pm.poll_cmd)
+    current_type = get_prop_type(pm)
+    v = items.find(current_type)
     if v == value:
         return
 
-    pm.poll_cmd = items[value].identifier
-    pm.clear_data("mulsel", "hor_exp", "vector")
+    new_type = items[value].identifier
+    set_prop_type(pm, new_type)
+    pm.clear_data("pr_mulsel", "pr_hor_exp", "pr_vector")
     clear_arg_pmis(pm)
 
     ARG_GETTERS.clear()
     ARG_SETTERS.clear()
 
     pm.ed.register_dynamic_props(pm)
-    if pm.poll_cmd == 'ENUM':
+    if new_type == 'ENUM':
         bpy.ops.pme.pmi_add('INVOKE_DEFAULT')
 
 
@@ -353,7 +390,7 @@ def gen_arg_setter(name, ptype, update_dynamic_props=False):
         if update_dynamic_props:
             pm.ed.register_dynamic_props(pm)
         else:
-            if pm.poll_cmd == 'ENUM':
+            if get_prop_type(pm) == 'ENUM':
                 pm.ed.register_default_enum_prop(pm)
             else:
                 pm.ed.register_default_prop(pm)
@@ -369,12 +406,13 @@ def gen_default_value(pm, use_pmi=False):
         pmi = pm.pmis["default"]
         value = eval(pmi.text)
     else:
+        prop_type = get_prop_type(pm)
         value = 0
-        if pm.poll_cmd == 'STRING':
+        if prop_type == 'STRING':
             value = ""
-        elif pm.poll_cmd == 'BOOL':
+        elif prop_type == 'BOOL':
             value = False
-        elif pm.poll_cmd == 'ENUM':
+        elif prop_type == 'ENUM':
             if pm.get_data("pr_mulsel"):
                 return set()
 
@@ -420,25 +458,15 @@ def register_user_property(pm):
     if not pm.enabled:
         return
 
-    # Validate poll_cmd contains a valid property type
-    # PROPERTY mode uses poll_cmd for property type, not poll condition
-    valid_prop_types = {'BOOL', 'INT', 'FLOAT', 'STRING', 'ENUM'}
-    if pm.poll_cmd not in valid_prop_types:
-        logw(
-            "PME: invalid property type in poll_cmd",
-            f"pm={pm.name}",
-            f"poll_cmd={pm.poll_cmd!r}",
-            "defaulting to BOOL"
-        )
-        pm.poll_cmd = 'BOOL'
-
+    # Get property type from pm.data (validated by get_prop_type)
+    prop_type = get_prop_type(pm)
     pr = get_prefs()
 
     size = pm.get_data("pr_vector")
-    bpy_prop = prop_by_type(pm.poll_cmd, size > 1)
+    bpy_prop = prop_by_type(prop_type, size > 1)
     kwargs = dict(name=pm.name)
     options = set()
-    if pm.poll_cmd == 'ENUM':
+    if prop_type == 'ENUM':
         kwargs["items"] = []
         if pm.get_data("pr_mulsel"):
             options.add('ENUM_FLAG')
@@ -471,7 +499,7 @@ def register_user_property(pm):
     DBG_PROP and logi(pm.data)
 
     # Sanitize EnumProperty default: set type requires ENUM_FLAG
-    if pm.poll_cmd == 'ENUM' and 'default' in kwargs:
+    if prop_type == 'ENUM' and 'default' in kwargs:
         default_val = kwargs['default']
         has_enum_flag = 'ENUM_FLAG' in options
         if isinstance(default_val, set) and not has_enum_flag:
@@ -546,18 +574,19 @@ def update_user_property(self=None, context=None):
     if isinstance(value, bpy_types.bpy_prop_array):
         value = list(value)
 
+    prop_type = get_prop_type(pm)
     update_arg_pmi(pm, "default", value)
-    if pm.poll_cmd in {'INT', 'FLOAT'}:
+    if prop_type in {'INT', 'FLOAT'}:
         update_arg_pmi(pm, "min", ep.ed_min)
         update_arg_pmi(pm, "max", ep.ed_max)
         update_arg_pmi(pm, "step", ep.ed_step)
         update_arg_pmi(pm, "subtype", ep.ed_subtype)
 
-        if pm.poll_cmd == 'FLOAT':
+        if prop_type == 'FLOAT':
             update_arg_pmi(pm, "unit", ep.ed_unit)
             update_arg_pmi(pm, "precision", ep.ed_precision)
 
-    elif pm.poll_cmd == 'STRING':
+    elif prop_type == 'STRING':
         update_arg_pmi(pm, "subtype", ep.ed_subtype)
 
     register_user_property(pm)
@@ -654,10 +683,11 @@ class PME_OT_prop_script_set(Operator):
             pmi.mode = 'COMMAND'
             pmi.name = self.mode
             if self.mode == 'GET':
+                prop_type = get_prop_type(pm)
                 default_value = 0
-                if pm.poll_cmd == 'STRING':
+                if prop_type == 'STRING':
                     default_value = ""
-                elif pm.poll_cmd == 'BOOL':
+                elif prop_type == 'BOOL':
                     default_value = False
 
                 size = pm.get_data("pr_vector")
@@ -821,7 +851,7 @@ class Editor(EditorBase):
 
     def register_default_prop(self, pm):
         size = pm.get_data("pr_vector")
-        bpy_prop = prop_by_type(pm.poll_cmd, size > 1)
+        bpy_prop = prop_by_type(get_prop_type(pm), size > 1)
         default_value = 0
         bpy_prop_name = bpy_prop.__name__
         if bpy_prop_name == "StringProperty":
@@ -878,12 +908,13 @@ class Editor(EditorBase):
         # store_ed_generated_funcs(prop, get_, set_)
 
     def register_dynamic_props(self, pm):
+        prop_type = get_prop_type(pm)
         size = pm.get_data("pr_vector")
-        bpy_prop = prop_by_type(pm.poll_cmd)
+        bpy_prop = prop_by_type(prop_type)
 
         self.update_preview_path(pm)
 
-        if pm.poll_cmd == 'ENUM':
+        if prop_type == 'ENUM':
             self.register_default_enum_prop(pm)
 
             self.register_temp_prop(
@@ -896,7 +927,7 @@ class Editor(EditorBase):
         else:
             self.register_default_prop(pm)
 
-        if pm.poll_cmd != 'STRING':
+        if prop_type != 'STRING':
             self.register_temp_prop(
                 "ed_hor_exp",
                 BoolProperty(
@@ -904,7 +935,7 @@ class Editor(EditorBase):
                 ),
             )
 
-        if pm.poll_cmd in {'INT', 'FLOAT', 'BOOL'}:
+        if prop_type in {'INT', 'FLOAT', 'BOOL'}:
             self.register_temp_prop(
                 "ed_size",
                 IntProperty(
@@ -912,7 +943,7 @@ class Editor(EditorBase):
                 ),
             )
 
-        if pm.poll_cmd in {'INT', 'FLOAT'}:
+        if prop_type in {'INT', 'FLOAT'}:
             subtype = pm_to_value(pm, "subtype") or 'NONE'
             unit = pm_to_value(pm, "unit") or 'NONE'
             self.register_arg_prop(
@@ -932,9 +963,9 @@ class Editor(EditorBase):
                 subtype == 'ANGLE' or unit == 'ROTATION',
             )
             self.register_arg_prop(
-                pm, bpy_prop, "step", "Step", 1 if pm.poll_cmd == 'INT' else 3
+                pm, bpy_prop, "step", "Step", 1 if prop_type == 'INT' else 3
             )
-            if pm.poll_cmd == 'FLOAT':
+            if prop_type == 'FLOAT':
                 self.register_arg_prop(
                     pm, IntProperty, "precision", "Precision", 2, min=0, max=6
                 )
@@ -949,14 +980,14 @@ class Editor(EditorBase):
                     ),
                 )
 
-        if pm.poll_cmd in {'INT', 'FLOAT', 'STRING'}:
+        if prop_type in {'INT', 'FLOAT', 'STRING'}:
             self.register_arg_prop(
                 pm,
                 EnumProperty,
                 "subtype",
                 "Subtype",
                 update_dynamic_props=True,
-                items=gen_prop_subtype_enum_items(pm.poll_cmd, size > 1),
+                items=gen_prop_subtype_enum_items(prop_type, size > 1),
             )
 
         register_user_property(pm)
@@ -978,7 +1009,7 @@ class Editor(EditorBase):
             pme.context.exe(operator_utils.add_default_args(pmi.text), exec_globals)
 
     def on_pm_add(self, pm):
-        pm.poll_cmd = 'BOOL'
+        set_prop_type(pm, 'BOOL')
 
     def on_pm_remove(self, pm):
         unregister_user_property(pm)
@@ -1005,7 +1036,7 @@ class Editor(EditorBase):
     def on_pmi_add(self, pm, pmi):
         pmi.mode = 'PROP'
         pmi.name = uname(pm.pmis, "Item", "", 1, False)
-        if pm.poll_cmd == 'ENUM':
+        if get_prop_type(pm) == 'ENUM':
             self.register_default_enum_prop(pm)
             register_user_property(pm)
 
@@ -1014,7 +1045,7 @@ class Editor(EditorBase):
             return
 
         pmi.name = name
-        if pm.poll_cmd == 'ENUM':
+        if get_prop_type(pm) == 'ENUM':
             if " " in pmi.name:
                 pmi.name = "%s|%s" % (pmi.name.replace(" ", "_"), pmi.name)
                 bpy.ops.pme.message_box(
@@ -1026,17 +1057,17 @@ class Editor(EditorBase):
             register_user_property(pm)
 
     def on_pmi_move(self, pm):
-        if pm.poll_cmd == 'ENUM':
+        if get_prop_type(pm) == 'ENUM':
             self.register_default_enum_prop(pm)
             update_user_property(self, bpy.context)
 
     def on_pmi_remove(self, pm):
-        if pm.poll_cmd == 'ENUM':
+        if get_prop_type(pm) == 'ENUM':
             self.register_default_enum_prop(pm)
             register_user_property(pm)
 
     def on_pmi_icon_edit(self, pm, pmi):
-        if pm.poll_cmd == 'ENUM':
+        if get_prop_type(pm) == 'ENUM':
             self.register_default_enum_prop(pm)
             register_user_property(pm)
 
@@ -1093,7 +1124,7 @@ class Editor(EditorBase):
         self.draw_cmd_pmi(pm, 'UPDATE', "On Update", 'FILE_REFRESH')
         self.draw_cmd_pmi(pm, 'INIT', "On Init", 'PLAY')
 
-        if pm.poll_cmd in {'INT', 'FLOAT', 'BOOL'}:
+        if get_prop_type(pm) in {'INT', 'FLOAT', 'BOOL'}:
             lh.sep()
             lh.prop(ep, "ed_size")
 
@@ -1134,6 +1165,7 @@ class Editor(EditorBase):
 
         lh.box(layout)
         lh.column()
+        prop_type = get_prop_type(pm)
         enum_flag = pm.get_data("pr_mulsel")
         hor_exp = pm.get_data("pr_hor_exp")
         exp = pm.get_data("pr_exp")
@@ -1152,24 +1184,24 @@ class Editor(EditorBase):
         if size > 1:
             hor_expand = size <= 4
 
-        hide_text = pm.poll_cmd != 'ENUM' or not exp
+        hide_text = prop_type != 'ENUM' or not exp
         self.draw_prop("ed_default", hide_text, hor_expand, expand)
 
-        if pm.poll_cmd in {'INT', 'FLOAT'}:
+        if prop_type in {'INT', 'FLOAT'}:
             lh.sep()
             self.draw_prop("ed_min")
             self.draw_prop("ed_max")
             self.draw_prop("ed_step")
-            if pm.poll_cmd == 'FLOAT':
+            if prop_type == 'FLOAT':
                 self.draw_prop("ed_precision")
 
             lh.sep()
             self.draw_prop("ed_subtype")
 
-        if pm.poll_cmd == 'FLOAT':
+        if prop_type == 'FLOAT':
             self.draw_prop("ed_unit")
 
-        elif pm.poll_cmd == 'ENUM':
+        elif prop_type == 'ENUM':
             self.draw_prop("ed_multiselect")
             if not self.ep.ed_multiselect:
                 self.draw_prop("ed_exp")
@@ -1179,16 +1211,16 @@ class Editor(EditorBase):
 
         if size > 1:
             lh.sep()
-            if pm.poll_cmd == 'FLOAT':
+            if prop_type == 'FLOAT':
                 self.draw_prop("ed_exp")
 
             self.draw_prop("ed_hor_exp")
 
-        elif pm.poll_cmd == 'STRING':
+        elif prop_type == 'STRING':
             lh.sep()
             self.draw_prop("ed_subtype")
 
-        if pm.poll_cmd == 'ENUM':
+        if prop_type == 'ENUM':
             lh.box(layout)
             lh.column()
             lh.label("Items:")
