@@ -278,106 +278,114 @@ Menu と MenuItem で共通の構造。MenuItem は Menu の style を継承し�
 
 settings はフラット構造で、mode に応じて異なるプロパティが入る。
 
-### 内部形式との変換
+### 内部形式との対応
 
-> **重要**: 内部形式（`core/schema.py`）はプロパティ名に接頭辞が付く（例: `pm_radius`）。
-> スキーマでは簡潔な名前を使用し、変換レイヤーで吸収する。
+> **方針**: JSON Schema のプロパティ名は内部形式（`pm.data`）と**同一**にする。
+> 変換処理を不要とし、シンプルさと AI フレンドリーを優先。
 
-| スキーマ | 内部形式 | 変換方向 |
-|---------|----------|---------|
-| `radius` | `pm_radius` | エクスポート時: `pm_` を除去 |
-| `flick` | `pm_flick` | インポート時: `pm_` を付加 |
+| JSON Schema | 内部形式 (pm.data) | 備考 |
+|-------------|-------------------|------|
+| `pm_radius` | `pm_radius` | 同一（変換不要） |
+| `pd_panel` | `pd_panel` | 同一（変換不要） |
+| `confirm` | `confirm` | MODAL は接頭辞なし |
+| `vector` | `vector` | PROPERTY は接頭辞なし |
 
-### キー名ルール
+### 接頭辞パターン
 
-| パターン | 用途 | 例 |
-|---------|------|-----|
-| 短い名前 | モード固有の設定 | `radius`, `flick` |
-| 接頭辞付き | 複数モードで共有したい設定 | `pm_confirm`, `dlg_confirm` |
+| モード | 接頭辞 | 例 |
+|--------|--------|-----|
+| PMENU | `pm_` | `pm_radius`, `pm_flick` |
+| RMENU | `rm_` | `rm_title` |
+| DIALOG | `pd_` | `pd_panel`, `pd_width` |
+| PANEL | `pg_` | `pg_space`, `pg_wicons` |
+| MODAL | なし | `confirm`, `block_ui` |
+| SCRIPT | `s_` | `s_undo`, `s_state` |
+| STICKY | `sk_` | `sk_block_ui` |
+| PROPERTY | なし/混在 | `vector`, `prop_type` |
 
 ### PMENU (Pie Menu)
 
 ```json
 {
-  "radius": 100,
-  "flick": true,
-  "confirm": -1,
-  "threshold": -1
+  "pm_radius": -1,
+  "pm_flick": true,
+  "pm_confirm": -1,
+  "pm_threshold": -1
 }
 ```
 
 | プロパティ | 型 | デフォルト | 説明 |
 |-----------|-----|----------|------|
-| `radius` | integer | -1 | 半径（-1 = デフォルト） |
-| `flick` | boolean | true | フリック確定 |
-| `confirm` | integer | -1 | 確定時間（-1 = デフォルト） |
-| `threshold` | integer | -1 | しきい値（-1 = デフォルト） |
+| `pm_radius` | integer | -1 | 半径（-1 = デフォルト） |
+| `pm_flick` | boolean | true | フリック確定 |
+| `pm_confirm` | integer | -1 | 確定時間（-1 = デフォルト） |
+| `pm_threshold` | integer | -1 | しきい値（-1 = デフォルト） |
 
 ### RMENU (Regular Menu)
 
 ```json
 {
-  "title": true,
-  "extend_target": null,
-  "extend_position": "append"
+  "rm_title": true,
+  "rm_extend_target": null,
+  "rm_extend_position": "append"
 }
 ```
 
 | プロパティ | 型 | デフォルト | 説明 |
 |-----------|-----|----------|------|
-| `title` | boolean | true | タイトルを表示 |
-| `extend_target` | string \| null | null | 拡張対象の Blender Menu ID |
-| `extend_position` | string | "append" | 挿入位置（"append" / "prepend"） |
+| `rm_title` | boolean | true | タイトルを表示 |
+| `rm_extend_target` | string \| null | null | 拡張対象の Blender Menu ID |
+| `rm_extend_position` | string | "append" | 挿入位置（"append" / "prepend"） |
 
 ### DIALOG (Pop-up Dialog)
 
 ```json
 {
-  "title": true,
-  "box": false,
-  "width": 300,
-  "auto_close": false,
-  "expand": false,
-  "panel": 1,
-  "extend_target": null,
-  "extend_position": "append"
+  "pd_title": true,
+  "pd_box": true,
+  "pd_width": 300,
+  "pd_auto_close": false,
+  "pd_expand": false,
+  "pd_panel": 1,
+  "pd_extend_target": null,
+  "pd_extend_position": "append"
 }
 ```
 
 | プロパティ | 型 | デフォルト | 説明 |
 |-----------|-----|----------|------|
-| `title` | boolean | true | タイトルを表示 |
-| `box` | boolean | true | ボックス表示 |
-| `width` | integer | 300 | ダイアログ幅 |
-| `auto_close` | boolean | false | 自動クローズ |
-| `expand` | boolean | false | 展開表示 |
-| `panel` | integer | 1 | 表示モード（0=PIE, 1=PANEL, 2=POPUP） |
-| `extend_target` | string \| null | null | 拡張対象の Blender Panel ID |
-| `extend_position` | string | "append" | 挿入位置（"append" / "prepend"） |
+| `pd_title` | boolean | true | タイトルを表示 |
+| `pd_box` | boolean | true | ボックス表示 |
+| `pd_width` | integer | 300 | ダイアログ幅 |
+| `pd_auto_close` | boolean | false | 自動クローズ |
+| `pd_expand` | boolean | false | 展開表示 |
+| `pd_panel` | integer | 1 | 表示モード（0=PIE, 1=PANEL, 2=POPUP） |
+| `pd_extend_target` | string \| null | null | 拡張対象の Blender Panel ID |
+| `pd_extend_position` | string | "append" | 挿入位置（"append" / "prepend"） |
 
 ### PANEL (Panel Group)
 
 ```json
 {
-  "space": "VIEW_3D",
-  "region": "TOOLS",
-  "context": "ANY",
-  "category": "My Category",
-  "icons": false,
-  "extend_target": null,
-  "extend_position": "append"
+  "pg_space": "VIEW_3D",
+  "pg_region": "TOOLS",
+  "pg_context": "ANY",
+  "pg_category": "My Category",
+  "pg_wicons": false,
+  "pg_extend_target": null,
+  "pg_extend_position": "append"
 }
 ```
 
 | プロパティ | 型 | デフォルト | 説明 |
 |-----------|-----|----------|------|
-| `space` | string | "VIEW_3D" | スペースタイプ |
-| `region` | string | "TOOLS" | リージョンタイプ |
-| `context` | string | "ANY" | コンテキスト |
-| `category` | string | "My Category" | カテゴリ名 |
-| `icons` | boolean | false | アイコン表示 |
-| `extend_target` | string \| null | null | 拡張対象の Blender Panel ID |
-| `extend_position` | string | "append" | 挿入位置（"append" / "prepend"） |
+| `pg_space` | string | "VIEW_3D" | スペースタイプ |
+| `pg_region` | string | "TOOLS" | リージョンタイプ |
+| `pg_context` | string | "ANY" | コンテキスト |
+| `pg_category` | string | "My Category" | カテゴリ名 |
+| `pg_wicons` | boolean | false | アイコン表示 |
+| `pg_extend_target` | string \| null | null | 拡張対象の Blender Panel ID |
+| `pg_extend_position` | string | "append" | 挿入位置（"append" / "prepend"） |
 
 ### MODAL (Modal Operator)
 
@@ -395,21 +403,31 @@ settings はフラット構造で、mode に応じて異なるプロパティが
 | `block_ui` | boolean | true | UI ブロック |
 | `lock` | boolean | true | ロック |
 
-### SCRIPT / STICKY
+### SCRIPT (Stack Key)
 
 ```json
 {
-  "undo": false,
-  "state": false,
-  "block_ui": false
+  "s_undo": false,
+  "s_state": false
 }
 ```
 
 | プロパティ | 型 | デフォルト | 説明 |
 |-----------|-----|----------|------|
-| `undo` | boolean | false | Undo 有効 |
-| `state` | boolean | false | 状態保持 |
-| `block_ui` | boolean | false | UI ブロック |
+| `s_undo` | boolean | false | Undo 有効 |
+| `s_state` | boolean | false | 状態保持 |
+
+### STICKY (Sticky Key)
+
+```json
+{
+  "sk_block_ui": false
+}
+```
+
+| プロパティ | 型 | デフォルト | 説明 |
+|-----------|-----|----------|------|
+| `sk_block_ui` | boolean | false | UI ブロック |
 
 ### PROPERTY
 
