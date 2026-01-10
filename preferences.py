@@ -1724,6 +1724,13 @@ class PMEPreferences(AddonPreferences):
                     open_mode = 'TWEAK'
                 drag_dir = ""
 
+            # For PME1 compatibility, PROPERTY mode exports prop_type to menu[7]
+            # instead of poll_cmd. prop_type is stored in pm.data as pr_prop_type.
+            if pm.mode == 'PROPERTY':
+                poll_or_prop_type = pm.get_data("pr_prop_type")
+            else:
+                poll_or_prop_type = "" if pm.poll_cmd == CC.DEFAULT_POLL else pm.poll_cmd
+
             base = [
                 pm.name,
                 pm.km_name,
@@ -1732,7 +1739,7 @@ class PMEPreferences(AddonPreferences):
                 pm.mode,
                 pm.data,
                 open_mode,  # Compat
-                "" if pm.poll_cmd == CC.DEFAULT_POLL else pm.poll_cmd,
+                poll_or_prop_type,
                 pm.tag if export_tags else "",
             ]
             if not compat:

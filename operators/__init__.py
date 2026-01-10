@@ -1253,7 +1253,7 @@ class WM_OT_pme_user_pie_menu_call(Operator):
                         text, icon, *_ = pmi.parse()
                         lh.label(text or f"[{sub_pm.name}]", 'ERROR')
                     else:
-                        is_enum = sub_pm.poll_cmd == 'ENUM'
+                        is_enum = sub_pm.get_data("pr_prop_type") == 'ENUM'
                         # enum_flag = sub_pm.get_data("pr_mulsel")
                         hor_exp = sub_pm.get_data("pr_hor_exp")
                         is_array = sub_pm.get_data("pr_vector") > 1
