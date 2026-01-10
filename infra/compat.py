@@ -123,47 +123,64 @@ def fix_json_1_17_1(pr, pm, menu):
 # PROPERTY: prop? → pr?, vector → pr_vector, etc.
 
 
+def _migrate_modal_data(data):
+    """Migrate MODAL data string to use md_ prefix."""
+    if "md_confirm" not in data:
+        data = re.sub(r'\bconfirm\b', 'md_confirm', data)
+    if "md_block_ui" not in data:
+        data = re.sub(r'\bblock_ui\b', 'md_block_ui', data)
+    if "md_lock" not in data:
+        data = re.sub(r'\block\b', 'md_lock', data)
+    return data
+
+
+def _migrate_property_data(data):
+    """Migrate PROPERTY data string to use pr_ prefix."""
+    # Change type prefix: prop? → pr?
+    if data.startswith("prop?"):
+        data = "pr?" + data[5:]
+
+    # Migrate property names
+    if "pr_vector" not in data:
+        data = re.sub(r'\bvector\b', 'pr_vector', data)
+    if "pr_mulsel" not in data:
+        data = re.sub(r'\bmulsel\b', 'pr_mulsel', data)
+    if "pr_hor_exp" not in data:
+        data = re.sub(r'\bhor_exp\b', 'pr_hor_exp', data)
+    if "pr_exp" not in data:
+        data = re.sub(r'(?<!hor_)\bexp\b', 'pr_exp', data)
+    if "pr_save" not in data:
+        data = re.sub(r'\bsave\b', 'pr_save', data)
+    return data
+
+
+def fix_json_2_0_0(pr, pm, menu):
+    """
+    Migrate MODAL and PROPERTY properties in JSON import.
+
+    JSON menu structure (PME1 format):
+      menu[4] = mode
+      menu[5] = data (pm.data string)
+    """
+    if len(menu) < 6:
+        return
+
+    mode = menu[4]
+    data = menu[5]
+
+    if mode == 'MODAL' and data:
+        menu[5] = _migrate_modal_data(data)
+    elif mode == 'PROPERTY' and data:
+        menu[5] = _migrate_property_data(data)
+
+
 def fix_2_0_0(pr, pm):
     """
     Migrate MODAL and PROPERTY properties to use standardized prefixes.
 
-    MODAL (md_ prefix):
-      - mo?confirm=True → mo?md_confirm=True
-      - block_ui → md_block_ui
-      - lock → md_lock
-
-    PROPERTY (pr_ prefix):
-      - prop? → pr?
-      - vector → pr_vector
-      - mulsel → pr_mulsel
-      - hor_exp → pr_hor_exp
-      - exp → pr_exp
-      - save → pr_save
+    Uses the same helper functions as fix_json_2_0_0 for consistency.
     """
-    if pm.mode == 'MODAL':
-        # Only replace if not already prefixed
-        if "md_confirm" not in pm.data:
-            # Use word boundary to avoid replacing partial matches
-            pm.data = re.sub(r'\bconfirm\b', 'md_confirm', pm.data)
-        if "md_block_ui" not in pm.data:
-            pm.data = re.sub(r'\bblock_ui\b', 'md_block_ui', pm.data)
-        if "md_lock" not in pm.data:
-            pm.data = re.sub(r'\block\b', 'md_lock', pm.data)
-
-    elif pm.mode == 'PROPERTY':
-        # Change type prefix: prop? → pr?
-        if pm.data.startswith("prop?"):
-            pm.data = "pr?" + pm.data[5:]
-
-        # Migrate property names (only if not already prefixed)
-        if "pr_vector" not in pm.data:
-            pm.data = re.sub(r'\bvector\b', 'pr_vector', pm.data)
-        if "pr_mulsel" not in pm.data:
-            pm.data = re.sub(r'\bmulsel\b', 'pr_mulsel', pm.data)
-        if "pr_hor_exp" not in pm.data:
-            pm.data = re.sub(r'\bhor_exp\b', 'pr_hor_exp', pm.data)
-        if "pr_exp" not in pm.data:
-            # Be careful not to replace hor_exp's exp part
-            pm.data = re.sub(r'(?<!hor_)\bexp\b', 'pr_exp', pm.data)
-        if "pr_save" not in pm.data:
-            pm.data = re.sub(r'\bsave\b', 'pr_save', pm.data)
+    if pm.mode == 'MODAL' and pm.data:
+        pm.data = _migrate_modal_data(pm.data)
+    elif pm.mode == 'PROPERTY' and pm.data:
+        pm.data = _migrate_property_data(pm.data)
