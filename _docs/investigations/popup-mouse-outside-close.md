@@ -3,7 +3,7 @@
 **Branch**: `investigate/popup-mouse-outside-close`
 **Date**: 2026-01-11
 **Status**: ✅ CLOSED - WONTFIX (Blender Behavior + Blender 5.0 Breaking Change)
-**Issue**: #90
+**Issue**: #96
 **Reporter**: [cartorolle's blog](https://note.com/cartorolle/n/n70dd6de8c33e)
 
 ## Summary
