@@ -2,7 +2,7 @@
 
 **Branch**: `investigate/popup-mouse-outside-close`
 **Date**: 2026-01-11
-**Status**: Root Cause Identified
+**Status**: ✅ CONFIRMED - Blender Behavior (Not PME Bug)
 
 ## Issue Report
 
@@ -243,17 +243,56 @@ def enable_mouse_quit(layout):
 
 **Warning**: This is experimental and may cause stability issues.
 
-## Conclusion
+## Blender 5.0 Verification Test (2026-01-11)
 
-**This is a missing feature, not a bug.** The documentation describes intended behavior that was never fully implemented. The `pd_auto_close` property exists as a remnant of this planned feature.
+### Test Setup
 
-However, Blender **does** have the underlying capability (`UI_BLOCK_MOVEMOUSE_QUIT`), which suggests the feature could potentially be enabled via ctypes manipulation in `c_utils.py`.
+Created standalone test addon: `test_popup_behavior.py`
+
+```python
+class TEST_OT_popup_mode(Operator):
+    def invoke(self, context, event):
+        return context.window_manager.invoke_popup(self, width=300)
+```
+
+### Test Results
+
+| Test | Expected (Wiki) | Actual (Blender 5.0.1) |
+|------|-----------------|------------------------|
+| `invoke_popup()` | Mouse outside closes | ❌ **Does NOT close** |
+| `invoke_props_dialog()` | Click/OK closes | ✅ Works as expected |
+
+### Conclusion from Test
+
+**Blender 5.0's `invoke_popup()` does NOT close on mouse-outside.**
+
+This confirms:
+1. ❌ Not a PME-specific bug
+2. ❌ Not a PME-F regression
+3. ✅ **Blender's `invoke_popup()` behavior** - `UI_BLOCK_KEEP_OPEN` overrides `UI_BLOCK_MOVEMOUSE_QUIT`
+
+The Wiki documentation was likely written for older Blender versions (2.7x-2.8x era) where this may have worked differently.
+
+## Final Conclusion
+
+**This is NOT a PME bug.** Blender's `invoke_popup()` sets both `UI_BLOCK_KEEP_OPEN` and `UI_BLOCK_MOVEMOUSE_QUIT` flags, but `KEEP_OPEN` takes precedence, preventing mouse-outside closure.
+
+The `pd_auto_close` property in PME exists as a remnant of a planned feature that relied on Blender behavior that no longer exists (or never existed as documented).
+
+### Recommendations
+
+| Option | Effort | Description |
+|--------|--------|-------------|
+| **A: Update Docs** | Low | Change description to "Click outside to close" |
+| **B: Remove Property** | Low | Remove unused `pd_auto_close` property |
+| **C: Implement via ctypes** | High | Manipulate `UI_BLOCK_KEEP_OPEN` flag (risky) |
+| **D: Modal Wrapper** | High | Track mouse position manually (complex) |
+
+**Recommended**: Option A + B (Update docs, remove unused property)
 
 ### Action Items
 
-1. [ ] Decide: Implement feature OR update documentation
-2. [ ] If implementing via c_utils: Add `UI_BLOCK_MOVEMOUSE_QUIT` flag manipulation
-3. [ ] If implementing via modal: Create modal wrapper for mouse tracking
-4. [ ] If not implementing: Remove `pd_auto_close` and update docs
-5. [ ] Update Wiki/documentation to match actual behavior
-6. [ ] Test `UI_BLOCK_MOVEMOUSE_QUIT` flag in Blender 5.0+ to verify behavior
+1. [x] Test `invoke_popup()` in Blender 5.0 → **Does NOT close on mouse-out**
+2. [ ] Update PME mode descriptions to match actual behavior
+3. [ ] Consider removing `pd_auto_close` property (unused since initial commit)
+4. [ ] Close investigation - this is Blender behavior, not a bug
