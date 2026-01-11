@@ -676,7 +676,17 @@ class PMEPreferences(AddonPreferences):
         for kmi in self.window_kmis:
             kmi.active = value
 
-    def add_pm(self, mode='PMENU', name=None, duplicate=False):
+    def add_pm(self, mode='PMENU', name=None, duplicate=False,
+               extend_target='', extend_position=0):
+        """Add a new pie menu.
+
+        Args:
+            mode: Menu mode (PMENU, RMENU, DIALOG, etc.)
+            name: Menu name (auto-generated if None)
+            duplicate: Whether this is a duplicate operation
+            extend_target: Phase 9-X - Blender Panel/Menu/Header ID to extend
+            extend_position: Phase 9-X - Position (<0 = prepend, >=0 = append)
+        """
         link = None
         pr = get_prefs()
         tpr = temp_prefs()
@@ -718,6 +728,16 @@ class PMEPreferences(AddonPreferences):
                 tree_state.collapsed_groups.remove(pm.km_name)
 
         pm.data = pm.ed.default_pmi_data
+
+        # Phase 9-X: Set extend_target and extend_position BEFORE on_pm_add()
+        # This eliminates the need to parse from pm.name
+        if extend_target:
+            if mode == 'DIALOG':
+                pm.set_data("pd_extend_target", extend_target)
+                pm.set_data("pd_extend_position", extend_position)
+            elif mode == 'RMENU':
+                pm.set_data("rm_extend_target", extend_target)
+                pm.set_data("rm_extend_position", extend_position)
 
         if duplicate:
             apm = pr.pie_menus[name]

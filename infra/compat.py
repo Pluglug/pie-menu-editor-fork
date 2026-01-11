@@ -248,12 +248,49 @@ def fix_2_0_0(pr, pm):
         _migrate_extend_target(pm)
 
 
-def _migrate_extend_target(pm):
-    """Migrate extend_target from pm.name suffix to pm.data.
+def parse_extend_from_pme1_name(name):
+    """Parse extend information from PME1 format pm.name.
 
     PME1 encodes extend information in pm.name with suffixes:
     - F_PRE ("_pre") → prepend position
-    - F_RIGHT ("_right") → right region (header only)
+    - F_RIGHT ("_right") → right region (header only, ignored in PME2)
+
+    Args:
+        name: PME1 format menu name (e.g., "VIEW3D_PT_tools_active_pre")
+
+    Returns:
+        tuple: (extend_target, extend_position) or (None, None) if not valid
+            - extend_target: Blender Panel/Menu/Header ID (e.g., "VIEW3D_PT_tools_active")
+            - extend_position: int (-1 for prepend, 0 for append)
+
+    Example:
+        >>> parse_extend_from_pme1_name("VIEW3D_PT_tools_active_pre")
+        ("VIEW3D_PT_tools_active", -1)
+        >>> parse_extend_from_pme1_name("TOPBAR_MT_file")
+        ("TOPBAR_MT_file", 0)
+        >>> parse_extend_from_pme1_name("My Custom Menu")
+        (None, None)
+    """
+    # Parse name for Blender ID and position flags
+    tp_name, is_right, is_prepend = extract_str_flags_b(
+        name, CC.F_RIGHT, CC.F_PRE
+    )
+
+    # Check if tp_name is a valid Blender type ID
+    if not any(x in tp_name for x in ('_PT_', '_MT_', '_HT_')):
+        return None, None
+
+    # Determine position: -1 for prepend, 0 for append
+    extend_position = -1 if is_prepend else 0
+
+    return tp_name, extend_position
+
+
+def _migrate_extend_target(pm):
+    """Migrate extend_target from pm.name suffix to pm.data.
+
+    Uses parse_extend_from_pme1_name() to extract extend information
+    from PME1 format names.
 
     PME2 stores these in pm.data:
     - pd_extend_target / rm_extend_target: Blender Panel/Menu ID
@@ -268,26 +305,20 @@ def _migrate_extend_target(pm):
     if pm.get_data(extend_target_key):
         return
 
-    # Parse pm.name for Blender ID and position flags
-    tp_name, is_right, is_prepend = extract_str_flags_b(
-        pm.name, CC.F_RIGHT, CC.F_PRE
-    )
+    # Parse pm.name using utility function
+    extend_target, extend_position = parse_extend_from_pme1_name(pm.name)
 
-    # Check if tp_name is a valid Blender type ID
-    if not any(x in tp_name for x in ('_PT_', '_MT_', '_HT_')):
+    if not extend_target:
         return
 
-    # Set extend_target
-    pm.set_data(extend_target_key, tp_name)
-
-    # Set extend_position: -1 for prepend, 0 for append
-    extend_position = -1 if is_prepend else 0
+    # Set extend_target and extend_position
+    pm.set_data(extend_target_key, extend_target)
     pm.set_data(extend_position_key, extend_position)
 
     DBG_INIT and logi(
         "PME: migrated extend_target",
         f"pm={pm.name!r}",
-        f"extend_target={tp_name!r}",
+        f"extend_target={extend_target!r}",
         f"extend_position={extend_position}"
     )
 

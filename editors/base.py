@@ -31,6 +31,7 @@ from ..ui import screen as SU
 from ..ui.utils import get_pme_menu_class, pme_menu_classes
 from ..ui.layout import lh, operator, split, draw_pme_layout, L_SEP, L_LABEL
 from ..pme_types import Tag, PMItem, PMIItem
+from ..prefs.tree import tree_state
 from ..operators import (
     PME_OT_docs,
     PME_OT_preview,
@@ -112,13 +113,17 @@ def gen_header_draw(pm_uid_or_name, is_right_pm=False):
     def _draw(self, context):
         is_right_region = context.region.alignment == 'RIGHT'
         if is_right_region and is_right_pm or not is_right_region and not is_right_pm:
-            # Try uid first, then fall back to name
+            # TODO(Phase 9-X): Remove pm.name fallback when all data is migrated (v3.0+)
             pm = get_pm_by_uid(pm_uid_or_name)
             if not pm:
                 try:
                     pm = get_prefs().pie_menus[pm_uid_or_name]
                 except Exception:
                     return
+
+            # Skip if disabled
+            if not pm.enabled:
+                return
 
             draw_pme_layout(
                 pm,
@@ -132,12 +137,17 @@ def gen_header_draw(pm_uid_or_name, is_right_pm=False):
 def gen_menu_draw(pm_uid_or_name):
     """Generate menu draw function."""
     def _draw(self, context):
+        # TODO(Phase 9-X): Remove pm.name fallback when all data is migrated (v3.0+)
         pm = get_pm_by_uid(pm_uid_or_name)
         if not pm:
             try:
                 pm = get_prefs().pie_menus[pm_uid_or_name]
             except Exception:
                 return
+
+        # Skip if disabled
+        if not pm.enabled:
+            return
 
         WM_OT_pme_user_pie_menu_call.draw_rm(pm, self.layout)
     return _draw
@@ -146,12 +156,17 @@ def gen_menu_draw(pm_uid_or_name):
 def gen_panel_draw(pm_uid_or_name):
     """Generate panel draw function."""
     def _draw(self, context):
+        # TODO(Phase 9-X): Remove pm.name fallback when all data is migrated (v3.0+)
         pm = get_pm_by_uid(pm_uid_or_name)
         if not pm:
             try:
                 pm = get_prefs().pie_menus[pm_uid_or_name]
             except Exception:
                 return
+
+        # Skip if disabled
+        if not pm.enabled:
+            return
 
         draw_pme_layout(
             pm,
@@ -190,9 +205,9 @@ def extend_panel(pm):
     else:
         # Get position from pm.data
         if pm.mode == 'DIALOG':
-            extend_position = pm.get_data("pd_extend_position", 0)
+            extend_position = (pm.get_data("pd_extend_position") or 0)
         elif pm.mode == 'RMENU':
-            extend_position = pm.get_data("rm_extend_position", 0)
+            extend_position = (pm.get_data("rm_extend_position") or 0)
         else:
             extend_position = 0
         is_prepend = extend_position < 0
@@ -222,6 +237,8 @@ def extend_panel(pm):
 
     f = tp.prepend if is_prepend else tp.append
     f(EXTENDED_PANELS[key])
+    # Debug log (remove after debugging)
+    print(f"PME extend_panel: key={key}, target={extend_target}, prepend={is_prepend}, mode={pm.mode}")
     SU.redraw_screen()
 
 
@@ -400,9 +417,10 @@ class EditorBase:
                 pm.kmis_map[name] = pm.kmis_map[old_name]
                 del pm.kmis_map[old_name]
 
-        if old_name in pr.tree_ul.expanded_folders:
-            pr.tree_ul.expanded_folders.remove(old_name)
-            pr.tree_ul.expanded_folders.add(name)
+        # FIXME(#95): tree_state workaround - pr.tree_ul returns class, not instance
+        if old_name in tree_state.expanded_folders:
+            tree_state.expanded_folders.remove(old_name)
+            tree_state.expanded_folders.add(name)
 
         if old_name in pr.old_pms:
             pr.old_pms.remove(old_name)

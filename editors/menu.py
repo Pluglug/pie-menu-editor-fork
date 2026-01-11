@@ -626,6 +626,8 @@ class Editor(EditorBase):
         pmi = pm.pmis.add()
         pmi.mode = 'COMMAND'
         pmi.name = "Slot"
+        # Phase 9-X: extend_target is now set directly in add_pm()
+        # No need to parse from pm.name
         extend_panel(pm)
 
     def on_pm_remove(self, pm):

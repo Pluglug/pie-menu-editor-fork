@@ -224,16 +224,64 @@ def find_pms_by_extend_target(extend_target, mode):
     for pm in pr.pie_menus:
         if pm.mode != mode:
             continue
-        # Check pm.data first
+        # TODO(Phase 9-X): Remove pm.name fallback when all data is migrated (v3.0+)
         pm_target = pm.get_data(target_key)
         if not pm_target:
-            # Fallback: check pm.name (for unmigrated data)
             pm_target, _, _ = extract_str_flags_b(pm.name, F_RIGHT, F_PRE)
 
         if pm_target == extend_target:
             results.append(pm)
 
     return results
+
+
+class PME_OT_extend_confirm(Operator):
+    """Confirm dialog when extend menu already exists for this target."""
+    bl_idname = "pme.extend_confirm"
+    bl_label = "Extend Menu"
+    bl_options = {'INTERNAL'}
+
+    mode: StringProperty()
+    # Phase 9-X: Direct extend parameters (no pm.name parsing)
+    extend_target: StringProperty()
+    extend_position: IntProperty(default=0)
+
+    def _draw(self, menu, context):
+        lh.lt(menu.layout, operator_context='INVOKE_DEFAULT')
+
+        existing = find_pms_by_extend_target(self.extend_target, self.mode)
+
+        lh.label(f"'{self.extend_target}' already has extensions:")
+        lh.sep()
+
+        # Add New option - pass extend_target and extend_position directly
+        lh.operator(
+            PME_OT_pm_add.bl_idname,
+            "Add New Extension",
+            'ADD',
+            mode=self.mode,
+            name=self.extend_target,  # Use extend_target as menu name
+            extend_target=self.extend_target,
+            extend_position=self.extend_position,
+        )
+
+        lh.sep()
+        lh.label("Or go to existing:")
+
+        # Go to existing options
+        for pm in existing:
+            pos = (pm.get_data("pd_extend_position" if self.mode == 'DIALOG' else "rm_extend_position") or 0)
+            pos_label = "prepend" if pos < 0 else "append"
+            lh.operator(
+                "wm.pm_select",
+                f"{pm.name} ({pos_label})",
+                'FORWARD',
+                pm_name=pm.name
+            )
+
+    def execute(self, context):
+        context.window_manager.popup_menu(self._draw, title="Extend Menu")
+        return {'CANCELLED'}
 
 
 class PME_OT_panel_menu(Operator):
@@ -245,43 +293,42 @@ class PME_OT_panel_menu(Operator):
     panel: StringProperty()
     is_right_region: BoolProperty()
 
-    def extend_ui_operator(self, label, icon, mode, pm_name):
-        """Draw extend UI operator button(s).
+    def extend_ui_operator(self, label, icon, mode, extend_target, extend_position):
+        """Draw extend UI operator button.
 
-        Phase 9-X: Uses pm.data (extend_target) for existing check.
-        If existing extend menus found for this target:
-            Show "Add" button and list of existing menus to go to
-        Otherwise:
-            Show only "Add" button
+        Phase 9-X: Pass extend_target and extend_position directly.
+        No pm.name parsing needed.
+
+        Args:
+            label: Button label
+            icon: Button icon
+            mode: 'DIALOG' or 'RMENU'
+            extend_target: Blender Panel/Menu/Header ID
+            extend_position: <0 = prepend, >=0 = append
         """
-        pr = get_prefs()
-
-        # Parse pm_name to get extend_target
-        extend_target, _, _ = extract_str_flags_b(pm_name, F_RIGHT, F_PRE)
-
-        # Find existing pms with same target
         existing = find_pms_by_extend_target(extend_target, mode)
 
         if existing:
-            # Show "Add" button
+            # Show confirmation popup
+            lh.operator(
+                PME_OT_extend_confirm.bl_idname,
+                label,
+                icon,
+                mode=mode,
+                extend_target=extend_target,
+                extend_position=extend_position,
+            )
+        else:
+            # No existing, add directly with extend parameters
             lh.operator(
                 PME_OT_pm_add.bl_idname,
-                f"{label} (Add New)",
-                'ADD',
+                label,
+                icon,
                 mode=mode,
-                name=pm_name
+                name=extend_target,  # Use extend_target as menu name
+                extend_target=extend_target,
+                extend_position=extend_position,
             )
-            # Show go-to for each existing
-            for pm in existing:
-                lh.operator(
-                    "wm.pm_select",
-                    f"  → {pm.name}",
-                    icon,
-                    pm_name=pm.name
-                )
-        else:
-            # No existing, just show Add
-            lh.operator(PME_OT_pm_add.bl_idname, label, icon, mode=mode, name=pm_name)
 
     def draw_header_menu(self, menu, context):
         lh.lt(menu.layout, operator_context='INVOKE_DEFAULT')
@@ -289,13 +336,14 @@ class PME_OT_panel_menu(Operator):
         pr = get_prefs()
         pm = pr.selected_pm
 
-        right_suffix = F_RIGHT if self.is_right_region else ""
+        # Phase 9-X: Pass extend_target and extend_position directly
+        # prepend = -1, append = 0
         self.extend_ui_operator(
-            "Extend Header", 'TRIA_LEFT', 'DIALOG', self.panel + right_suffix + F_PRE
+            "Extend Header", 'TRIA_LEFT', 'DIALOG', self.panel, -1
         )
 
         self.extend_ui_operator(
-            "Extend Header", 'TRIA_RIGHT', 'DIALOG', self.panel + right_suffix
+            "Extend Header", 'TRIA_RIGHT', 'DIALOG', self.panel, 0
         )
 
         lh.operator(
@@ -342,10 +390,11 @@ class PME_OT_panel_menu(Operator):
 
                 lh.sep()
 
+        # Phase 9-X: Pass extend_target and extend_position directly
         self.extend_ui_operator(
-            "Extend Menu", 'TRIA_UP', 'RMENU', self.panel + F_PRE
+            "Extend Menu", 'TRIA_UP', 'RMENU', self.panel, -1
         )
-        self.extend_ui_operator("Extend Menu", 'TRIA_DOWN', 'RMENU', self.panel)
+        self.extend_ui_operator("Extend Menu", 'TRIA_DOWN', 'RMENU', self.panel, 0)
 
         lh.operator(
             "pme.clipboard_copy", "Copy Menu ID", 'COPYDOWN', text=self.panel

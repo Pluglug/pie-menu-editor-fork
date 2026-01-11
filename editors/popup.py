@@ -1745,6 +1745,8 @@ class Editor(EditorBase):
 
     def on_pm_add(self, pm):
         self.add_pd_row(pm)
+        # Phase 9-X: extend_target is now set directly in add_pm()
+        # No need to parse from pm.name
         extend_panel(pm)
 
     def on_pm_remove(self, pm):
