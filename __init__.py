@@ -266,6 +266,13 @@ def on_context():
     else:
         compatibility_fixes.fix()
 
+    # Load optional pluglug module (delete pluglug.py to disable)
+    try:
+        from . import pluglug
+        pluglug.register()
+    except ImportError:
+        pass
+
 
 def init_keymaps():
     DBG_INIT and logi("Waiting Keymaps")
@@ -467,6 +474,13 @@ def unregister():
     if APP_VERSION < (5, 0, 0):
         global re_enable_data
         re_enable_data = property_utils.to_dict(get_prefs())
+
+    # Unload optional pluglug module first
+    try:
+        from . import pluglug
+        pluglug.unregister()
+    except ImportError:
+        pass
 
     for mod in reversed(MODULES):
         m = sys.modules["%s.%s" % (__name__, mod)]
