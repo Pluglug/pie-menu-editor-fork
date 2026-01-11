@@ -575,6 +575,46 @@ class EditorBase:
             PME_OT_poll_specials_call.bl_idname, text="", icon=ic('COLLAPSEMENU')
         )
 
+    def draw_extend_info(self, layout, pm):
+        """Draw extend_target and extend_position info (read-only).
+
+        Phase 9-X: For DIALOG and RMENU modes only.
+        """
+        if pm.mode == 'DIALOG':
+            prefix = "pd"
+        elif pm.mode == 'RMENU':
+            prefix = "rm"
+        else:
+            return
+
+        extend_target = pm.get_data(f"{prefix}_extend_target")
+        if not extend_target:
+            return
+
+        extend_position = pm.get_data(f"{prefix}_extend_position") or 0
+
+        # Display extend info
+        box = layout.box()
+        col = box.column(align=True)
+
+        # Target row
+        row = col.row(align=True)
+        row.label(text="Extend Target:")
+        # Validate target exists
+        tp = getattr(bpy_types, extend_target, None)
+        if tp:
+            row.label(text=extend_target)
+        else:
+            sub = row.row()
+            sub.alert = True
+            sub.label(text=f"{extend_target} (not found)")
+
+        # Position row
+        row = col.row(align=True)
+        row.label(text="Position:")
+        pos_label = "prepend" if extend_position < 0 else "append"
+        row.label(text=f"{extend_position} ({pos_label})")
+
     def draw_pm_name(self, layout, pm):
         pr = get_prefs()
         col = layout.column(align=True)

@@ -1784,6 +1784,8 @@ class Editor(EditorBase):
 
     def draw_extra_settings(self, layout, pm):
         EditorBase.draw_extra_settings(self, layout, pm)
+        # Phase 9-X: Show extend info if present
+        self.draw_extend_info(layout, pm)
         layout.row(align=True).prop(pm, "pd_panel", expand=True)
         col = layout.column(align=True)
         # col.prop(pm, "pd_expand")

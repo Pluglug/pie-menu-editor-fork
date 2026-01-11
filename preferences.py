@@ -752,6 +752,11 @@ class PMEPreferences(AddonPreferences):
             pm.poll_cmd = apm.poll_cmd
             pm.tag = apm.tag
 
+            # Phase 9-X: Register extend panel for duplicated menus
+            if pm.mode in ('DIALOG', 'RMENU'):
+                from .editors.base import extend_panel
+                extend_panel(pm)
+
         else:
             pm.ed.on_pm_add(pm)
 
