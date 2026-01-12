@@ -442,9 +442,9 @@ class EditorBase:
         tpr = temp_prefs()
         tpr.update_extend_targets(pm.mode)
 
-        # Row 1: prop_search (like km_name)
-        row = layout.row(align=False)
-        target_row = row.row(align=True)
+        target_row = layout.row(align=False)
+
+        # prop_search for extend_target
         if extend_target:
             tp = getattr(bpy_types, extend_target, None)
             if not tp:
@@ -459,10 +459,9 @@ class EditorBase:
             results_are_suggestions=True,
         )
 
-        # Row 2: Side + Order + [Right] - only when target is set
+        # Right: Side + Order + [Right] - only when target is set
         if extend_target:
-            pos_row = row.row(align=True)
-            pos_row.alignment = 'RIGHT'
+            pos_row = target_row.row(align=True)
             pos_row.prop_enum(pm, "extend_side", "prepend", text="", icon=ic('TRIA_LEFT') if "_HT_" in extend_target else ic('TRIA_UP'))
             pos_row.prop_enum(pm, "extend_side", "append", text="", icon=ic('TRIA_RIGHT') if "_HT_" in extend_target else ic('TRIA_DOWN'))
 
@@ -475,7 +474,9 @@ class EditorBase:
                     toggle=True,
                 )
             pos_row.separator()
-            pos_row.prop(pm, "extend_order", text="")
+            order_row = pos_row.row(align=True)
+            order_row.scale_x = 0.5
+            order_row.prop(pm, "extend_order", text="")
 
         layout.separator(factor=1.5, type="LINE")
 

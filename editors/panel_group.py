@@ -242,7 +242,7 @@ def find_pms_by_extend_target(extend_target, mode):
 
 
 class PME_OT_extend_confirm(Operator):
-    """Confirm dialog when extend menu already exists for this target."""
+    """Add new extension or edit existing ones for this target"""
     bl_idname = "pme.extend_confirm"
     bl_label = "Extend Menu"
     bl_options = {'INTERNAL'}
@@ -257,22 +257,27 @@ class PME_OT_extend_confirm(Operator):
     def _draw(self, menu, context):
         lh.lt(menu.layout, operator_context='INVOKE_DEFAULT')
 
-        existing = find_pms_by_extend_target(self.extend_target, self.mode)
+        # Filter to same side only
+        prefix = "pd" if self.mode == 'DIALOG' else "rm"
+        all_existing = find_pms_by_extend_target(self.extend_target, self.mode)
+        existing = [
+            pm for pm in all_existing
+            if (pm.get_data(f"{prefix}_extend_side") or "append") == self.extend_side
+        ]
 
-        lh.label(f"'{self.extend_target}' already has extensions:")
-        lh.sep()
-
-        # Add New option - pass extend_target, extend_side, extend_order
-        # Phase 9-X (#97): Use descriptive name "Extend <target> <side> [Right]"
-        # Clean extend_target (remove _pre/_right suffix if present)
+        # Add New (primary action)
         clean_target, _, _ = extract_str_flags_b(self.extend_target, F_RIGHT, F_PRE)
-        side_label = "Pre" if self.extend_side == "prepend" else "App"
-        # Add "Right" suffix for TOPBAR right region
-        right_suffix = " Right" if self.extend_is_right else ""
+        # Side label: Header = Left/Right, Panel/Menu = Top/Bottom
+        is_header = "_HT_" in clean_target
+        if is_header:
+            side_label = "Left" if self.extend_side == "prepend" else "Right"
+        else:
+            side_label = "Top" if self.extend_side == "prepend" else "Bottom"
+        right_suffix = " (R)" if self.extend_is_right else ""
         menu_name = f"Extend {clean_target} {side_label}{right_suffix}"
         lh.operator(
             PME_OT_pm_add.bl_idname,
-            "Add New Extension",
+            "Add New",
             'ADD',
             mode=self.mode,
             name=menu_name,
@@ -282,23 +287,17 @@ class PME_OT_extend_confirm(Operator):
             extend_is_right=self.extend_is_right,
         )
 
-        lh.sep()
-        lh.label("Or go to existing:")
-
-        # Go to existing options
+        # Existing extensions (no icon - name indicates side)
         for pm in existing:
-            prefix = "pd" if self.mode == 'DIALOG' else "rm"
-            side = pm.get_data(f"{prefix}_extend_side") or ""
-            order = pm.get_data(f"{prefix}_extend_order") or 0
             lh.operator(
                 "wm.pm_select",
-                f"{pm.name} ({side} {order})",
-                'FORWARD',
+                pm.label or pm.name,
+                'NONE',
                 pm_name=pm.name
             )
 
     def execute(self, context):
-        context.window_manager.popup_menu(self._draw, title="Extend Menu")
+        context.window_manager.popup_menu(self._draw, title=self.extend_target)
         return {'CANCELLED'}
 
 
@@ -326,14 +325,22 @@ class PME_OT_panel_menu(Operator):
         """
         from ..infra.extend import extend_manager
 
-        existing = find_pms_by_extend_target(extend_target, mode)
         extend_side = "prepend" if is_prepend else "append"
+        prefix = "pd" if mode == 'DIALOG' else "rm"
+
+        # Only check for existing with same side (App existing doesn't block Pre)
+        all_existing = find_pms_by_extend_target(extend_target, mode)
+        existing_same_side = [
+            pm for pm in all_existing
+            if (pm.get_data(f"{prefix}_extend_side") or "append") == extend_side
+        ]
+
         # Get next order for this specific region (is_right matters for Headers)
         extend_order = extend_manager.get_next_order(
             extend_target, extend_side, is_right=is_right
         )
 
-        if existing:
+        if existing_same_side:
             # Show confirmation popup
             # Clean extend_target (remove _pre/_right suffix if present)
             clean_target, _, _ = extract_str_flags_b(extend_target, F_RIGHT, F_PRE)
@@ -349,12 +356,16 @@ class PME_OT_panel_menu(Operator):
             )
         else:
             # No existing, add directly with extend parameters
-            # Phase 9-X (#97): Use descriptive name "Extend <target> <side> [Right]"
             # Clean extend_target (remove _pre/_right suffix if present)
             clean_target, _, _ = extract_str_flags_b(extend_target, F_RIGHT, F_PRE)
-            side_label = "Pre" if is_prepend else "App"
-            # Add "Right" suffix for TOPBAR right region
-            right_suffix = " Right" if is_right else ""
+            # Side label: Header = Left/Right, Panel/Menu = Top/Bottom
+            is_header = "_HT_" in clean_target
+            if is_header:
+                side_label = "Left" if is_prepend else "Right"
+            else:
+                side_label = "Top" if is_prepend else "Bottom"
+            # Add "(R)" suffix for TOPBAR right region
+            right_suffix = " (R)" if is_right else ""
             menu_name = f"Extend {clean_target} {side_label}{right_suffix}"
             lh.operator(
                 PME_OT_pm_add.bl_idname,
