@@ -196,6 +196,7 @@ class PMEData(PropertyGroup):
     links_idx: IntProperty(default=0, update=update_links_idx)
     hidden_panels_idx: IntProperty()
     pie_menus: CollectionProperty(type=BaseCollectionItem)
+    extend_targets: CollectionProperty(type=BaseCollectionItem)
     modal_item_hk: PointerProperty(type=keymap_helper.Hotkey)
     modal_item_prop_mode: EnumProperty(
         items=(
@@ -291,3 +292,43 @@ class PMEData(PropertyGroup):
         for pm in sorted(pms):
             item = self.pie_menus.add()
             item.name = pm
+
+    def update_extend_targets(self, mode):
+        """Update extend_targets collection for prop_search.
+
+        Phase 9-X (#97): Populate Panel/Menu/Header list based on mode.
+        - DIALOG: Panel (_PT_) and Header (_HT_)
+        - RMENU: Menu (_MT_)
+        """
+        from inspect import isclass
+        from bpy import types as bpy_types
+        from bpy.types import Panel, Menu, Header
+
+        self.extend_targets.clear()
+        targets = set()
+
+        if mode == 'RMENU':
+            # Menu (_MT_) only
+            for tp_name in dir(bpy_types):
+                tp = getattr(bpy_types, tp_name, None)
+                if not tp or not isclass(tp):
+                    continue
+                if issubclass(tp, Menu) and tp is not Menu:
+                    targets.add(tp_name)
+
+        elif mode == 'DIALOG':
+            # Panel (_PT_) and Header (_HT_)
+            for tp_name in dir(bpy_types):
+                tp = getattr(bpy_types, tp_name, None)
+                if not tp or not isclass(tp):
+                    continue
+                if issubclass(tp, Panel) and tp is not Panel:
+                    # Skip PME-generated panels
+                    if not hasattr(tp, "pme_data"):
+                        targets.add(tp_name)
+                elif issubclass(tp, Header) and tp is not Header:
+                    targets.add(tp_name)
+
+        for name in sorted(targets):
+            item = self.extend_targets.add()
+            item.name = name

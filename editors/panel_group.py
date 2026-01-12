@@ -27,6 +27,7 @@ from ..ui.panels import (
     PLayout,
 )
 from .. import pme
+from ..infra.utils import extract_str_flags_b
 
 # =============================================================================
 # Schema Definitions (PANEL)
@@ -205,6 +206,101 @@ def poll_pme_panel(cls, context):
     return pm.poll(cls, context)
 
 
+def find_pms_by_extend_target(extend_target, mode):
+    """Find existing pms with the same extend_target.
+
+    Args:
+        extend_target: Blender Panel/Menu/Header ID
+        mode: 'DIALOG' or 'RMENU'
+
+    Returns:
+        List of matching pms
+    """
+    pr = get_prefs()
+    prefix = "pd" if mode == 'DIALOG' else "rm"
+    target_key = f"{prefix}_extend_target"
+
+    # Clean search target (remove _pre/_right suffix if present)
+    clean_search_target, _, _ = extract_str_flags_b(extend_target, F_RIGHT, F_PRE)
+
+    results = []
+    for pm in pr.pie_menus:
+        if pm.mode != mode:
+            continue
+        # TODO(Phase 9-X): Remove pm.name fallback when all data is migrated (v3.0+)
+        pm_target = pm.get_data(target_key)
+        if not pm_target:
+            pm_target, _, _ = extract_str_flags_b(pm.name, F_RIGHT, F_PRE)
+        else:
+            # Also clean pm_target in case it has suffix
+            pm_target, _, _ = extract_str_flags_b(pm_target, F_RIGHT, F_PRE)
+
+        if pm_target == clean_search_target:
+            results.append(pm)
+
+    return results
+
+
+class PME_OT_extend_confirm(Operator):
+    """Add new extension or edit existing ones for this target"""
+    bl_idname = "pme.extend_confirm"
+    bl_label = "Extend Menu"
+    bl_options = {'INTERNAL'}
+
+    mode: StringProperty()
+    # Phase 9-X (#97): Direct extend parameters
+    extend_target: StringProperty()
+    extend_side: StringProperty(default="append")  # "prepend" | "append"
+    extend_order: IntProperty(default=0)
+    extend_is_right: BoolProperty(default=False)  # Header right region
+
+    def _draw(self, menu, context):
+        lh.lt(menu.layout, operator_context='INVOKE_DEFAULT')
+
+        # Filter to same side only
+        prefix = "pd" if self.mode == 'DIALOG' else "rm"
+        all_existing = find_pms_by_extend_target(self.extend_target, self.mode)
+        existing = [
+            pm for pm in all_existing
+            if (pm.get_data(f"{prefix}_extend_side") or "append") == self.extend_side
+        ]
+
+        # Add New (primary action)
+        clean_target, _, _ = extract_str_flags_b(self.extend_target, F_RIGHT, F_PRE)
+        # Side label: Header = Left/Right, Panel/Menu = Top/Bottom
+        is_header = "_HT_" in clean_target
+        if is_header:
+            side_label = "Left" if self.extend_side == "prepend" else "Right"
+        else:
+            side_label = "Top" if self.extend_side == "prepend" else "Bottom"
+        right_suffix = " (R)" if self.extend_is_right else ""
+        menu_name = f"Extend {clean_target} {side_label}{right_suffix}"
+        lh.operator(
+            PME_OT_pm_add.bl_idname,
+            "Add New",
+            'ADD',
+            mode=self.mode,
+            name=menu_name,
+            extend_target=clean_target,
+            extend_side=self.extend_side,
+            extend_order=self.extend_order,
+            extend_is_right=self.extend_is_right,
+        )
+
+        # Existing extensions (no icon - name indicates side)
+        for pm in existing:
+            lh.operator(
+                "wm.pm_select",
+                pm.label or pm.name,
+                'NONE',
+                pm_name=pm.name
+            )
+
+    def execute(self, context):
+        context.window_manager.popup_menu(self._draw, title=self.extend_target)
+        return {'CANCELLED'}
+
+
 class PME_OT_panel_menu(Operator):
     bl_idname = "pme.panel_menu"
     bl_label = ""
@@ -214,12 +310,74 @@ class PME_OT_panel_menu(Operator):
     panel: StringProperty()
     is_right_region: BoolProperty()
 
-    def extend_ui_operator(self, label, icon, mode, pm_name):
-        pr = get_prefs()
-        if pm_name in pr.pie_menus:
-            lh.operator("wm.pm_select", label, icon, pm_name=pm_name)
+    def extend_ui_operator(self, label, icon, mode, extend_target, is_prepend, is_right=False):
+        """Draw extend UI operator button.
+
+        Phase 9-X (#97): Uses extend_side + extend_order.
+
+        Args:
+            label: Button label
+            icon: Button icon
+            mode: 'DIALOG' or 'RMENU'
+            extend_target: Blender Panel/Menu/Header ID
+            is_prepend: True for prepend, False for append
+            is_right: True for right region (Header only)
+        """
+        from ..infra.extend import extend_manager
+
+        extend_side = "prepend" if is_prepend else "append"
+        prefix = "pd" if mode == 'DIALOG' else "rm"
+
+        # Only check for existing with same side (App existing doesn't block Pre)
+        all_existing = find_pms_by_extend_target(extend_target, mode)
+        existing_same_side = [
+            pm for pm in all_existing
+            if (pm.get_data(f"{prefix}_extend_side") or "append") == extend_side
+        ]
+
+        # Get next order for this specific region (is_right matters for Headers)
+        extend_order = extend_manager.get_next_order(
+            extend_target, extend_side, is_right=is_right
+        )
+
+        if existing_same_side:
+            # Show confirmation popup
+            # Clean extend_target (remove _pre/_right suffix if present)
+            clean_target, _, _ = extract_str_flags_b(extend_target, F_RIGHT, F_PRE)
+            lh.operator(
+                PME_OT_extend_confirm.bl_idname,
+                label,
+                icon,
+                mode=mode,
+                extend_target=clean_target,
+                extend_side=extend_side,
+                extend_order=extend_order,
+                extend_is_right=is_right,
+            )
         else:
-            lh.operator(PME_OT_pm_add.bl_idname, label, icon, mode=mode, name=pm_name)
+            # No existing, add directly with extend parameters
+            # Clean extend_target (remove _pre/_right suffix if present)
+            clean_target, _, _ = extract_str_flags_b(extend_target, F_RIGHT, F_PRE)
+            # Side label: Header = Left/Right, Panel/Menu = Top/Bottom
+            is_header = "_HT_" in clean_target
+            if is_header:
+                side_label = "Left" if is_prepend else "Right"
+            else:
+                side_label = "Top" if is_prepend else "Bottom"
+            # Add "(R)" suffix for TOPBAR right region
+            right_suffix = " (R)" if is_right else ""
+            menu_name = f"Extend {clean_target} {side_label}{right_suffix}"
+            lh.operator(
+                PME_OT_pm_add.bl_idname,
+                label,
+                icon,
+                mode=mode,
+                name=menu_name,
+                extend_target=clean_target,
+                extend_side=extend_side,
+                extend_order=extend_order,
+                extend_is_right=is_right,
+            )
 
     def draw_header_menu(self, menu, context):
         lh.lt(menu.layout, operator_context='INVOKE_DEFAULT')
@@ -227,13 +385,15 @@ class PME_OT_panel_menu(Operator):
         pr = get_prefs()
         pm = pr.selected_pm
 
-        right_suffix = F_RIGHT if self.is_right_region else ""
+        # Phase 9-X (#97): Pass extend_target, is_prepend, and is_right
         self.extend_ui_operator(
-            "Extend Header", 'TRIA_LEFT', 'DIALOG', self.panel + right_suffix + F_PRE
+            "Extend Header", 'TRIA_LEFT', 'DIALOG', self.panel, True,
+            is_right=self.is_right_region
         )
 
         self.extend_ui_operator(
-            "Extend Header", 'TRIA_RIGHT', 'DIALOG', self.panel + right_suffix
+            "Extend Header", 'TRIA_RIGHT', 'DIALOG', self.panel, False,
+            is_right=self.is_right_region
         )
 
         lh.operator(
@@ -280,10 +440,11 @@ class PME_OT_panel_menu(Operator):
 
                 lh.sep()
 
+        # Phase 9-X (#97): Pass extend_target and is_prepend
         self.extend_ui_operator(
-            "Extend Menu", 'TRIA_UP', 'RMENU', self.panel + F_PRE
+            "Extend Menu", 'TRIA_UP', 'RMENU', self.panel, True
         )
-        self.extend_ui_operator("Extend Menu", 'TRIA_DOWN', 'RMENU', self.panel)
+        self.extend_ui_operator("Extend Menu", 'TRIA_DOWN', 'RMENU', self.panel, False)
 
         lh.operator(
             "pme.clipboard_copy", "Copy Menu ID", 'COPYDOWN', text=self.panel
@@ -314,7 +475,7 @@ class PME_OT_panel_menu(Operator):
         lh.operator(
             "pme.panel_hide",
             "Hide Panel",
-            'VISIBLE_IPO_OFF',
+            'GHOST_DISABLED',
             panel=self.panel,
         )
 
@@ -383,9 +544,9 @@ class PME_OT_panel_menu(Operator):
             lh.sep()
 
         self.extend_ui_operator(
-            "Extend Panel", 'TRIA_UP', 'DIALOG', self.panel + F_PRE
+            "Extend Panel", 'TRIA_UP', 'DIALOG', self.panel + F_PRE, True
         )
-        self.extend_ui_operator("Extend Panel", 'TRIA_DOWN', 'DIALOG', self.panel)
+        self.extend_ui_operator("Extend Panel", 'TRIA_DOWN', 'DIALOG', self.panel, False)
 
         lh.operator(
             "pme.clipboard_copy",

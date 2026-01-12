@@ -31,13 +31,16 @@ from ..ui import screen as SU
 from ..ui.utils import get_pme_menu_class, pme_menu_classes
 from ..ui.layout import lh, operator, split, draw_pme_layout, L_SEP, L_LABEL
 from ..pme_types import Tag, PMItem, PMIItem
+from ..prefs.tree import tree_state
 from ..operators import (
     PME_OT_docs,
     PME_OT_preview,
     PME_OT_pm_hotkey_remove,
     WM_OT_pm_select,
     WM_OT_pme_user_pie_menu_call,
+    PME_OT_extend_target_search,
 )
+from ..infra.extend import extend_manager
 
 # Re-export operators from operators/ed/ for backward compatibility
 from ..operators.ed import (
@@ -83,99 +86,39 @@ from ..operators.ed import (
     PME_OT_pm_hotkey_convert,
 )
 
-EXTENDED_PANELS = {}
 
-
-def gen_header_draw(pm_name):
-    def _draw(self, context):
-        is_right_region = context.region.alignment == 'RIGHT'
-        _, is_right_pm, _ = extract_str_flags_b(pm_name, F_RIGHT, F_PRE)
-        if is_right_region and is_right_pm or not is_right_region and not is_right_pm:
-            try:
-                pm = get_prefs().pie_menus[pm_name]
-            except Exception:
-                # During app template / homefile reload PME prefs may be
-                # temporarily unavailable; skip drawing instead of raising.
-                return
-
-            draw_pme_layout(
-                pm,
-                self.layout.column(align=True),
-                WM_OT_pme_user_pie_menu_call._draw_item,
-                icon_btn_scale_x=1,
-            )
-
-    return _draw
-
-
-def gen_menu_draw(pm_name):
-    def _draw(self, context):
-        try:
-            pm = get_prefs().pie_menus[pm_name]
-        except Exception:
-            return
-
-        WM_OT_pme_user_pie_menu_call.draw_rm(pm, self.layout)
-
-    return _draw
-
-
-def gen_panel_draw(pm_name):
-    def _draw(self, context):
-        try:
-            pm = get_prefs().pie_menus[pm_name]
-        except Exception:
-            return
-
-        draw_pme_layout(
-            pm,
-            self.layout.column(align=True),
-            WM_OT_pme_user_pie_menu_call._draw_item,
-        )
-
-    return _draw
+def get_pm_by_uid(uid):
+    """Get pm by uid. Returns None if not found."""
+    if not uid:
+        return None
+    pr = get_prefs()
+    for pm in pr.pie_menus:
+        if pm.uid == uid:
+            return pm
+    return None
 
 
 def extend_panel(pm):
-    if pm.name in EXTENDED_PANELS:
-        return
+    """Extend a Blender panel/menu/header with PME content.
 
-    tp_name, right, pre = extract_str_flags_b(pm.name, F_RIGHT, F_PRE)
+    This is a thin wrapper around extend_manager.register() for
+    backward compatibility.
 
-    if (
-        tp_name.startswith("PME_PT")
-        or tp_name.startswith("PME_MT")
-        or tp_name.startswith("PME_HT")
-    ):
-        return
-
-    tp = getattr(bpy_types, tp_name, None)
-    if not tp:
-        return
-
-    if tp and issubclass(tp, (Panel, Menu, Header)):
-        if '_HT_' in pm.name:
-            EXTENDED_PANELS[pm.name] = gen_header_draw(pm.name)
-        elif '_MT_' in pm.name:
-            EXTENDED_PANELS[pm.name] = gen_menu_draw(pm.name)
-        else:
-            EXTENDED_PANELS[pm.name] = gen_panel_draw(pm.name)
-        f = tp.prepend if pre else tp.append
-        f(EXTENDED_PANELS[pm.name])
-        SU.redraw_screen()
+    Args:
+        pm: PMItem to extend from
+    """
+    extend_manager.register(pm)
 
 
 def unextend_panel(pm):
-    if pm.name not in EXTENDED_PANELS:
-        return
+    """Remove extension from a Blender panel/menu/header.
 
-    tp_name, _, _ = extract_str_flags_b(pm.name, F_RIGHT, F_PRE)
+    This is a thin wrapper around extend_manager.unregister() for
+    backward compatibility.
+    """
+    pm_uid = pm.uid if pm.uid else pm.name
+    extend_manager.unregister(pm_uid)
 
-    tp = getattr(bpy_types, tp_name, None)
-    if tp:
-        tp.remove(EXTENDED_PANELS[pm.name])
-        del EXTENDED_PANELS[pm.name]
-        SU.redraw_screen()
 
 
 class EditorBase:
@@ -325,9 +268,10 @@ class EditorBase:
                 pm.kmis_map[name] = pm.kmis_map[old_name]
                 del pm.kmis_map[old_name]
 
-        if old_name in pr.tree_ul.expanded_folders:
-            pr.tree_ul.expanded_folders.remove(old_name)
-            pr.tree_ul.expanded_folders.add(name)
+        # FIXME(#95): tree_state workaround - pr.tree_ul returns class, not instance
+        if old_name in tree_state.expanded_folders:
+            tree_state.expanded_folders.remove(old_name)
+            tree_state.expanded_folders.add(name)
 
         if old_name in pr.old_pms:
             pr.old_pms.remove(old_name)
@@ -481,6 +425,60 @@ class EditorBase:
         row.operator(
             PME_OT_poll_specials_call.bl_idname, text="", icon=ic('COLLAPSEMENU')
         )
+
+    def draw_extend_info(self, layout, pm):
+        """Draw extend_target, extend_side, and extend_order info.
+
+        Phase 9-X (#97): For DIALOG and RMENU modes only.
+        Like km_name: prop_search for text field with search suggestions.
+        Allows copy-paste from bpy.ops.pme.panel_menu() Copy Menu ID.
+        """
+        if pm.mode not in ('DIALOG', 'RMENU'):
+            return
+
+        extend_target = pm.extend_target
+
+        # Update extend_targets collection for prop_search
+        tpr = temp_prefs()
+        tpr.update_extend_targets(pm.mode)
+
+        target_row = layout.row(align=False)
+
+        # prop_search for extend_target
+        if extend_target:
+            tp = getattr(bpy_types, extend_target, None)
+            if not tp:
+                target_row.alert = True
+        target_row.prop_search(
+            pm,
+            "extend_target",
+            tpr,
+            "extend_targets",
+            text="",
+            icon="WINDOW",
+            results_are_suggestions=True,
+        )
+
+        # Right: Side + Order + [Right] - only when target is set
+        if extend_target:
+            pos_row = target_row.row(align=True)
+            pos_row.prop_enum(pm, "extend_side", "prepend", text="", icon=ic('TRIA_LEFT') if "_HT_" in extend_target else ic('TRIA_UP'))
+            pos_row.prop_enum(pm, "extend_side", "append", text="", icon=ic('TRIA_RIGHT') if "_HT_" in extend_target else ic('TRIA_DOWN'))
+
+            # Right Region toggle (TOPBAR_HT_ only, DIALOG mode only)
+            if pm.mode == 'DIALOG' and extend_target.startswith("TOPBAR_HT_"):
+                pos_row.prop(
+                    pm, "extend_is_right",
+                    text="",
+                    icon=ic('SCENE_DATA'),
+                    toggle=True,
+                )
+            pos_row.separator()
+            order_row = pos_row.row(align=True)
+            order_row.scale_x = 0.5
+            order_row.prop(pm, "extend_order", text="")
+
+        layout.separator(factor=1.5, type="LINE")
 
     def draw_pm_name(self, layout, pm):
         pr = get_prefs()

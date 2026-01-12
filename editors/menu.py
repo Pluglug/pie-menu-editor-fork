@@ -31,6 +31,10 @@ from ..core.schema import schema
 # Schema Definitions (RMENU)
 # =============================================================================
 schema.BoolProperty("rm", "rm_title", True)
+# Extend Menu properties (Phase 9-X: #89, #97)
+schema.StringProperty("rm", "rm_extend_target", "")  # Blender Menu ID to extend
+schema.StringProperty("rm", "rm_extend_side", "")    # "prepend" | "append" | ""
+schema.IntProperty("rm", "rm_extend_order", 0)       # 0 = innermost
 
 
 class WM_OT_rmi_add(Operator):
@@ -623,6 +627,8 @@ class Editor(EditorBase):
         pmi = pm.pmis.add()
         pmi.mode = 'COMMAND'
         pmi.name = "Slot"
+        # Phase 9-X: extend_target is now set directly in add_pm()
+        # No need to parse from pm.name
         extend_panel(pm)
 
     def on_pm_remove(self, pm):
@@ -643,6 +649,8 @@ class Editor(EditorBase):
         extend_panel(pm)
 
     def draw_extra_settings(self, layout, pm):
+        # Phase 9-X: Show extend info if present
+        self.draw_extend_info(layout, pm)
         EditorBase.draw_extra_settings(self, layout, pm)
         layout.prop(pm, "rm_title")
 

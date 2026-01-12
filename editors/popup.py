@@ -100,6 +100,11 @@ schema.BoolProperty("pd", "pd_expand")
 schema.IntProperty("pd", "pd_panel", 1)
 schema.BoolProperty("pd", "pd_auto_close", False)
 schema.IntProperty("pd", "pd_width", 300)
+# Extend Panel properties (Phase 9-X: #89, #97)
+schema.StringProperty("pd", "pd_extend_target", "")  # Blender Panel/Header ID to extend
+schema.StringProperty("pd", "pd_extend_side", "")    # "prepend" | "append" | ""
+schema.IntProperty("pd", "pd_extend_order", 0)       # 0 = innermost
+schema.BoolProperty("pd", "pd_extend_is_right", False)  # Header right region
 
 
 current_pdi = 0
@@ -1742,6 +1747,8 @@ class Editor(EditorBase):
 
     def on_pm_add(self, pm):
         self.add_pd_row(pm)
+        # Phase 9-X: extend_target is now set directly in add_pm()
+        # No need to parse from pm.name
         extend_panel(pm)
 
     def on_pm_remove(self, pm):
@@ -1778,6 +1785,8 @@ class Editor(EditorBase):
         pass
 
     def draw_extra_settings(self, layout, pm):
+        # Phase 9-X: Show extend info if present
+        self.draw_extend_info(layout, pm)
         EditorBase.draw_extra_settings(self, layout, pm)
         layout.row(align=True).prop(pm, "pd_panel", expand=True)
         col = layout.column(align=True)

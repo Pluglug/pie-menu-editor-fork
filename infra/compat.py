@@ -11,6 +11,7 @@ from .. import addon
 from ..addon import get_prefs
 from .debug import *
 from ..core import constants as CC
+from .utils import extract_str_flags_b
 
 
 def fix(pms=None, version=None):
@@ -197,11 +198,85 @@ def _migrate_json_property_poll_cmd(menu):
         menu[7] = ""
 
 
+def _migrate_json_extend_target(menu):
+    """Migrate extend_target from menu[0] (pm.name) to menu[5] (pm.data) for JSON import.
+
+    PME1 JSON format encodes extend information in pm.name:
+    - "VIEW3D_PT_tools_pre" → prepend to VIEW3D_PT_tools
+    - "TOPBAR_HT_upper_bar_right" → right region of TOPBAR_HT_upper_bar
+
+    PME2 stores these in pm.data:
+    - pd_extend_target / rm_extend_target: Blender Panel/Menu ID
+    - pd_extend_side / rm_extend_side: "prepend" | "append"
+    - pd_extend_order: int (0 = innermost)
+    - pd_extend_is_right: bool (Header right region, DIALOG only)
+
+    Args:
+        menu: JSON menu array [name, km_name, hotkey, icon, mode, data, ...]
+    """
+    mode = menu[4]
+    if mode not in ('DIALOG', 'RMENU'):
+        return
+
+    name = menu[0]
+    # Parse name for Blender ID and position flags
+    tp_name, is_right, is_prepend = extract_str_flags_b(name, CC.F_RIGHT, CC.F_PRE)
+
+    # Check if tp_name is a valid Blender type ID
+    if not any(x in tp_name for x in ('_PT_', '_MT_', '_HT_')):
+        return
+
+    # Determine prefix and values
+    prefix = "pd" if mode == 'DIALOG' else "rm"
+    extend_side = "prepend" if is_prepend else "append"
+
+    # Get current data string
+    data = menu[5] if len(menu) > 5 else ""
+
+    # Build new data string with extend properties
+    # Parse existing data to preserve other settings
+    if data and "?" in data:
+        base_prefix, _, params = data.partition("?")
+        # Remove any existing extend properties (shouldn't exist, but be safe)
+        param_pairs = [p for p in params.split("&") if p and not p.startswith(f"{prefix}_extend")]
+        new_params = [
+            f"{prefix}_extend_target={tp_name}",
+            f"{prefix}_extend_side={extend_side}",
+            f"{prefix}_extend_order=0",
+        ]
+        if prefix == "pd" and is_right:
+            new_params.append(f"{prefix}_extend_is_right=True")
+        all_params = new_params + param_pairs
+        data = f"{base_prefix}?{'&'.join(all_params)}"
+    else:
+        # No existing data, create new
+        base_prefix = prefix
+        new_params = [
+            f"{prefix}_extend_target={tp_name}",
+            f"{prefix}_extend_side={extend_side}",
+            f"{prefix}_extend_order=0",
+        ]
+        if prefix == "pd" and is_right:
+            new_params.append(f"{prefix}_extend_is_right=True")
+        data = f"{base_prefix}?{'&'.join(new_params)}"
+
+    menu[5] = data
+
+    DBG_INIT and logi(
+        "PME JSON: migrated extend_target",
+        f"name={name!r}",
+        f"extend_target={tp_name!r}",
+        f"extend_side={extend_side!r}",
+        f"is_right={is_right}"
+    )
+
+
 def fix_json_2_0_0(pr, pm, menu):
     """
-    Migrate MODAL and PROPERTY properties in JSON import.
+    Migrate MODAL, PROPERTY, and Extend properties in JSON import.
 
     JSON menu structure (PME1 format):
+      menu[0] = name (may contain Blender type ID for Extend menus)
       menu[4] = mode
       menu[5] = data (pm.data string)
       menu[7] = poll_cmd (or prop_type for PROPERTY mode in PME1)
@@ -219,6 +294,10 @@ def fix_json_2_0_0(pr, pm, menu):
             menu[5] = _migrate_property_data(data)
         # Migrate prop_type from menu[7] to menu[5] (pm.data)
         _migrate_json_property_poll_cmd(menu)
+
+    # Migrate extend_target from pm.name to pm.data (DIALOG/RMENU)
+    if mode in ('DIALOG', 'RMENU'):
+        _migrate_json_extend_target(menu)
 
 
 def fix_2_0_0(pr, pm):
@@ -241,6 +320,155 @@ def fix_2_0_0(pr, pm):
     if not pm.uid:
         from ..core.uid import generate_uid
         pm.uid = generate_uid(pm.mode)
+
+    # Migrate extend_target from pm.name suffix to pm.data (Phase 9-X: #89)
+    if pm.mode in ('DIALOG', 'RMENU'):
+        _migrate_extend_target(pm)
+
+
+def parse_extend_from_pme1_name(name):
+    """Parse extend information from PME1 format pm.name.
+
+    PME1 encodes extend information in pm.name with suffixes:
+    - F_PRE ("_pre") → prepend position
+    - F_RIGHT ("_right") → right region (header only, ignored in PME2)
+
+    Args:
+        name: PME1 format menu name (e.g., "VIEW3D_PT_tools_active_pre")
+
+    Returns:
+        tuple: (extend_target, extend_position) or (None, None) if not valid
+            - extend_target: Blender Panel/Menu/Header ID (e.g., "VIEW3D_PT_tools_active")
+            - extend_position: int (-1 for prepend, 0 for append)
+
+    Example:
+        >>> parse_extend_from_pme1_name("VIEW3D_PT_tools_active_pre")
+        ("VIEW3D_PT_tools_active", -1)
+        >>> parse_extend_from_pme1_name("TOPBAR_MT_file")
+        ("TOPBAR_MT_file", 0)
+        >>> parse_extend_from_pme1_name("My Custom Menu")
+        (None, None)
+    """
+    # Parse name for Blender ID and position flags
+    tp_name, is_right, is_prepend = extract_str_flags_b(
+        name, CC.F_RIGHT, CC.F_PRE
+    )
+
+    # Check if tp_name is a valid Blender type ID
+    if not any(x in tp_name for x in ('_PT_', '_MT_', '_HT_')):
+        return None, None
+
+    # Determine position: -1 for prepend, 0 for append
+    extend_position = -1 if is_prepend else 0
+
+    return tp_name, extend_position
+
+
+def _migrate_extend_target(pm):
+    """Migrate extend_target from pm.name suffix to pm.data.
+
+    Uses parse_extend_from_pme1_name() to extract extend information
+    from PME1 format names.
+
+    Phase 9-X (#97): Updated to use extend_side + extend_order schema.
+    Also fixes existing data where extend_target contains suffix.
+
+    PME2 stores these in pm.data:
+    - pd_extend_target / rm_extend_target: Blender Panel/Menu ID (no suffix)
+    - pd_extend_side / rm_extend_side: "prepend" | "append"
+    - pd_extend_order / rm_extend_order: int (0 = innermost)
+    - pd_extend_is_right: bool (Header right region, DIALOG only)
+    """
+    # Get prefix based on mode
+    prefix = "pd" if pm.mode == 'DIALOG' else "rm"
+    extend_target_key = f"{prefix}_extend_target"
+    extend_side_key = f"{prefix}_extend_side"
+    extend_order_key = f"{prefix}_extend_order"
+    extend_is_right_key = f"{prefix}_extend_is_right" if prefix == "pd" else None
+    # Legacy key (to be removed after migration)
+    extend_position_key = f"{prefix}_extend_position"
+
+    current_target = pm.get_data(extend_target_key)
+    current_side = pm.get_data(extend_side_key)
+
+    # Case 1: Already fully migrated (has extend_side and clean extend_target)
+    if current_side and current_target:
+        # Still need to fix suffix in extend_target if present
+        clean_target, is_right, is_prepend = extract_str_flags_b(
+            current_target, CC.F_RIGHT, CC.F_PRE
+        )
+        if clean_target != current_target:
+            # extend_target had suffix, fix it
+            pm.set_data(extend_target_key, clean_target)
+            # Migrate is_right from suffix (Header only)
+            if extend_is_right_key and is_right:
+                pm.set_data(extend_is_right_key, True)
+            DBG_INIT and logi(
+                "PME: fixed extend_target suffix",
+                f"pm={pm.name!r}",
+                f"old={current_target!r}",
+                f"new={clean_target!r}",
+                f"is_right={is_right}"
+            )
+        return
+
+    # Case 2: Has extend_target but no extend_side (old schema)
+    if current_target and not current_side:
+        # Parse suffix from extend_target (might have _pre/_right)
+        clean_target, is_right, is_prepend = extract_str_flags_b(
+            current_target, CC.F_RIGHT, CC.F_PRE
+        )
+        # Get extend_side from old extend_position or suffix
+        old_position = pm.get_data(extend_position_key)
+        if old_position is not None and old_position < 0:
+            extend_side = "prepend"
+        elif is_prepend:
+            extend_side = "prepend"
+        else:
+            extend_side = "append"
+
+        pm.set_data(extend_target_key, clean_target)
+        pm.set_data(extend_side_key, extend_side)
+        pm.set_data(extend_order_key, 0)
+        # Migrate is_right from suffix (Header only)
+        if extend_is_right_key and is_right:
+            pm.set_data(extend_is_right_key, True)
+
+        DBG_INIT and logi(
+            "PME: migrated extend_target (old schema)",
+            f"pm={pm.name!r}",
+            f"extend_target={clean_target!r}",
+            f"extend_side={extend_side!r}",
+            f"is_right={is_right}"
+        )
+        return
+
+    # Case 3: No extend_target, parse from pm.name
+    # Extract is_right directly since parse_extend_from_pme1_name doesn't return it
+    _, is_right, _ = extract_str_flags_b(pm.name, CC.F_RIGHT, CC.F_PRE)
+    extend_target, extend_position = parse_extend_from_pme1_name(pm.name)
+
+    if not extend_target:
+        return
+
+    # Convert extend_position to extend_side
+    extend_side = "prepend" if extend_position < 0 else "append"
+
+    # Set new schema values
+    pm.set_data(extend_target_key, extend_target)
+    pm.set_data(extend_side_key, extend_side)
+    pm.set_data(extend_order_key, 0)
+    # Migrate is_right from pm.name suffix (Header only)
+    if extend_is_right_key and is_right:
+        pm.set_data(extend_is_right_key, True)
+
+    DBG_INIT and logi(
+        "PME: migrated extend_target (from name)",
+        f"pm={pm.name!r}",
+        f"extend_target={extend_target!r}",
+        f"extend_side={extend_side!r}",
+        f"is_right={is_right}"
+    )
 
 
 # Valid property types for PROPERTY mode migration

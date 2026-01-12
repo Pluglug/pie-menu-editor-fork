@@ -67,6 +67,11 @@ class PME_OT_pm_add(Operator):
 
     mode: StringProperty()
     name: StringProperty(options={'SKIP_SAVE'})
+    # Phase 9-X (#97): Extend parameters passed directly
+    extend_target: StringProperty(options={'SKIP_SAVE'})
+    extend_side: StringProperty(default="", options={'SKIP_SAVE'})  # "prepend" | "append" | ""
+    extend_order: IntProperty(default=0, options={'SKIP_SAVE'})
+    extend_is_right: BoolProperty(default=False, options={'SKIP_SAVE'})  # Header right region
 
     def _draw(self, menu, context):
         PME_MT_pm_new.draw_items(self, menu.layout)
@@ -78,7 +83,15 @@ class PME_OT_pm_add(Operator):
             )
         else:
             pr = get_prefs()
-            pr.add_pm(self.mode, self.name or None)
+            # Phase 9-X (#97): Pass extend parameters directly to add_pm
+            pr.add_pm(
+                self.mode,
+                self.name or None,
+                extend_target=self.extend_target,
+                extend_side=self.extend_side,
+                extend_order=self.extend_order,
+                extend_is_right=self.extend_is_right,
+            )
             pr.update_tree()
             tag_redraw()
 

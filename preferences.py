@@ -676,7 +676,19 @@ class PMEPreferences(AddonPreferences):
         for kmi in self.window_kmis:
             kmi.active = value
 
-    def add_pm(self, mode='PMENU', name=None, duplicate=False):
+    def add_pm(self, mode='PMENU', name=None, duplicate=False,
+               extend_target='', extend_side='', extend_order=0, extend_is_right=False):
+        """Add a new pie menu.
+
+        Args:
+            mode: Menu mode (PMENU, RMENU, DIALOG, etc.)
+            name: Menu name (auto-generated if None)
+            duplicate: Whether this is a duplicate operation
+            extend_target: Phase 9-X (#97) - Blender Panel/Menu/Header ID to extend
+            extend_side: Phase 9-X (#97) - "prepend" or "append"
+            extend_order: Phase 9-X (#97) - Order within same target+side (0 = innermost)
+            extend_is_right: Phase 9-X (#97) - True for Header right region
+        """
         link = None
         pr = get_prefs()
         tpr = temp_prefs()
@@ -719,6 +731,20 @@ class PMEPreferences(AddonPreferences):
 
         pm.data = pm.ed.default_pmi_data
 
+        # Phase 9-X (#97): Set extend_target, extend_side, extend_order BEFORE on_pm_add()
+        # This eliminates the need to parse from pm.name
+        if extend_target and extend_side:
+            if mode == 'DIALOG':
+                pm.set_data("pd_extend_target", extend_target)
+                pm.set_data("pd_extend_side", extend_side)
+                pm.set_data("pd_extend_order", extend_order)
+                pm.set_data("pd_extend_is_right", extend_is_right)
+            elif mode == 'RMENU':
+                pm.set_data("rm_extend_target", extend_target)
+                pm.set_data("rm_extend_side", extend_side)
+                pm.set_data("rm_extend_order", extend_order)
+                # RMENU doesn't use is_right (Menu has no right region)
+
         if duplicate:
             apm = pr.pie_menus[name]
 
@@ -731,6 +757,11 @@ class PMEPreferences(AddonPreferences):
             pm.open_mode = apm.open_mode
             pm.poll_cmd = apm.poll_cmd
             pm.tag = apm.tag
+
+            # Phase 9-X: Register extend panel for duplicated menus
+            if pm.mode in ('DIALOG', 'RMENU'):
+                from .editors.base import extend_panel
+                extend_panel(pm)
 
         else:
             pm.ed.on_pm_add(pm)

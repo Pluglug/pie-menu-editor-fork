@@ -748,6 +748,166 @@ class PMItem(PropertyGroup):
         update=mo_lock_update,
     )
 
+    # =========================================================================
+    # Phase 9-X: Extend properties for DIALOG/RMENU modes
+    # These wrap pm.data with mode-aware prefix (pd_/rm_)
+    # =========================================================================
+
+    def _extend_prefix(self):
+        """Get the extend property prefix for current mode."""
+        if self.mode == 'DIALOG':
+            return "pd"
+        elif self.mode == 'RMENU':
+            return "rm"
+        return None
+
+    def get_extend_target(self):
+        prefix = self._extend_prefix()
+        if not prefix:
+            return ""
+        return self.get_data(f"{prefix}_extend_target") or ""
+
+    def set_extend_target(self, value):
+        prefix = self._extend_prefix()
+        if not prefix:
+            return
+
+        old_value = self.get_data(f"{prefix}_extend_target") or ""
+        if value == old_value:
+            return
+
+        # Update ExtendManager registration
+        from .infra.extend import extend_manager
+        pm_uid = self.uid if self.uid else self.name
+
+        # Unregister from old target
+        if old_value:
+            extend_manager.unregister(pm_uid)
+
+        # Set new value
+        self.set_data(f"{prefix}_extend_target", value)
+
+        # Set default extend_side if target is set and side is empty
+        if value:
+            current_side = self.get_data(f"{prefix}_extend_side") or ""
+            if not current_side:
+                self.set_data(f"{prefix}_extend_side", "append")
+
+            # Register to new target
+            extend_manager.register(self)
+        else:
+            # Clear extend settings when target is cleared
+            self.set_data(f"{prefix}_extend_side", "")
+            self.set_data(f"{prefix}_extend_order", 0)
+
+    extend_target: StringProperty(
+        name="Extend Target",
+        description=(
+            "Add this menu's content to an existing Blender Panel, Menu, or Header. "
+            "Use the search to find available targets"
+        ),
+        get=get_extend_target,
+        set=set_extend_target,
+    )
+
+    def get_extend_side(self):
+        prefix = self._extend_prefix()
+        if not prefix:
+            return 1  # 'append' (default)
+        value = self.get_data(f"{prefix}_extend_side") or ""
+        for i, item in enumerate(CC.EXTEND_SIDE_ITEMS):
+            if item[0] == value:
+                return i
+        return 1  # 'append' (default)
+
+    def set_extend_side(self, value):
+        prefix = self._extend_prefix()
+        if not prefix:
+            return
+        new_side = CC.EXTEND_SIDE_ITEMS[value][0]
+        old_side = self.get_data(f"{prefix}_extend_side") or ""
+        if new_side == old_side:
+            return
+
+        from .infra.extend import extend_manager
+        pm_uid = self.uid if self.uid else self.name
+
+        # Update pm.data first
+        self.set_data(f"{prefix}_extend_side", new_side)
+
+        # Use ExtendManager.change_side() to handle all updates
+        changes = extend_manager.change_side(pm_uid, new_side)
+        if changes:
+            # Sync pm.data for all affected pms (including self)
+            extend_manager.sync_pm_data_orders(changes)
+        tag_redraw()
+
+    extend_side: EnumProperty(
+        name="Side",
+        description="Position relative to original content",
+        items=CC.EXTEND_SIDE_ITEMS,
+        get=get_extend_side,
+        set=set_extend_side,
+    )
+
+    def get_extend_order(self):
+        prefix = self._extend_prefix()
+        if not prefix:
+            return 0
+        return self.get_data(f"{prefix}_extend_order") or 0
+
+    def set_extend_order(self, value):
+        prefix = self._extend_prefix()
+        if not prefix:
+            return
+        extend_target = self.get_data(f"{prefix}_extend_target")
+        extend_side = self.get_data(f"{prefix}_extend_side")
+        if not extend_target or not extend_side:
+            return
+
+        from .infra.extend import extend_manager
+        pm_uid = self.uid if self.uid else self.name
+
+        # Use ExtendManager.set_order() to adjust all entries
+        changes = extend_manager.set_order(pm_uid, value)
+        if changes:
+            # Sync pm.data for all affected pms
+            extend_manager.sync_pm_data_orders(changes)
+        tag_redraw()
+
+    extend_order: IntProperty(
+        name="Order",
+        description="Display order when multiple menus extend the same target",
+        get=get_extend_order,
+        set=set_extend_order,
+        min=0,
+        soft_max=10,
+    )
+
+    def get_extend_is_right(self):
+        # Only DIALOG mode supports is_right (Header right region)
+        if self.mode != 'DIALOG':
+            return False
+        return bool(self.get_data("pd_extend_is_right"))
+
+    def set_extend_is_right(self, value):
+        if self.mode != 'DIALOG':
+            return
+        self.set_data("pd_extend_is_right", value)
+        # Re-register to update draw function
+        from .infra.extend import extend_manager
+        pm_uid = self.uid if self.uid else self.name
+        extend_manager.unregister(pm_uid)
+        extend_manager.register(self)
+        tag_redraw()
+
+    extend_is_right: BoolProperty(
+        name="Right Region",
+        description="Draw in TOPBAR right region (scene selector area)",
+        get=get_extend_is_right,
+        set=set_extend_is_right,
+    )
+
     def poll(self, cls=None, context=None):
         if self.poll_cmd == CC.DEFAULT_POLL:
             return True
