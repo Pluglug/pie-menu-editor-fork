@@ -464,12 +464,42 @@ class PME_OT_extend_target_search(SearchOperator, Operator):
     Phase 9-X (#97): Extend Target selection for DIALOG/RMENU modes.
     - DIALOG mode: Shows Panels (_PT_) and Headers (_HT_)
     - RMENU mode: Shows Menus (_MT_)
+
+    Usage:
+    - add=True: Open search popup to select target
+    - add=False: Clear current extend_target
     """
     bl_idname = "pme.extend_target_search"
     bl_label = "Select Extend Target"
     bl_description = "Search and select a Panel, Menu, or Header to extend"
     bl_options = {'INTERNAL'}
     bl_property = "value"
+
+    add: BoolProperty(options={'SKIP_SAVE'})
+
+    def invoke(self, context, event):
+        if self.add:
+            # Reset enum_items cache before search (from SearchOperator.invoke)
+            cls = getattr(bpy.types, self.__class__.__name__)
+            if not hasattr(cls, "enum_items"):
+                cls.enum_items = None
+            elif not self.use_cache and cls.enum_items:
+                cls.enum_items.clear()
+                cls.enum_items = None
+
+            context.window_manager.invoke_search_popup(self)
+            return {'RUNNING_MODAL'}
+        else:
+            # Clear extend_target
+            pr = get_prefs()
+            pm = pr.selected_pm
+            if pm and pm.extend_target:
+                from ..infra.extend import extend_manager
+                pm_uid = pm.uid if pm.uid else pm.name
+                extend_manager.unregister(pm_uid)
+                pm.set_extend_target("")
+            tag_redraw()
+            return {'FINISHED'}
 
     def fill_enum_items(self, items):
         pr = get_prefs()

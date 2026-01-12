@@ -769,12 +769,43 @@ class PMItem(PropertyGroup):
 
     def set_extend_target(self, value):
         prefix = self._extend_prefix()
-        if prefix:
-            self.set_data(f"{prefix}_extend_target", value)
+        if not prefix:
+            return
+
+        old_value = self.get_data(f"{prefix}_extend_target") or ""
+        if value == old_value:
+            return
+
+        # Update ExtendManager registration
+        from .infra.extend import extend_manager
+        pm_uid = self.uid if self.uid else self.name
+
+        # Unregister from old target
+        if old_value:
+            extend_manager.unregister(pm_uid)
+
+        # Set new value
+        self.set_data(f"{prefix}_extend_target", value)
+
+        # Set default extend_side if target is set and side is empty
+        if value:
+            current_side = self.get_data(f"{prefix}_extend_side") or ""
+            if not current_side:
+                self.set_data(f"{prefix}_extend_side", "append")
+
+            # Register to new target
+            extend_manager.register(self)
+        else:
+            # Clear extend settings when target is cleared
+            self.set_data(f"{prefix}_extend_side", "")
+            self.set_data(f"{prefix}_extend_order", 0)
 
     extend_target: StringProperty(
         name="Extend Target",
-        description="Blender Panel/Menu ID to extend",
+        description=(
+            "Add this menu's content to an existing Blender Panel, Menu, or Header. "
+            "Use the search to find available targets"
+        ),
         get=get_extend_target,
         set=set_extend_target,
     )
@@ -782,12 +813,12 @@ class PMItem(PropertyGroup):
     def get_extend_side(self):
         prefix = self._extend_prefix()
         if not prefix:
-            return 0  # '' (None)
+            return 1  # 'append' (default)
         value = self.get_data(f"{prefix}_extend_side") or ""
         for i, item in enumerate(CC.EXTEND_SIDE_ITEMS):
             if item[0] == value:
                 return i
-        return 0
+        return 1  # 'append' (default)
 
     def set_extend_side(self, value):
         prefix = self._extend_prefix()
@@ -846,10 +877,11 @@ class PMItem(PropertyGroup):
 
     extend_order: IntProperty(
         name="Order",
-        description="Position within the extend side (0 = innermost)",
+        description="Display order when multiple menus extend the same target",
         get=get_extend_order,
         set=set_extend_order,
         min=0,
+        soft_max=10,
     )
 
     def get_extend_is_right(self):

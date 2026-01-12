@@ -430,55 +430,54 @@ class EditorBase:
         """Draw extend_target, extend_side, and extend_order info.
 
         Phase 9-X (#97): For DIALOG and RMENU modes only.
-        Uses direct property binding for Target, Side, and Order.
+        Like km_name: prop_search for text field with search suggestions.
+        Allows copy-paste from bpy.ops.pme.panel_menu() Copy Menu ID.
         """
         if pm.mode not in ('DIALOG', 'RMENU'):
             return
 
         extend_target = pm.extend_target
 
-        # TODO(Phase 9-X): Restore empty check when extend UI is reorganized
-        # if not extend_target:
-        #     return
+        # Update extend_targets collection for prop_search
+        tpr = temp_prefs()
+        tpr.update_extend_targets(pm.mode)
 
-        # Display extend info
-        box = layout.box()
-        col = box.column(align=True)
-
-        # Target row (search button + label/alert)
-        row = col.row(align=True)
-        row.label(text="Target:")
-        row.operator(
-            PME_OT_extend_target_search.bl_idname,
-            text="",
-            icon=ic('VIEWZOOM'),
-        )
+        # Row 1: prop_search (like km_name)
+        row = layout.row(align=False)
+        target_row = row.row(align=True)
         if extend_target:
             tp = getattr(bpy_types, extend_target, None)
-            if tp:
-                row.label(text=extend_target)
-            else:
-                sub = row.row()
-                sub.alert = True
-                sub.label(text=f"{extend_target} (not found)")
-        else:
-            row.label(text="(not set)")
+            if not tp:
+                target_row.alert = True
+        target_row.prop_search(
+            pm,
+            "extend_target",
+            tpr,
+            "extend_targets",
+            text="",
+            icon="WINDOW",
+            results_are_suggestions=True,
+        )
 
-        # Side row (direct property binding)
-        row = col.row(align=True)
-        row.label(text="Side:")
-        row.prop(pm, "extend_side", text="")
+        # Row 2: Side + Order + [Right] - only when target is set
+        if extend_target:
+            pos_row = row.row(align=True)
+            pos_row.alignment = 'RIGHT'
+            pos_row.prop_enum(pm, "extend_side", "prepend", text="", icon=ic('TRIA_LEFT') if "_HT_" in extend_target else ic('TRIA_UP'))
+            pos_row.prop_enum(pm, "extend_side", "append", text="", icon=ic('TRIA_RIGHT') if "_HT_" in extend_target else ic('TRIA_DOWN'))
 
-        # Order row (direct property binding)
-        row = col.row(align=True)
-        row.label(text="Order:")
-        row.prop(pm, "extend_order", text="")
+            # Right Region toggle (TOPBAR_HT_ only, DIALOG mode only)
+            if pm.mode == 'DIALOG' and extend_target.startswith("TOPBAR_HT_"):
+                pos_row.prop(
+                    pm, "extend_is_right",
+                    text="",
+                    icon=ic('SCENE_DATA'),
+                    toggle=True,
+                )
+            pos_row.separator()
+            pos_row.prop(pm, "extend_order", text="")
 
-        # Right Region row (TOPBAR_HT_ only, DIALOG mode only)
-        if pm.mode == 'DIALOG' and extend_target and extend_target.startswith("TOPBAR_HT_"):
-            row = col.row(align=True)
-            row.label(text="Region:")
-            row.prop(pm, "extend_is_right", text="Right")
+        layout.separator(factor=1.5, type="LINE")
 
     def draw_pm_name(self, layout, pm):
         pr = get_prefs()

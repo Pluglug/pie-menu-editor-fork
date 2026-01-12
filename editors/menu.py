@@ -649,9 +649,9 @@ class Editor(EditorBase):
         extend_panel(pm)
 
     def draw_extra_settings(self, layout, pm):
-        EditorBase.draw_extra_settings(self, layout, pm)
         # Phase 9-X: Show extend info if present
         self.draw_extend_info(layout, pm)
+        EditorBase.draw_extra_settings(self, layout, pm)
         layout.prop(pm, "rm_title")
 
     def draw_slots(self, layout, data):
