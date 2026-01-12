@@ -85,9 +85,6 @@ from ..operators.ed import (
     PME_OT_pm_hotkey_convert,
 )
 
-# Legacy: kept for backward compatibility, now managed by extend_manager
-EXTENDED_PANELS = {}
-
 
 def get_pm_by_uid(uid):
     """Get pm by uid. Returns None if not found."""
