@@ -214,6 +214,17 @@ class ExtendManager:
         entries.sort(key=lambda e: e.order)
         return entries
 
+    def get_entry(self, pm_uid: str) -> ExtendEntry | None:
+        """Get an entry by pm_uid.
+
+        Args:
+            pm_uid: The PM's unique identifier.
+
+        Returns:
+            ExtendEntry if found, None otherwise.
+        """
+        return self._entries.get(pm_uid)
+
     def swap_order(self, pm_uid: str, direction: int) -> bool:
         """Swap a PM's order with its neighbor.
 
@@ -289,6 +300,62 @@ class ExtendManager:
         """
         self._normalize_orders(target, side)
 
+    def change_side(self, pm_uid: str, new_side: str) -> dict[str, int]:
+        """Change an entry's side and handle all related updates.
+
+        This method:
+        1. Updates the entry's side
+        2. Resets order to innermost (0) on new side
+        3. Refreshes combined draw functions for both sides
+        4. Normalizes orders on the old side (fills gaps)
+        5. Returns affected pm_uids with their new orders for pm.data sync
+
+        Args:
+            pm_uid: The PM's unique identifier.
+            new_side: New side value ("prepend" or "append").
+
+        Returns:
+            Dict of {pm_uid: new_order} for all affected entries.
+            Includes entries from both old and new sides.
+            Empty dict if entry not found or side unchanged.
+        """
+        entry = self._entries.get(pm_uid)
+        if not entry:
+            return {}
+
+        old_side = entry.side
+        target = entry.target
+
+        # No change needed
+        if old_side == new_side:
+            return {}
+
+        # Update entry
+        entry.side = new_side
+        entry.order = 0  # Innermost on new side
+
+        changes = {pm_uid: 0}
+
+        # Refresh old side and normalize orders
+        self._refresh_combined(target, old_side)
+        self._normalize_orders(target, old_side)
+
+        # Collect order changes from old side
+        for e in self.get_entries(target, old_side):
+            changes[e.pm_uid] = e.order
+
+        # Shift existing entries on new side to make room
+        new_side_entries = self.get_entries(target, new_side)
+        for e in new_side_entries:
+            if e.pm_uid != pm_uid:
+                e.order += 1
+                changes[e.pm_uid] = e.order
+
+        # Refresh new side
+        self._refresh_combined(target, new_side)
+
+        return changes
+
     def get_next_order(self, target: str, side: str) -> int:
         """Get the next order value for a new entry (outer position).
 
@@ -299,12 +366,15 @@ class ExtendManager:
         Returns:
             Next order value (max + 1, or 0 if no entries).
         """
-        # First try ExtendManager entries
+        # Primary path: use ExtendManager entries (normal operation)
         entries = self.get_entries(target, side)
         if entries:
             return max(e.order for e in entries) + 1
 
-        # Fallback: scan pm.data directly (for startup or before registration)
+        # Fallback: scan pm.data directly
+        # This path is rarely used - mainly as a safety net for edge cases
+        # like addon reload or registration failures. In most cases,
+        # extend_all() has already registered all extend pms at startup.
         from ..addon import get_prefs
         pr = get_prefs()
         max_order = -1
@@ -371,26 +441,29 @@ class ExtendManager:
         return changes
 
     def sync_pm_data_orders(self, changes: dict[str, int]) -> None:
-        """Sync pm.data with order changes from set_order().
+        """Sync pm.data with order changes from set_order() or change_side().
 
         Args:
-            changes: Dict of {pm_uid: new_order} from set_order().
+            changes: Dict of {pm_uid: new_order} from set_order()/change_side().
         """
+        if not changes:
+            return
+
         from ..addon import get_prefs
         pr = get_prefs()
 
-        for pm_uid, new_order in changes.items():
-            # Find pm by uid
-            pm = None
-            for p in pr.pie_menus:
-                if (p.uid and p.uid == pm_uid) or p.name == pm_uid:
-                    pm = p
-                    break
+        # Build uid → pm lookup table once (O(M) where M = total menus)
+        pm_by_uid: dict[str, object] = {}
+        for pm in pr.pie_menus:
+            key = pm.uid if pm.uid else pm.name
+            pm_by_uid[key] = pm
 
+        # Update pm.data for each change (O(N) where N = changes)
+        for pm_uid, new_order in changes.items():
+            pm = pm_by_uid.get(pm_uid)
             if not pm:
                 continue
 
-            # Get prefix and update data
             prefix = self._get_prefix(pm.mode)
             if prefix:
                 pm.set_data(f"{prefix}_extend_order", new_order)

@@ -793,13 +793,23 @@ class PMItem(PropertyGroup):
         prefix = self._extend_prefix()
         if not prefix:
             return
-        side_value = CC.EXTEND_SIDE_ITEMS[value][0]
+        new_side = CC.EXTEND_SIDE_ITEMS[value][0]
         old_side = self.get_data(f"{prefix}_extend_side") or ""
-        if side_value == old_side:
+        if new_side == old_side:
             return
-        self.set_data(f"{prefix}_extend_side", side_value)
-        # Update ExtendManager
-        self._update_extend_registration(old_side)
+
+        from .infra.extend import extend_manager
+        pm_uid = self.uid if self.uid else self.name
+
+        # Update pm.data first
+        self.set_data(f"{prefix}_extend_side", new_side)
+
+        # Use ExtendManager.change_side() to handle all updates
+        changes = extend_manager.change_side(pm_uid, new_side)
+        if changes:
+            # Sync pm.data for all affected pms (including self)
+            extend_manager.sync_pm_data_orders(changes)
+        tag_redraw()
 
     extend_side: EnumProperty(
         name="Side",
@@ -841,38 +851,6 @@ class PMItem(PropertyGroup):
         set=set_extend_order,
         min=0,
     )
-
-    def _update_extend_registration(self, old_side=None):
-        """Update ExtendManager when extend side changes."""
-        from .infra.extend import extend_manager
-        pm_uid = self.uid if self.uid else self.name
-        entry = extend_manager._entries.get(pm_uid)
-        if not entry:
-            return
-        prefix = self._extend_prefix()
-        if not prefix:
-            return
-        extend_target = self.get_data(f"{prefix}_extend_target")
-        extend_side = self.get_data(f"{prefix}_extend_side") or ""
-        extend_order = self.get_data(f"{prefix}_extend_order") or 0
-
-        # Update entry side
-        entry.side = extend_side
-        # When side changes, reset order to innermost (0)
-        entry.order = 0
-        self.set_data(f"{prefix}_extend_order", 0)
-
-        # Refresh combined draw functions
-        if old_side and old_side != extend_side:
-            extend_manager._refresh_combined(extend_target, old_side)
-            # Normalize orders on old side (fill gap)
-            extend_manager.normalize_orders(extend_target, old_side)
-            # Sync pm.data for old side entries
-            old_entries = extend_manager.get_entries(extend_target, old_side)
-            for e in old_entries:
-                extend_manager.sync_pm_data_orders({e.pm_uid: e.order})
-        extend_manager._refresh_combined(extend_target, extend_side)
-        tag_redraw()
 
     def poll(self, cls=None, context=None):
         if self.poll_cmd == CC.DEFAULT_POLL:
