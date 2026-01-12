@@ -98,7 +98,6 @@ schema.BoolProperty("pd", "pd_title", True)
 schema.BoolProperty("pd", "pd_box", True)
 schema.BoolProperty("pd", "pd_expand")
 schema.IntProperty("pd", "pd_panel", 1)
-schema.BoolProperty("pd", "pd_auto_close", False)
 schema.IntProperty("pd", "pd_width", 300)
 # Extend Panel properties (Phase 9-X: #89, #97)
 schema.StringProperty("pd", "pd_extend_target", "")  # Blender Panel/Header ID to extend

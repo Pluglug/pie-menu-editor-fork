@@ -348,7 +348,6 @@ settings はフラット構造で、mode に応じて異なるプロパティが
   "pd_title": true,
   "pd_box": true,
   "pd_width": 300,
-  "pd_auto_close": false,
   "pd_expand": false,
   "pd_panel": 1,
   "pd_extend_target": null,
@@ -363,7 +362,6 @@ settings はフラット構造で、mode に応じて異なるプロパティが
 | `pd_title` | boolean | true | タイトルを表示 |
 | `pd_box` | boolean | true | ボックス表示 |
 | `pd_width` | integer | 300 | ダイアログ幅 |
-| `pd_auto_close` | boolean | false | 自動クローズ |
 | `pd_expand` | boolean | false | 展開表示 |
 | `pd_panel` | integer | 1 | 表示モード（0=PIE, 1=PANEL, 2=POPUP） |
 | `pd_extend_target` | string \| null | null | 拡張対象の Blender Panel/Header ID |

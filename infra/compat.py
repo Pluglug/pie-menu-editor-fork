@@ -66,56 +66,11 @@ def fix_json(pm, menu, version):
         fix_func(pr, pm, menu)
 
 
-def fix_1_14_0(pr, pm):
-    if pm.mode == 'PMENU':
-        for pmi in pm.pmis:
-            if pmi.mode == 'MENU':
-                sub_pm = pmi.text in pr.pie_menus and pr.pie_menus[pmi.text]
-
-                if (
-                    sub_pm
-                    and sub_pm.mode == 'DIALOG'
-                    and sub_pm.get_data("pd_panel") == 0
-                ):
-                    pmi.text = CC.F_EXPAND + pmi.text
-
-                    if sub_pm.get_data("pd_box"):
-                        pmi.text = CC.F_EXPAND + pmi.text
-
-    elif pm.mode == 'DIALOG':
-        if pm.get_data("pd_expand"):
-            pm.set_data("pd_expand", False)
-            for pmi in pm.pmis:
-                if pmi.mode == 'MENU':
-                    sub_pm = pmi.text in pr.pie_menus and pr.pie_menus[pmi.text]
-                    if sub_pm and sub_pm.mode == 'DIALOG':
-                        pmi.text = CC.F_EXPAND + pmi.text
-
-
-def fix_1_14_9(pr, pm):
-    if pm.mode == 'STICKY':
-        pm.data = re.sub(r"([^_])block_ui", r"\1sk_block_ui", pm.data)
-
-
-def fix_1_17_0(pr, pm):
-    if pm.mode == 'PMENU':
-        for i in range(len(pm.pmis), 10):
-            pm.pmis.add()
-
-
-def fix_1_17_1(pr, pm):
-    if not pm.ed.has_hotkey:
-        return
-
-    pm.km_name = (CC.KEYMAP_SPLITTER + " ").join(pm.km_name.split(","))
-
-
-def fix_json_1_17_1(pr, pm, menu):
-    if not pm.ed.has_hotkey:
-        return
-
-    menu[1] = (CC.KEYMAP_SPLITTER + " ").join(menu[1].split(","))
-
+# =============================================================================
+# Legacy fix functions removed in PME2 2.0.0:
+# - fix_1_14_0, fix_1_14_9, fix_1_17_0, fix_1_17_1, fix_json_1_17_1
+# PME2 only supports migration from PME 1.19.x
+# =============================================================================
 
 # =============================================================================
 # PME2 2.0.0 Migrations: Prefix standardization (#92)

@@ -234,7 +234,6 @@ class ParsedData:
         'pd_box': True,
         'pd_expand': False,
         'pd_panel': 1,
-        'pd_auto_close': False,
         'pd_width': 300,
         # editors/panel_group.py (type: pg)
         'pg_wicons': False,

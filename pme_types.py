@@ -667,12 +667,6 @@ class PMItem(PropertyGroup):
         get=lambda s: s.get_data("pd_box"),
         set=lambda s, v: s.set_data("pd_box", v),
     )
-    pd_auto_close: BoolProperty(
-        name="Auto Close on Mouse Out",
-        description="Auto close on mouse out",
-        get=lambda s: s.get_data("pd_auto_close"),
-        set=lambda s, v: s.set_data("pd_auto_close", v),
-    )
     pd_expand: BoolProperty(
         name="Expand Sub Popup Dialogs",
         description=(
