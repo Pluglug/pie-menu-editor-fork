@@ -353,7 +353,8 @@ settings はフラット構造で、mode に応じて異なるプロパティが
   "pd_panel": 1,
   "pd_extend_target": null,
   "pd_extend_side": null,
-  "pd_extend_order": 0
+  "pd_extend_order": 0,
+  "pd_extend_is_right": false
 }
 ```
 
@@ -365,9 +366,10 @@ settings はフラット構造で、mode に応じて異なるプロパティが
 | `pd_auto_close` | boolean | false | 自動クローズ |
 | `pd_expand` | boolean | false | 展開表示 |
 | `pd_panel` | integer | 1 | 表示モード（0=PIE, 1=PANEL, 2=POPUP） |
-| `pd_extend_target` | string \| null | null | 拡張対象の Blender Panel ID |
+| `pd_extend_target` | string \| null | null | 拡張対象の Blender Panel/Header ID |
 | `pd_extend_side` | string \| null | null | 挿入側（`"prepend"` / `"append"`） |
 | `pd_extend_order` | integer | 0 | 同一 target+side 内での順序（0 = 最内側） |
+| `pd_extend_is_right` | boolean | false | Header 右リージョン用（`_HT_` のみ有効） |
 
 ### PANEL (Panel Group)
 
@@ -1028,4 +1030,4 @@ PME2 では MenuItem オブジェクトとして変換：
 
 *Last Updated: 2026-01-12*
 *Design Review: 9-D diagnosis incorporated, DIALOG layout types (row/spacer) added, prefix standardization (#92)*
-*Schema Update: extend_position → extend_side + extend_order (#97)*
+*Schema Update: extend_position → extend_side + extend_order, pd_extend_is_right for Header right region (#97)*
