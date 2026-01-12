@@ -44,14 +44,17 @@ from .preferences import PMEPreferences
 python .claude/scripts/analyze_deps_log.py
 ```
 
-## 現在の構造（Phase 4-A 完了後）
+## 現在の構造（Phase 9 進行中）
 
 | モジュール | レイヤ | 内容 |
 |-----------|--------|------|
-| `core/props.py` | core | PMEProp, PMEProps, ParsedData |
+| `core/schema.py` | core | SchemaProp, SchemaRegistry, ParsedData |
+| `core/namespace.py` | core | 標準名前空間、公開 API 定義 |
+| `core/uid.py` | core | uid 生成・検証 |
 | `core/constants.py` | core | 定数 |
 | `pme.py` | infra | PMEContext + 再エクスポート |
-| `infra/overlay.py` | infra | オーバーレイ描画 |
+| `infra/extend.py` | infra | ExtendManager, ExtendEntry |
+| `infra/compat.py` | infra | マイグレーション処理 |
 | `infra/io.py` | infra | ファイル I/O |
 | `ui/layout.py` | ui | LayoutHelper |
 | `editors/` | editors | 各エディタ |

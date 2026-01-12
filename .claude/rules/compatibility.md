@@ -1,7 +1,7 @@
 ---
 title: Compatibility Policy
 status: stable
-last_updated: 2026-01-01
+last_updated: 2026-01-13
 ---
 
 # rules/compatibility.md
@@ -49,8 +49,19 @@ last_updated: 2026-01-01
 | 中 | `if APP_VERSION < (4, 2, 0):` | 4.2 LTS 未満の互換コード |
 | 低 | `if APP_VERSION < (4, 0, 0):` | 3.x 互換コード |
 
-## 4. compatibility_fixes.py の方針
+## 4. infra/compat.py の方針
+
+> 旧名: `compatibility_fixes.py`
 
 - **1.19.x → 2.0.0 のマイグレーションパス**のみ維持
 - 1.17.x 未満の古い `fix_*` 関数は **2.0.0 リリース時に削除可**
 - 新しいマイグレーションが必要な場合は `fix_2_0_0()` のような命名で追加
+
+### 現在のマイグレーション関数
+
+| 関数 | 用途 |
+|------|------|
+| `fix_2_0_0()` | Blender 起動時の PME1→PME2 マイグレーション |
+| `fix_json_2_0_0()` | JSON v1 インポート時のマイグレーション |
+| `_migrate_extend_target()` | Extend プロパティの pm.data 移行 |
+| `_migrate_json_extend_target()` | JSON v1 の Extend プロパティ移行 |

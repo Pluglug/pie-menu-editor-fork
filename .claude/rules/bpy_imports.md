@@ -8,6 +8,38 @@
 
 ---
 
+## PME レガシーエイリアス（将来削除対象）
+
+PME では以下のエイリアスが広く使用されている。
+**モジュール分割が進んだ段階で**段階的に削除する方針。現時点では既存コードに残っていてOK。
+
+| エイリアス | 正体 | 削除方針 |
+|-----------|------|---------|
+| `CC` | `core.constants` | 直接 import に置換 |
+| `SU` | `ui.screen` | 直接 import に置換 |
+| `PAU` | `ui.panels` | 直接 import に置換 |
+| `U` | `infra.utils` | 直接 import に置換 |
+| `UU` | `ui.utils` | 直接 import に置換 |
+| `MAU` | `infra.macro` | 直接 import に置換 |
+| `BU` | `bl_utils` | 直接 import に置換 |
+| `KH` | `keymap_helper` | 直接 import に置換 |
+| `CTU` | `c_utils` | 直接 import に置換 |
+| `OU` | `operator_utils` | 直接 import に置換 |
+
+```python
+# ❌ レガシーエイリアス（削除対象）
+from .core import constants as CC
+from .ui import screen as SU
+
+# ✅ 推奨: 必要なシンボルを直接 import
+from .core.constants import F_RIGHT, ED_DATA
+from .ui.screen import area_header_text_set
+```
+
+**理由**: エイリアスは可読性を下げ、依存関係を不明確にする。
+
+---
+
 ## 推奨パターン
 
 ### 基本構成
@@ -109,7 +141,7 @@ from ..core.props import props  # → core/schema.py から再エクスポート
 props.IntProperty("pm", "pm_radius", -1)
 ```
 
-**詳細**: `@_docs/design/schema-rename-plan.md`
+**詳細**: `@_docs/archive/phase8-9/schema-rename-plan.md`
 
 ---
 
