@@ -299,12 +299,14 @@ def _migrate_extend_target(pm):
     - pd_extend_target / rm_extend_target: Blender Panel/Menu ID (no suffix)
     - pd_extend_side / rm_extend_side: "prepend" | "append"
     - pd_extend_order / rm_extend_order: int (0 = innermost)
+    - pd_extend_is_right: bool (Header right region, DIALOG only)
     """
     # Get prefix based on mode
     prefix = "pd" if pm.mode == 'DIALOG' else "rm"
     extend_target_key = f"{prefix}_extend_target"
     extend_side_key = f"{prefix}_extend_side"
     extend_order_key = f"{prefix}_extend_order"
+    extend_is_right_key = f"{prefix}_extend_is_right" if prefix == "pd" else None
     # Legacy key (to be removed after migration)
     extend_position_key = f"{prefix}_extend_position"
 
@@ -314,24 +316,28 @@ def _migrate_extend_target(pm):
     # Case 1: Already fully migrated (has extend_side and clean extend_target)
     if current_side and current_target:
         # Still need to fix suffix in extend_target if present
-        clean_target, _, is_prepend = extract_str_flags_b(
+        clean_target, is_right, is_prepend = extract_str_flags_b(
             current_target, CC.F_RIGHT, CC.F_PRE
         )
         if clean_target != current_target:
             # extend_target had suffix, fix it
             pm.set_data(extend_target_key, clean_target)
+            # Migrate is_right from suffix (Header only)
+            if extend_is_right_key and is_right:
+                pm.set_data(extend_is_right_key, True)
             DBG_INIT and logi(
                 "PME: fixed extend_target suffix",
                 f"pm={pm.name!r}",
                 f"old={current_target!r}",
-                f"new={clean_target!r}"
+                f"new={clean_target!r}",
+                f"is_right={is_right}"
             )
         return
 
     # Case 2: Has extend_target but no extend_side (old schema)
     if current_target and not current_side:
         # Parse suffix from extend_target (might have _pre/_right)
-        clean_target, _, is_prepend = extract_str_flags_b(
+        clean_target, is_right, is_prepend = extract_str_flags_b(
             current_target, CC.F_RIGHT, CC.F_PRE
         )
         # Get extend_side from old extend_position or suffix
@@ -346,16 +352,22 @@ def _migrate_extend_target(pm):
         pm.set_data(extend_target_key, clean_target)
         pm.set_data(extend_side_key, extend_side)
         pm.set_data(extend_order_key, 0)
+        # Migrate is_right from suffix (Header only)
+        if extend_is_right_key and is_right:
+            pm.set_data(extend_is_right_key, True)
 
         DBG_INIT and logi(
             "PME: migrated extend_target (old schema)",
             f"pm={pm.name!r}",
             f"extend_target={clean_target!r}",
-            f"extend_side={extend_side!r}"
+            f"extend_side={extend_side!r}",
+            f"is_right={is_right}"
         )
         return
 
     # Case 3: No extend_target, parse from pm.name
+    # Extract is_right directly since parse_extend_from_pme1_name doesn't return it
+    _, is_right, _ = extract_str_flags_b(pm.name, CC.F_RIGHT, CC.F_PRE)
     extend_target, extend_position = parse_extend_from_pme1_name(pm.name)
 
     if not extend_target:
@@ -368,12 +380,16 @@ def _migrate_extend_target(pm):
     pm.set_data(extend_target_key, extend_target)
     pm.set_data(extend_side_key, extend_side)
     pm.set_data(extend_order_key, 0)
+    # Migrate is_right from pm.name suffix (Header only)
+    if extend_is_right_key and is_right:
+        pm.set_data(extend_is_right_key, True)
 
     DBG_INIT and logi(
         "PME: migrated extend_target (from name)",
         f"pm={pm.name!r}",
         f"extend_target={extend_target!r}",
-        f"extend_side={extend_side!r}"
+        f"extend_side={extend_side!r}",
+        f"is_right={is_right}"
     )
 
 
