@@ -667,14 +667,6 @@ class PMItem(PropertyGroup):
         get=lambda s: s.get_data("pd_box"),
         set=lambda s, v: s.set_data("pd_box", v),
     )
-    pd_expand: BoolProperty(
-        name="Expand Sub Popup Dialogs",
-        description=(
-            "Expand all sub popup dialogs instead of using them as a button"
-        ),
-        get=lambda s: s.get_data("pd_expand"),
-        set=lambda s, v: s.set_data("pd_expand", v),
-    )
     pd_panel: EnumProperty(
         name="Mode",
         description="Popup dialog mode",

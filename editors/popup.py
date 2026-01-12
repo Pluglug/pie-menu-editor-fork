@@ -96,7 +96,6 @@ schema.EnumProperty(
 # DIALOG properties
 schema.BoolProperty("pd", "pd_title", True)
 schema.BoolProperty("pd", "pd_box", True)
-schema.BoolProperty("pd", "pd_expand")
 schema.IntProperty("pd", "pd_panel", 1)
 schema.IntProperty("pd", "pd_width", 300)
 # Extend Panel properties (Phase 9-X: #89, #97)
@@ -1789,7 +1788,6 @@ class Editor(EditorBase):
         EditorBase.draw_extra_settings(self, layout, pm)
         layout.row(align=True).prop(pm, "pd_panel", expand=True)
         col = layout.column(align=True)
-        # col.prop(pm, "pd_expand")
 
         if pm.pd_panel == 'PIE':
             col.prop(pm, "pd_box")

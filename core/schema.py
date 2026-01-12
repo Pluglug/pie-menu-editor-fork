@@ -232,7 +232,8 @@ class ParsedData:
         # editors/popup.py (type: pd)
         'pd_title': True,
         'pd_box': True,
-        'pd_expand': False,
+        'pd_expand': False,  # Deprecated in 1.14.0, kept for legacy data
+        'pd_auto_close': False,  # Never implemented, kept for legacy data
         'pd_panel': 1,
         'pd_width': 300,
         # editors/panel_group.py (type: pg)
