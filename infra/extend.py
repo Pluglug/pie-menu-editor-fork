@@ -41,6 +41,7 @@ from bpy.types import Header, Menu, Panel
 from ..ui import screen as SU
 from ..infra.utils import extract_str_flags_b
 from ..core.constants import F_PRE, F_RIGHT
+from .debug import DBG_INIT, logi
 
 if TYPE_CHECKING:
     from ..pme_types import PMItem
@@ -170,6 +171,9 @@ class ExtendManager:
         # Refresh combined function for this target+side
         self._refresh_combined(extend_target, extend_side)
 
+        DBG_INIT and logi(
+            f"extend.register: pm={pm.name!r}, target={extend_target}, side={extend_side}"
+        )
         return True
 
     def unregister(self, pm_uid: str) -> bool:
@@ -574,3 +578,19 @@ class ExtendManager:
 
 # Module-level singleton instance
 extend_manager = ExtendManager()
+
+
+def unregister():
+    """Unregister all extensions from Blender.
+
+    Called by addon.unregister_modules() during addon unload or Reload Scripts.
+    This ensures Blender's Panel/Menu/Header prepend/append registrations
+    are properly cleaned up before module reload.
+    """
+    entry_count = len(extend_manager._entries)
+    registered_count = len(extend_manager._blender_registered)
+    DBG_INIT and logi(
+        f"extend.unregister: entries={entry_count}, blender_registered={registered_count}"
+    )
+    extend_manager.unregister_all()
+    DBG_INIT and logi("extend.unregister: done")
