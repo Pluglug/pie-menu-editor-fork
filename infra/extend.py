@@ -55,14 +55,17 @@ class ExtendEntry:
         pm_uid: The PM's unique identifier.
         target: Blender type ID (e.g., "VIEW3D_PT_tools").
         side: "prepend" or "append".
-        order: Sort order within same target+side. 0 = innermost.
+        order: Sort order within same target+side+is_right. 0 = innermost.
         draw_func: The individual draw function for this PM.
+        is_right: Header right region flag. True = RIGHT region, False = LEFT.
+                  Only meaningful for Header types (_HT_). Panel/Menu ignore this.
     """
     pm_uid: str
     target: str
     side: str  # "prepend" | "append"
     order: int
     draw_func: Callable
+    is_right: bool = False  # Header region: False=LEFT, True=RIGHT
 
 
 class ExtendManager:
@@ -158,13 +161,14 @@ class ExtendManager:
         # Generate draw function
         draw_func = self._gen_draw_func(pm_uid, extend_target, is_right)
 
-        # Create entry
+        # Create entry (is_right is only meaningful for Header types)
         entry = ExtendEntry(
             pm_uid=pm_uid,
             target=extend_target,
             side=extend_side,
             order=extend_order,
             draw_func=draw_func,
+            is_right=bool(is_right),  # Ensure bool type
         )
         self._entries[pm_uid] = entry
 
@@ -208,20 +212,33 @@ class ExtendManager:
         for target, side in pairs:
             self._unregister_from_blender(target, side)
 
-    def get_entries(self, target: str, side: str) -> list[ExtendEntry]:
+    def get_entries(
+        self, target: str, side: str, is_right: bool | None = None
+    ) -> list[ExtendEntry]:
         """Get all entries for a target+side, sorted by order.
 
         Args:
             target: Blender type ID.
             side: "prepend" or "append".
+            is_right: Optional filter for Header region.
+                      None = return all entries (for combined draw).
+                      True/False = filter by is_right value (for order management).
 
         Returns:
             List of ExtendEntry sorted by order (ascending).
         """
-        entries = [
-            e for e in self._entries.values()
-            if e.target == target and e.side == side
-        ]
+        if is_right is None:
+            # Return all entries for this target+side (for combined draw function)
+            entries = [
+                e for e in self._entries.values()
+                if e.target == target and e.side == side
+            ]
+        else:
+            # Filter by is_right (for order management)
+            entries = [
+                e for e in self._entries.values()
+                if e.target == target and e.side == side and e.is_right == is_right
+            ]
         entries.sort(key=lambda e: e.order)
         return entries
 
@@ -236,14 +253,18 @@ class ExtendManager:
         """
         return self._entries.get(pm_uid)
 
-    def normalize_orders(self, target: str, side: str) -> None:
+    def normalize_orders(
+        self, target: str, side: str, is_right: bool | None = None
+    ) -> None:
         """Normalize orders to consecutive integers starting from 0.
 
         Args:
             target: Blender type ID.
             side: "prepend" or "append".
+            is_right: If specified, only normalize entries with this is_right value.
+                      If None, normalize all entries (left and right separately).
         """
-        self._normalize_orders(target, side)
+        self._normalize_orders(target, side, is_right)
 
     def change_side(self, pm_uid: str, new_side: str) -> dict[str, int]:
         """Change an entry's side and handle all related updates.
@@ -254,6 +275,9 @@ class ExtendManager:
         3. Refreshes combined draw functions for both sides
         4. Normalizes orders on the old side (fills gaps)
         5. Returns affected pm_uids with their new orders for pm.data sync
+
+        Order is managed independently for each (target, side, is_right) group.
+        The entry's is_right value is preserved when changing sides.
 
         Args:
             pm_uid: The PM's unique identifier.
@@ -270,6 +294,7 @@ class ExtendManager:
 
         old_side = entry.side
         target = entry.target
+        is_right = entry.is_right  # Preserved when changing sides
 
         # No change needed
         if old_side == new_side:
@@ -281,16 +306,16 @@ class ExtendManager:
 
         changes = {pm_uid: 0}
 
-        # Refresh old side and normalize orders
+        # Refresh old side and normalize orders (only for same is_right)
         self._refresh_combined(target, old_side)
-        self._normalize_orders(target, old_side)
+        self._normalize_orders(target, old_side, is_right)
 
-        # Collect order changes from old side
-        for e in self.get_entries(target, old_side):
+        # Collect order changes from old side (only same is_right)
+        for e in self.get_entries(target, old_side, is_right=is_right):
             changes[e.pm_uid] = e.order
 
-        # Shift existing entries on new side to make room
-        new_side_entries = self.get_entries(target, new_side)
+        # Shift existing entries on new side to make room (only same is_right)
+        new_side_entries = self.get_entries(target, new_side, is_right=is_right)
         for e in new_side_entries:
             if e.pm_uid != pm_uid:
                 e.order += 1
@@ -301,18 +326,21 @@ class ExtendManager:
 
         return changes
 
-    def get_next_order(self, target: str, side: str) -> int:
+    def get_next_order(self, target: str, side: str, is_right: bool = False) -> int:
         """Get the next order value for a new entry (outer position).
 
         Args:
             target: Blender type ID.
             side: "prepend" or "append".
+            is_right: Header region flag. True = RIGHT, False = LEFT.
+                      For Panel/Menu types, this should always be False.
 
         Returns:
             Next order value (max + 1, or 0 if no entries).
         """
         # Primary path: use ExtendManager entries (normal operation)
-        entries = self.get_entries(target, side)
+        # Filter by is_right to get order within the same region
+        entries = self.get_entries(target, side, is_right=is_right)
         if entries:
             return max(e.order for e in entries) + 1
 
@@ -329,7 +357,9 @@ class ExtendManager:
                 continue
             pm_target = pm.get_data(f"{prefix}_extend_target")
             pm_side = pm.get_data(f"{prefix}_extend_side")
-            if pm_target == target and pm_side == side:
+            # Also check is_right for Header targets
+            pm_is_right = pm.get_data(f"{prefix}_extend_is_right") if prefix == "pd" else False
+            if pm_target == target and pm_side == side and pm_is_right == is_right:
                 pm_order = pm.get_data(f"{prefix}_extend_order") or 0
                 if pm_order > max_order:
                     max_order = pm_order
@@ -343,6 +373,9 @@ class ExtendManager:
         1. Remove self from the order sequence
         2. Insert at new_order position
         3. Normalize all orders to 0, 1, 2...
+
+        Order is managed independently for each (target, side, is_right) group.
+        For Headers, left region entries and right region entries have separate orders.
 
         Args:
             pm_uid: The PM's unique identifier.
@@ -358,7 +391,8 @@ class ExtendManager:
 
         target = entry.target
         side = entry.side
-        entries = self.get_entries(target, side)
+        # Filter by is_right to only affect entries in the same region
+        entries = self.get_entries(target, side, is_right=entry.is_right)
 
         if len(entries) <= 1:
             # Only one entry, just set order to 0
@@ -569,11 +603,28 @@ class ExtendManager:
         self._combined_funcs.pop(key, None)
         SU.redraw_screen()
 
-    def _normalize_orders(self, target: str, side: str) -> None:
-        """Internal: normalize orders to consecutive integers."""
-        entries = self.get_entries(target, side)
-        for i, entry in enumerate(entries):
-            entry.order = i
+    def _normalize_orders(
+        self, target: str, side: str, is_right: bool | None = None
+    ) -> None:
+        """Internal: normalize orders to consecutive integers.
+
+        Args:
+            target: Blender type ID.
+            side: "prepend" or "append".
+            is_right: If specified, only normalize entries with this is_right value.
+                      If None, normalize all entries (left and right separately).
+        """
+        if is_right is None:
+            # Normalize both left and right entries separately
+            for ir in (False, True):
+                entries = self.get_entries(target, side, is_right=ir)
+                for i, entry in enumerate(entries):
+                    entry.order = i
+        else:
+            # Normalize only entries with specified is_right
+            entries = self.get_entries(target, side, is_right=is_right)
+            for i, entry in enumerate(entries):
+                entry.order = i
 
 
 # Module-level singleton instance

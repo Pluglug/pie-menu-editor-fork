@@ -263,11 +263,13 @@ class PME_OT_extend_confirm(Operator):
         lh.sep()
 
         # Add New option - pass extend_target, extend_side, extend_order
-        # Phase 9-X (#97): Use descriptive name "Extend <target> <side>"
+        # Phase 9-X (#97): Use descriptive name "Extend <target> <side> [Right]"
         # Clean extend_target (remove _pre/_right suffix if present)
         clean_target, _, _ = extract_str_flags_b(self.extend_target, F_RIGHT, F_PRE)
         side_label = "Pre" if self.extend_side == "prepend" else "App"
-        menu_name = f"Extend {clean_target} {side_label}"
+        # Add "Right" suffix for TOPBAR right region
+        right_suffix = " Right" if self.extend_is_right else ""
+        menu_name = f"Extend {clean_target} {side_label}{right_suffix}"
         lh.operator(
             PME_OT_pm_add.bl_idname,
             "Add New Extension",
@@ -326,7 +328,10 @@ class PME_OT_panel_menu(Operator):
 
         existing = find_pms_by_extend_target(extend_target, mode)
         extend_side = "prepend" if is_prepend else "append"
-        extend_order = extend_manager.get_next_order(extend_target, extend_side)
+        # Get next order for this specific region (is_right matters for Headers)
+        extend_order = extend_manager.get_next_order(
+            extend_target, extend_side, is_right=is_right
+        )
 
         if existing:
             # Show confirmation popup
@@ -344,11 +349,13 @@ class PME_OT_panel_menu(Operator):
             )
         else:
             # No existing, add directly with extend parameters
-            # Phase 9-X (#97): Use descriptive name "Extend <target> <side>"
+            # Phase 9-X (#97): Use descriptive name "Extend <target> <side> [Right]"
             # Clean extend_target (remove _pre/_right suffix if present)
             clean_target, _, _ = extract_str_flags_b(extend_target, F_RIGHT, F_PRE)
             side_label = "Pre" if is_prepend else "App"
-            menu_name = f"Extend {clean_target} {side_label}"
+            # Add "Right" suffix for TOPBAR right region
+            right_suffix = " Right" if is_right else ""
+            menu_name = f"Extend {clean_target} {side_label}{right_suffix}"
             lh.operator(
                 PME_OT_pm_add.bl_idname,
                 label,

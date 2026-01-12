@@ -463,6 +463,12 @@ class EditorBase:
         row.label(text="Order:")
         row.prop(pm, "extend_order", text="")
 
+        # Right Region row (TOPBAR_HT_ only, DIALOG mode only)
+        if pm.mode == 'DIALOG' and extend_target.startswith("TOPBAR_HT_"):
+            row = col.row(align=True)
+            row.label(text="Region:")
+            row.prop(pm, "extend_is_right", text="Right")
+
     def draw_pm_name(self, layout, pm):
         pr = get_prefs()
         col = layout.column(align=True)

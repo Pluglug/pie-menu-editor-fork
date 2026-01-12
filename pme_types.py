@@ -852,6 +852,30 @@ class PMItem(PropertyGroup):
         min=0,
     )
 
+    def get_extend_is_right(self):
+        # Only DIALOG mode supports is_right (Header right region)
+        if self.mode != 'DIALOG':
+            return False
+        return bool(self.get_data("pd_extend_is_right"))
+
+    def set_extend_is_right(self, value):
+        if self.mode != 'DIALOG':
+            return
+        self.set_data("pd_extend_is_right", value)
+        # Re-register to update draw function
+        from .infra.extend import extend_manager
+        pm_uid = self.uid if self.uid else self.name
+        extend_manager.unregister(pm_uid)
+        extend_manager.register(self)
+        tag_redraw()
+
+    extend_is_right: BoolProperty(
+        name="Right Region",
+        description="Draw in TOPBAR right region (scene selector area)",
+        get=get_extend_is_right,
+        set=set_extend_is_right,
+    )
+
     def poll(self, cls=None, context=None):
         if self.poll_cmd == CC.DEFAULT_POLL:
             return True
