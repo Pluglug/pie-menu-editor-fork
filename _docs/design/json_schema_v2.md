@@ -373,16 +373,17 @@ settings はフラット構造で、mode に応じて異なるプロパティが
 
 ### PANEL (Panel Group)
 
+> **Note**: PANEL モードは新しい Panel クラスを動的生成して登録するため、
+> Extend (prepend/append) の概念は適用されません。
+> Extend が必要な場合は DIALOG モードを使用してください。
+
 ```json
 {
   "pg_space": "VIEW_3D",
   "pg_region": "TOOLS",
   "pg_context": "ANY",
   "pg_category": "My Category",
-  "pg_wicons": false,
-  "pg_extend_target": null,
-  "pg_extend_side": null,
-  "pg_extend_order": 0
+  "pg_wicons": false
 }
 ```
 
@@ -393,9 +394,6 @@ settings はフラット構造で、mode に応じて異なるプロパティが
 | `pg_context` | string | "ANY" | コンテキスト |
 | `pg_category` | string | "My Category" | カテゴリ名 |
 | `pg_wicons` | boolean | false | アイコン表示 |
-| `pg_extend_target` | string \| null | null | 拡張対象の Blender Panel ID |
-| `pg_extend_side` | string \| null | null | 挿入側（`"prepend"` / `"append"`） |
-| `pg_extend_order` | integer | 0 | 同一 target+side 内での順序（0 = 最内側） |
 
 ### MODAL (Modal Operator)
 
@@ -1028,6 +1026,7 @@ PME2 では MenuItem オブジェクトとして変換：
 
 ---
 
-*Last Updated: 2026-01-12*
+*Last Updated: 2026-01-13*
 *Design Review: 9-D diagnosis incorporated, DIALOG layout types (row/spacer) added, prefix standardization (#92)*
 *Schema Update: extend_position → extend_side + extend_order, pd_extend_is_right for Header right region (#97)*
+*Schema Fix: Remove pg_extend_* from PANEL mode (Panel Group uses dynamic class generation, not extend)*
