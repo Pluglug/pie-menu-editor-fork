@@ -252,6 +252,7 @@ class PME_OT_extend_confirm(Operator):
     extend_target: StringProperty()
     extend_side: StringProperty(default="append")  # "prepend" | "append"
     extend_order: IntProperty(default=0)
+    extend_is_right: BoolProperty(default=False)  # Header right region
 
     def _draw(self, menu, context):
         lh.lt(menu.layout, operator_context='INVOKE_DEFAULT')
@@ -276,6 +277,7 @@ class PME_OT_extend_confirm(Operator):
             extend_target=clean_target,
             extend_side=self.extend_side,
             extend_order=self.extend_order,
+            extend_is_right=self.extend_is_right,
         )
 
         lh.sep()
@@ -307,7 +309,7 @@ class PME_OT_panel_menu(Operator):
     panel: StringProperty()
     is_right_region: BoolProperty()
 
-    def extend_ui_operator(self, label, icon, mode, extend_target, is_prepend):
+    def extend_ui_operator(self, label, icon, mode, extend_target, is_prepend, is_right=False):
         """Draw extend UI operator button.
 
         Phase 9-X (#97): Uses extend_side + extend_order.
@@ -318,6 +320,7 @@ class PME_OT_panel_menu(Operator):
             mode: 'DIALOG' or 'RMENU'
             extend_target: Blender Panel/Menu/Header ID
             is_prepend: True for prepend, False for append
+            is_right: True for right region (Header only)
         """
         from ..infra.extend import extend_manager
 
@@ -337,6 +340,7 @@ class PME_OT_panel_menu(Operator):
                 extend_target=clean_target,
                 extend_side=extend_side,
                 extend_order=extend_order,
+                extend_is_right=is_right,
             )
         else:
             # No existing, add directly with extend parameters
@@ -354,6 +358,7 @@ class PME_OT_panel_menu(Operator):
                 extend_target=clean_target,
                 extend_side=extend_side,
                 extend_order=extend_order,
+                extend_is_right=is_right,
             )
 
     def draw_header_menu(self, menu, context):
@@ -362,13 +367,15 @@ class PME_OT_panel_menu(Operator):
         pr = get_prefs()
         pm = pr.selected_pm
 
-        # Phase 9-X (#97): Pass extend_target and is_prepend
+        # Phase 9-X (#97): Pass extend_target, is_prepend, and is_right
         self.extend_ui_operator(
-            "Extend Header", 'TRIA_LEFT', 'DIALOG', self.panel, True
+            "Extend Header", 'TRIA_LEFT', 'DIALOG', self.panel, True,
+            is_right=self.is_right_region
         )
 
         self.extend_ui_operator(
-            "Extend Header", 'TRIA_RIGHT', 'DIALOG', self.panel, False
+            "Extend Header", 'TRIA_RIGHT', 'DIALOG', self.panel, False,
+            is_right=self.is_right_region
         )
 
         lh.operator(

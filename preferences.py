@@ -677,7 +677,7 @@ class PMEPreferences(AddonPreferences):
             kmi.active = value
 
     def add_pm(self, mode='PMENU', name=None, duplicate=False,
-               extend_target='', extend_side='', extend_order=0):
+               extend_target='', extend_side='', extend_order=0, extend_is_right=False):
         """Add a new pie menu.
 
         Args:
@@ -687,6 +687,7 @@ class PMEPreferences(AddonPreferences):
             extend_target: Phase 9-X (#97) - Blender Panel/Menu/Header ID to extend
             extend_side: Phase 9-X (#97) - "prepend" or "append"
             extend_order: Phase 9-X (#97) - Order within same target+side (0 = innermost)
+            extend_is_right: Phase 9-X (#97) - True for Header right region
         """
         link = None
         pr = get_prefs()
@@ -737,10 +738,12 @@ class PMEPreferences(AddonPreferences):
                 pm.set_data("pd_extend_target", extend_target)
                 pm.set_data("pd_extend_side", extend_side)
                 pm.set_data("pd_extend_order", extend_order)
+                pm.set_data("pd_extend_is_right", extend_is_right)
             elif mode == 'RMENU':
                 pm.set_data("rm_extend_target", extend_target)
                 pm.set_data("rm_extend_side", extend_side)
                 pm.set_data("rm_extend_order", extend_order)
+                # RMENU doesn't use is_right (Menu has no right region)
 
         if duplicate:
             apm = pr.pie_menus[name]

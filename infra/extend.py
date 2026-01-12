@@ -98,22 +98,26 @@ class ExtendManager:
         extend_target = pm.get_data(f"{prefix}_extend_target")
         extend_side = pm.get_data(f"{prefix}_extend_side") or ""
         extend_order = pm.get_data(f"{prefix}_extend_order") or 0
+        # Read is_right from pm.data (DIALOG only, default False)
+        is_right = pm.get_data(f"{prefix}_extend_is_right") if prefix == "pd" else False
 
         # Fallback: parse from pm.name (backward compatibility with PME1)
-        is_right = False
         if not extend_target:
-            extend_target, is_right, is_prepend = extract_str_flags_b(
+            extend_target, name_is_right, is_prepend = extract_str_flags_b(
                 pm.name, F_RIGHT, F_PRE
             )
             if is_prepend:
                 extend_side = "prepend"
             elif extend_target:
                 extend_side = "append"
+            # Use name flag if is_right not explicitly set
+            if not is_right and name_is_right:
+                is_right = name_is_right
 
         # Defensive: strip suffix from extend_target if present
         # (handles case where migration didn't run or old data)
         if extend_target:
-            clean_target, is_right, is_prepend = extract_str_flags_b(
+            clean_target, target_is_right, is_prepend = extract_str_flags_b(
                 extend_target, F_RIGHT, F_PRE
             )
             if clean_target != extend_target:
@@ -127,6 +131,9 @@ class ExtendManager:
                 elif not extend_side:
                     extend_side = "append"
                     pm.set_data(f"{prefix}_extend_side", extend_side)
+                # Use target flag if is_right not explicitly set
+                if not is_right and target_is_right:
+                    is_right = target_is_right
 
         if not extend_target or not extend_side:
             return False

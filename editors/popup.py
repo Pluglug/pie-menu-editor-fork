@@ -104,6 +104,7 @@ schema.IntProperty("pd", "pd_width", 300)
 schema.StringProperty("pd", "pd_extend_target", "")  # Blender Panel/Header ID to extend
 schema.StringProperty("pd", "pd_extend_side", "")    # "prepend" | "append" | ""
 schema.IntProperty("pd", "pd_extend_order", 0)       # 0 = innermost
+schema.BoolProperty("pd", "pd_extend_is_right", False)  # Header right region
 
 
 current_pdi = 0
