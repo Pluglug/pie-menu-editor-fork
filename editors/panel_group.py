@@ -220,6 +220,9 @@ def find_pms_by_extend_target(extend_target, mode):
     prefix = "pd" if mode == 'DIALOG' else "rm"
     target_key = f"{prefix}_extend_target"
 
+    # Clean search target (remove _pre/_right suffix if present)
+    clean_search_target, _, _ = extract_str_flags_b(extend_target, F_RIGHT, F_PRE)
+
     results = []
     for pm in pr.pie_menus:
         if pm.mode != mode:
@@ -228,8 +231,11 @@ def find_pms_by_extend_target(extend_target, mode):
         pm_target = pm.get_data(target_key)
         if not pm_target:
             pm_target, _, _ = extract_str_flags_b(pm.name, F_RIGHT, F_PRE)
+        else:
+            # Also clean pm_target in case it has suffix
+            pm_target, _, _ = extract_str_flags_b(pm_target, F_RIGHT, F_PRE)
 
-        if pm_target == extend_target:
+        if pm_target == clean_search_target:
             results.append(pm)
 
     return results
@@ -242,9 +248,10 @@ class PME_OT_extend_confirm(Operator):
     bl_options = {'INTERNAL'}
 
     mode: StringProperty()
-    # Phase 9-X: Direct extend parameters (no pm.name parsing)
+    # Phase 9-X (#97): Direct extend parameters
     extend_target: StringProperty()
-    extend_position: IntProperty(default=0)
+    extend_side: StringProperty(default="append")  # "prepend" | "append"
+    extend_order: IntProperty(default=0)
 
     def _draw(self, menu, context):
         lh.lt(menu.layout, operator_context='INVOKE_DEFAULT')
@@ -254,15 +261,21 @@ class PME_OT_extend_confirm(Operator):
         lh.label(f"'{self.extend_target}' already has extensions:")
         lh.sep()
 
-        # Add New option - pass extend_target and extend_position directly
+        # Add New option - pass extend_target, extend_side, extend_order
+        # Phase 9-X (#97): Use descriptive name "Extend <target> <side>"
+        # Clean extend_target (remove _pre/_right suffix if present)
+        clean_target, _, _ = extract_str_flags_b(self.extend_target, F_RIGHT, F_PRE)
+        side_label = "Pre" if self.extend_side == "prepend" else "App"
+        menu_name = f"Extend {clean_target} {side_label}"
         lh.operator(
             PME_OT_pm_add.bl_idname,
             "Add New Extension",
             'ADD',
             mode=self.mode,
-            name=self.extend_target,  # Use extend_target as menu name
-            extend_target=self.extend_target,
-            extend_position=self.extend_position,
+            name=menu_name,
+            extend_target=clean_target,
+            extend_side=self.extend_side,
+            extend_order=self.extend_order,
         )
 
         lh.sep()
@@ -270,11 +283,12 @@ class PME_OT_extend_confirm(Operator):
 
         # Go to existing options
         for pm in existing:
-            pos = (pm.get_data("pd_extend_position" if self.mode == 'DIALOG' else "rm_extend_position") or 0)
-            pos_label = "prepend" if pos < 0 else "append"
+            prefix = "pd" if self.mode == 'DIALOG' else "rm"
+            side = pm.get_data(f"{prefix}_extend_side") or ""
+            order = pm.get_data(f"{prefix}_extend_order") or 0
             lh.operator(
                 "wm.pm_select",
-                f"{pm.name} ({pos_label})",
+                f"{pm.name} ({side} {order})",
                 'FORWARD',
                 pm_name=pm.name
             )
@@ -293,41 +307,53 @@ class PME_OT_panel_menu(Operator):
     panel: StringProperty()
     is_right_region: BoolProperty()
 
-    def extend_ui_operator(self, label, icon, mode, extend_target, extend_position):
+    def extend_ui_operator(self, label, icon, mode, extend_target, is_prepend):
         """Draw extend UI operator button.
 
-        Phase 9-X: Pass extend_target and extend_position directly.
-        No pm.name parsing needed.
+        Phase 9-X (#97): Uses extend_side + extend_order.
 
         Args:
             label: Button label
             icon: Button icon
             mode: 'DIALOG' or 'RMENU'
             extend_target: Blender Panel/Menu/Header ID
-            extend_position: <0 = prepend, >=0 = append
+            is_prepend: True for prepend, False for append
         """
+        from ..infra.extend import extend_manager
+
         existing = find_pms_by_extend_target(extend_target, mode)
+        extend_side = "prepend" if is_prepend else "append"
+        extend_order = extend_manager.get_next_order(extend_target, extend_side)
 
         if existing:
             # Show confirmation popup
+            # Clean extend_target (remove _pre/_right suffix if present)
+            clean_target, _, _ = extract_str_flags_b(extend_target, F_RIGHT, F_PRE)
             lh.operator(
                 PME_OT_extend_confirm.bl_idname,
                 label,
                 icon,
                 mode=mode,
-                extend_target=extend_target,
-                extend_position=extend_position,
+                extend_target=clean_target,
+                extend_side=extend_side,
+                extend_order=extend_order,
             )
         else:
             # No existing, add directly with extend parameters
+            # Phase 9-X (#97): Use descriptive name "Extend <target> <side>"
+            # Clean extend_target (remove _pre/_right suffix if present)
+            clean_target, _, _ = extract_str_flags_b(extend_target, F_RIGHT, F_PRE)
+            side_label = "Pre" if is_prepend else "App"
+            menu_name = f"Extend {clean_target} {side_label}"
             lh.operator(
                 PME_OT_pm_add.bl_idname,
                 label,
                 icon,
                 mode=mode,
-                name=extend_target,  # Use extend_target as menu name
-                extend_target=extend_target,
-                extend_position=extend_position,
+                name=menu_name,
+                extend_target=clean_target,
+                extend_side=extend_side,
+                extend_order=extend_order,
             )
 
     def draw_header_menu(self, menu, context):
@@ -336,14 +362,13 @@ class PME_OT_panel_menu(Operator):
         pr = get_prefs()
         pm = pr.selected_pm
 
-        # Phase 9-X: Pass extend_target and extend_position directly
-        # prepend = -1, append = 0
+        # Phase 9-X (#97): Pass extend_target and is_prepend
         self.extend_ui_operator(
-            "Extend Header", 'TRIA_LEFT', 'DIALOG', self.panel, -1
+            "Extend Header", 'TRIA_LEFT', 'DIALOG', self.panel, True
         )
 
         self.extend_ui_operator(
-            "Extend Header", 'TRIA_RIGHT', 'DIALOG', self.panel, 0
+            "Extend Header", 'TRIA_RIGHT', 'DIALOG', self.panel, False
         )
 
         lh.operator(
@@ -390,11 +415,11 @@ class PME_OT_panel_menu(Operator):
 
                 lh.sep()
 
-        # Phase 9-X: Pass extend_target and extend_position directly
+        # Phase 9-X (#97): Pass extend_target and is_prepend
         self.extend_ui_operator(
-            "Extend Menu", 'TRIA_UP', 'RMENU', self.panel, -1
+            "Extend Menu", 'TRIA_UP', 'RMENU', self.panel, True
         )
-        self.extend_ui_operator("Extend Menu", 'TRIA_DOWN', 'RMENU', self.panel, 0)
+        self.extend_ui_operator("Extend Menu", 'TRIA_DOWN', 'RMENU', self.panel, False)
 
         lh.operator(
             "pme.clipboard_copy", "Copy Menu ID", 'COPYDOWN', text=self.panel
@@ -494,9 +519,9 @@ class PME_OT_panel_menu(Operator):
             lh.sep()
 
         self.extend_ui_operator(
-            "Extend Panel", 'TRIA_UP', 'DIALOG', self.panel + F_PRE
+            "Extend Panel", 'TRIA_UP', 'DIALOG', self.panel + F_PRE, True
         )
-        self.extend_ui_operator("Extend Panel", 'TRIA_DOWN', 'DIALOG', self.panel)
+        self.extend_ui_operator("Extend Panel", 'TRIA_DOWN', 'DIALOG', self.panel, False)
 
         lh.operator(
             "pme.clipboard_copy",

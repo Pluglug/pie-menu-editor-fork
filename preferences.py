@@ -677,15 +677,16 @@ class PMEPreferences(AddonPreferences):
             kmi.active = value
 
     def add_pm(self, mode='PMENU', name=None, duplicate=False,
-               extend_target='', extend_position=0):
+               extend_target='', extend_side='', extend_order=0):
         """Add a new pie menu.
 
         Args:
             mode: Menu mode (PMENU, RMENU, DIALOG, etc.)
             name: Menu name (auto-generated if None)
             duplicate: Whether this is a duplicate operation
-            extend_target: Phase 9-X - Blender Panel/Menu/Header ID to extend
-            extend_position: Phase 9-X - Position (<0 = prepend, >=0 = append)
+            extend_target: Phase 9-X (#97) - Blender Panel/Menu/Header ID to extend
+            extend_side: Phase 9-X (#97) - "prepend" or "append"
+            extend_order: Phase 9-X (#97) - Order within same target+side (0 = innermost)
         """
         link = None
         pr = get_prefs()
@@ -729,15 +730,17 @@ class PMEPreferences(AddonPreferences):
 
         pm.data = pm.ed.default_pmi_data
 
-        # Phase 9-X: Set extend_target and extend_position BEFORE on_pm_add()
+        # Phase 9-X (#97): Set extend_target, extend_side, extend_order BEFORE on_pm_add()
         # This eliminates the need to parse from pm.name
-        if extend_target:
+        if extend_target and extend_side:
             if mode == 'DIALOG':
                 pm.set_data("pd_extend_target", extend_target)
-                pm.set_data("pd_extend_position", extend_position)
+                pm.set_data("pd_extend_side", extend_side)
+                pm.set_data("pd_extend_order", extend_order)
             elif mode == 'RMENU':
                 pm.set_data("rm_extend_target", extend_target)
-                pm.set_data("rm_extend_position", extend_position)
+                pm.set_data("rm_extend_side", extend_side)
+                pm.set_data("rm_extend_order", extend_order)
 
         if duplicate:
             apm = pr.pie_menus[name]

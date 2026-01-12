@@ -329,7 +329,8 @@ settings はフラット構造で、mode に応じて異なるプロパティが
 {
   "rm_title": true,
   "rm_extend_target": null,
-  "rm_extend_position": "append"
+  "rm_extend_side": null,
+  "rm_extend_order": 0
 }
 ```
 
@@ -337,7 +338,8 @@ settings はフラット構造で、mode に応じて異なるプロパティが
 |-----------|-----|----------|------|
 | `rm_title` | boolean | true | タイトルを表示 |
 | `rm_extend_target` | string \| null | null | 拡張対象の Blender Menu ID |
-| `rm_extend_position` | string | "append" | 挿入位置（"append" / "prepend"） |
+| `rm_extend_side` | string \| null | null | 挿入側（`"prepend"` / `"append"`） |
+| `rm_extend_order` | integer | 0 | 同一 target+side 内での順序（0 = 最内側） |
 
 ### DIALOG (Pop-up Dialog)
 
@@ -350,7 +352,8 @@ settings はフラット構造で、mode に応じて異なるプロパティが
   "pd_expand": false,
   "pd_panel": 1,
   "pd_extend_target": null,
-  "pd_extend_position": "append"
+  "pd_extend_side": null,
+  "pd_extend_order": 0
 }
 ```
 
@@ -363,7 +366,8 @@ settings はフラット構造で、mode に応じて異なるプロパティが
 | `pd_expand` | boolean | false | 展開表示 |
 | `pd_panel` | integer | 1 | 表示モード（0=PIE, 1=PANEL, 2=POPUP） |
 | `pd_extend_target` | string \| null | null | 拡張対象の Blender Panel ID |
-| `pd_extend_position` | string | "append" | 挿入位置（"append" / "prepend"） |
+| `pd_extend_side` | string \| null | null | 挿入側（`"prepend"` / `"append"`） |
+| `pd_extend_order` | integer | 0 | 同一 target+side 内での順序（0 = 最内側） |
 
 ### PANEL (Panel Group)
 
@@ -375,7 +379,8 @@ settings はフラット構造で、mode に応じて異なるプロパティが
   "pg_category": "My Category",
   "pg_wicons": false,
   "pg_extend_target": null,
-  "pg_extend_position": "append"
+  "pg_extend_side": null,
+  "pg_extend_order": 0
 }
 ```
 
@@ -387,7 +392,8 @@ settings はフラット構造で、mode に応じて異なるプロパティが
 | `pg_category` | string | "My Category" | カテゴリ名 |
 | `pg_wicons` | boolean | false | アイコン表示 |
 | `pg_extend_target` | string \| null | null | 拡張対象の Blender Panel ID |
-| `pg_extend_position` | string | "append" | 挿入位置（"append" / "prepend"） |
+| `pg_extend_side` | string \| null | null | 挿入側（`"prepend"` / `"append"`） |
+| `pg_extend_order` | integer | 0 | 同一 target+side 内での順序（0 = 最内側） |
 
 ### MODAL (Modal Operator)
 
@@ -1007,7 +1013,7 @@ PME2 では MenuItem オブジェクトとして変換：
 
 | schema_version | 変更点 |
 |---------------|--------|
-| 2.0 | 初版（uid, description/description_expr, extend_target in settings, style in extensions, row/spacer action types） |
+| 2.0 | 初版（uid, description/description_expr, extend_target + extend_side + extend_order, style in extensions, row/spacer action types） |
 | 2.1 | conditions, style 昇格予定 |
 
 ---
@@ -1020,5 +1026,6 @@ PME2 では MenuItem オブジェクトとして変換：
 
 ---
 
-*Last Updated: 2026-01-11*
+*Last Updated: 2026-01-12*
 *Design Review: 9-D diagnosis incorporated, DIALOG layout types (row/spacer) added, prefix standardization (#92)*
+*Schema Update: extend_position → extend_side + extend_order (#97)*

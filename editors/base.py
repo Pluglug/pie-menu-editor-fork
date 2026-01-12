@@ -39,6 +39,7 @@ from ..operators import (
     WM_OT_pm_select,
     WM_OT_pme_user_pie_menu_call,
 )
+from ..infra.extend import extend_manager
 
 # Re-export operators from operators/ed/ for backward compatibility
 from ..operators.ed import (
@@ -84,6 +85,7 @@ from ..operators.ed import (
     PME_OT_pm_hotkey_convert,
 )
 
+# Legacy: kept for backward compatibility, now managed by extend_manager
 EXTENDED_PANELS = {}
 
 
@@ -98,175 +100,26 @@ def get_pm_by_uid(uid):
     return None
 
 
-def _get_extend_key(pm):
-    """Get the key for EXTENDED_PANELS. Uses uid if available, falls back to name."""
-    return pm.uid if pm.uid else pm.name
-
-
-def gen_header_draw(pm_uid_or_name, is_right_pm=False):
-    """Generate header draw function.
-
-    Args:
-        pm_uid_or_name: pm.uid (preferred) or pm.name (fallback)
-        is_right_pm: Whether this is for right region
-    """
-    def _draw(self, context):
-        is_right_region = context.region.alignment == 'RIGHT'
-        if is_right_region and is_right_pm or not is_right_region and not is_right_pm:
-            # TODO(Phase 9-X): Remove pm.name fallback when all data is migrated (v3.0+)
-            pm = get_pm_by_uid(pm_uid_or_name)
-            if not pm:
-                try:
-                    pm = get_prefs().pie_menus[pm_uid_or_name]
-                except Exception:
-                    return
-
-            # Skip if disabled
-            if not pm.enabled:
-                return
-
-            draw_pme_layout(
-                pm,
-                self.layout.column(align=True),
-                WM_OT_pme_user_pie_menu_call._draw_item,
-                icon_btn_scale_x=1,
-            )
-    return _draw
-
-
-def gen_menu_draw(pm_uid_or_name):
-    """Generate menu draw function."""
-    def _draw(self, context):
-        # TODO(Phase 9-X): Remove pm.name fallback when all data is migrated (v3.0+)
-        pm = get_pm_by_uid(pm_uid_or_name)
-        if not pm:
-            try:
-                pm = get_prefs().pie_menus[pm_uid_or_name]
-            except Exception:
-                return
-
-        # Skip if disabled
-        if not pm.enabled:
-            return
-
-        WM_OT_pme_user_pie_menu_call.draw_rm(pm, self.layout)
-    return _draw
-
-
-def gen_panel_draw(pm_uid_or_name):
-    """Generate panel draw function."""
-    def _draw(self, context):
-        # TODO(Phase 9-X): Remove pm.name fallback when all data is migrated (v3.0+)
-        pm = get_pm_by_uid(pm_uid_or_name)
-        if not pm:
-            try:
-                pm = get_prefs().pie_menus[pm_uid_or_name]
-            except Exception:
-                return
-
-        # Skip if disabled
-        if not pm.enabled:
-            return
-
-        draw_pme_layout(
-            pm,
-            self.layout.column(align=True),
-            WM_OT_pme_user_pie_menu_call._draw_item,
-        )
-    return _draw
-
-
 def extend_panel(pm):
     """Extend a Blender panel/menu/header with PME content.
 
-    Phase 9-X: Uses pm.data for extend_target, with pm.name fallback for compatibility.
+    This is a thin wrapper around extend_manager.register() for
+    backward compatibility.
 
     Args:
         pm: PMItem to extend from
     """
-    key = _get_extend_key(pm)
-    if key in EXTENDED_PANELS:
-        return
-
-    # Get extend_target from pm.data (Phase 9-X)
-    # Use appropriate prefix based on mode: pd for DIALOG, rm for RMENU
-    if pm.mode == 'DIALOG':
-        extend_target = pm.get_data("pd_extend_target")
-    elif pm.mode == 'RMENU':
-        extend_target = pm.get_data("rm_extend_target")
-    else:
-        extend_target = None
-
-    # Fallback: parse from pm.name (backward compatibility)
-    is_right = False
-    is_prepend = False
-    if not extend_target:
-        extend_target, is_right, is_prepend = extract_str_flags_b(pm.name, F_RIGHT, F_PRE)
-    else:
-        # Get position from pm.data
-        if pm.mode == 'DIALOG':
-            extend_position = (pm.get_data("pd_extend_position") or 0)
-        elif pm.mode == 'RMENU':
-            extend_position = (pm.get_data("rm_extend_position") or 0)
-        else:
-            extend_position = 0
-        is_prepend = extend_position < 0
-        # Note: is_right is deprecated, always False for new menus
-
-    if not extend_target:
-        return
-
-    # Skip PME's own panels
-    if extend_target.startswith("PME_"):
-        return
-
-    tp = getattr(bpy_types, extend_target, None)
-    if not tp:
-        return
-
-    if not issubclass(tp, (Panel, Menu, Header)):
-        return
-
-    # Generate draw function using uid (or name as fallback)
-    if '_HT_' in extend_target:
-        EXTENDED_PANELS[key] = gen_header_draw(key, is_right)
-    elif '_MT_' in extend_target:
-        EXTENDED_PANELS[key] = gen_menu_draw(key)
-    else:
-        EXTENDED_PANELS[key] = gen_panel_draw(key)
-
-    f = tp.prepend if is_prepend else tp.append
-    f(EXTENDED_PANELS[key])
-    # Debug log (remove after debugging)
-    print(f"PME extend_panel: key={key}, target={extend_target}, prepend={is_prepend}, mode={pm.mode}")
-    SU.redraw_screen()
+    extend_manager.register(pm)
 
 
 def unextend_panel(pm):
     """Remove extension from a Blender panel/menu/header.
 
-    Phase 9-X: Uses pm.uid as key, with pm.name fallback for compatibility.
+    This is a thin wrapper around extend_manager.unregister() for
+    backward compatibility.
     """
-    key = _get_extend_key(pm)
-    if key not in EXTENDED_PANELS:
-        return
-
-    # Get extend_target from pm.data or pm.name
-    if pm.mode == 'DIALOG':
-        extend_target = pm.get_data("pd_extend_target")
-    elif pm.mode == 'RMENU':
-        extend_target = pm.get_data("rm_extend_target")
-    else:
-        extend_target = None
-
-    if not extend_target:
-        extend_target, _, _ = extract_str_flags_b(pm.name, F_RIGHT, F_PRE)
-
-    tp = getattr(bpy_types, extend_target, None)
-    if tp:
-        tp.remove(EXTENDED_PANELS[key])
-        del EXTENDED_PANELS[key]
-        SU.redraw_screen()
+    pm_uid = pm.uid if pm.uid else pm.name
+    extend_manager.unregister(pm_uid)
 
 
 
@@ -576,31 +429,25 @@ class EditorBase:
         )
 
     def draw_extend_info(self, layout, pm):
-        """Draw extend_target and extend_position info (read-only).
+        """Draw extend_target, extend_side, and extend_order info.
 
-        Phase 9-X: For DIALOG and RMENU modes only.
+        Phase 9-X (#97): For DIALOG and RMENU modes only.
+        Uses direct property binding for Target, Side, and Order.
         """
-        if pm.mode == 'DIALOG':
-            prefix = "pd"
-        elif pm.mode == 'RMENU':
-            prefix = "rm"
-        else:
+        if pm.mode not in ('DIALOG', 'RMENU'):
             return
 
-        extend_target = pm.get_data(f"{prefix}_extend_target")
+        extend_target = pm.extend_target
         if not extend_target:
             return
-
-        extend_position = pm.get_data(f"{prefix}_extend_position") or 0
 
         # Display extend info
         box = layout.box()
         col = box.column(align=True)
 
-        # Target row
+        # Target row (read-only label)
         row = col.row(align=True)
-        row.label(text="Extend Target:")
-        # Validate target exists
+        row.label(text="Target:")
         tp = getattr(bpy_types, extend_target, None)
         if tp:
             row.label(text=extend_target)
@@ -609,11 +456,15 @@ class EditorBase:
             sub.alert = True
             sub.label(text=f"{extend_target} (not found)")
 
-        # Position row
+        # Side row (direct property binding)
         row = col.row(align=True)
-        row.label(text="Position:")
-        pos_label = "prepend" if extend_position < 0 else "append"
-        row.label(text=f"{extend_position} ({pos_label})")
+        row.label(text="Side:")
+        row.prop(pm, "extend_side", text="")
+
+        # Order row (direct property binding)
+        row = col.row(align=True)
+        row.label(text="Order:")
+        row.prop(pm, "extend_order", text="")
 
     def draw_pm_name(self, layout, pm):
         pr = get_prefs()

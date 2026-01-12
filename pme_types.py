@@ -748,6 +748,132 @@ class PMItem(PropertyGroup):
         update=mo_lock_update,
     )
 
+    # =========================================================================
+    # Phase 9-X: Extend properties for DIALOG/RMENU modes
+    # These wrap pm.data with mode-aware prefix (pd_/rm_)
+    # =========================================================================
+
+    def _extend_prefix(self):
+        """Get the extend property prefix for current mode."""
+        if self.mode == 'DIALOG':
+            return "pd"
+        elif self.mode == 'RMENU':
+            return "rm"
+        return None
+
+    def get_extend_target(self):
+        prefix = self._extend_prefix()
+        if not prefix:
+            return ""
+        return self.get_data(f"{prefix}_extend_target") or ""
+
+    def set_extend_target(self, value):
+        prefix = self._extend_prefix()
+        if prefix:
+            self.set_data(f"{prefix}_extend_target", value)
+
+    extend_target: StringProperty(
+        name="Extend Target",
+        description="Blender Panel/Menu ID to extend",
+        get=get_extend_target,
+        set=set_extend_target,
+    )
+
+    def get_extend_side(self):
+        prefix = self._extend_prefix()
+        if not prefix:
+            return 0  # '' (None)
+        value = self.get_data(f"{prefix}_extend_side") or ""
+        for i, item in enumerate(CC.EXTEND_SIDE_ITEMS):
+            if item[0] == value:
+                return i
+        return 0
+
+    def set_extend_side(self, value):
+        prefix = self._extend_prefix()
+        if not prefix:
+            return
+        side_value = CC.EXTEND_SIDE_ITEMS[value][0]
+        old_side = self.get_data(f"{prefix}_extend_side") or ""
+        if side_value == old_side:
+            return
+        self.set_data(f"{prefix}_extend_side", side_value)
+        # Update ExtendManager
+        self._update_extend_registration(old_side)
+
+    extend_side: EnumProperty(
+        name="Side",
+        description="Position relative to original content",
+        items=CC.EXTEND_SIDE_ITEMS,
+        get=get_extend_side,
+        set=set_extend_side,
+    )
+
+    def get_extend_order(self):
+        prefix = self._extend_prefix()
+        if not prefix:
+            return 0
+        return self.get_data(f"{prefix}_extend_order") or 0
+
+    def set_extend_order(self, value):
+        prefix = self._extend_prefix()
+        if not prefix:
+            return
+        extend_target = self.get_data(f"{prefix}_extend_target")
+        extend_side = self.get_data(f"{prefix}_extend_side")
+        if not extend_target or not extend_side:
+            return
+
+        from .infra.extend import extend_manager
+        pm_uid = self.uid if self.uid else self.name
+
+        # Use ExtendManager.set_order() to adjust all entries
+        changes = extend_manager.set_order(pm_uid, value)
+        if changes:
+            # Sync pm.data for all affected pms
+            extend_manager.sync_pm_data_orders(changes)
+        tag_redraw()
+
+    extend_order: IntProperty(
+        name="Order",
+        description="Position within the extend side (0 = innermost)",
+        get=get_extend_order,
+        set=set_extend_order,
+        min=0,
+    )
+
+    def _update_extend_registration(self, old_side=None):
+        """Update ExtendManager when extend side changes."""
+        from .infra.extend import extend_manager
+        pm_uid = self.uid if self.uid else self.name
+        entry = extend_manager._entries.get(pm_uid)
+        if not entry:
+            return
+        prefix = self._extend_prefix()
+        if not prefix:
+            return
+        extend_target = self.get_data(f"{prefix}_extend_target")
+        extend_side = self.get_data(f"{prefix}_extend_side") or ""
+        extend_order = self.get_data(f"{prefix}_extend_order") or 0
+
+        # Update entry side
+        entry.side = extend_side
+        # When side changes, reset order to innermost (0)
+        entry.order = 0
+        self.set_data(f"{prefix}_extend_order", 0)
+
+        # Refresh combined draw functions
+        if old_side and old_side != extend_side:
+            extend_manager._refresh_combined(extend_target, old_side)
+            # Normalize orders on old side (fill gap)
+            extend_manager.normalize_orders(extend_target, old_side)
+            # Sync pm.data for old side entries
+            old_entries = extend_manager.get_entries(extend_target, old_side)
+            for e in old_entries:
+                extend_manager.sync_pm_data_orders({e.pm_uid: e.order})
+        extend_manager._refresh_combined(extend_target, extend_side)
+        tag_redraw()
+
     def poll(self, cls=None, context=None):
         if self.poll_cmd == CC.DEFAULT_POLL:
             return True

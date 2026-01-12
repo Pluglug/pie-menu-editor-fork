@@ -224,6 +224,13 @@ REGION_ITEMS = (
     ('HEADER', "Header", "Top or bottom bar", 'TRIA_DOWN_BAR', 3),
 )
 
+# Phase 9-X: Extend side items for DIALOG/RMENU modes
+EXTEND_SIDE_ITEMS = (
+    ('', "None", "Not extending", '', 0),
+    ('prepend', "Prepend", "Show before original content", 'TRIA_UP', 1),
+    ('append', "Append", "Show after original content", 'TRIA_DOWN', 2),
+)
+
 OPEN_MODE_ITEMS = (
     ('PRESS', "Press", "Press the key", ph.get_icon("pPress"), 0),
     ('HOLD', "Hold", "Hold down the key", ph.get_icon("pHold"), 1),
