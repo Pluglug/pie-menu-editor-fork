@@ -38,6 +38,7 @@ from ..operators import (
     PME_OT_pm_hotkey_remove,
     WM_OT_pm_select,
     WM_OT_pme_user_pie_menu_call,
+    PME_OT_extend_target_search,
 )
 from ..infra.extend import extend_manager
 
@@ -435,23 +436,33 @@ class EditorBase:
             return
 
         extend_target = pm.extend_target
-        if not extend_target:
-            return
+
+        # TODO(Phase 9-X): Restore empty check when extend UI is reorganized
+        # if not extend_target:
+        #     return
 
         # Display extend info
         box = layout.box()
         col = box.column(align=True)
 
-        # Target row (read-only label)
+        # Target row (search button + label/alert)
         row = col.row(align=True)
         row.label(text="Target:")
-        tp = getattr(bpy_types, extend_target, None)
-        if tp:
-            row.label(text=extend_target)
+        row.operator(
+            PME_OT_extend_target_search.bl_idname,
+            text="",
+            icon=ic('VIEWZOOM'),
+        )
+        if extend_target:
+            tp = getattr(bpy_types, extend_target, None)
+            if tp:
+                row.label(text=extend_target)
+            else:
+                sub = row.row()
+                sub.alert = True
+                sub.label(text=f"{extend_target} (not found)")
         else:
-            sub = row.row()
-            sub.alert = True
-            sub.label(text=f"{extend_target} (not found)")
+            row.label(text="(not set)")
 
         # Side row (direct property binding)
         row = col.row(align=True)
@@ -464,7 +475,7 @@ class EditorBase:
         row.prop(pm, "extend_order", text="")
 
         # Right Region row (TOPBAR_HT_ only, DIALOG mode only)
-        if pm.mode == 'DIALOG' and extend_target.startswith("TOPBAR_HT_"):
+        if pm.mode == 'DIALOG' and extend_target and extend_target.startswith("TOPBAR_HT_"):
             row = col.row(align=True)
             row.label(text="Region:")
             row.prop(pm, "extend_is_right", text="Right")

@@ -75,6 +75,7 @@ from .search import (
     PME_OT_pmi_panel_search,
     PME_OT_pmi_area_search,
     PME_OT_pmi_menu_search,
+    PME_OT_extend_target_search,
 )
 
 # Panel operators (moved to operators/panel.py in Phase 2-C)

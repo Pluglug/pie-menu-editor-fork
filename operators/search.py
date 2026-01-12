@@ -456,3 +456,94 @@ class PME_OT_pmi_menu_search(SearchOperator, Operator):
 
         tag_redraw()
         return {'FINISHED'}
+
+
+class PME_OT_extend_target_search(SearchOperator, Operator):
+    """Search and select Blender Panel/Menu/Header to extend.
+
+    Phase 9-X (#97): Extend Target selection for DIALOG/RMENU modes.
+    - DIALOG mode: Shows Panels (_PT_) and Headers (_HT_)
+    - RMENU mode: Shows Menus (_MT_)
+    """
+    bl_idname = "pme.extend_target_search"
+    bl_label = "Select Extend Target"
+    bl_description = "Search and select a Panel, Menu, or Header to extend"
+    bl_options = {'INTERNAL'}
+    bl_property = "value"
+
+    def fill_enum_items(self, items):
+        pr = get_prefs()
+        pm = pr.selected_pm
+        if not pm:
+            return
+
+        # Filter based on pm.mode
+        if pm.mode == 'RMENU':
+            # RMENU: Menu (_MT_) only
+            for tp_name in dir(bpy.types):
+                tp = getattr(bpy.types, tp_name)
+                if not isclass(tp):
+                    continue
+                if issubclass(tp, bpy.types.Menu) and hasattr(tp, "bl_label"):
+                    ctx, _, name = tp_name.partition("_MT_")
+                    label = tp.bl_label if tp.bl_label else name or tp_name
+                    label = "%s|%s" % (utitle(label), ctx)
+                    items.append((tp_name, label, ""))
+
+        elif pm.mode == 'DIALOG':
+            # DIALOG: Panel (_PT_) and Header (_HT_)
+            # Panels
+            for tp_name in dir(bpy.types):
+                tp = getattr(bpy.types, tp_name)
+                if not isclass(tp):
+                    continue
+                if issubclass(tp, bpy.types.Panel) and hasattr(tp, "bl_label"):
+                    # Skip PME-generated panels
+                    if hasattr(tp, "pme_data"):
+                        continue
+                    ctx, _, name = tp_name.partition("_PT_")
+                    if ctx == tp_name:
+                        ctx = "USER"
+                    label = tp.bl_label if tp.bl_label else name or tp_name
+                    label = "%s|%s" % (utitle(label), ctx)
+                    items.append((tp_name, label, ""))
+
+            # Headers
+            for tp_name in dir(bpy.types):
+                tp = getattr(bpy.types, tp_name)
+                if not isclass(tp):
+                    continue
+                if issubclass(tp, bpy.types.Header) and hasattr(tp, "bl_label"):
+                    ctx, _, name = tp_name.partition("_HT_")
+                    label = tp.bl_label if tp.bl_label else name or tp_name
+                    label = "%s|%s [Header]" % (utitle(label), ctx)
+                    items.append((tp_name, label, ""))
+
+    def execute(self, context):
+        pr = get_prefs()
+        pm = pr.selected_pm
+        if not pm:
+            return {'CANCELLED'}
+
+        # Update extend_target
+        new_target = self.value
+        old_target = pm.extend_target
+
+        if new_target == old_target:
+            return {'FINISHED'}
+
+        # Unregister from old target if it was registered
+        if old_target:
+            from ..infra.extend import extend_manager
+            pm_uid = pm.uid if pm.uid else pm.name
+            extend_manager.unregister(pm_uid)
+
+        # Set new extend_target
+        pm.set_extend_target(new_target)
+
+        # Register to new target
+        from ..infra.extend import extend_manager
+        extend_manager.register(pm)
+
+        tag_redraw()
+        return {'FINISHED'}
