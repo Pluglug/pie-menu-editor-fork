@@ -276,3 +276,13 @@ def validate_file(
         return ValidationResult(valid=False, errors=errors)
 
     return validate_json(json_string, strict=strict, check_references=check_references)
+
+
+# =============================================================================
+# Autocomplete control
+# =============================================================================
+
+
+def __dir__():
+    """Control what appears in dir() and autocomplete."""
+    return __all__

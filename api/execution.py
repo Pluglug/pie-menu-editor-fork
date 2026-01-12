@@ -174,3 +174,13 @@ def check_syntax(code: str, *, mode: str = "exec") -> SyntaxResult:
             line=e.lineno,
             column=e.offset,
         )
+
+
+# =============================================================================
+# Autocomplete control
+# =============================================================================
+
+
+def __dir__():
+    """Control what appears in dir() and autocomplete."""
+    return __all__

@@ -21,6 +21,21 @@ Stability: Stable
 
 LAYER = "api"
 
+__all__ = [
+    # Menu modes
+    "PMENU", "RMENU", "DIALOG", "SCRIPT", "PANEL",
+    "HPANEL", "STICKY", "MACRO", "MODAL", "PROPERTY",
+    "MENU_MODES", "MENU_MODE_DATA",
+    # Item modes
+    "COMMAND", "PROP", "MENU", "HOTKEY", "CUSTOM", "EMPTY",
+    "INVOKE", "FINISH", "CANCEL", "UPDATE",
+    "ITEM_MODES",
+    # Tag
+    "UNTAGGED",
+    # Helper functions
+    "get_mode_label", "get_mode_icon", "is_valid_mode",
+]
+
 # =============================================================================
 # Menu Mode Constants
 # =============================================================================
@@ -156,3 +171,13 @@ def is_valid_mode(mode: str) -> bool:
         True if valid menu mode, False otherwise.
     """
     return mode in MENU_MODES
+
+
+# =============================================================================
+# Autocomplete control
+# =============================================================================
+
+
+def __dir__():
+    """Control what appears in dir() and autocomplete."""
+    return __all__

@@ -250,3 +250,13 @@ def invoke_pm(
         return True
     except Exception:
         return False
+
+
+# =============================================================================
+# Autocomplete control
+# =============================================================================
+
+
+def __dir__():
+    """Control what appears in dir() and autocomplete."""
+    return __all__
