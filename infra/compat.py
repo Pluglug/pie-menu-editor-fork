@@ -198,11 +198,85 @@ def _migrate_json_property_poll_cmd(menu):
         menu[7] = ""
 
 
+def _migrate_json_extend_target(menu):
+    """Migrate extend_target from menu[0] (pm.name) to menu[5] (pm.data) for JSON import.
+
+    PME1 JSON format encodes extend information in pm.name:
+    - "VIEW3D_PT_tools_pre" → prepend to VIEW3D_PT_tools
+    - "TOPBAR_HT_upper_bar_right" → right region of TOPBAR_HT_upper_bar
+
+    PME2 stores these in pm.data:
+    - pd_extend_target / rm_extend_target: Blender Panel/Menu ID
+    - pd_extend_side / rm_extend_side: "prepend" | "append"
+    - pd_extend_order: int (0 = innermost)
+    - pd_extend_is_right: bool (Header right region, DIALOG only)
+
+    Args:
+        menu: JSON menu array [name, km_name, hotkey, icon, mode, data, ...]
+    """
+    mode = menu[4]
+    if mode not in ('DIALOG', 'RMENU'):
+        return
+
+    name = menu[0]
+    # Parse name for Blender ID and position flags
+    tp_name, is_right, is_prepend = extract_str_flags_b(name, CC.F_RIGHT, CC.F_PRE)
+
+    # Check if tp_name is a valid Blender type ID
+    if not any(x in tp_name for x in ('_PT_', '_MT_', '_HT_')):
+        return
+
+    # Determine prefix and values
+    prefix = "pd" if mode == 'DIALOG' else "rm"
+    extend_side = "prepend" if is_prepend else "append"
+
+    # Get current data string
+    data = menu[5] if len(menu) > 5 else ""
+
+    # Build new data string with extend properties
+    # Parse existing data to preserve other settings
+    if data and "?" in data:
+        base_prefix, _, params = data.partition("?")
+        # Remove any existing extend properties (shouldn't exist, but be safe)
+        param_pairs = [p for p in params.split("&") if p and not p.startswith(f"{prefix}_extend")]
+        new_params = [
+            f"{prefix}_extend_target={tp_name}",
+            f"{prefix}_extend_side={extend_side}",
+            f"{prefix}_extend_order=0",
+        ]
+        if prefix == "pd" and is_right:
+            new_params.append(f"{prefix}_extend_is_right=True")
+        all_params = new_params + param_pairs
+        data = f"{base_prefix}?{'&'.join(all_params)}"
+    else:
+        # No existing data, create new
+        base_prefix = prefix
+        new_params = [
+            f"{prefix}_extend_target={tp_name}",
+            f"{prefix}_extend_side={extend_side}",
+            f"{prefix}_extend_order=0",
+        ]
+        if prefix == "pd" and is_right:
+            new_params.append(f"{prefix}_extend_is_right=True")
+        data = f"{base_prefix}?{'&'.join(new_params)}"
+
+    menu[5] = data
+
+    DBG_INIT and logi(
+        "PME JSON: migrated extend_target",
+        f"name={name!r}",
+        f"extend_target={tp_name!r}",
+        f"extend_side={extend_side!r}",
+        f"is_right={is_right}"
+    )
+
+
 def fix_json_2_0_0(pr, pm, menu):
     """
-    Migrate MODAL and PROPERTY properties in JSON import.
+    Migrate MODAL, PROPERTY, and Extend properties in JSON import.
 
     JSON menu structure (PME1 format):
+      menu[0] = name (may contain Blender type ID for Extend menus)
       menu[4] = mode
       menu[5] = data (pm.data string)
       menu[7] = poll_cmd (or prop_type for PROPERTY mode in PME1)
@@ -220,6 +294,10 @@ def fix_json_2_0_0(pr, pm, menu):
             menu[5] = _migrate_property_data(data)
         # Migrate prop_type from menu[7] to menu[5] (pm.data)
         _migrate_json_property_poll_cmd(menu)
+
+    # Migrate extend_target from pm.name to pm.data (DIALOG/RMENU)
+    if mode in ('DIALOG', 'RMENU'):
+        _migrate_json_extend_target(menu)
 
 
 def fix_2_0_0(pr, pm):
