@@ -26,6 +26,36 @@ class ExecuteResult:
 
 
 @dataclass
+class SyntaxResult:
+    """Result of syntax validation.
+
+    Attributes:
+        valid: True if syntax is valid.
+        error: Error message if invalid, None otherwise.
+        line: Line number where error occurred (1-indexed), None if valid.
+        column: Column number where error occurred (1-indexed), None if valid.
+
+    Example:
+        >>> result = pme.check_syntax("print('hello')")
+        >>> result.valid
+        True
+
+        >>> result = pme.check_syntax("print(")
+        >>> result.valid
+        False
+        >>> result.error
+        'unexpected EOF while parsing'
+
+    Stability: Experimental
+    """
+
+    valid: bool
+    error: str | None = None
+    line: int | None = None
+    column: int | None = None
+
+
+@dataclass
 class PMHandle:
     """Read-only handle to a Pie Menu.
 

@@ -52,10 +52,14 @@ __all__ = [
     "execute",
     "evaluate",
     "ExecuteResult",
+    # Syntax validation
+    "check_syntax",
+    "SyntaxResult",
     # Menu API
     "PMHandle",
     "find_pm",
     "list_pms",
+    "list_tags",
     "invoke_pm",
     # UID utilities
     "validate_uid",
@@ -65,6 +69,8 @@ __all__ = [
     "preferences",  # PME preferences access
     # Context (backward compat)
     "context",  # PMEContext singleton for add_global()
+    # Constants (submodule)
+    "constants",  # pme.constants.* - menu modes, item modes
     # Developer utilities (submodule)
     "dev",  # pme.dev.* - namespace introspection, debugging
 ]
@@ -74,7 +80,10 @@ __all__ = [
 # =============================================================================
 
 # Types (public)
-from ._types import ExecuteResult, PMHandle
+from ._types import ExecuteResult, PMHandle, SyntaxResult
+
+# Constants submodule (public)
+from . import constants
 
 # UID utilities (public, from core layer)
 from ..core.uid import validate_uid
@@ -356,6 +365,94 @@ def invoke_pm(
         return True
     except Exception:
         return False
+
+
+def list_tags() -> list[str]:
+    """List all tags currently used by menus.
+
+    Returns:
+        Sorted list of unique tag names. Does not include 'Untagged'.
+
+    Example:
+        >>> tags = pme.list_tags()
+        >>> print(tags)
+        ['Modeling', 'Sculpt', 'UV']
+
+    Stability: Experimental
+    """
+    prefs = _get_prefs()
+    if prefs is None:
+        return []
+
+    pie_menus = getattr(prefs, "pie_menus", None)
+    if pie_menus is None:
+        return []
+
+    tags = set()
+    for pm in pie_menus:
+        pm_tag = getattr(pm, "tag", "")
+        if pm_tag:
+            for t in pm_tag.split(","):
+                t = t.strip()
+                if t:
+                    tags.add(t)
+
+    return sorted(tags)
+
+
+# =============================================================================
+# Syntax Validation API (Experimental)
+# =============================================================================
+
+import ast as _ast
+
+
+def check_syntax(code: str, *, mode: str = "exec") -> SyntaxResult:
+    """Check Python code syntax without executing it.
+
+    Uses ast.parse() for Pythonic syntax validation.
+
+    Args:
+        code: Python code to validate.
+        mode: Parsing mode - 'exec' for statements (default), 'eval' for expressions.
+
+    Returns:
+        SyntaxResult with validation status and error details if invalid.
+
+    Example:
+        >>> result = pme.check_syntax("print('hello')")
+        >>> result.valid
+        True
+
+        >>> result = pme.check_syntax("x = ", mode="exec")
+        >>> result.valid
+        False
+        >>> result.error
+        'invalid syntax'
+        >>> result.line
+        1
+
+        >>> # For expressions only
+        >>> result = pme.check_syntax("2 + 2", mode="eval")
+        >>> result.valid
+        True
+
+    Stability: Experimental
+    """
+    if not code.strip():
+        return SyntaxResult(valid=True)
+
+    try:
+        _ast.parse(code, mode=mode)
+        return SyntaxResult(valid=True)
+    except SyntaxError as e:
+        return SyntaxResult(
+            valid=False,
+            error=e.msg,
+            line=e.lineno,
+            column=e.offset,
+        )
+
 
 
 # =============================================================================
