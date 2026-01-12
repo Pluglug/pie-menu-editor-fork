@@ -37,9 +37,10 @@ class PMHandle:
         mode: The menu type ('PMENU', 'RMENU', 'DIALOG', etc.)
         enabled: Whether the menu is enabled.
         uid: Unique identifier (stable reference, e.g., "pm_9f7c2k3h").
+        tag: Comma-separated tags (e.g., "Modeling, Sculpt").
 
     Note:
-        More fields (hotkey, tag, etc.) may be added in future versions.
+        More fields (hotkey, etc.) may be added in future versions.
         Use `uid` for stable references; `name` can change.
 
     Stability: Experimental
@@ -49,3 +50,4 @@ class PMHandle:
     mode: str | None = None
     enabled: bool = True
     uid: str = ""
+    tag: str = ""

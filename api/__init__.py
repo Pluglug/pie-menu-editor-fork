@@ -240,25 +240,27 @@ def find_pm(name: str | None = None, *, uid: str | None = None) -> PMHandle | No
         mode=getattr(pm, "mode", None),
         enabled=getattr(pm, "enabled", True),
         uid=getattr(pm, "uid", ""),
+        tag=getattr(pm, "tag", ""),
     )
 
 
-def list_pms(mode: str | None = None) -> list[PMHandle]:
-    """List all Pie Menus, optionally filtered by mode.
+def list_pms(mode: str | None = None, *, enabled_only: bool = False) -> list[PMHandle]:
+    """List all Pie Menus, optionally filtered by mode and enabled state.
 
     Args:
         mode: Filter by menu type ('PMENU', 'RMENU', 'DIALOG', etc.)
               If None, returns all menus.
+        enabled_only: If True, only return enabled menus.
 
     Returns:
-        List of PMHandle objects (includes uid for stable references).
+        List of PMHandle objects (includes uid, tag for stable references).
 
     Example:
         >>> all_menus = pme.list_pms()
         >>> for pm in all_menus:
-        ...     print(f"{pm.name} ({pm.uid})")
+        ...     print(f"{pm.name} ({pm.uid}) tags={pm.tag}")
 
-        >>> pie_menus = pme.list_pms(mode='PMENU')
+        >>> pie_menus = pme.list_pms(mode='PMENU', enabled_only=True)
 
     Stability: Experimental
     """
@@ -273,13 +275,21 @@ def list_pms(mode: str | None = None) -> list[PMHandle]:
     result = []
     for pm in pie_menus:
         pm_mode = getattr(pm, "mode", None)
-        if mode is None or pm_mode == mode:
-            result.append(PMHandle(
-                name=pm.name,
-                mode=pm_mode,
-                enabled=getattr(pm, "enabled", True),
-                uid=getattr(pm, "uid", ""),
-            ))
+        pm_enabled = getattr(pm, "enabled", True)
+
+        # Apply filters
+        if mode is not None and pm_mode != mode:
+            continue
+        if enabled_only and not pm_enabled:
+            continue
+
+        result.append(PMHandle(
+            name=pm.name,
+            mode=pm_mode,
+            enabled=pm_enabled,
+            uid=getattr(pm, "uid", ""),
+            tag=getattr(pm, "tag", ""),
+        ))
     return result
 
 
