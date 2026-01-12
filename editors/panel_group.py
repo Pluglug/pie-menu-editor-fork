@@ -450,7 +450,7 @@ class PME_OT_panel_menu(Operator):
         lh.operator(
             "pme.panel_hide",
             "Hide Panel",
-            'VISIBLE_IPO_OFF',
+            'GHOST_DISABLED',
             panel=self.panel,
         )
 
