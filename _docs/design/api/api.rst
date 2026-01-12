@@ -56,18 +56,28 @@ API 一覧
       - Python コードを実行
     * - ``pme.evaluate()``
       - Python 式を評価
+    * - ``pme.check_syntax()``
+      - Python コードの構文チェック
     * - ``pme.find_pm()``
-      - メニューを検索
+      - メニューを検索（名前または uid）
     * - ``pme.list_pms()``
-      - メニュー一覧を取得
+      - メニュー一覧を取得（フィルタ対応）
+    * - ``pme.list_tags()``
+      - タグ一覧を取得
     * - ``pme.invoke_pm()``
       - メニューを呼び出し
+    * - ``pme.validate_json()``
+      - PME JSON データのバリデーション
     * - ``pme.props``
       - ユーザープロパティへのアクセス
     * - ``pme.preferences``
       - PME 設定へのアクセス
     * - ``pme.context``
       - 実行コンテキスト（``add_global()`` 用）
+    * - ``pme.constants``
+      - 定数（メニューモード、アイテムモード）
+    * - ``pme.validation``
+      - JSON バリデーション（サブモジュール）
     * - ``pme.dev``
       - 開発者ユーティリティ（サブモジュール）
 
@@ -134,34 +144,97 @@ API 一覧
         失敗時のエラーメッセージ
 
 
+.. py:function:: pme.check_syntax(code, *, mode='exec')
+
+    Python コードの構文をチェックします（実行はしない）。
+
+    :param str code: チェックする Python コード
+    :param str mode: パースモード（``'exec'`` または ``'eval'``）
+    :return: 検証結果を含む :class:`SyntaxResult`
+    :rtype: SyntaxResult
+
+    **例**::
+
+        result = pme.check_syntax("print('hello')")
+        if result.valid:
+            print("Syntax OK")
+        else:
+            print(f"Error at line {result.line}: {result.error}")
+
+
+.. py:class:: pme.SyntaxResult
+
+    構文チェック結果を表すデータクラス。
+
+    .. py:attribute:: valid
+        :type: bool
+
+        構文が正しいかどうか
+
+    .. py:attribute:: error
+        :type: str | None
+
+        エラーメッセージ（無効な場合）
+
+    .. py:attribute:: line
+        :type: int | None
+
+        エラー行番号（1 始まり）
+
+    .. py:attribute:: column
+        :type: int | None
+
+        エラー列番号
+
+
 メニュー API
 *************
 
-.. py:function:: pme.find_pm(name)
+.. py:function:: pme.find_pm(name=None, *, uid=None)
 
-    名前でパイメニューを検索します。
+    名前または uid でパイメニューを検索します。
 
     :param str name: メニューの正確な名前
+    :param str uid: メニューの uid（``"pm_9f7c2k3h"`` など）。指定時は name より優先
     :return: 見つかった場合は :class:`PMHandle`、それ以外は ``None``
 
     **例**::
 
+        # 名前で検索
         pm = pme.find_pm("My Pie Menu")
         if pm:
             print(f"Found: {pm.name} ({pm.mode})")
 
+        # uid で検索（より安定した参照）
+        pm = pme.find_pm(uid="pm_9f7c2k3h")
 
-.. py:function:: pme.list_pms(mode=None)
+
+.. py:function:: pme.list_pms(mode=None, *, enabled_only=False)
 
     すべてのパイメニューを列挙します。
 
     :param str mode: メニュータイプでフィルタ（``'PMENU'``, ``'RMENU'``, ``'DIALOG'`` など）
+    :param bool enabled_only: ``True`` の場合、有効なメニューのみ返す
     :return: :class:`PMHandle` のリスト
 
     **例**::
 
         all_menus = pme.list_pms()
         pie_menus = pme.list_pms(mode='PMENU')
+        enabled_pies = pme.list_pms(mode='PMENU', enabled_only=True)
+
+
+.. py:function:: pme.list_tags()
+
+    メニューで使用されているタグの一覧を取得します。
+
+    :return: ソートされたタグ名のリスト
+    :rtype: list[str]
+
+    **例**::
+
+        tags = pme.list_tags()
+        print(tags)  # ['Modeling', 'Sculpt', 'UV']
 
 
 .. py:function:: pme.invoke_pm(pm_or_name)
@@ -184,12 +257,12 @@ API 一覧
 
 .. py:class:: pme.PMHandle
 
-    パイメニューへのハンドル。
+    パイメニューへの読み取り専用ハンドル。
 
     .. py:attribute:: name
         :type: str
 
-        メニュー名
+        メニュー名（ユーザーが変更可能）
 
     .. py:attribute:: mode
         :type: str | None
@@ -200,6 +273,16 @@ API 一覧
         :type: bool
 
         メニューが有効かどうか
+
+    .. py:attribute:: uid
+        :type: str
+
+        一意識別子（``"pm_9f7c2k3h"`` など）。名前が変わっても安定した参照として使用可能
+
+    .. py:attribute:: tag
+        :type: str
+
+        カンマ区切りのタグ（``"Modeling, Sculpt"`` など）
 
 
 ユーザープロパティ
@@ -270,6 +353,191 @@ API 一覧
 
     .. note::
         コード実行には ``pme.execute()`` / ``pme.evaluate()`` の使用を推奨します。
+
+
+----
+
+.. _pme-validation-api:
+
+-----------------
+バリデーション API
+-----------------
+
+``pme.validation`` サブモジュールは、PME JSON データのインポート前検証を提供します。
+AI 生成、手動編集、サードパーティツールからの JSON をチェックできます。
+
+.. code-block:: python
+
+    import pme
+
+    # JSON 文字列のバリデーション
+    result = pme.validate_json(json_string)
+    if result.valid:
+        print(f"Valid! {result.menu_count} menus")
+    else:
+        print(result.format_report())
+
+    # ファイルのバリデーション
+    result = pme.validation.validate_file("/path/to/menu.json")
+
+
+.. py:function:: pme.validate_json(json_string, *, strict=False, check_references=True)
+
+    PME JSON 文字列をバリデーションします。
+
+    :param str json_string: JSON 文字列
+    :param bool strict: ``True`` の場合、警告もエラーとして扱う
+    :param bool check_references: メニュー uid 参照の整合性チェック
+    :return: 検証結果
+    :rtype: ValidationResult
+
+
+.. py:function:: pme.validation.validate_file(filepath, *, strict=False, check_references=True)
+
+    PME JSON ファイルをバリデーションします。
+
+    :param str filepath: ファイルパス
+    :param bool strict: ``True`` の場合、警告もエラーとして扱う
+    :param bool check_references: メニュー uid 参照の整合性チェック
+    :return: 検証結果
+    :rtype: ValidationResult
+
+
+.. py:class:: pme.ValidationResult
+
+    バリデーション結果を表すデータクラス。
+
+    .. py:attribute:: valid
+        :type: bool
+
+        エラーがないかどうか（警告は許容）
+
+    .. py:attribute:: errors
+        :type: list[ValidationIssue]
+
+        致命的なエラーのリスト
+
+    .. py:attribute:: warnings
+        :type: list[ValidationIssue]
+
+        警告のリスト
+
+    .. py:attribute:: schema_version
+        :type: str | None
+
+        検出されたスキーマバージョン
+
+    .. py:attribute:: menu_count
+        :type: int
+
+        検出されたメニュー数
+
+    .. py:method:: format_report(*, include_warnings=True, max_issues=50)
+
+        人間可読なレポートを生成します。
+
+        :return: フォーマットされたレポート文字列
+
+
+.. py:class:: pme.validation.ValidationIssue
+
+    バリデーション問題を表すデータクラス。
+
+    .. py:attribute:: severity
+        :type: str
+
+        ``"error"`` または ``"warning"``
+
+    .. py:attribute:: code
+        :type: str
+
+        エラーコード（``"E301"``, ``"W102"`` など）
+
+    .. py:attribute:: path
+        :type: str
+
+        JSON パス（``"menus[0].items[2].action"`` など）
+
+    .. py:attribute:: message
+        :type: str
+
+        エラーメッセージ
+
+    .. py:attribute:: suggestion
+        :type: str | None
+
+        修正提案
+
+
+----
+
+.. _pme-constants-api:
+
+-----------
+定数 API
+-----------
+
+``pme.constants`` サブモジュールは、メニューモードやアイテムモードの定数を提供します。
+
+.. code-block:: python
+
+    import pme
+
+    # メニューモード
+    pme.constants.PMENU   # "PMENU"
+    pme.constants.RMENU   # "RMENU"
+    pme.constants.DIALOG  # "DIALOG"
+
+    # モード一覧
+    pme.constants.MENU_MODES  # ('PMENU', 'RMENU', 'DIALOG', ...)
+
+    # ヘルパー関数
+    pme.constants.get_mode_label('PMENU')  # "Pie Menu"
+    pme.constants.get_mode_icon('PMENU')   # "MOD_SUBSURF"
+
+
+メニューモード定数
+********************
+
+.. py:data:: pme.constants.MENU_MODES
+
+    すべてのメニューモードのタプル::
+
+        ('PMENU', 'RMENU', 'DIALOG', 'SCRIPT', 'PANEL',
+         'HPANEL', 'STICKY', 'MACRO', 'MODAL', 'PROPERTY')
+
+
+.. py:data:: pme.constants.PMENU
+             pme.constants.RMENU
+             pme.constants.DIALOG
+             pme.constants.SCRIPT
+             pme.constants.PANEL
+             pme.constants.HPANEL
+             pme.constants.STICKY
+             pme.constants.MACRO
+             pme.constants.MODAL
+             pme.constants.PROPERTY
+
+    個別のメニューモード定数。
+
+
+ヘルパー関数
+**************
+
+.. py:function:: pme.constants.get_mode_label(mode)
+
+    メニューモードの表示名を取得します。
+
+    :param str mode: モード ID（``'PMENU'`` など）
+    :return: 表示名（``'Pie Menu'`` など）
+
+
+.. py:function:: pme.constants.get_mode_icon(mode)
+
+    メニューモードのアイコン名を取得します。
+
+    :param str mode: モード ID
+    :return: アイコン名（``'MOD_SUBSURF'`` など）
 
 
 ----
