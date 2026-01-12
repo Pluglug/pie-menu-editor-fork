@@ -25,7 +25,7 @@ LAYER = "api"
 
 import bpy
 
-from ._types import PMHandle
+from .pme_types import PMHandle
 
 __all__ = [
     "find_pm",

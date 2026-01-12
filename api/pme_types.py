@@ -1,13 +1,38 @@
-# api/_types.py - Public API type definitions
+# api/pme_types.py - Public API type definitions
 # LAYER = "api"
 #
 # This module contains data classes used by the public API.
 # These are intentionally simple and stable.
+#
+# File is named pme_types.py to avoid collision with stdlib 'types'.
+# Aliased as 'types' in __init__.py for clean access: pme.types.ExecuteResult
+
+"""PME Public Types.
+
+This module provides data classes for API return values.
+Similar to bpy.types, but for PME-specific types.
+
+Example:
+    >>> import pme
+    >>> result = pme.execute("print('hello')")
+    >>> isinstance(result, pme.types.ExecuteResult)
+    True
+
+Stability: Experimental
+"""
 
 LAYER = "api"
 
 from dataclasses import dataclass, field
 from typing import Any
+
+__all__ = [
+    "ExecuteResult",
+    "SyntaxResult",
+    "PMHandle",
+    "ValidationIssue",
+    "ValidationResult",
+]
 
 
 @dataclass
@@ -202,3 +227,13 @@ class ValidationResult:
                 shown += 1
 
         return "\n".join(lines)
+
+
+# =============================================================================
+# Autocomplete control
+# =============================================================================
+
+
+def __dir__():
+    """Control what appears in dir() and autocomplete."""
+    return __all__

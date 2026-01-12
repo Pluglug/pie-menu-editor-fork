@@ -40,13 +40,14 @@ from .api import (
     # Execution
     execute,
     evaluate,
-    ExecuteResult,
     # Menu API
-    PMHandle,
     find_pm,
     list_pms,
     invoke_pm,
 )
+
+# Types submodule (pme.types.ExecuteResult, pme.types.PMHandle, etc.)
+from .api import types
 
 # Preferences access (delegate to api module)
 from .api import _proxy as _api_proxy

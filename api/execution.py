@@ -27,7 +27,7 @@ LAYER = "api"
 import ast
 from typing import Any
 
-from ._types import ExecuteResult, SyntaxResult
+from .pme_types import ExecuteResult, SyntaxResult
 
 __all__ = [
     "execute",

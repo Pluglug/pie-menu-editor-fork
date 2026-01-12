@@ -48,17 +48,13 @@ __all__ = [
     "execute",
     "evaluate",
     "check_syntax",
-    "ExecuteResult",
-    "SyntaxResult",
     # Menu API (from menu.py)
-    "PMHandle",
     "find_pm",
     "list_pms",
     "list_tags",
     "invoke_pm",
     # Validation API (from validation.py) - top-level access
     "validate_json",
-    "ValidationResult",
     # UID utilities (from core)
     "validate_uid",
     # User Properties
@@ -68,6 +64,7 @@ __all__ = [
     # Context (backward compat)
     "context",
     # Submodules
+    "types",       # pme.types.ExecuteResult, etc. (like bpy.types)
     "constants",
     "dev",
     "validation",
@@ -77,14 +74,9 @@ __all__ = [
 # Re-exports from submodules
 # =============================================================================
 
-# Types (public)
-from ._types import (
-    ExecuteResult,
-    PMHandle,
-    SyntaxResult,
-    ValidationIssue,
-    ValidationResult,
-)
+# Types submodule (pme.types.ExecuteResult, etc.)
+# File is pme_types.py to avoid collision with stdlib 'types'
+from . import pme_types as types
 
 # Execution API
 from .execution import execute, evaluate, check_syntax
