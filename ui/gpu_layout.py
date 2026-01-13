@@ -779,6 +779,7 @@ class LabelItem(LayoutItem):
     icon: str = "NONE"
     alignment: Alignment = Alignment.LEFT
     text_color: Optional[tuple[float, float, float, float]] = None
+    alert: bool = False
 
     def calc_size(self, style: GPULayoutStyle) -> tuple[float, float]:
         text_w, text_h = BLFDrawing.get_text_dimensions(self.text, style.scaled_text_size())
@@ -789,7 +790,15 @@ class LabelItem(LayoutItem):
         if not self.visible:
             return
 
-        color = self.text_color or (style.text_color if self.enabled else style.text_color_disabled)
+        # 色の決定: alert > text_color > enabled/disabled
+        if self.alert:
+            color = style.alert_color
+        elif self.text_color:
+            color = self.text_color
+        elif self.enabled:
+            color = style.text_color
+        else:
+            color = style.text_color_disabled
         text_size = style.scaled_text_size()
 
         # コンテンツサイズを計算
@@ -1028,12 +1037,16 @@ class PropDisplayItem(LayoutItem):
         _, text_h = BLFDrawing.get_text_dimensions("Wg", text_size)
         text_y = self.y - (self.height + text_h) / 2
 
+        # enabled 状態に応じた色
+        label_color = style.text_color_secondary if self.enabled else style.text_color_disabled
+        value_color = style.text_color if self.enabled else style.text_color_disabled
+
         # ラベル
-        BLFDrawing.draw_text(self.x, text_y, f"{label}: ", style.text_color_secondary, text_size)
+        BLFDrawing.draw_text(self.x, text_y, f"{label}: ", label_color, text_size)
 
         # 値
         label_w, _ = BLFDrawing.get_text_dimensions(f"{label}: ", text_size)
-        BLFDrawing.draw_text(self.x + label_w, text_y, value, style.text_color, text_size)
+        BLFDrawing.draw_text(self.x + label_w, text_y, value, value_color, text_size)
 
 
 @dataclass
@@ -1146,6 +1159,10 @@ class GPULayout:
         # アイテム間スペースを制御（align=True で 0）
         self._align: bool = False
 
+        # split 用（0.0 = 自動計算、0.0-1.0 = 最初の column の割合）
+        self._split_factor: float = 0.0
+        self._split_column_index: int = 0  # column() が呼ばれるたびにインクリメント
+
         # ボックス描画フラグ
         self._draw_background: bool = False
         self._draw_outline: bool = False
@@ -1171,6 +1188,7 @@ class GPULayout:
         )
         child.active = self.active
         child.enabled = self.enabled
+        child.alert = self.alert
         child._align = align  # アイテム間スペースを制御
         self._children.append(child)
         return child
@@ -1181,19 +1199,42 @@ class GPULayout:
 
         Args:
             align: True の場合、アイテム間のスペースをなくす
+
+        Note:
+            split() 内で呼ばれた場合、factor に基づいて幅が計算される。
+            - factor > 0: 最初の column が factor 割合、残りは均等分割
+            - factor == 0: 全ての column を均等分割
         """
+        available_width = self._get_available_width()
+
+        # split の中で呼ばれた場合、factor に基づいて幅を計算
+        if self._split_factor > 0.0 and self._split_column_index == 0:
+            # 最初の column: factor 割合
+            col_width = available_width * self._split_factor
+        elif self._split_factor > 0.0 and self._split_column_index == 1:
+            # 2番目の column: 残り全部（単純化のため 2 列のみサポート）
+            col_width = available_width * (1.0 - self._split_factor)
+        else:
+            # 自動計算または 3 列目以降: 利用可能幅をそのまま使用
+            col_width = available_width
+
         child = GPULayout(
             x=self._cursor_x,
             y=self._cursor_y,
-            width=self._get_available_width(),
+            width=col_width,
             style=self.style,
             direction=Direction.VERTICAL,
             parent=self
         )
         child.active = self.active
         child.enabled = self.enabled
+        child.alert = self.alert
         child._align = align
         self._children.append(child)
+
+        # split 用インデックスをインクリメント
+        self._split_column_index += 1
+
         return child
 
     def box(self) -> GPULayout:
@@ -1203,9 +1244,14 @@ class GPULayout:
         child._draw_outline = True
         return child
 
-    def split(self, factor: float = 0.5, align: bool = False) -> GPULayout:
+    def split(self, *, factor: float = 0.0, align: bool = False) -> GPULayout:
         """
         分割レイアウトを作成
+
+        Args:
+            factor: 最初の column の幅の割合 (0.0-1.0)
+                    0.0 の場合は自動計算（均等分割）
+            align: True の場合、column 間のスペースをなくす
 
         使用例:
             split = layout.split(factor=0.3)
@@ -1223,8 +1269,10 @@ class GPULayout:
             parent=self
         )
         child._split_factor = factor
+        child._align = align
         child.active = self.active
         child.enabled = self.enabled
+        child.alert = self.alert
         self._children.append(child)
         return child
 
@@ -1237,7 +1285,8 @@ class GPULayout:
         item = LabelItem(
             text=text,
             icon=icon,
-            enabled=self.enabled and self.active
+            enabled=self.enabled and self.active,
+            alert=self.alert
         )
         self._add_item(item)
 

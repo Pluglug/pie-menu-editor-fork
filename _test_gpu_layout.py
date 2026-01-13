@@ -372,6 +372,73 @@ class TEST_OT_gpu_layout(Operator):
 
             row_demo.draw()
 
+            # ═══════════════════════════════════════════════════════════════
+            # 8. alert / enabled デモ
+            # ═══════════════════════════════════════════════════════════════
+            state_demo_y = row_demo_y - row_demo.calc_height() - margin
+
+            state_demo = GPULayout(
+                x=right_x,
+                y=state_demo_y,
+                width=250
+            )
+            state_demo._draw_background = True
+            state_demo._draw_outline = True
+
+            state_demo.label(text="State Properties Demo")
+            state_demo.separator(factor=0.5)
+
+            # 通常状態
+            state_demo.label(text="Normal label")
+
+            # alert 状態
+            state_demo.alert = True
+            state_demo.label(text="Alert label (red)")
+            state_demo.alert = False
+
+            # enabled=False 状態
+            state_demo.enabled = False
+            state_demo.label(text="Disabled label (gray)")
+            state_demo.enabled = True
+
+            state_demo.draw()
+
+            # ═══════════════════════════════════════════════════════════════
+            # 9. split() デモ
+            # ═══════════════════════════════════════════════════════════════
+            split_demo_y = state_demo_y - state_demo.calc_height() - margin
+
+            split_demo = GPULayout(
+                x=right_x,
+                y=split_demo_y,
+                width=250
+            )
+            split_demo._draw_background = True
+            split_demo._draw_outline = True
+
+            split_demo.label(text="split() Demo")
+            split_demo.separator(factor=0.5)
+
+            # factor=0.3 の分割
+            split_demo.label(text="split(factor=0.3):")
+            split1 = split_demo.split(factor=0.3)
+            col1 = split1.column()
+            col1.label(text="30%")
+            col2 = split1.column()
+            col2.label(text="70%")
+
+            split_demo.separator(factor=0.5)
+
+            # factor=0.5 の分割（均等）
+            split_demo.label(text="split(factor=0.5):")
+            split2 = split_demo.split(factor=0.5)
+            col3 = split2.column()
+            col3.label(text="50%")
+            col4 = split2.column()
+            col4.label(text="50%")
+
+            split_demo.draw()
+
         except Exception as e:
             import traceback
             print(f"Draw error: {e}")
