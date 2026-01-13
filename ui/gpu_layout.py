@@ -372,34 +372,33 @@ class GPUDrawing:
         shader = cls.get_shader()
         half = stroke_width / 2.0
 
+        # セグメント数を固定（内外で同じ数にするため）
+        segments = 8
+
         # 外側の頂点（元のサイズ + half）
-        outer_verts = cls._calc_rounded_rect_outline_vertices(
+        outer_radius = radius + int(half)
+        outer_verts = cls._calc_rounded_rect_outline_vertices_fixed(
             x - half, y + half,
             width + stroke_width, height + stroke_width,
-            radius + int(half), corners
+            outer_radius, corners, segments
         )
 
         # 内側の頂点（元のサイズ - half）
         inner_radius = max(0, radius - int(half))
-        inner_verts = cls._calc_rounded_rect_outline_vertices(
+        inner_verts = cls._calc_rounded_rect_outline_vertices_fixed(
             x + half, y - half,
             width - stroke_width, height - stroke_width,
-            inner_radius, corners
+            inner_radius, corners, segments
         )
-
-        # 頂点数を揃える（少ない方に合わせる）
-        min_len = min(len(outer_verts), len(inner_verts))
-        outer_verts = outer_verts[:min_len]
-        inner_verts = inner_verts[:min_len]
 
         # TRIANGLE_STRIP 用に交互に配置
         vertices = []
-        for i in range(min_len):
+        for i in range(len(outer_verts)):
             vertices.append(outer_verts[i])
             vertices.append(inner_verts[i])
 
         # 閉じる（最初の頂点ペアを追加）
-        if min_len > 0:
+        if len(outer_verts) > 0:
             vertices.append(outer_verts[0])
             vertices.append(inner_verts[0])
 
@@ -409,6 +408,64 @@ class GPUDrawing:
         gpu.state.blend_set('ALPHA')
         batch.draw(shader)
         gpu.state.blend_set('NONE')
+
+    @classmethod
+    def _calc_rounded_rect_outline_vertices_fixed(cls, x: float, y: float, width: float, height: float,
+                                                   radius: int, corners: tuple[bool, bool, bool, bool],
+                                                   segments: int = 8) -> list[tuple[float, float]]:
+        """
+        固定セグメント数で角丸矩形のアウトライン頂点を計算
+
+        ストローク描画用に、セグメント数を固定して内外で頂点数を揃える。
+        radius が 0 でも同じ頂点数を返す（角の位置に重複頂点を配置）。
+        """
+        r = max(0, min(radius, int(height / 2), int(width / 2)))
+
+        vertices = []
+
+        # 各角に (segments + 1) 個の頂点を配置（常に同じ数）
+        # topLeft (corners[1]) - 角度 90° → 180°
+        if corners[1] and r > 0:
+            cx, cy = x + r, y - r
+            for j in range(segments + 1):
+                angle = pi / 2 * (1 + j / segments)
+                vertices.append((cx + r * cos(angle), cy + r * sin(angle)))
+        else:
+            # 角丸なしでも同じ頂点数（全て同じ点）
+            for _ in range(segments + 1):
+                vertices.append((x, y))
+
+        # bottomLeft (corners[0]) - 角度 180° → 270°
+        if corners[0] and r > 0:
+            cx, cy = x + r, y - height + r
+            for j in range(segments + 1):
+                angle = pi * (1 + 0.5 * j / segments)
+                vertices.append((cx + r * cos(angle), cy + r * sin(angle)))
+        else:
+            for _ in range(segments + 1):
+                vertices.append((x, y - height))
+
+        # bottomRight (corners[3]) - 角度 270° → 360°
+        if corners[3] and r > 0:
+            cx, cy = x + width - r, y - height + r
+            for j in range(segments + 1):
+                angle = pi * (1.5 + 0.5 * j / segments)
+                vertices.append((cx + r * cos(angle), cy + r * sin(angle)))
+        else:
+            for _ in range(segments + 1):
+                vertices.append((x + width, y - height))
+
+        # topRight (corners[2]) - 角度 0° → 90°
+        if corners[2] and r > 0:
+            cx, cy = x + width - r, y - r
+            for j in range(segments + 1):
+                angle = pi / 2 * j / segments
+                vertices.append((cx + r * cos(angle), cy + r * sin(angle)))
+        else:
+            for _ in range(segments + 1):
+                vertices.append((x + width, y))
+
+        return vertices
 
     @classmethod
     def _calc_rounded_rect_outline_vertices(cls, x: float, y: float, width: float, height: float,
