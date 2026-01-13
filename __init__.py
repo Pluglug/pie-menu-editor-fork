@@ -127,6 +127,9 @@ tmp_filepath = None
 invalid_prefs = None
 timer = None
 
+# Issue #63: JSON backup for re-enable (5.0+)
+REENABLE_BACKUP_FILENAME = "_reenable_backup.json"
+
 
 @persistent
 def load_pre_handler(_):
@@ -213,6 +216,39 @@ def on_context():
                 property_utils.from_dict(pr, re_enable_data)
             re_enable_data.clear()
             re_enable_data = None
+    else:
+        # Issue #63: Restore from JSON backup (5.0+)
+        try:
+            import os
+            from .infra.io import get_user_backup_dir
+            backup_dir = get_user_backup_dir()
+            backup_path = os.path.join(backup_dir, REENABLE_BACKUP_FILENAME)
+            if os.path.exists(backup_path):
+                # Check if we need to restore (current menus < backup menus)
+                # The default empty PMEPreferences creates 1 menu, so we compare counts
+                backup_menu_count = 0
+                try:
+                    import json
+                    with open(backup_path, "r", encoding="utf-8") as f:
+                        backup_data = json.load(f)
+                    backup_menu_count = len(backup_data.get("menus", []))
+                except:
+                    pass
+
+                current_menu_count = len(pr.pie_menus)
+                DBG_INIT and logi(f"Re-enable check: backup={backup_menu_count}, current={current_menu_count}")
+
+                if backup_menu_count > current_menu_count:
+                    DBG_INIT and logi("Restoring from JSON backup...")
+                    # Use the import operator with REPLACE mode
+                    bpy.ops.wm.pm_import(filepath=backup_path, mode='REPLACE')
+                    DBG_INIT and logi(f"Restored {backup_menu_count} menus from backup")
+
+                # Always remove backup file after check
+                os.remove(backup_path)
+                DBG_INIT and logi("Removed re-enable backup file")
+        except Exception as e:
+            logw(f"Failed to restore from re-enable backup: {e}")
 
     if pr.missing_kms:
         logw(f"Missing Keymaps: {pr.missing_kms}")
@@ -441,6 +477,23 @@ def unregister():
     if APP_VERSION < (5, 0, 0):
         global re_enable_data
         re_enable_data = property_utils.to_dict(get_prefs())
+    else:
+        # Issue #63: JSON backup for re-enable (5.0+)
+        # to_dict/from_dict causes data drift on 5.x, so we use JSON export instead
+        try:
+            import os
+            import json
+            from .infra.io import get_user_backup_dir
+            pr = get_prefs()
+            if pr and len(pr.pie_menus) > 0:
+                backup_dir = get_user_backup_dir(create=True)
+                backup_path = os.path.join(backup_dir, REENABLE_BACKUP_FILENAME)
+                data = pr.get_export_data()
+                with open(backup_path, "w", encoding="utf-8") as f:
+                    json.dump(data, f)
+                DBG_INIT and logi(f"Saved re-enable backup: {len(data.get('menus', []))} menus")
+        except Exception as e:
+            logw(f"Failed to save re-enable backup: {e}")
 
     # PME2 Loader: unregister_modules handles everything
     DBG_INIT and logi("Unregistering with PME2 Loader")
