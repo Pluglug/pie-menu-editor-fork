@@ -122,12 +122,18 @@ class GPULayoutStyle:
         Blender テーマから自動取得
 
         Args:
-            style_name: 'TOOLTIP', 'BOX', 'PANEL', 'REGULAR'
+            style_name: 'TOOLTIP', 'BOX', 'PANEL', 'REGULAR', 'PIE_MENU', 'MENU', 'TOOL'
+
+        Note:
+            - preferences.view.ui_scale: ユーザーが設定するスケール値 (0.5-6.0)
+            - preferences.system.ui_scale: OS DPI × ユーザー設定 = 最終スケール
+            - preferences.system.ui_line_width: 計算されたライン太さ（ピクセル）
         """
         try:
-            theme = bpy.context.preferences.themes[0]
+            prefs = bpy.context.preferences
+            theme = prefs.themes[0]
             ui = theme.user_interface
-            ui_styles = bpy.context.preferences.ui_styles[0]
+            ui_styles = prefs.ui_styles[0]
 
             # スタイル名からテーマ属性を取得
             style_map = {
@@ -137,30 +143,95 @@ class GPULayoutStyle:
                 'REGULAR': 'wcol_regular',
                 'TOOL': 'wcol_tool',
                 'RADIO': 'wcol_radio',
+                'PIE_MENU': 'wcol_pie_menu',
+                'MENU': 'wcol_menu',
+                'MENU_ITEM': 'wcol_menu_item',
+                'TOGGLE': 'wcol_toggle',
+                'OPTION': 'wcol_option',
+                'NUM': 'wcol_num',
+                'NUMSLIDER': 'wcol_numslider',
             }
             wcol_name = style_map.get(style_name, 'wcol_tooltip')
             wcol = getattr(ui, wcol_name)
 
-            # 色を取得（Blender 4.0+ では outline が 3要素）
-            if bpy.app.version >= (4, 0, 0):
-                outline = tuple(wcol.outline) + (1.0,) if len(wcol.outline) == 3 else tuple(wcol.outline)
-            else:
-                outline = tuple(wcol.outline)
+            # ボタン用のカラーを取得（wcol_tool を使用）
+            wcol_button = ui.wcol_tool
+
+            # ヘルパー関数: 色を RGBA に変換
+            def to_rgba(color, alpha: float = 1.0) -> tuple[float, float, float, float]:
+                """色を RGBA タプルに変換"""
+                c = tuple(color)
+                if len(c) == 3:
+                    return c + (alpha,)
+                return c
+
+            # ThemeFontStyle からシャドウ設定を取得
+            font_style = ui_styles.widget
+            shadow_type = font_style.shadow  # 0=none, 3=shadow, 5=blur, 6=outline
+            shadow_enabled = shadow_type > 0
+
+            # roundness から border_radius を計算（0-1 → ピクセル値）
+            # roundness 1.0 で約 10px、スケールを考慮
+            base_radius = int(wcol.roundness * 10)
 
             return cls(
-                bg_color=tuple(wcol.inner),
-                outline_color=outline,
-                text_color=tuple(wcol.text) + (1.0,) if len(wcol.text) == 3 else tuple(wcol.text),
-                text_size=ui_styles.widget.points,
-                shadow_color=tuple(ui.widget_emboss),
+                # 背景
+                bg_color=to_rgba(wcol.inner),
+                outline_color=to_rgba(wcol.outline),
+
+                # テキスト
+                text_color=to_rgba(wcol.text),
+                text_color_secondary=to_rgba(wcol.text, 0.7),  # メインテキストの 70%
+                text_color_disabled=to_rgba(wcol.text, 0.4),   # メインテキストの 40%
+                text_size=int(font_style.points),
+
+                # ボタン（wcol_tool から取得）
+                button_color=to_rgba(wcol_button.inner),
+                button_hover_color=to_rgba(wcol_button.inner_sel),
+                button_press_color=to_rgba(wcol_button.item),
+                button_text_color=to_rgba(wcol_button.text),
+
+                # 特殊色
+                alert_color=(0.8, 0.2, 0.2, 1.0),  # 赤系（Blender の alert は固定色）
+                highlight_color=to_rgba(wcol.inner_sel),
+
+                # 区切り線（アウトラインより少し暗く）
+                separator_color=to_rgba(wcol.outline, 0.5),
+
+                # レイアウト
+                border_radius=max(4, base_radius),
+
+                # シャドウ（widget_emboss を使用）
+                shadow_color=to_rgba(ui.widget_emboss),
+
+                # テキストシャドウ（ThemeFontStyle から取得）
+                text_shadow_enabled=shadow_enabled,
+                text_shadow_color=font_style.shadow_value,  # 0.0=黒, 1.0=白
+                text_shadow_alpha=font_style.shadow_alpha,
+                text_shadow_offset=(font_style.shadow_offset_x, font_style.shadow_offset_y),
             )
         except Exception:
             # フォールバック
             return cls()
 
     def ui_scale(self, value: float) -> float:
-        """UI スケールを適用"""
-        return value * bpy.context.preferences.view.ui_scale
+        """
+        UI スケールを適用
+
+        Note:
+            system.ui_scale は OS DPI も考慮した最終値。
+            view.ui_scale はユーザー設定値のみ。
+            アドオンでは system.ui_scale の使用が推奨される。
+        """
+        return value * bpy.context.preferences.system.ui_scale
+
+    def line_width(self) -> float:
+        """
+        推奨ライン太さを取得
+
+        OS 設定と UI スケールに基づいた、カスタム UI 要素用の推奨値。
+        """
+        return bpy.context.preferences.system.ui_line_width
 
     def scaled_padding(self) -> int:
         return int(self.ui_scale(self.padding))
@@ -231,16 +302,26 @@ class GPUDrawing:
     @classmethod
     def draw_rounded_rect_outline(cls, x: float, y: float, width: float, height: float,
                                    radius: int, color: tuple[float, float, float, float],
-                                   corners: tuple[bool, bool, bool, bool] = (True, True, True, True)) -> None:
-        """角丸矩形のアウトラインを描画"""
+                                   corners: tuple[bool, bool, bool, bool] = (True, True, True, True),
+                                   line_width: float = 0.0) -> None:
+        """
+        角丸矩形のアウトラインを描画
+
+        Args:
+            line_width: ライン太さ（0.0 の場合は system.ui_line_width を使用）
+        """
         shader = cls.get_shader()
         # LINE_LOOP 用の頂点（中心点なし）
         vertices = cls._calc_rounded_rect_outline_vertices(x, y, width, height, radius, corners)
         batch = batch_for_shader(shader, 'LINE_LOOP', {"pos": vertices})
         shader.bind()
         shader.uniform_float("color", color)
+
+        # ライン太さを設定（0.0 の場合はシステム推奨値を使用）
+        if line_width <= 0.0:
+            line_width = bpy.context.preferences.system.ui_line_width
         gpu.state.blend_set('ALPHA')
-        gpu.state.line_width_set(1.0)
+        gpu.state.line_width_set(line_width)
         batch.draw(shader)
         gpu.state.blend_set('NONE')
 
@@ -390,13 +471,22 @@ class GPUDrawing:
 
     @classmethod
     def draw_line(cls, x1: float, y1: float, x2: float, y2: float,
-                  color: tuple[float, float, float, float], width: float = 1.0) -> None:
-        """線を描画"""
+                  color: tuple[float, float, float, float], width: float = 0.0) -> None:
+        """
+        線を描画
+
+        Args:
+            width: ライン太さ（0.0 の場合は system.ui_line_width を使用）
+        """
         shader = cls.get_shader()
         vertices = ((x1, y1), (x2, y2))
         batch = batch_for_shader(shader, 'LINES', {"pos": vertices})
         shader.bind()
         shader.uniform_float("color", color)
+
+        # ライン太さを設定（0.0 の場合はシステム推奨値を使用）
+        if width <= 0.0:
+            width = bpy.context.preferences.system.ui_line_width
         gpu.state.blend_set('ALPHA')
         gpu.state.line_width_set(width)
         batch.draw(shader)

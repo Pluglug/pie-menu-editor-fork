@@ -169,8 +169,9 @@ class TEST_OT_gpu_layout(Operator):
 
             # ═══════════════════════════════════════════════════════════════
             # 4. スタイルバリエーション（右列、ボックスの下）
+            #    Blender テーマから自動取得される各種スタイル
             # ═══════════════════════════════════════════════════════════════
-            styles = ['TOOLTIP', 'BOX', 'REGULAR']
+            styles = ['TOOLTIP', 'PIE_MENU', 'MENU', 'BOX', 'REGULAR', 'TOOL']
 
             for style_name in styles:
                 style = GPULayoutStyle.from_blender_theme(style_name)
