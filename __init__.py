@@ -40,132 +40,28 @@ from bpy.props import (
 )
 from bpy.types import AddonPreferences, Operator, WindowManager
 import sys
-import inspect
 from .infra.debug import *
 
-MODULES = (
-    "addon",
-    "pme",
-    "c_utils",
-    "bl_utils",
-    "operator_utils",
-    "ui",
-    "keymap_helper",
-    "operators",
-    "pme_types",
-    "preferences",
-)
-
-CLASSES = []
-
 
 # ======================================================
-# Legacy Loader (MODULES + get_classes)
-# ======================================================
-
-def legacy_get_classes():
-    """Get all bpy_struct classes from MODULES for legacy registration."""
-    ret = set()
-    bpy_struct = bpy_types.bpy_struct
-    cprop = CollectionProperty
-    pprop = PointerProperty
-    pdtype = getattr(bpy.props, "_PropertyDeferred", tuple)
-    mems = set()
-    mem_data = []
-    for mod in MODULES:
-        mod = sys.modules["%s.%s" % (__name__, mod)]
-        # mod = sys.modules[mod]
-        for name, mem in inspect.getmembers(mod):
-            if inspect.isclass(mem) and issubclass(mem, bpy_struct) and mem not in mems:
-
-                mems.add(mem)
-                classes = []
-
-                if hasattr(mem, "__annotations__"):
-                    for pname, pd in mem.__annotations__.items():
-                        if not isinstance(pd, pdtype):
-                            continue
-
-                        pfunc = getattr(pd, "function", None) or pd[0]
-                        pkeywords = pd.keywords if hasattr(pd, "keywords") else pd[1]
-                        if pfunc is cprop or pfunc is pprop:
-                            classes.append(pkeywords["type"])
-
-                if not classes:
-                    ret.add(mem)
-                else:
-                    mem_data.append(dict(mem=mem, classes=classes))
-
-    mems.clear()
-
-    ret_post = []
-    if mem_data:
-        mem_data_len = -1
-        while len(mem_data):
-            if len(mem_data) == mem_data_len:
-                for data in mem_data:
-                    ret_post.append(data["mem"])
-                break
-
-            new_mem_data = []
-            for data in mem_data:
-                add = True
-                for cls in data["classes"]:
-                    if cls not in ret and cls not in ret_post:
-                        add = False
-                        break
-
-                if add:
-                    ret_post.append(data["mem"])
-                else:
-                    new_mem_data.append(data)
-
-            mem_data_len = len(mem_data)
-            mem_data.clear()
-            mem_data = new_mem_data
-
-    ret = list(ret)
-    ret.extend(ret_post)
-    return ret
-
-
-def legacy_register_module():
-    """Register all classes using legacy MODULES approach."""
-    if hasattr(bpy.utils, "register_module"):
-        bpy.utils.register_module(__name__)
-    else:
-        for cls in legacy_get_classes():
-            bpy.utils.register_class(cls)
-
-
-def legacy_unregister_module():
-    """Unregister all classes using legacy MODULES approach."""
-    if hasattr(bpy.utils, "unregister_module"):
-        bpy.utils.unregister_module(__name__)
-    else:
-        for cls in legacy_get_classes():
-            bpy.utils.unregister_class(cls)
-
-
-# ======================================================
-# New Loader (init_addon + register_modules)
+# PME2 Loader (init_addon + register_modules)
 # ======================================================
 
 # Module patterns for init_addon
 # These patterns define which modules are collected and loaded by the new loader.
 PME2_MODULE_PATTERNS = [
-    # Layer packages
-    "core",
-    "core.*",
-    "infra",
-    "infra.*",
-    "api",        # Phase 8-D: public API facade
-    "api.*",
+    # Packages that define classes/register() in __init__.py
     "ui",
+    "operators",
+    # Package submodules
+    "core.*",
+    "infra.*",
+    "api.*",      # Phase 8-D: public API facade
     "ui.*",
-    "editors",
     "editors.*",
-    # Core modules (without package)
+    "operators.*",
+    "prefs.*",
+    # Root modules (without package)
     # NOTE: "addon" is intentionally excluded - it's the bootstrap module
     # that is already loaded/reloaded in __init__.py's use_reload block.
     # Reloading it again in init_addon() would reset VERSION to None.
@@ -174,24 +70,19 @@ PME2_MODULE_PATTERNS = [
     "keymap_helper",
     "operator_utils",
     "pme_types",
-    # Operators
-    "operators",
-    "operators.*",
-    # Preferences
     "preferences",
-    # Remaining root modules
     "bl_utils",
 ]
 
 
-def new_register_modules():
+def pme2_register_modules():
     """Register modules using init_addon approach."""
     from .infra.debug import dbg_log, dbg_scope
 
-    dbg_log("deps", f"Using init_addon loader (use_reload={use_reload})", location="__init__.new_register_modules")
+    dbg_log("deps", f"Using init_addon loader (use_reload={use_reload})", location="__init__.pme2_register_modules")
 
     # Initialize addon module system
-    with dbg_scope("profile", "new_register_modules.init_addon", location="__init__"):
+    with dbg_scope("profile", "pme2_register_modules.init_addon", location="__init__"):
         addon.init_addon(
             module_patterns=PME2_MODULE_PATTERNS,
             use_reload=use_reload,
@@ -200,52 +91,26 @@ def new_register_modules():
         )
 
     # Register all classes and call module register() functions
-    with dbg_scope("profile", "new_register_modules.register", location="__init__"):
+    with dbg_scope("profile", "pme2_register_modules.register", location="__init__"):
         addon.register_modules()
 
     # Deferred initialization for editor-dependent code
     # Must run after all Editor() instances are registered
-    with dbg_scope("profile", "new_register_modules.deferred_init", location="__init__"):
+    with dbg_scope("profile", "pme2_register_modules.deferred_init", location="__init__"):
         from .preferences import deferred_init
         deferred_init()
 
 
-def new_unregister_modules():
+def pme2_unregister_modules():
     """Unregister modules using init_addon approach."""
     addon.unregister_modules()
 
 
-# Backward compatibility aliases
-get_classes = legacy_get_classes
-register_module = legacy_register_module
-unregister_module = legacy_unregister_module
-
+# ======================================================
+# Module initialization (non-background mode)
+# ======================================================
 
 if not bpy.app.background:
-    import importlib
-
-    # Track reload activity for debugging unexpected reloads
-    _reload_count = 0
-    _import_count = 0
-
-    for mod in MODULES:
-        if mod in locals():
-            try:
-                importlib.reload(locals()[mod])
-                _reload_count += 1
-                continue
-            except:
-                pass
-
-        importlib.import_module("pie_menu_editor." + mod)
-        _import_count += 1
-
-    # Log reload activity (helps detect unexpected module reloads)
-    if _reload_count > 0:
-        logw(f"PME: Module-level reload detected: {_reload_count} reloaded, {_import_count} imported")
-    else:
-        DBG_INIT and logi(f"PME: Module-level import: {_import_count} modules imported (no reloads)")
-
     from .addon import get_prefs, temp_prefs
     from .infra import property as property_utils
     from . import pme
@@ -335,20 +200,9 @@ def on_context():
         if k.startswith("__"):
             pme.context.add_global(k, v)
 
-    # Branch based on loader flag
-    if addon.USE_PME2_LOADER:
-        # New loader: init_addon handles class registration and module.register() calls
-        DBG_INIT and logi("Using PME2 Loader (init_addon)")
-        new_register_modules()
-    else:
-        # Legacy loader: manual class registration + module.register() loop
-        DBG_INIT and logi("Using Legacy Loader (MODULES)")
-        legacy_register_module()
-
-        for mod in MODULES:
-            m = sys.modules["%s.%s" % (__name__, mod)]
-            if hasattr(m, "register"):
-                m.register()
+    # PME2 Loader: init_addon handles class registration and module.register() calls
+    DBG_INIT and logi("Using PME2 Loader (init_addon)")
+    pme2_register_modules()
 
     pr = get_prefs()
 
@@ -588,21 +442,11 @@ def unregister():
         global re_enable_data
         re_enable_data = property_utils.to_dict(get_prefs())
 
-    # Branch based on loader flag
-    if addon.USE_PME2_LOADER:
-        # New loader: unregister_modules handles everything
-        DBG_INIT and logi("Unregistering with PME2 Loader")
-        new_unregister_modules()
-    else:
-        # Legacy loader: manual module.unregister() loop + class unregistration
-        DBG_INIT and logi("Unregistering with Legacy Loader")
-        for mod in reversed(MODULES):
-            m = sys.modules["%s.%s" % (__name__, mod)]
-            if hasattr(m, "unregister"):
-                m.unregister()
-        legacy_unregister_module()
+    # PME2 Loader: unregister_modules handles everything
+    DBG_INIT and logi("Unregistering with PME2 Loader")
+    pme2_unregister_modules()
 
-    # Common cleanup (regardless of loader)
+    # Common cleanup
     if hasattr(bpy_types.WindowManager, "pme"):
         delattr(bpy_types.WindowManager, "pme")
 

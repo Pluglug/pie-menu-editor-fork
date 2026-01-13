@@ -25,11 +25,6 @@ ADDON_ID = os.path.basename(os.path.dirname(os.path.abspath(__file__)))
 ADDON_PATH = os.path.normpath(os.path.dirname(os.path.abspath(__file__)))
 SCRIPT_PATH = os.path.join(ADDON_PATH, "assets", "scripts") + os.sep
 SAFE_MODE = "--pme-safe-mode" in sys.argv
-
-# PME2 Loader Flag
-# When True, uses init_addon() based module loading instead of legacy MODULES tuple.
-# This flag is intended for pme2-dev branch and can be overridden from __init__.py.
-USE_PME2_LOADER = True  # Default: False for safety, set True to opt-in
 ICON_ENUM_ITEMS = (
     bpy_types.UILayout.bl_rna.functions["prop"].parameters["icon"].enum_items
 )
@@ -161,17 +156,14 @@ def ic_eye(value):
 
 
 # ======================================================
-# Generic Module Loader (PME2)
+# PME2 Module Loader
 # ======================================================
 #
-# This section provides a generic module loading system for PME2.
-# It is NOT currently used - the existing MODULES + get_classes() system
-# in __init__.py remains active.
-#
-# When ready to migrate, __init__.py will call:
+# This section provides the module loading system for PME2.
+# __init__.py calls:
 #   addon.init_addon(module_patterns=[...])
 #   addon.register_modules()
-# instead of the current manual module loading.
+# to initialize and register all modules.
 # ======================================================
 
 import ast
