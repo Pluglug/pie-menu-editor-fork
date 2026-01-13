@@ -1,52 +1,23 @@
 """
 GPULayout テストスクリプト
 
-Blender のテキストエディタで実行して動作確認できます。
+PME 開発中に自動で読み込まれます。
+3D Viewport で F3 → "Test GPULayout" を実行してください。
 
 使い方:
-1. Blender のテキストエディタにこのスクリプトを開く
-2. 「Run Script」ボタン（▷）をクリック
+1. 3D Viewport で F3 キーを押してオペレーター検索
+2. "Test GPULayout" を実行
 3. 3D Viewport の左上にサンプル UI が表示される
 4. 終了するには 3D Viewport で ESC キーを押す
 """
 
 import bpy
-import gpu
 from bpy.types import Operator
 
-# PME がインストールされている場合
-try:
-    from pie_menu_editor.ui.gpu_layout import (
-        GPULayout, GPULayoutStyle, GPUTooltip, GPUDrawing, BLFDrawing, IconDrawing,
-        Alignment
-    )
-    PME_AVAILABLE = True
-except ImportError:
-    PME_AVAILABLE = False
-    print("PME not available, using embedded module")
-
-
-# PME がない場合のフォールバック（開発用）
-if not PME_AVAILABLE:
-    # gpu_layout.py の内容をここに埋め込むか、
-    # 直接ファイルパスから import する
-    import sys
-    import os
-
-    # 開発環境のパスを追加
-    addon_path = r"E:\0187_Pie-Menu-Editor\MyScriptDir\addons"
-    if addon_path not in sys.path:
-        sys.path.insert(0, addon_path)
-
-    try:
-        from pie_menu_editor.ui.gpu_layout import (
-            GPULayout, GPULayoutStyle, GPUTooltip, GPUDrawing, BLFDrawing, IconDrawing,
-            Alignment
-        )
-        PME_AVAILABLE = True
-    except ImportError as e:
-        print(f"Failed to import gpu_layout: {e}")
-        PME_AVAILABLE = False
+from .gpu_layout import (
+    GPULayout, GPULayoutStyle, GPUTooltip, GPUDrawing, BLFDrawing, IconDrawing,
+    Alignment
+)
 
 
 class TEST_OT_gpu_layout(Operator):
@@ -77,10 +48,6 @@ class TEST_OT_gpu_layout(Operator):
     def invoke(self, context, event):
         if context.area.type != 'VIEW_3D':
             self.report({'WARNING'}, "3D Viewport で実行してください")
-            return {'CANCELLED'}
-
-        if not PME_AVAILABLE:
-            self.report({'ERROR'}, "gpu_layout モジュールが見つかりません")
             return {'CANCELLED'}
 
         # draw handler を登録
