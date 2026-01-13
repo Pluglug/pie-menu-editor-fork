@@ -40,13 +40,14 @@ from .api import (
     # Execution
     execute,
     evaluate,
-    ExecuteResult,
     # Menu API
-    PMHandle,
     find_pm,
     list_pms,
     invoke_pm,
 )
+
+# Types submodule (pme.types.ExecuteResult, pme.types.PMHandle, etc.)
+from .api import types
 
 # Preferences access (delegate to api module)
 from .api import _proxy as _api_proxy
@@ -140,13 +141,12 @@ def unregister():
 # Match the behavior of api/__init__.py for consistency
 
 # Public API surface (what shows in autocomplete)
+# Note: ExecuteResult, PMHandle are accessed via pme.types.* (like bpy.types)
 __all__ = [
     # Execution
     "execute",
     "evaluate",
-    "ExecuteResult",
     # Menu API
-    "PMHandle",
     "find_pm",
     "list_pms",
     "invoke_pm",
@@ -156,7 +156,8 @@ __all__ = [
     "preferences",
     # Context (backward compat)
     "context",
-    # Developer utilities (submodule)
+    # Submodules
+    "types",  # pme.types.ExecuteResult, pme.types.PMHandle, etc.
     "dev",
 ]
 
