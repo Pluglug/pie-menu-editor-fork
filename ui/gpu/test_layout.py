@@ -14,7 +14,7 @@ PME 開発中に自動で読み込まれます。
 import bpy
 from bpy.types import Operator
 
-from .gpu_layout import (
+from . import (
     GPULayout, GPULayoutStyle, GPUTooltip, GPUDrawing, BLFDrawing, IconDrawing,
     Alignment
 )
