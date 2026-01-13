@@ -270,13 +270,6 @@ class TEST_OT_gpu_layout(Operator):
             for style_name in styles:
                 style = GPULayoutStyle.from_blender_theme(style_name)
 
-                # シャドウ
-                GPUDrawing.draw_drop_shadow(
-                    col3_x, y, 220, 60,
-                    style.border_radius, style.shadow_color,
-                    (3, -3), 6
-                )
-
                 demo = GPULayout(x=col3_x, y=y, width=220, style=style)
                 demo._draw_background = True
                 demo._draw_outline = True
@@ -284,8 +277,19 @@ class TEST_OT_gpu_layout(Operator):
                 demo.label(text=f"Style: {style_name}")
                 demo.label(text=f"roundness: {style.roundness:.2f}")
 
+                # レイアウト計算して正確な高さを取得
+                demo.layout()
+                demo_height = demo.calc_height()
+
+                # シャドウ（正確な高さを使用）
+                GPUDrawing.draw_drop_shadow(
+                    col3_x, y, 220, demo_height,
+                    style.border_radius, style.shadow_color,
+                    (3, -3), 6
+                )
+
                 demo.draw()
-                y -= demo.calc_height() + margin + 10
+                y -= demo_height + margin + 10
 
             # ───────────────────────────────────────────────────────────────
             # roundness テスト
