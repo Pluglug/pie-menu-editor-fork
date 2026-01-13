@@ -75,8 +75,8 @@ __all__ = [
 # =============================================================================
 
 # Types submodule (pme.types.ExecuteResult, etc.)
-# File is pme_types.py to avoid collision with stdlib 'types'
-from . import pme_types as types
+# File is _types.py to avoid collision with stdlib 'types'
+from . import _types as types
 
 # Execution API
 from .execution import execute, evaluate, check_syntax

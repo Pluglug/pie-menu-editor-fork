@@ -28,7 +28,7 @@ LAYER = "api"
 import json
 from typing import Any
 
-from .pme_types import ValidationIssue, ValidationResult
+from ._types import ValidationIssue, ValidationResult
 
 __all__ = [
     "validate",

@@ -1,10 +1,10 @@
-# api/pme_types.py - Public API type definitions
+# api/_types.py - Public API type definitions
 # LAYER = "api"
 #
 # This module contains data classes used by the public API.
 # These are intentionally simple and stable.
 #
-# File is named pme_types.py to avoid collision with stdlib 'types'.
+# File is named _types.py (underscore prefix) to avoid collision with stdlib 'types'.
 # Aliased as 'types' in __init__.py for clean access: pme.types.ExecuteResult
 
 """PME Public Types.
