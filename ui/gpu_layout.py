@@ -75,14 +75,25 @@ class GPULayoutStyle:
 
     Blender テーマから自動取得、または個別にオーバーライド可能
     """
-    # 背景
+    # 背景（通常状態）
     bg_color: tuple[float, float, float, float] = (0.2, 0.2, 0.2, 0.95)
     outline_color: tuple[float, float, float, float] = (0.1, 0.1, 0.1, 1.0)
 
-    # テキスト
+    # 背景（選択状態）
+    bg_color_sel: tuple[float, float, float, float] = (0.3, 0.5, 0.8, 0.95)
+    outline_color_sel: tuple[float, float, float, float] = (0.2, 0.4, 0.7, 1.0)
+
+    # アイテム色（メニューアイテム、チェックマーク等）
+    item_color: tuple[float, float, float, float] = (0.4, 0.4, 0.4, 1.0)
+
+    # テキスト（通常状態）
     text_color: tuple[float, float, float, float] = (1.0, 1.0, 1.0, 1.0)
     text_color_secondary: tuple[float, float, float, float] = (0.7, 0.7, 0.7, 1.0)
     text_color_disabled: tuple[float, float, float, float] = (0.5, 0.5, 0.5, 1.0)
+
+    # テキスト（選択状態）
+    text_color_sel: tuple[float, float, float, float] = (1.0, 1.0, 1.0, 1.0)
+
     text_size: int = 13
 
     # ボタン
@@ -103,12 +114,13 @@ class GPULayoutStyle:
     spacing: int = 4
     item_height: int = 22
     border_radius: int = 6
+    roundness: float = 0.4  # 0.0-1.0、テーマから取得
 
-    # シャドウ
-    # TODO: shadow_enabled is reserved for future drop shadow support.
+    # ドロップシャドウ（パネル/メニュー用）
     shadow_enabled: bool = True
     shadow_color: tuple[float, float, float, float] = (0.0, 0.0, 0.0, 0.3)
-    shadow_offset: tuple[int, int] = (2, -2)
+    shadow_offset: tuple[int, int] = (4, -4)
+    shadow_blur: int = 8  # ぼかし半径
 
     # テキストシャドウ
     text_shadow_enabled: bool = True
@@ -172,17 +184,29 @@ class GPULayoutStyle:
 
             # roundness から border_radius を計算（0-1 → ピクセル値）
             # roundness 1.0 で約 10px、スケールを考慮
-            base_radius = int(wcol.roundness * 10)
+            roundness_val = wcol.roundness
+            base_radius = int(roundness_val * 10)
 
             return cls(
-                # 背景
+                # 背景（通常状態）
                 bg_color=to_rgba(wcol.inner),
                 outline_color=to_rgba(wcol.outline),
 
-                # テキスト
+                # 背景（選択状態）
+                bg_color_sel=to_rgba(wcol.inner_sel),
+                outline_color_sel=to_rgba(wcol.outline_sel) if hasattr(wcol, 'outline_sel') else to_rgba(wcol.outline),
+
+                # アイテム色
+                item_color=to_rgba(wcol.item),
+
+                # テキスト（通常状態）
                 text_color=to_rgba(wcol.text),
                 text_color_secondary=to_rgba(wcol.text, 0.7),  # メインテキストの 70%
                 text_color_disabled=to_rgba(wcol.text, 0.4),   # メインテキストの 40%
+
+                # テキスト（選択状態）
+                text_color_sel=to_rgba(wcol.text_sel),
+
                 text_size=int(font_style.points),
 
                 # ボタン（wcol_tool から取得）
@@ -200,8 +224,9 @@ class GPULayoutStyle:
 
                 # レイアウト
                 border_radius=max(4, base_radius),
+                roundness=roundness_val,
 
-                # シャドウ（widget_emboss を使用）
+                # ドロップシャドウ（widget_emboss を使用）
                 shadow_color=to_rgba(ui.widget_emboss),
 
                 # テキストシャドウ（ThemeFontStyle から取得）
@@ -491,6 +516,107 @@ class GPUDrawing:
         gpu.state.line_width_set(width)
         batch.draw(shader)
         gpu.state.blend_set('NONE')
+
+    @classmethod
+    def draw_circle(cls, cx: float, cy: float, radius: float,
+                    color: tuple[float, float, float, float],
+                    segments: int = 16) -> None:
+        """
+        塗りつぶし円を描画
+
+        Args:
+            cx, cy: 中心座標
+            radius: 半径
+            color: 色 (RGBA)
+            segments: 分割数（滑らかさ）
+        """
+        shader = cls.get_shader()
+
+        # 中心点 + 円周上の頂点
+        vertices = [(cx, cy)]
+        for i in range(segments + 1):
+            angle = 2 * pi * i / segments
+            vertices.append((cx + radius * cos(angle), cy + radius * sin(angle)))
+
+        batch = batch_for_shader(shader, 'TRI_FAN', {"pos": vertices})
+        shader.bind()
+        shader.uniform_float("color", color)
+        gpu.state.blend_set('ALPHA')
+        batch.draw(shader)
+        gpu.state.blend_set('NONE')
+
+    @classmethod
+    def draw_rounded_line(cls, x1: float, y1: float, x2: float, y2: float,
+                          color: tuple[float, float, float, float],
+                          width: float = 0.0, segments: int = 8) -> None:
+        """
+        先端が丸い線を描画
+
+        GPU の線描画は先端が平らなので、両端に円を追加して丸みを表現。
+
+        Args:
+            x1, y1: 始点
+            x2, y2: 終点
+            color: 色 (RGBA)
+            width: ライン太さ（0.0 の場合は system.ui_line_width を使用）
+            segments: 円の分割数
+        """
+        if width <= 0.0:
+            width = bpy.context.preferences.system.ui_line_width
+
+        # 線を描画
+        cls.draw_line(x1, y1, x2, y2, color, width)
+
+        # 先端の円を描画（半径は線の太さの半分）
+        radius = width / 2.0
+        if radius >= 1.0:
+            cls.draw_circle(x1, y1, radius, color, segments)
+            cls.draw_circle(x2, y2, radius, color, segments)
+
+    @classmethod
+    def draw_drop_shadow(cls, x: float, y: float, width: float, height: float,
+                         radius: int, color: tuple[float, float, float, float],
+                         offset: tuple[int, int] = (4, -4),
+                         blur: int = 8) -> None:
+        """
+        ドロップシャドウを描画
+
+        複数の半透明レイヤーを重ねてぼかし効果を近似。
+
+        Args:
+            x, y: 左上座標
+            width, height: サイズ
+            radius: 角丸半径
+            color: シャドウ色 (RGBA)
+            offset: オフセット (x, y)
+            blur: ぼかし半径
+        """
+        if blur <= 0:
+            # ぼかしなし - 単純なシャドウ
+            cls.draw_rounded_rect(
+                x + offset[0], y + offset[1],
+                width, height, radius, color
+            )
+            return
+
+        # ぼかし効果を近似（複数レイヤー）
+        layers = min(blur, 6)  # 最大6レイヤー
+        base_alpha = color[3]
+
+        for i in range(layers, 0, -1):
+            # 外側のレイヤーほど大きく、透明に
+            expand = i * (blur / layers)
+            layer_alpha = base_alpha * (1.0 - i / (layers + 1)) * 0.5
+
+            layer_color = (color[0], color[1], color[2], layer_alpha)
+            cls.draw_rounded_rect(
+                x + offset[0] - expand / 2,
+                y + offset[1] + expand / 2,
+                width + expand,
+                height + expand,
+                radius + int(expand / 2),
+                layer_color
+            )
 
 
 class BLFDrawing:
