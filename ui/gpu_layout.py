@@ -330,23 +330,83 @@ class GPUDrawing:
                                    corners: tuple[bool, bool, bool, bool] = (True, True, True, True),
                                    line_width: float = 0.0) -> None:
         """
-        角丸矩形のアウトラインを描画
+        角丸矩形のアウトラインを描画（ストローク方式）
 
         Args:
             line_width: ライン太さ（0.0 の場合は system.ui_line_width を使用）
-        """
-        shader = cls.get_shader()
-        # LINE_LOOP 用の頂点（中心点なし）
-        vertices = cls._calc_rounded_rect_outline_vertices(x, y, width, height, radius, corners)
-        batch = batch_for_shader(shader, 'LINE_LOOP', {"pos": vertices})
-        shader.bind()
-        shader.uniform_float("color", color)
 
-        # ライン太さを設定（0.0 の場合はシステム推奨値を使用）
+        Note:
+            GPU の LINE_LOOP は太い線で角が正しく接続されないため、
+            内側と外側の 2 つのパスを TRIANGLE_STRIP で塗りつぶす方式を使用。
+        """
         if line_width <= 0.0:
             line_width = bpy.context.preferences.system.ui_line_width
+
+        # 細い線（1px 以下）の場合は従来の LINE_LOOP を使用
+        if line_width <= 1.0:
+            shader = cls.get_shader()
+            vertices = cls._calc_rounded_rect_outline_vertices(x, y, width, height, radius, corners)
+            batch = batch_for_shader(shader, 'LINE_LOOP', {"pos": vertices})
+            shader.bind()
+            shader.uniform_float("color", color)
+            gpu.state.blend_set('ALPHA')
+            gpu.state.line_width_set(line_width)
+            batch.draw(shader)
+            gpu.state.blend_set('NONE')
+            return
+
+        # 太い線の場合はストローク描画（内外 2 パスの塗りつぶし）
+        cls._draw_rounded_rect_stroke(x, y, width, height, radius, color, line_width, corners)
+
+    @classmethod
+    def _draw_rounded_rect_stroke(cls, x: float, y: float, width: float, height: float,
+                                   radius: int, color: tuple[float, float, float, float],
+                                   stroke_width: float,
+                                   corners: tuple[bool, bool, bool, bool] = (True, True, True, True)) -> None:
+        """
+        ストローク方式で角丸矩形のアウトラインを描画
+
+        内側と外側の頂点を交互に配置し、TRIANGLE_STRIP で描画することで
+        均一な太さのストロークを実現。
+        """
+        shader = cls.get_shader()
+        half = stroke_width / 2.0
+
+        # 外側の頂点（元のサイズ + half）
+        outer_verts = cls._calc_rounded_rect_outline_vertices(
+            x - half, y + half,
+            width + stroke_width, height + stroke_width,
+            radius + int(half), corners
+        )
+
+        # 内側の頂点（元のサイズ - half）
+        inner_radius = max(0, radius - int(half))
+        inner_verts = cls._calc_rounded_rect_outline_vertices(
+            x + half, y - half,
+            width - stroke_width, height - stroke_width,
+            inner_radius, corners
+        )
+
+        # 頂点数を揃える（少ない方に合わせる）
+        min_len = min(len(outer_verts), len(inner_verts))
+        outer_verts = outer_verts[:min_len]
+        inner_verts = inner_verts[:min_len]
+
+        # TRIANGLE_STRIP 用に交互に配置
+        vertices = []
+        for i in range(min_len):
+            vertices.append(outer_verts[i])
+            vertices.append(inner_verts[i])
+
+        # 閉じる（最初の頂点ペアを追加）
+        if min_len > 0:
+            vertices.append(outer_verts[0])
+            vertices.append(inner_verts[0])
+
+        batch = batch_for_shader(shader, 'TRI_STRIP', {"pos": vertices})
+        shader.bind()
+        shader.uniform_float("color", color)
         gpu.state.blend_set('ALPHA')
-        gpu.state.line_width_set(line_width)
         batch.draw(shader)
         gpu.state.blend_set('NONE')
 

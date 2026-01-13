@@ -76,6 +76,7 @@ class TEST_OT_gpu_layout(Operator):
             col1_x = 50
             col2_x = 380
             col3_x = 680
+            col4_x = 940  # 追加: ツールチップ列
             start_y = context.region.height - 50
 
             # ═══════════════════════════════════════════════════════════════
@@ -86,20 +87,10 @@ class TEST_OT_gpu_layout(Operator):
             # パネルヘッダー風
             panel_style = GPULayoutStyle.from_blender_theme('REGULAR')
 
-            # ドロップシャドウ付きパネル
+            # ドロップシャドウ付きパネル - まずレイアウトを構築して高さを取得
             panel = GPULayout(x=col1_x, y=y, width=300, style=panel_style)
             panel._draw_background = True
             panel._draw_outline = True
-
-            # シャドウを先に描画
-            if panel_style.shadow_enabled:
-                GPUDrawing.draw_drop_shadow(
-                    col1_x, y, 300, 200,
-                    panel_style.border_radius,
-                    panel_style.shadow_color,
-                    panel_style.shadow_offset,
-                    panel_style.shadow_blur
-                )
 
             panel.label(text="Panel Style (REGULAR)", icon='PROPERTIES')
             panel.separator()
@@ -116,21 +107,27 @@ class TEST_OT_gpu_layout(Operator):
             panel.separator()
             panel.operator(text="Sample Button")
 
+            # レイアウト計算して高さを取得
+            panel.layout()
+            panel_height = panel.calc_height()
+
+            # シャドウを先に描画（正確な高さを使用）
+            if panel_style.shadow_enabled:
+                GPUDrawing.draw_drop_shadow(
+                    col1_x, y, 300, panel_height,
+                    panel_style.border_radius,
+                    panel_style.shadow_color,
+                    panel_style.shadow_offset,
+                    panel_style.shadow_blur
+                )
+
             panel.draw()
-            y -= panel.calc_height() + margin + 20
+            y -= panel_height + margin + 20
 
             # ───────────────────────────────────────────────────────────────
             # メニュースタイル（MENU）
             # ───────────────────────────────────────────────────────────────
             menu_style = GPULayoutStyle.from_blender_theme('MENU')
-
-            # ドロップシャドウ
-            GPUDrawing.draw_drop_shadow(
-                col1_x, y, 280, 180,
-                menu_style.border_radius,
-                menu_style.shadow_color,
-                (6, -6), 12
-            )
 
             menu = GPULayout(x=col1_x, y=y, width=280, style=menu_style)
             menu._draw_background = True
@@ -146,8 +143,20 @@ class TEST_OT_gpu_layout(Operator):
             menu.separator(factor=0.5)
             menu.label(text="Delete", icon='X')
 
+            # レイアウト計算して高さを取得
+            menu.layout()
+            menu_height = menu.calc_height()
+
+            # ドロップシャドウ（正確な高さを使用）
+            GPUDrawing.draw_drop_shadow(
+                col1_x, y, 280, menu_height,
+                menu_style.border_radius,
+                menu_style.shadow_color,
+                (6, -6), 12
+            )
+
             menu.draw()
-            y -= menu.calc_height() + margin + 20
+            y -= menu_height + margin + 20
 
             # ───────────────────────────────────────────────────────────────
             # 選択状態のカラーデモ
@@ -297,6 +306,55 @@ class TEST_OT_gpu_layout(Operator):
                     panel_style.text_color_secondary, 10
                 )
                 y -= 40
+
+            # ═══════════════════════════════════════════════════════════════
+            # Column 4: ツールチップスタイル（TOOLTIP）
+            # ═══════════════════════════════════════════════════════════════
+            y = start_y
+
+            # ツールチップヘッダー
+            BLFDrawing.draw_text(col4_x, y - 12, "Tooltip Style", panel_style.text_color, 14)
+            y -= 40
+
+            # GPUTooltip を使用したサンプル
+            tooltip = GPUTooltip(max_width=280)
+            tooltip.title("Add Cube")
+            tooltip.description("シーンに立方体プリミティブを追加します。デフォルトでは 3D カーソル位置に配置されます。")
+            tooltip.shortcut("Shift + A > Mesh > Cube")
+            tooltip.python("bpy.ops.mesh.primitive_cube_add()")
+            tooltip_height = tooltip.draw(col4_x, y)
+            y -= tooltip_height + margin
+
+            # シンプルなツールチップ
+            tooltip2 = GPUTooltip(max_width=250)
+            tooltip2.title("Simple Tooltip")
+            tooltip2.description("これは短い説明文のサンプルです。")
+            tooltip2_height = tooltip2.draw(col4_x, y)
+            y -= tooltip2_height + margin
+
+            # TOOLTIP スタイルの直接使用例
+            tooltip_style = GPULayoutStyle.from_blender_theme('TOOLTIP')
+            tip_panel = GPULayout(x=col4_x, y=y, width=260, style=tooltip_style)
+            tip_panel._draw_background = True
+            tip_panel._draw_outline = True
+
+            tip_panel.label(text="Direct TOOLTIP Style")
+            tip_panel.separator(factor=0.5)
+            tip_panel.label(text="Tooltip uses wcol_tooltip")
+            tip_panel.label(text=f"roundness: {tooltip_style.roundness:.2f}")
+            tip_panel.label(text=f"border_radius: {tooltip_style.border_radius}")
+
+            tip_panel.layout()
+            tip_height = tip_panel.calc_height()
+
+            # シャドウ
+            GPUDrawing.draw_drop_shadow(
+                col4_x, y, 260, tip_height,
+                tooltip_style.border_radius,
+                (0.0, 0.0, 0.0, 0.4),
+                (3, -3), 6
+            )
+            tip_panel.draw()
 
         except Exception as e:
             import traceback
