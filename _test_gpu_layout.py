@@ -17,7 +17,8 @@ from bpy.types import Operator
 # PME がインストールされている場合
 try:
     from pie_menu_editor.ui.gpu_layout import (
-        GPULayout, GPULayoutStyle, GPUTooltip, GPUDrawing, BLFDrawing, IconDrawing
+        GPULayout, GPULayoutStyle, GPUTooltip, GPUDrawing, BLFDrawing, IconDrawing,
+        Alignment
     )
     PME_AVAILABLE = True
 except ImportError:
@@ -39,7 +40,8 @@ if not PME_AVAILABLE:
 
     try:
         from pie_menu_editor.ui.gpu_layout import (
-            GPULayout, GPULayoutStyle, GPUTooltip, GPUDrawing, BLFDrawing, IconDrawing
+            GPULayout, GPULayoutStyle, GPUTooltip, GPUDrawing, BLFDrawing, IconDrawing,
+            Alignment
         )
         PME_AVAILABLE = True
     except ImportError as e:
@@ -256,6 +258,119 @@ class TEST_OT_gpu_layout(Operator):
             for i, icon_name in enumerate(["p1", "p2", "p3", "p4", "p6", "p7"]):
                 x_pos = icon_test_x + i * (icon_size + 4)
                 IconDrawing.draw_custom_icon(icon_name, x_pos, icon_test_y, size=icon_size)
+
+            # ═══════════════════════════════════════════════════════════════
+            # 6. Alignment デモ（左列の下）
+            # ═══════════════════════════════════════════════════════════════
+            align_y = left_y - 250  # レイアウトデモの下
+
+            # EXPAND（デフォルト）
+            expand_layout = GPULayout(
+                x=left_x,
+                y=align_y,
+                width=300
+            )
+            expand_layout._draw_background = True
+            expand_layout._draw_outline = True
+            expand_layout.alignment = Alignment.EXPAND
+
+            expand_layout.label(text="Alignment: EXPAND")
+            expand_layout.separator(factor=0.5)
+            expand_layout.label(text="Short")
+            expand_layout.label(text="Medium text")
+            expand_layout.label(text="Longer text here")
+            expand_layout.draw()
+
+            align_y -= expand_layout.calc_height() + margin
+
+            # CENTER
+            center_layout = GPULayout(
+                x=left_x,
+                y=align_y,
+                width=300
+            )
+            center_layout._draw_background = True
+            center_layout._draw_outline = True
+            center_layout.alignment = Alignment.CENTER
+
+            center_layout.label(text="Alignment: CENTER")
+            center_layout.separator(factor=0.5)
+            center_layout.label(text="Short")
+            center_layout.label(text="Medium text")
+            center_layout.label(text="Longer text here")
+            center_layout.draw()
+
+            align_y -= center_layout.calc_height() + margin
+
+            # LEFT
+            left_layout = GPULayout(
+                x=left_x,
+                y=align_y,
+                width=300
+            )
+            left_layout._draw_background = True
+            left_layout._draw_outline = True
+            left_layout.alignment = Alignment.LEFT
+
+            left_layout.label(text="Alignment: LEFT")
+            left_layout.separator(factor=0.5)
+            left_layout.label(text="Short")
+            left_layout.label(text="Medium text")
+            left_layout.label(text="Longer text here")
+            left_layout.draw()
+
+            align_y -= left_layout.calc_height() + margin
+
+            # RIGHT
+            right_layout_align = GPULayout(
+                x=left_x,
+                y=align_y,
+                width=300
+            )
+            right_layout_align._draw_background = True
+            right_layout_align._draw_outline = True
+            right_layout_align.alignment = Alignment.RIGHT
+
+            right_layout_align.label(text="Alignment: RIGHT")
+            right_layout_align.separator(factor=0.5)
+            right_layout_align.label(text="Short")
+            right_layout_align.label(text="Medium text")
+            right_layout_align.label(text="Longer text here")
+            right_layout_align.draw()
+
+            # ═══════════════════════════════════════════════════════════════
+            # 7. Row align=True デモ
+            # ═══════════════════════════════════════════════════════════════
+            row_demo_y = icon_test_y - 50
+
+            row_demo = GPULayout(
+                x=right_x,
+                y=row_demo_y,
+                width=250
+            )
+            row_demo._draw_background = True
+            row_demo._draw_outline = True
+
+            row_demo.label(text="Row Demo")
+            row_demo.separator(factor=0.5)
+
+            # align=False（デフォルト、スペースあり）
+            row_demo.label(text="row(align=False):")
+            row1 = row_demo.row(align=False)
+            row1.label(text="A")
+            row1.label(text="B")
+            row1.label(text="C")
+
+            row_demo.separator(factor=0.5)
+
+            # align=True（スペースなし）
+            row_demo.label(text="row(align=True):")
+            row2 = row_demo.row(align=True)
+            row2.label(text="A")
+            row2.label(text="B")
+            row2.label(text="C")
+
+            row_demo.draw()
 
         except Exception as e:
             import traceback

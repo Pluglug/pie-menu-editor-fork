@@ -50,8 +50,14 @@ class Direction(Enum):
 
 
 class Alignment(Enum):
-    """アラインメント"""
-    # TODO: Alignment handling not implemented yet.
+    """
+    アラインメント
+
+    - EXPAND: 利用可能幅いっぱいに拡張（デフォルト）
+    - LEFT: 自然サイズを維持し、左寄せ
+    - CENTER: 自然サイズを維持し、中央寄せ
+    - RIGHT: 自然サイズを維持し、右寄せ
+    """
     LEFT = auto()
     CENTER = auto()
     RIGHT = auto()
@@ -786,19 +792,31 @@ class LabelItem(LayoutItem):
         color = self.text_color or (style.text_color if self.enabled else style.text_color_disabled)
         text_size = style.scaled_text_size()
 
+        # コンテンツサイズを計算
+        text_w, text_h = BLFDrawing.get_text_dimensions(self.text, text_size)
+        icon_size = IconDrawing.ICON_SIZE if self.icon != "NONE" else 0
+        icon_spacing = style.scaled_spacing() if self.icon != "NONE" else 0
+        content_w = icon_size + icon_spacing + text_w
+
+        # alignment に応じた X 位置を計算
+        if self.alignment == Alignment.CENTER:
+            content_x = self.x + (self.width - content_w) / 2
+        elif self.alignment == Alignment.RIGHT:
+            content_x = self.x + self.width - content_w
+        else:  # LEFT or EXPAND
+            content_x = self.x
+
         # テキスト位置（Y は baseline）
-        _, text_h = BLFDrawing.get_text_dimensions("Wg", text_size)
         text_y = self.y - (self.height + text_h) / 2
 
         # アイコン描画
-        text_x = self.x
+        text_x = content_x
         if self.icon != "NONE":
-            icon_size = IconDrawing.ICON_SIZE
             # アイコンを垂直方向に中央揃え
             icon_y = self.y - (self.height - icon_size) / 2
             alpha = 1.0 if self.enabled else 0.5
-            IconDrawing.draw_icon(self.x, icon_y, self.icon, alpha=alpha)
-            text_x += icon_size + style.scaled_spacing()
+            IconDrawing.draw_icon(content_x, icon_y, self.icon, alpha=alpha)
+            text_x += icon_size + icon_spacing
 
         # テキスト
         if style.text_shadow_enabled:
@@ -1125,6 +1143,9 @@ class GPULayout:
         self.scale_y: float = 1.0
         self.alignment: Alignment = Alignment.EXPAND
 
+        # アイテム間スペースを制御（align=True で 0）
+        self._align: bool = False
+
         # ボックス描画フラグ
         self._draw_background: bool = False
         self._draw_outline: bool = False
@@ -1134,7 +1155,12 @@ class GPULayout:
     # ─────────────────────────────────────────────────────────────────────────
 
     def row(self, align: bool = False) -> GPULayout:
-        """水平レイアウトを作成"""
+        """
+        水平レイアウトを作成
+
+        Args:
+            align: True の場合、アイテム間のスペースをなくす
+        """
         child = GPULayout(
             x=self._cursor_x,
             y=self._cursor_y,
@@ -1145,11 +1171,17 @@ class GPULayout:
         )
         child.active = self.active
         child.enabled = self.enabled
+        child._align = align  # アイテム間スペースを制御
         self._children.append(child)
         return child
 
     def column(self, align: bool = False) -> GPULayout:
-        """垂直レイアウトを作成"""
+        """
+        垂直レイアウトを作成
+
+        Args:
+            align: True の場合、アイテム間のスペースをなくす
+        """
         child = GPULayout(
             x=self._cursor_x,
             y=self._cursor_y,
@@ -1160,6 +1192,7 @@ class GPULayout:
         )
         child.active = self.active
         child.enabled = self.enabled
+        child._align = align
         self._children.append(child)
         return child
 
@@ -1309,17 +1342,39 @@ class GPULayout:
         """利用可能な幅を取得"""
         return self.width - self.style.scaled_padding() * 2
 
+    def _get_spacing(self) -> int:
+        """アイテム間のスペースを取得（align=True で 0）"""
+        return 0 if self._align else self.style.scaled_spacing()
+
     def _add_item(self, item: LayoutItem) -> None:
         """アイテムを追加"""
         item_width, item_height = item.calc_size(self.style)
+        available_width = self._get_available_width()
 
         if self.direction == Direction.VERTICAL:
-            item.x = self._cursor_x
+            # alignment に応じて幅と位置を計算
+            if self.alignment == Alignment.EXPAND:
+                # EXPAND: 利用可能幅いっぱいに拡張
+                item.width = available_width * self.scale_x
+                item.x = self._cursor_x
+            else:
+                # LEFT/CENTER/RIGHT: 自然サイズを維持
+                item.width = item_width * self.scale_x
+                if self.alignment == Alignment.CENTER:
+                    item.x = self._cursor_x + (available_width - item.width) / 2
+                elif self.alignment == Alignment.RIGHT:
+                    item.x = self._cursor_x + available_width - item.width
+                else:  # LEFT
+                    item.x = self._cursor_x
+
             item.y = self._cursor_y
-            item.width = self._get_available_width() * self.scale_x
             item.height = item_height * self.scale_y
 
-            self._cursor_y -= item.height + self.style.scaled_spacing()
+            # LabelItem に alignment を継承
+            if hasattr(item, 'alignment'):
+                item.alignment = self.alignment
+
+            self._cursor_y -= item.height + self._get_spacing()
         else:
             # 水平レイアウト
             item.x = self._cursor_x
@@ -1327,7 +1382,7 @@ class GPULayout:
             item.width = item_width * self.scale_x
             item.height = item_height * self.scale_y
 
-            self._cursor_x += item.width + self.style.scaled_spacing()
+            self._cursor_x += item.width + self._get_spacing()
 
         self._items.append(item)
 
@@ -1336,13 +1391,14 @@ class GPULayout:
         if not self._items and not self._children:
             return self.style.scaled_padding() * 2
 
+        spacing = self._get_spacing()
         if self.direction == Direction.VERTICAL:
             height = self.style.scaled_padding() * 2
             for item in self._items:
                 _, h = item.calc_size(self.style)
-                height += h * self.scale_y + self.style.scaled_spacing()
+                height += h * self.scale_y + spacing
             for child in self._children:
-                height += child.calc_height() + self.style.scaled_spacing()
+                height += child.calc_height() + spacing
             return height
         else:
             # 水平レイアウト - 最大の高さ
@@ -1352,20 +1408,21 @@ class GPULayout:
                 max_height = max(max_height, h * self.scale_y)
             for child in self._children:
                 max_height = max(max_height, child.calc_height())
-            return max_height + self.style.scaled_spacing()
+            return max_height + spacing
 
     def calc_width(self) -> float:
         """合計幅を計算"""
         if not self._items and not self._children:
             return self.width
 
+        spacing = self._get_spacing()
         if self.direction == Direction.HORIZONTAL:
             width = self.style.scaled_padding() * 2
             for item in self._items:
                 w, _ = item.calc_size(self.style)
-                width += w * self.scale_x + self.style.scaled_spacing()
+                width += w * self.scale_x + spacing
             for child in self._children:
-                width += child.calc_width() + self.style.scaled_spacing()
+                width += child.calc_width() + spacing
             return width
         else:
             return self.width
@@ -1379,6 +1436,8 @@ class GPULayout:
         # 自身のアイテムを再配置
         self._relayout_items()
 
+        spacing = self._get_spacing()
+
         # 子レイアウトを配置
         cursor_y = self.y - self.style.scaled_padding()
         cursor_x = self.x + self.style.scaled_padding()
@@ -1387,10 +1446,10 @@ class GPULayout:
         if self._items:
             if self.direction == Direction.VERTICAL:
                 last_item = self._items[-1]
-                cursor_y = last_item.y - last_item.height - self.style.scaled_spacing()
+                cursor_y = last_item.y - last_item.height - spacing
             else:
                 last_item = self._items[-1]
-                cursor_x = last_item.x + last_item.width + self.style.scaled_spacing()
+                cursor_x = last_item.x + last_item.width + spacing
 
         for child in self._children:
             child.x = cursor_x
@@ -1398,31 +1457,44 @@ class GPULayout:
             child.layout()
 
             if self.direction == Direction.VERTICAL:
-                cursor_y -= child.calc_height() + self.style.scaled_spacing()
+                cursor_y -= child.calc_height() + spacing
             else:
-                cursor_x += child.calc_width() + self.style.scaled_spacing()
+                cursor_x += child.calc_width() + spacing
 
     def _relayout_items(self) -> None:
         """アイテムの位置を再計算"""
         cursor_x = self.x + self.style.scaled_padding()
         cursor_y = self.y - self.style.scaled_padding()
+        available_width = self._get_available_width()
+        spacing = self._get_spacing()
 
         for item in self._items:
             item_width, item_height = item.calc_size(self.style)
 
             if self.direction == Direction.VERTICAL:
-                item.x = cursor_x
+                # alignment に応じて幅と位置を計算
+                if self.alignment == Alignment.EXPAND:
+                    item.width = available_width * self.scale_x
+                    item.x = cursor_x
+                else:
+                    item.width = item_width * self.scale_x
+                    if self.alignment == Alignment.CENTER:
+                        item.x = cursor_x + (available_width - item.width) / 2
+                    elif self.alignment == Alignment.RIGHT:
+                        item.x = cursor_x + available_width - item.width
+                    else:  # LEFT
+                        item.x = cursor_x
+
                 item.y = cursor_y
-                item.width = self._get_available_width() * self.scale_x
                 item.height = item_height * self.scale_y
-                cursor_y -= item.height + self.style.scaled_spacing()
+                cursor_y -= item.height + spacing
             else:
                 # 水平レイアウト
                 item.x = cursor_x
                 item.y = cursor_y
                 item.width = item_width * self.scale_x
                 item.height = item_height * self.scale_y
-                cursor_x += item.width + self.style.scaled_spacing()
+                cursor_x += item.width + spacing
 
     # ─────────────────────────────────────────────────────────────────────────
     # 描画
