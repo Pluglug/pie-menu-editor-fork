@@ -266,18 +266,33 @@ class ButtonItem(LayoutItem):
             style.scaled_border_radius(), bg_color
         )
 
-        # テキスト
+        # アイコンとテキストのサイズ計算
         text_color = style.button_text_color if enabled else style.text_color_disabled
         text_size = style.scaled_text_size()
         padding = style.scaled_padding()
 
-        # ボタン内で利用可能なテキスト幅（省略記号用）
-        available_width = self.width - padding * 2
+        icon_size = style.scaled_icon_size() if self.icon != "NONE" else 0
+        icon_spacing = style.scaled_spacing() if self.icon != "NONE" else 0
+
+        # ボタン内で利用可能なテキスト幅（アイコンとパディングを考慮）
+        available_width = self.width - padding * 2 - icon_size - icon_spacing
         display_text = BLFDrawing.get_text_with_ellipsis(self.text, available_width, text_size)
         text_w, text_h = BLFDrawing.get_text_dimensions(display_text, text_size)
 
-        text_x = self.x + (self.width - text_w) / 2
+        # コンテンツ全体の幅（アイコン + スペース + テキスト）
+        content_w = icon_size + icon_spacing + text_w
+
+        # 中央揃えでコンテンツを配置
+        content_x = self.x + (self.width - content_w) / 2
         text_y = self.y - (self.height + text_h) / 2
+
+        # アイコン描画
+        text_x = content_x
+        if self.icon != "NONE":
+            icon_y = self.y - (self.height - icon_size) / 2
+            alpha = 1.0 if enabled else 0.5
+            IconDrawing.draw_icon(content_x, icon_y, self.icon, alpha=alpha)
+            text_x += icon_size + icon_spacing
 
         # クリップ矩形（ボタン全体、角丸背景がテキストを制約）
         clip_rect = self.get_clip_rect()
@@ -300,6 +315,14 @@ class ToggleItem(LayoutItem):
         icon_w = icon_size + style.scaled_spacing() if self.icon != "NONE" else 0
         padding = style.scaled_padding()
         return (text_w + icon_w + padding * 2, style.scaled_item_height())
+
+    def _get_display_icon(self) -> str:
+        """現在の value に応じた表示アイコンを取得"""
+        if self.value and self.icon_on != "NONE":
+            return self.icon_on
+        elif not self.value and self.icon_off != "NONE":
+            return self.icon_off
+        return self.icon
 
     def draw(self, style: GPULayoutStyle, state: Optional[ItemRenderState] = None) -> None:
         if not self.visible:
@@ -326,18 +349,34 @@ class ToggleItem(LayoutItem):
             style.scaled_border_radius(), bg_color
         )
 
-        # テキスト
+        # アイコンとテキストのサイズ計算
         text_color = style.button_text_color if enabled else style.text_color_disabled
         text_size = style.scaled_text_size()
         padding = style.scaled_padding()
 
-        # ボタン内で利用可能なテキスト幅（省略記号用）
-        available_width = self.width - padding * 2
+        display_icon = self._get_display_icon()
+        icon_size = style.scaled_icon_size() if display_icon != "NONE" else 0
+        icon_spacing = style.scaled_spacing() if display_icon != "NONE" else 0
+
+        # ボタン内で利用可能なテキスト幅（アイコンとパディングを考慮）
+        available_width = self.width - padding * 2 - icon_size - icon_spacing
         display_text = BLFDrawing.get_text_with_ellipsis(self.text, available_width, text_size)
         text_w, text_h = BLFDrawing.get_text_dimensions(display_text, text_size)
 
-        text_x = self.x + (self.width - text_w) / 2
+        # コンテンツ全体の幅（アイコン + スペース + テキスト）
+        content_w = icon_size + icon_spacing + text_w
+
+        # 中央揃えでコンテンツを配置
+        content_x = self.x + (self.width - content_w) / 2
         text_y = self.y - (self.height + text_h) / 2
+
+        # アイコン描画
+        text_x = content_x
+        if display_icon != "NONE":
+            icon_y = self.y - (self.height - icon_size) / 2
+            alpha = 1.0 if enabled else 0.5
+            IconDrawing.draw_icon(content_x, icon_y, display_icon, alpha=alpha)
+            text_x += icon_size + icon_spacing
 
         # クリップ矩形（ボタン全体、角丸背景がテキストを制約）
         clip_rect = self.get_clip_rect()

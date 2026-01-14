@@ -142,6 +142,8 @@ class GPUTooltip:
         if layout is None:
             return 0.0
 
+        # layout() を呼んでから draw() を実行（layout before draw contract）
+        layout.layout()
         layout.draw()
         return layout.calc_height()
 

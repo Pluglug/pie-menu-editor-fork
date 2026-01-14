@@ -806,18 +806,18 @@ class IconDrawing:
 
         try:
             import os
+            import hashlib
             if not os.path.exists(filepath):
                 return None
 
             # Blender Image としてロード
-            # 既存の同名イメージがあれば再利用
-            img_name = f"_gpu_icon_{os.path.basename(filepath)}"
+            # フルパスのハッシュを使用して一意の名前を生成（同名ファイル衝突防止）
+            path_hash = hashlib.md5(filepath.encode()).hexdigest()[:8]
+            basename = os.path.basename(filepath)
+            img_name = f"_gpu_icon_{path_hash}_{basename}"
+
             if img_name in bpy.data.images:
                 img = bpy.data.images[img_name]
-                # ファイルパスが異なる場合は再読み込み
-                if img.filepath != filepath:
-                    img.filepath = filepath
-                    img.reload()
             else:
                 img = bpy.data.images.load(filepath)
                 img.name = img_name

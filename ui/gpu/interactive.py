@@ -92,6 +92,7 @@ class HitRect:
     item_id: str = ""  # 状態管理用の一意識別子（UIState で使用）
     tag: str = ""     # 識別用タグ（デバッグ表示用）
     enabled: bool = True
+    visible: bool = True  # 非表示アイテムはヒットテストをスキップ
     z_index: int = 0  # 重なり順（大きいほど前面）
 
     # コールバック
@@ -128,7 +129,8 @@ class HitRect:
             width=item.width,
             height=item.height,
             item=item,
-            enabled=getattr(item, 'enabled', True)
+            enabled=getattr(item, 'enabled', True),
+            visible=getattr(item, 'visible', True)
         )
 
 
@@ -301,6 +303,18 @@ class HitTestManager:
                 self._state.hovered = None
             if self._state.pressed is rect:
                 self._state.pressed = None
+            # ドラッグ中の場合もクリア
+            if self._state.dragging_rect is rect:
+                self._state.is_dragging = False
+                self._state.dragging_rect = None
+            # UIState の ID ベース状態もクリア（item_id が一致する場合）
+            if rect.item_id:
+                if self._ui_state.hovered_id == rect.item_id:
+                    self._ui_state.hovered_id = None
+                if self._ui_state.pressed_id == rect.item_id:
+                    self._ui_state.pressed_id = None
+                if self._ui_state.dragging_id == rect.item_id:
+                    self._ui_state.dragging_id = None
 
     def clear(self) -> None:
         """すべての HitRect をクリア"""
@@ -309,8 +323,17 @@ class HitTestManager:
             self._state.hovered.on_hover_leave()
 
         self._rects.clear()
+
+        # InteractionState を完全にリセット
         self._state.hovered = None
         self._state.pressed = None
+        self._state.is_dragging = False
+        self._state.dragging_rect = None
+        self._state.drag_start_x = 0
+        self._state.drag_start_y = 0
+
+        # UIState もリセット
+        self._ui_state.clear()
 
     # ─────────────────────────────────────────────────────────────────────────
     # ヒットテスト
@@ -323,7 +346,8 @@ class HitTestManager:
         Returns:
             ヒットした HitRect（複数ある場合は z_index が最大のもの）
         """
-        hits = [r for r in self._rects if r.enabled and r.contains(x, y)]
+        # visible=False のアイテムはヒットテストをスキップ
+        hits = [r for r in self._rects if r.visible and r.enabled and r.contains(x, y)]
         if not hits:
             return None
 
@@ -337,7 +361,8 @@ class HitTestManager:
         Returns:
             ヒットした HitRect のリスト（z_index 降順）
         """
-        hits = [r for r in self._rects if r.enabled and r.contains(x, y)]
+        # visible=False のアイテムはヒットテストをスキップ
+        hits = [r for r in self._rects if r.visible and r.enabled and r.contains(x, y)]
         return sorted(hits, key=lambda r: r.z_index, reverse=True)
 
     # ─────────────────────────────────────────────────────────────────────────
@@ -474,6 +499,7 @@ class HitTestManager:
                 rect.width = rect.item.width
                 rect.height = rect.item.height
                 rect.enabled = getattr(rect.item, 'enabled', True)
+                rect.visible = getattr(rect.item, 'visible', True)
 
     def debug_draw(self) -> None:
         """デバッグ用: すべての HitRect を可視化"""
