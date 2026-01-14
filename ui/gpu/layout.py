@@ -30,6 +30,9 @@ MIN_PANEL_WIDTH = 200
 MIN_PANEL_HEIGHT = 100  # 将来用（高さリサイズ時）
 RESIZE_HANDLE_SIZE = 16  # UI スケーリング前のピクセル
 
+# パネル境界クランプ定数
+CLAMP_MARGIN = 20  # エリア端からの最小マージン（ピクセル）
+
 
 class GPULayout:
     """
@@ -122,6 +125,10 @@ class GPULayout:
         self._resize_handle_hovered: bool = False
         self._panel_uid: Optional[str] = None
         self._min_width: float = MIN_PANEL_WIDTH
+
+        # 境界クランプ用のリージョンサイズ（None = クランプ無効）
+        self._region_width: Optional[float] = None
+        self._region_height: Optional[float] = None
 
     # ─────────────────────────────────────────────────────────────────────────
     # コンテナメソッド（UILayout 互換）
@@ -521,6 +528,82 @@ class GPULayout:
         except Exception:
             pass
 
+    # ─────────────────────────────────────────────────────────────────────────
+    # 境界クランプ
+    # ─────────────────────────────────────────────────────────────────────────
+
+    def set_region_bounds(self, width: float, height: float) -> None:
+        """
+        境界クランプ用のリージョンサイズを設定
+
+        Args:
+            width: リージョンの幅
+            height: リージョンの高さ
+
+        Note:
+            この設定後、パネルは自動的にリージョン内にクランプされます。
+            - タイトルバーは常にリージョン内に表示
+            - ドラッグ終了時に位置を補正
+            - リージョンリサイズ時も位置を維持
+        """
+        old_width = self._region_width
+        old_height = self._region_height
+
+        self._region_width = width
+        self._region_height = height
+
+        # リージョンサイズが変わった場合はクランプを実行
+        if old_width != width or old_height != height:
+            self._clamp_position()
+
+    def _clamp_position(self) -> None:
+        """
+        パネル位置をリージョン境界内にクランプ
+
+        タイトルバー全体（閉じるボタン含む）が常に見えるように位置を調整します。
+        コンテンツ部分は下側にはみ出すことを許容します。
+
+        座標系:
+            - Blender は左下原点、Y 上向き
+            - self.y はコンテンツ領域の上端
+            - title_bar_y = self.y + title_bar_height（タイトルバー上端）
+        """
+        if self._region_width is None or self._region_height is None:
+            return
+
+        margin = int(self.style.ui_scale(CLAMP_MARGIN))
+        title_bar_height = self._get_title_bar_height() if self._show_title_bar else 0
+
+        # X 座標のクランプ（タイトルバー全体が見える範囲）
+        # 左端: パネル左端がマージン以上
+        min_x = margin
+        # 右端: パネル右端がリージョン幅 - マージン以下
+        max_x = self._region_width - margin - self.width
+
+        # パネル幅がリージョン幅より大きい場合は左寄せ
+        if max_x < min_x:
+            max_x = min_x
+
+        # Y 座標のクランプ（タイトルバー基準）
+        # 下端: タイトルバー上端がマージン以上（title_bar_y >= margin）
+        min_y = margin - title_bar_height if self._show_title_bar else margin
+        # 上端: タイトルバー上端がリージョン高さ - マージン以下
+        max_y = self._region_height - margin - title_bar_height if self._show_title_bar else self._region_height - margin
+
+        # クランプを適用
+        clamped = False
+        old_x, old_y = self.x, self.y
+
+        self.x = max(min_x, min(self.x, max_x))
+        self.y = max(min_y, min(self.y, max_y))
+
+        if self.x != old_x or self.y != old_y:
+            clamped = True
+
+        if clamped:
+            self._save_panel_state()
+            self.mark_dirty()
+
     def _get_title_bar_height(self) -> int:
         """スケーリングされたタイトルバーの高さを取得"""
         return self.style.scaled_title_bar_height()
@@ -573,6 +656,10 @@ class GPULayout:
                 self._save_panel_state()
                 self.mark_dirty()
 
+            def on_drag_end(inside: bool):
+                # ドラッグ終了時に境界内にクランプ
+                self._clamp_position()
+
             self._title_bar_rect = HitRect(
                 x=drag_x,
                 y=title_bar_y,
@@ -581,6 +668,7 @@ class GPULayout:
                 tag="title_bar",
                 draggable=True,
                 on_drag=on_drag,
+                on_release=on_drag_end,
                 z_index=100  # 他の要素より優先
             )
             manager.register(self._title_bar_rect)

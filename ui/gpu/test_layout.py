@@ -473,6 +473,9 @@ class TEST_OT_gpu_interactive(Operator):
                 resizable=True
             )
 
+            # リージョン境界クランプを有効化
+            layout.set_region_bounds(region.width, region.height)
+
             layout.separator()
 
             # クリックカウンター
@@ -508,6 +511,12 @@ class TEST_OT_gpu_interactive(Operator):
         else:
             self._layout.x = self._panel_x
             self._layout.y = self._panel_y
+            # リージョンサイズ変更時のクランプ対応
+            self._layout.set_region_bounds(region.width, region.height)
+
+        # クランプ後の位置を保持（次のフレームで使用）
+        self._panel_x = self._layout.x
+        self._panel_y = self._layout.y
 
         if self._click_label:
             self._click_label.text = f"Click Count: {self._click_count}"
