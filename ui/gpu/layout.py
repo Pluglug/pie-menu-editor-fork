@@ -15,6 +15,7 @@ from .items import (
     LayoutItem, LabelItem, SeparatorItem, ButtonItem, ToggleItem,
     PropDisplayItem, BoxItem
 )
+from .interactive import HitTestManager
 
 if TYPE_CHECKING:
     from bpy.types import Event
@@ -91,9 +92,16 @@ class GPULayout:
         self._draw_background: bool = False
         self._draw_outline: bool = False
 
+        self._hit_manager: Optional[HitTestManager] = None
+
     # ─────────────────────────────────────────────────────────────────────────
     # コンテナメソッド（UILayout 互換）
     # ─────────────────────────────────────────────────────────────────────────
+
+    @property
+    def hit_manager(self) -> Optional[HitTestManager]:
+        """HitTestManager（未使用なら None）"""
+        return self._hit_manager
 
     def row(self, align: bool = False) -> GPULayout:
         """
@@ -357,6 +365,7 @@ class GPULayout:
 
             self._cursor_x += item.width + self._get_spacing()
 
+        self._register_interactive_item(item)
         self._items.append(item)
 
     def calc_height(self) -> float:
@@ -434,6 +443,9 @@ class GPULayout:
             else:
                 cursor_x += child.calc_width() + spacing
 
+        if self._hit_manager:
+            self._hit_manager.update_positions()
+
     def _relayout_items(self) -> None:
         """アイテムの位置を再計算"""
         cursor_x = self.x + self.style.scaled_padding()
@@ -505,25 +517,33 @@ class GPULayout:
     # イベント処理
     # ─────────────────────────────────────────────────────────────────────────
 
-    def handle_event(self, event: Event) -> bool:
+    def handle_event(self, event: Event, region=None) -> bool:
         """
         イベントを処理
 
         Args:
             event: Blender イベント
+            region: Blender region（オプション）
 
         Returns:
             イベントを消費したかどうか
         """
+        self.layout()
+        return self._handle_event(event, region)
+
+    def _handle_event(self, event: Event, region=None) -> bool:
+        # 子レイアウトを先に処理
+        for child in self._children:
+            if child._handle_event(event, region):
+                return True
+
+        if self._hit_manager:
+            return self._hit_manager.handle_event(event, region)
+
         # region 座標からマウス位置を取得
         # Note: 呼び出し側で region.x, region.y を引く必要がある場合あり
         mouse_x = event.mouse_region_x
         mouse_y = event.mouse_region_y
-
-        # 子レイアウトを先に処理
-        for child in self._children:
-            if child.handle_event(event):
-                return True
 
         # アイテムを処理
         for item in self._items:
@@ -537,3 +557,27 @@ class GPULayout:
         height = self.calc_height()
         return (self.x <= x <= self.x + self.width and
                 self.y - height <= y <= self.y)
+
+    def _ensure_hit_manager(self) -> HitTestManager:
+        if self._hit_manager is None:
+            self._hit_manager = HitTestManager()
+        return self._hit_manager
+
+    def _register_interactive_item(self, item: LayoutItem) -> None:
+        if not isinstance(item, (ButtonItem, ToggleItem)):
+            return
+
+        manager = self._ensure_hit_manager()
+
+        if isinstance(item, ToggleItem):
+            def on_click():
+                item.value = not item.value
+                if item.on_toggle:
+                    item.on_toggle(item.value)
+
+            rect = manager.register_item(item, on_click=on_click)
+        else:
+            rect = manager.register_item(item)
+
+        if hasattr(item, 'text') and item.text:
+            rect.tag = item.text

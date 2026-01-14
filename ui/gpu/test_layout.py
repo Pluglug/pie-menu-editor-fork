@@ -16,7 +16,7 @@ from bpy.types import Operator
 
 from . import (
     GPULayout, GPULayoutStyle, GPUTooltip, GPUDrawing, BLFDrawing, IconDrawing,
-    Alignment, HitTestManager, HitRect, ButtonItem
+    Alignment
 )
 
 
@@ -374,7 +374,6 @@ class TEST_OT_gpu_interactive(Operator):
 
     _handler = None
     _timer = None
-    _hit_manager: HitTestManager = None
     _layout: GPULayout = None
     _click_label = None
     _action_label = None
@@ -394,14 +393,10 @@ class TEST_OT_gpu_interactive(Operator):
             self._debug_mode = not self._debug_mode
             return {'RUNNING_MODAL'}
 
-        # HitTestManager でイベント処理
-        if self._hit_manager:
-            region = self._get_window_region(context)
-            self._rebuild_layout(context, region)
-
-            consumed = self._hit_manager.handle_event(event, region)
-            if consumed:
-                return {'RUNNING_MODAL'}
+        region = self._get_window_region(context)
+        self._rebuild_layout(context, region)
+        if self._layout and self._layout.handle_event(event, region):
+            return {'RUNNING_MODAL'}
 
         return {'PASS_THROUGH'}
 
@@ -410,8 +405,6 @@ class TEST_OT_gpu_interactive(Operator):
             self.report({'WARNING'}, "3D Viewport で実行してください")
             return {'CANCELLED'}
 
-        # HitTestManager を初期化
-        self._hit_manager = HitTestManager()
         self._click_count = 0
         self._last_action = "Ready"
         self._debug_mode = True
@@ -440,7 +433,6 @@ class TEST_OT_gpu_interactive(Operator):
             context.window_manager.event_timer_remove(self._timer)
             self._timer = None
 
-        self._hit_manager = None
         self._layout = None
         self.report({'INFO'}, "インタラクティブテスト終了")
 
@@ -458,9 +450,6 @@ class TEST_OT_gpu_interactive(Operator):
 
     def _rebuild_layout(self, context, region=None) -> None:
         """レイアウトを再構築"""
-        if not self._hit_manager:
-            return
-
         region = region or self._get_window_region(context)
         if region is None:
             return
@@ -507,15 +496,6 @@ class TEST_OT_gpu_interactive(Operator):
             layout.label(text="Press D to toggle debug view")
             layout.label(text="Press ESC to exit")
 
-            # レイアウト計算
-            layout.layout()
-
-            # HitRect を登録
-            for item in layout._items:
-                if isinstance(item, ButtonItem):
-                    rect = self._hit_manager.register_item(item)
-                    rect.tag = item.text
-
             self._layout = layout
         else:
             self._layout.x = x
@@ -525,9 +505,6 @@ class TEST_OT_gpu_interactive(Operator):
             self._click_label.text = f"Click Count: {self._click_count}"
         if self._action_label:
             self._action_label.text = f"Last Action: {self._last_action}"
-
-        self._layout.layout()
-        self._hit_manager.update_positions()
 
     @staticmethod
     def draw_callback(self, context):
@@ -553,23 +530,24 @@ class TEST_OT_gpu_interactive(Operator):
             self._layout.draw()
 
             # デバッグ表示
-            if self._debug_mode and self._hit_manager:
-                self._hit_manager.debug_draw()
+            if self._debug_mode and self._layout and self._layout.hit_manager:
+                hit_manager = self._layout.hit_manager
+                hit_manager.debug_draw()
 
                 # 状態表示
-                state = self._hit_manager.state
+                state = hit_manager.state
                 debug_y = self._layout.y - height - 30
                 debug_style = GPULayoutStyle.from_blender_theme('TOOLTIP')
 
                 info_lines = [
                     f"Mouse: ({state.mouse_x:.0f}, {state.mouse_y:.0f})",
-                    f"Hovered: {self._hit_manager.hovered.tag if self._hit_manager.hovered else 'None'}",
-                    f"Pressed: {self._hit_manager.pressed.tag if self._hit_manager.pressed else 'None'}",
-                    f"HitRects: {len(self._hit_manager._rects)}",
+                    f"Hovered: {hit_manager.hovered.tag if hit_manager.hovered else 'None'}",
+                    f"Pressed: {hit_manager.pressed.tag if hit_manager.pressed else 'None'}",
+                    f"HitRects: {len(hit_manager._rects)}",
                 ]
 
                 # 各 HitRect の座標も表示
-                for i, rect in enumerate(self._hit_manager._rects):
+                for i, rect in enumerate(hit_manager._rects):
                     info_lines.append(
                         f"  [{i}] x={rect.x:.0f} y={rect.y:.0f} w={rect.width:.0f} h={rect.height:.0f}"
                     )
