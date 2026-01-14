@@ -49,6 +49,8 @@ from .drawing import (
     GPUDrawing,
     BLFDrawing,
     IconDrawing,
+    CORNER_SEGMENTS,
+    CIRCLE_SEGMENTS,
 )
 
 # Layout Items
@@ -89,6 +91,8 @@ __all__ = [
     'GPUDrawing',
     'BLFDrawing',
     'IconDrawing',
+    'CORNER_SEGMENTS',
+    'CIRCLE_SEGMENTS',
     # Items
     'LayoutItem',
     'LabelItem',

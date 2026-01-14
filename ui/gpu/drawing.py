@@ -18,6 +18,17 @@ from .style import SHADER_NAME, FONT_ID
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
+# 描画品質設定（アンチエイリアス的な滑らかさ）
+# ═══════════════════════════════════════════════════════════════════════════════
+
+# 角丸のセグメント数 [推奨: 8-24, 高品質: 16]
+CORNER_SEGMENTS: int = 16
+
+# 円のセグメント数 [推奨: 16-32, 高品質: 32]
+CIRCLE_SEGMENTS: int = 32
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
 # GPU Drawing - 図形描画
 # ═══════════════════════════════════════════════════════════════════════════════
 
@@ -119,7 +130,7 @@ class GPUDrawing:
         half = stroke_width / 2.0
 
         # セグメント数を固定（内外で同じ数にするため）
-        segments = 8
+        segments = CORNER_SEGMENTS
 
         # 外側の頂点（元のサイズ + half）
         outer_radius = radius + int(half)
@@ -158,7 +169,7 @@ class GPUDrawing:
     @classmethod
     def _calc_rounded_rect_outline_vertices_fixed(cls, x: float, y: float, width: float, height: float,
                                                    radius: int, corners: tuple[bool, bool, bool, bool],
-                                                   segments: int = 8) -> list[tuple[float, float]]:
+                                                   segments: int = CORNER_SEGMENTS) -> list[tuple[float, float]]:
         """
         固定セグメント数で角丸矩形のアウトライン頂点を計算
 
@@ -231,7 +242,7 @@ class GPUDrawing:
             ]
 
         vertices = []
-        segments = max(4, r)
+        segments = CORNER_SEGMENTS  # 固定セグメント数で滑らかな角丸
 
         # topLeft (corners[1]) - 角度 90° → 180°
         if corners[1]:
@@ -300,7 +311,7 @@ class GPUDrawing:
             ])
             return vertices
 
-        segments = max(4, r)  # 角の滑らかさ
+        segments = CORNER_SEGMENTS  # 固定セグメント数で滑らかな角丸
 
         # topLeft (corners[1]) - 角度 90° → 180°
         if corners[1]:
@@ -383,7 +394,7 @@ class GPUDrawing:
     @classmethod
     def draw_circle(cls, cx: float, cy: float, radius: float,
                     color: tuple[float, float, float, float],
-                    segments: int = 16) -> None:
+                    segments: int = CIRCLE_SEGMENTS) -> None:
         """
         塗りつぶし円を描画
 
@@ -391,7 +402,7 @@ class GPUDrawing:
             cx, cy: 中心座標
             radius: 半径
             color: 色 (RGBA)
-            segments: 分割数（滑らかさ）
+            segments: 分割数（滑らかさ、デフォルト: CIRCLE_SEGMENTS）
         """
         shader = cls.get_shader()
 
@@ -411,7 +422,7 @@ class GPUDrawing:
     @classmethod
     def draw_rounded_line(cls, x1: float, y1: float, x2: float, y2: float,
                           color: tuple[float, float, float, float],
-                          width: float = 0.0, segments: int = 8) -> None:
+                          width: float = 0.0, segments: int = CIRCLE_SEGMENTS) -> None:
         """
         先端が丸い線を描画
 
@@ -422,7 +433,7 @@ class GPUDrawing:
             x2, y2: 終点
             color: 色 (RGBA)
             width: ライン太さ（0.0 の場合は system.ui_line_width を使用）
-            segments: 円の分割数
+            segments: 円の分割数（デフォルト: CIRCLE_SEGMENTS）
         """
         if width <= 0.0:
             width = bpy.context.preferences.system.ui_line_width
