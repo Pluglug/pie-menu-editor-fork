@@ -209,12 +209,14 @@ class PropDisplayItem(LayoutItem):
         # クリップ矩形を取得
         clip_rect = self.get_clip_rect()
 
-        # ラベル
+        # ラベル（最大でも幅の50%に制限）
         label_text = f"{label}: "
-        label_w, _ = BLFDrawing.get_text_dimensions(label_text, text_size)
-        BLFDrawing.draw_text_clipped(self.x, text_y, label_text, label_color, text_size, clip_rect)
+        max_label_width = self.width * 0.5
+        display_label = BLFDrawing.get_text_with_ellipsis(label_text, max_label_width, text_size)
+        label_w, _ = BLFDrawing.get_text_dimensions(display_label, text_size)
+        BLFDrawing.draw_text_clipped(self.x, text_y, display_label, label_color, text_size, clip_rect)
 
-        # 値（利用可能幅を超える場合は省略記号を追加）
+        # 値（残り幅で省略記号を追加）
         available_width = self.width - label_w
         display_value = BLFDrawing.get_text_with_ellipsis(value, available_width, text_size)
         BLFDrawing.draw_text_clipped(self.x + label_w, text_y, display_value, value_color, text_size, clip_rect)
