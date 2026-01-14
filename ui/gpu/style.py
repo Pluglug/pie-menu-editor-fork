@@ -253,3 +253,31 @@ class GPULayoutStyle:
 
     def scaled_text_size(self) -> int:
         return int(self.ui_scale(self.text_size))
+
+    def scaled_border_radius(self) -> int:
+        return int(self.ui_scale(self.border_radius))
+
+    def scaled_shadow_offset(self) -> tuple[int, int]:
+        """スケーリングされたドロップシャドウオフセット"""
+        return (
+            int(self.ui_scale(self.shadow_offset[0])),
+            int(self.ui_scale(self.shadow_offset[1]))
+        )
+
+    def scaled_shadow_blur(self) -> int:
+        return int(self.ui_scale(self.shadow_blur))
+
+    def scaled_text_shadow_offset(self) -> tuple[int, int]:
+        """スケーリングされたテキストシャドウオフセット"""
+        return (
+            int(self.ui_scale(self.text_shadow_offset[0])),
+            int(self.ui_scale(self.text_shadow_offset[1]))
+        )
+
+    def scaled_title_bar_height(self) -> int:
+        """スケーリングされたタイトルバー高さ"""
+        return int(self.ui_scale(24))  # base: 24px
+
+    def scaled_icon_size(self) -> int:
+        """スケーリングされたアイコンサイズ"""
+        return int(self.ui_scale(20))  # base: 20px (Blender standard)

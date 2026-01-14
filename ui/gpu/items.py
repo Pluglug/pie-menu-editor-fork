@@ -65,7 +65,8 @@ class LabelItem(LayoutItem):
 
     def calc_size(self, style: GPULayoutStyle) -> tuple[float, float]:
         text_w, text_h = BLFDrawing.get_text_dimensions(self.text, style.scaled_text_size())
-        icon_w = IconDrawing.ICON_SIZE + style.scaled_spacing() if self.icon != "NONE" else 0
+        icon_size = style.scaled_icon_size()
+        icon_w = icon_size + style.scaled_spacing() if self.icon != "NONE" else 0
         return (text_w + icon_w, max(text_h, style.scaled_item_height()))
 
     def draw(self, style: GPULayoutStyle) -> None:
@@ -85,7 +86,7 @@ class LabelItem(LayoutItem):
 
         # コンテンツサイズを計算
         text_w, text_h = BLFDrawing.get_text_dimensions(self.text, text_size)
-        icon_size = IconDrawing.ICON_SIZE if self.icon != "NONE" else 0
+        icon_size = style.scaled_icon_size() if self.icon != "NONE" else 0
         icon_spacing = style.scaled_spacing() if self.icon != "NONE" else 0
         content_w = icon_size + icon_spacing + text_w
 
@@ -205,7 +206,8 @@ class ButtonItem(LayoutItem):
 
     def calc_size(self, style: GPULayoutStyle) -> tuple[float, float]:
         text_w, text_h = BLFDrawing.get_text_dimensions(self.text, style.scaled_text_size())
-        icon_w = IconDrawing.ICON_SIZE + style.scaled_spacing() if self.icon != "NONE" else 0
+        icon_size = style.scaled_icon_size()
+        icon_w = icon_size + style.scaled_spacing() if self.icon != "NONE" else 0
         padding = style.scaled_padding()
         return (text_w + icon_w + padding * 2, style.scaled_item_height())
 
@@ -232,7 +234,7 @@ class ButtonItem(LayoutItem):
         # 背景
         GPUDrawing.draw_rounded_rect(
             self.x, self.y, self.width, self.height,
-            style.border_radius, bg_color
+            style.scaled_border_radius(), bg_color
         )
 
         # テキスト
@@ -258,7 +260,8 @@ class ToggleItem(LayoutItem):
 
     def calc_size(self, style: GPULayoutStyle) -> tuple[float, float]:
         text_w, text_h = BLFDrawing.get_text_dimensions(self.text, style.scaled_text_size())
-        icon_w = IconDrawing.ICON_SIZE + style.scaled_spacing() if self.icon != "NONE" else 0
+        icon_size = style.scaled_icon_size()
+        icon_w = icon_size + style.scaled_spacing() if self.icon != "NONE" else 0
         padding = style.scaled_padding()
         return (text_w + icon_w + padding * 2, style.scaled_item_height())
 
@@ -284,7 +287,7 @@ class ToggleItem(LayoutItem):
         # 背景
         GPUDrawing.draw_rounded_rect(
             self.x, self.y, self.width, self.height,
-            style.border_radius, bg_color
+            style.scaled_border_radius(), bg_color
         )
 
         # テキスト
@@ -322,16 +325,18 @@ class BoxItem(LayoutItem):
         if not self.visible:
             return
 
+        border_radius = style.scaled_border_radius()
+
         # 背景
         GPUDrawing.draw_rounded_rect(
             self.x, self.y, self.width, self.height,
-            style.border_radius, style.bg_color
+            border_radius, style.bg_color
         )
 
         # アウトライン
         GPUDrawing.draw_rounded_rect_outline(
             self.x, self.y, self.width, self.height,
-            style.border_radius, style.outline_color
+            border_radius, style.outline_color
         )
 
         # 子アイテム

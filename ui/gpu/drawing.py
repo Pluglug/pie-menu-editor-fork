@@ -581,8 +581,13 @@ class IconDrawing:
         IconDrawing.draw_custom_icon("my_icon", x, y)
     """
 
-    # アイコンサイズ（Blender 標準）
+    # アイコンサイズ（Blender 標準、基準値）
     ICON_SIZE = 20
+
+    @classmethod
+    def get_scaled_icon_size(cls) -> int:
+        """UI スケールを適用したアイコンサイズを取得"""
+        return int(cls.ICON_SIZE * bpy.context.preferences.system.ui_scale)
 
     # シェーダーキャッシュ
     _image_shader: gpu.types.GPUShader = None
@@ -736,7 +741,7 @@ class IconDrawing:
     @classmethod
     def draw_custom_icon(cls, icon_name: str,
                          x: float, y: float,
-                         size: float = ICON_SIZE,
+                         size: Optional[float] = None,
                          alpha: float = 1.0) -> bool:
         """
         PME カスタムアイコンを描画
@@ -744,12 +749,14 @@ class IconDrawing:
         Args:
             icon_name: PME アイコン名（拡張子なし）
             x, y: 左上座標
-            size: 描画サイズ（正方形）
+            size: 描画サイズ（正方形、None の場合は UI スケールを適用）
             alpha: 透明度
 
         Returns:
             描画成功したかどうか
         """
+        if size is None:
+            size = cls.get_scaled_icon_size()
         filepath = cls.find_custom_icon_path(icon_name)
         if not filepath:
             return False
@@ -807,12 +814,13 @@ class IconDrawing:
             icon: アイコン名（PME カスタムアイコン名 or Blender アイコン名）
             x, y: 左上座標
             alpha: 透明度
-            scale: サイズスケール
+            scale: サイズスケール（UI スケールに加えて追加で適用）
 
         Returns:
             描画成功したかどうか
         """
-        size = cls.ICON_SIZE * scale
+        # UI スケールを適用した基準サイズに、追加スケールを乗算
+        size = cls.get_scaled_icon_size() * scale
 
         # PME カスタムアイコンを試す
         if cls.draw_custom_icon(icon, x, y, size, alpha):

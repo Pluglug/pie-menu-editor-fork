@@ -123,10 +123,10 @@ class TEST_OT_gpu_layout(Operator):
             if panel_style.shadow_enabled:
                 GPUDrawing.draw_drop_shadow(
                     col1_x, y, 300, panel_height,
-                    panel_style.border_radius,
+                    panel_style.scaled_border_radius(),
                     panel_style.shadow_color,
-                    panel_style.shadow_offset,
-                    panel_style.shadow_blur
+                    panel_style.scaled_shadow_offset(),
+                    panel_style.scaled_shadow_blur()
                 )
 
             panel.draw()
@@ -158,9 +158,10 @@ class TEST_OT_gpu_layout(Operator):
             # ドロップシャドウ（正確な高さを使用）
             GPUDrawing.draw_drop_shadow(
                 col1_x, y, 280, menu_height,
-                menu_style.border_radius,
+                menu_style.scaled_border_radius(),
                 menu_style.shadow_color,
-                (6, -6), 12
+                menu_style.scaled_shadow_offset(),
+                menu_style.scaled_shadow_blur()
             )
 
             menu.draw()
@@ -170,37 +171,40 @@ class TEST_OT_gpu_layout(Operator):
             # 選択状態のカラーデモ
             # ───────────────────────────────────────────────────────────────
             sel_style = GPULayoutStyle.from_blender_theme('MENU_ITEM')
+            sel_border_radius = sel_style.scaled_border_radius()
+            sel_item_height = sel_style.scaled_item_height()
+            sel_text_size = sel_style.scaled_text_size()
 
             # 通常状態
             GPUDrawing.draw_rounded_rect(
-                col1_x, y, 280, 26,
-                sel_style.border_radius, sel_style.bg_color
+                col1_x, y, 280, sel_item_height,
+                sel_border_radius, sel_style.bg_color
             )
             BLFDrawing.draw_text(
-                col1_x + 10, y - 18, "Normal Item",
-                sel_style.text_color, sel_style.text_size
+                col1_x + 10, y - sel_item_height + 8, "Normal Item",
+                sel_style.text_color, sel_text_size
             )
-            y -= 30
+            y -= sel_item_height + 4
 
             # 選択状態
             GPUDrawing.draw_rounded_rect(
-                col1_x, y, 280, 26,
-                sel_style.border_radius, sel_style.bg_color_sel
+                col1_x, y, 280, sel_item_height,
+                sel_border_radius, sel_style.bg_color_sel
             )
             BLFDrawing.draw_text(
-                col1_x + 10, y - 18, "Selected Item",
-                sel_style.text_color_sel, sel_style.text_size
+                col1_x + 10, y - sel_item_height + 8, "Selected Item",
+                sel_style.text_color_sel, sel_text_size
             )
-            y -= 30
+            y -= sel_item_height + 4
 
             # アイテム色
             GPUDrawing.draw_rounded_rect(
-                col1_x, y, 280, 26,
-                sel_style.border_radius, sel_style.item_color
+                col1_x, y, 280, sel_item_height,
+                sel_border_radius, sel_style.item_color
             )
             BLFDrawing.draw_text(
-                col1_x + 10, y - 18, "Item Color",
-                sel_style.text_color, sel_style.text_size
+                col1_x + 10, y - sel_item_height + 8, "Item Color",
+                sel_style.text_color, sel_text_size
             )
 
             # ═══════════════════════════════════════════════════════════════
@@ -292,8 +296,8 @@ class TEST_OT_gpu_layout(Operator):
                 # シャドウ（正確な高さを使用）
                 GPUDrawing.draw_drop_shadow(
                     col3_x, y, 220, demo_height,
-                    style.border_radius, style.shadow_color,
-                    (3, -3), 6
+                    style.scaled_border_radius(), style.shadow_color,
+                    style.scaled_shadow_offset(), style.scaled_shadow_blur()
                 )
 
                 demo.draw()
@@ -362,9 +366,10 @@ class TEST_OT_gpu_layout(Operator):
             # シャドウ
             GPUDrawing.draw_drop_shadow(
                 col4_x, y, 260, tip_height,
-                tooltip_style.border_radius,
+                tooltip_style.scaled_border_radius(),
                 (0.0, 0.0, 0.0, 0.4),
-                (3, -3), 6
+                tooltip_style.scaled_shadow_offset(),
+                tooltip_style.scaled_shadow_blur()
             )
             tip_panel.draw()
 
@@ -562,10 +567,10 @@ class TEST_OT_gpu_interactive(Operator):
                 GPUDrawing.draw_drop_shadow(
                     self._layout.x, self._layout.y,
                     self._layout.width, height,
-                    style.border_radius,
+                    style.scaled_border_radius(),
                     style.shadow_color,
-                    style.shadow_offset,
-                    style.shadow_blur
+                    style.scaled_shadow_offset(),
+                    style.scaled_shadow_blur()
                 )
 
             # メインレイアウト描画（layout() + draw()）
