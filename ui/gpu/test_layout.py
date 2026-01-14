@@ -508,6 +508,12 @@ class TEST_OT_gpu_interactive(Operator):
                 on_close=request_close
             )
 
+            # リサイズと位置の永続化を有効化
+            layout.set_panel_config(
+                uid="test_interactive_panel",
+                resizable=True
+            )
+
             layout.separator()
 
             # クリックカウンター

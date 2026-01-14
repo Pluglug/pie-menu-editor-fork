@@ -7,6 +7,7 @@ Blender UILayout API を模した GPU 描画レイアウトシステム。
 
 from __future__ import annotations
 
+import bpy
 import sys
 from typing import TYPE_CHECKING, Any, Callable, Optional
 
@@ -23,6 +24,11 @@ if TYPE_CHECKING:
 
 # プラットフォーム検出
 IS_MAC = sys.platform == 'darwin'
+
+# パネルリサイズ定数
+MIN_PANEL_WIDTH = 200
+MIN_PANEL_HEIGHT = 100  # 将来用（高さリサイズ時）
+RESIZE_HANDLE_SIZE = 16  # UI スケーリング前のピクセル
 
 
 class GPULayout:
@@ -109,6 +115,13 @@ class GPULayout:
 
         # Dirty Flag: レイアウト再計算が必要かどうか
         self._dirty: bool = True
+
+        # リサイズハンドル
+        self._show_resize_handle: bool = False
+        self._resize_handle_rect: Optional[HitRect] = None
+        self._resize_handle_hovered: bool = False
+        self._panel_uid: Optional[str] = None
+        self._min_width: float = MIN_PANEL_WIDTH
 
     # ─────────────────────────────────────────────────────────────────────────
     # コンテナメソッド（UILayout 互換）
@@ -456,6 +469,58 @@ class GPULayout:
         self._show_close_button = show_close
         self._on_close = on_close
 
+    def set_panel_config(self, uid: str = None,
+                         resizable: bool = False,
+                         min_width: float = MIN_PANEL_WIDTH) -> None:
+        """
+        パネルのリサイズと永続化を設定
+
+        Args:
+            uid: 永続化用の一意識別子（pm.uid）
+            resizable: 右下コーナーでリサイズ可能にする
+            min_width: 最小幅の制約
+        """
+        self._panel_uid = uid
+        self._show_resize_handle = resizable
+        self._min_width = min_width
+
+        if uid:
+            self._restore_panel_state()
+
+    def _restore_panel_state(self) -> None:
+        """window_manager から位置・サイズを復元"""
+        if not self._panel_uid:
+            return
+        try:
+            wm = bpy.context.window_manager
+            states = wm.get('_gpu_layout_states', {})
+            if self._panel_uid in states:
+                state = states[self._panel_uid]
+                self.x = state.get('x', self.x)
+                self.y = state.get('y', self.y)
+                self.width = max(state.get('width', self.width), self._min_width)
+                self.mark_dirty()
+        except Exception:
+            pass
+
+    def _save_panel_state(self) -> None:
+        """window_manager に位置・サイズを保存"""
+        if not self._panel_uid:
+            return
+        try:
+            wm = bpy.context.window_manager
+            states = wm.get('_gpu_layout_states', None)
+            if states is None:
+                states = {}
+                wm['_gpu_layout_states'] = states
+            states[self._panel_uid] = {
+                'x': self.x,
+                'y': self.y,
+                'width': self.width,
+            }
+        except Exception:
+            pass
+
     def _get_title_bar_height(self) -> int:
         """スケーリングされたタイトルバーの高さを取得"""
         return self.style.scaled_title_bar_height()
@@ -505,6 +570,7 @@ class GPULayout:
             def on_drag(dx: float, dy: float):
                 self.x += dx
                 self.y += dy
+                self._save_panel_state()
                 self.mark_dirty()
 
             self._title_bar_rect = HitRect(
@@ -566,6 +632,61 @@ class GPULayout:
             self._close_button_rect.width = close_btn_size
             self._close_button_rect.height = close_btn_size
 
+    def _register_resize_handle(self) -> None:
+        """リサイズハンドルの HitRect を右下コーナーに登録"""
+        if not self._show_resize_handle:
+            return
+
+        manager = self._ensure_hit_manager()
+        content_height = self.calc_height()
+        handle_size = int(self.style.ui_scale(RESIZE_HANDLE_SIZE))
+
+        # タイトルバーを含む全体高さを計算
+        if self._show_title_bar:
+            base_y = self._get_title_bar_y()
+            total_height = content_height + self._get_title_bar_height()
+        else:
+            base_y = self.y
+            total_height = content_height
+
+        # 右下コーナーの位置（アウトライン内に収めるためマージンを追加）
+        margin = 4
+        handle_x = self.x + self.width - handle_size - margin
+        handle_y = base_y - total_height + handle_size + margin
+
+        if self._resize_handle_rect is None:
+            def on_resize_drag(dx: float, dy: float):
+                new_width = self.width + dx
+                self.width = max(new_width, self._min_width)
+                self._save_panel_state()
+                self.mark_dirty()
+
+            def on_hover_enter():
+                self._resize_handle_hovered = True
+
+            def on_hover_leave():
+                self._resize_handle_hovered = False
+
+            self._resize_handle_rect = HitRect(
+                x=handle_x,
+                y=handle_y,
+                width=handle_size,
+                height=handle_size,
+                tag="resize_handle",
+                draggable=True,
+                on_drag=on_resize_drag,
+                on_hover_enter=on_hover_enter,
+                on_hover_leave=on_hover_leave,
+                z_index=102  # タイトルバー(100)、クローズボタン(101)より上
+            )
+            manager.register(self._resize_handle_rect)
+        else:
+            # 位置更新
+            self._resize_handle_rect.x = handle_x
+            self._resize_handle_rect.y = handle_y
+            self._resize_handle_rect.width = handle_size
+            self._resize_handle_rect.height = handle_size
+
     # ─────────────────────────────────────────────────────────────────────────
     # レイアウト計算
     # ─────────────────────────────────────────────────────────────────────────
@@ -610,6 +731,7 @@ class GPULayout:
 
         # タイトルバーの HitRect を登録（handle_event で呼ばれた場合も対応）
         self._register_title_bar()
+        self._register_resize_handle()
 
         if self._hit_manager:
             self._hit_manager.update_positions()
@@ -691,6 +813,9 @@ class GPULayout:
         # タイトルバー描画
         if self._show_title_bar:
             self._draw_title_bar()
+
+        # リサイズハンドル描画
+        self._draw_resize_handle()
 
         # アイテム描画
         for item in self._items:
@@ -786,6 +911,45 @@ class GPULayout:
                 btn_color = (0.7, 0.25, 0.25, 1.0)  # 暗めの赤
 
             GPUDrawing.draw_circle(btn_x, btn_y, close_btn_size / 2, btn_color)
+
+    def _draw_resize_handle(self) -> None:
+        """リサイズグリップハンドルを右下コーナーに描画"""
+        if not self._show_resize_handle:
+            return
+
+        content_height = self.calc_height()
+        handle_size = int(self.style.ui_scale(RESIZE_HANDLE_SIZE))
+
+        if self._show_title_bar:
+            base_y = self._get_title_bar_y()
+            total_height = content_height + self._get_title_bar_height()
+        else:
+            base_y = self.y
+            total_height = content_height
+
+        # 右下コーナー（アウトライン内に収めるためマージンを追加）
+        margin = 4
+        handle_x = self.x + self.width - handle_size - margin
+        handle_y = base_y - total_height + handle_size + margin
+
+        # テーマカラーから派生（通常: 暗め、ホバー: 明るめ）
+        if self._resize_handle_hovered:
+            # ホバー時: text_color_secondary
+            line_color = self.style.text_color_secondary
+        else:
+            # 通常時: text_color_secondary を暗く
+            base = self.style.text_color_secondary
+            line_color = (base[0] * 0.6, base[1] * 0.6, base[2] * 0.6, base[3])
+        line_width = 0.8  # 細め
+
+        # 3本の斜め線（右下から左上への対角線パターン）
+        for i, factor in enumerate([0.3, 0.55, 0.8]):
+            offset = int(handle_size * factor)
+            GPUDrawing.draw_rounded_line(
+                handle_x + handle_size - offset, handle_y - handle_size,
+                handle_x + handle_size, handle_y - handle_size + offset,
+                line_color, line_width
+            )
 
     # ─────────────────────────────────────────────────────────────────────────
     # イベント処理
