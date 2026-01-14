@@ -15,6 +15,7 @@ from .drawing import GPUDrawing, BLFDrawing, IconDrawing
 
 if TYPE_CHECKING:
     from bpy.types import Event
+    from .interactive import ItemRenderState
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -202,29 +203,30 @@ class ButtonItem(LayoutItem):
     icon: str = "NONE"
     on_click: Optional[Callable[[], None]] = None
 
-    # 状態
-    _hovered: bool = field(default=False, repr=False)
-    _pressed: bool = field(default=False, repr=False)
-
     def calc_size(self, style: GPULayoutStyle) -> tuple[float, float]:
         text_w, text_h = BLFDrawing.get_text_dimensions(self.text, style.scaled_text_size())
         icon_w = IconDrawing.ICON_SIZE + style.scaled_spacing() if self.icon != "NONE" else 0
         padding = style.scaled_padding()
         return (text_w + icon_w + padding * 2, style.scaled_item_height())
 
-    def draw(self, style: GPULayoutStyle) -> None:
+    def draw(self, style: GPULayoutStyle, state: Optional[ItemRenderState] = None) -> None:
         if not self.visible:
             return
 
+        # 状態から色を決定
+        pressed = state.pressed if state else False
+        hovered = state.hovered if state else False
+        enabled = state.enabled if state else self.enabled
+
         # 背景色
-        if self._pressed:
+        if pressed:
             bg_color = style.button_press_color
-        elif self._hovered:
+        elif hovered:
             bg_color = style.button_hover_color
         else:
             bg_color = style.button_color
 
-        if not self.enabled:
+        if not enabled:
             bg_color = tuple(c * 0.5 for c in bg_color[:3]) + (bg_color[3],)
 
         # 背景
@@ -234,7 +236,7 @@ class ButtonItem(LayoutItem):
         )
 
         # テキスト
-        text_color = style.button_text_color if self.enabled else style.text_color_disabled
+        text_color = style.button_text_color if enabled else style.text_color_disabled
         text_size = style.scaled_text_size()
         text_w, text_h = BLFDrawing.get_text_dimensions(self.text, text_size)
 
@@ -242,28 +244,6 @@ class ButtonItem(LayoutItem):
         text_y = self.y - (self.height + text_h) / 2
 
         BLFDrawing.draw_text(text_x, text_y, self.text, text_color, text_size)
-
-    def handle_event(self, event: Event, mouse_x: float, mouse_y: float) -> bool:
-        if not self.enabled:
-            return False
-
-        inside = self.is_inside(mouse_x, mouse_y)
-
-        if event.type == 'MOUSEMOVE':
-            self._hovered = inside
-            return inside
-
-        elif event.type == 'LEFTMOUSE':
-            if event.value == 'PRESS' and inside:
-                self._pressed = True
-                return True
-            elif event.value == 'RELEASE':
-                if self._pressed and inside and self.on_click:
-                    self.on_click()
-                self._pressed = False
-                return inside
-
-        return False
 
 
 @dataclass
@@ -276,27 +256,29 @@ class ToggleItem(LayoutItem):
     value: bool = False
     on_toggle: Optional[Callable[[bool], None]] = None
 
-    _hovered: bool = field(default=False, repr=False)
-
     def calc_size(self, style: GPULayoutStyle) -> tuple[float, float]:
         text_w, text_h = BLFDrawing.get_text_dimensions(self.text, style.scaled_text_size())
         icon_w = IconDrawing.ICON_SIZE + style.scaled_spacing() if self.icon != "NONE" else 0
         padding = style.scaled_padding()
         return (text_w + icon_w + padding * 2, style.scaled_item_height())
 
-    def draw(self, style: GPULayoutStyle) -> None:
+    def draw(self, style: GPULayoutStyle, state: Optional[ItemRenderState] = None) -> None:
         if not self.visible:
             return
 
+        # 状態から色を決定
+        hovered = state.hovered if state else False
+        enabled = state.enabled if state else self.enabled
+
         # 背景色（ON 状態で強調）
         if self.value:
-            bg_color = style.highlight_color if not self._hovered else tuple(
+            bg_color = style.highlight_color if not hovered else tuple(
                 min(1.0, c * 1.2) for c in style.highlight_color[:3]
             ) + (style.highlight_color[3],)
         else:
-            bg_color = style.button_hover_color if self._hovered else style.button_color
+            bg_color = style.button_hover_color if hovered else style.button_color
 
-        if not self.enabled:
+        if not enabled:
             bg_color = tuple(c * 0.5 for c in bg_color[:3]) + (bg_color[3],)
 
         # 背景
@@ -306,7 +288,7 @@ class ToggleItem(LayoutItem):
         )
 
         # テキスト
-        text_color = style.button_text_color if self.enabled else style.text_color_disabled
+        text_color = style.button_text_color if enabled else style.text_color_disabled
         text_size = style.scaled_text_size()
         text_w, text_h = BLFDrawing.get_text_dimensions(self.text, text_size)
 
@@ -314,24 +296,6 @@ class ToggleItem(LayoutItem):
         text_y = self.y - (self.height + text_h) / 2
 
         BLFDrawing.draw_text(text_x, text_y, self.text, text_color, text_size)
-
-    def handle_event(self, event: Event, mouse_x: float, mouse_y: float) -> bool:
-        if not self.enabled:
-            return False
-
-        inside = self.is_inside(mouse_x, mouse_y)
-
-        if event.type == 'MOUSEMOVE':
-            self._hovered = inside
-            return inside
-
-        elif event.type == 'LEFTMOUSE' and event.value == 'RELEASE' and inside:
-            self.value = not self.value
-            if self.on_toggle:
-                self.on_toggle(self.value)
-            return True
-
-        return False
 
 
 # ═══════════════════════════════════════════════════════════════════════════════

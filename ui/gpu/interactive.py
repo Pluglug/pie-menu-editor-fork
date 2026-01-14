@@ -8,30 +8,66 @@ PME GPU Layout - Interactive System
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any, Callable, Optional, Protocol
+from typing import TYPE_CHECKING, Any, Callable, Optional
 
 if TYPE_CHECKING:
     from bpy.types import Event
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# Protocols
+# UIState - 集中状態管理
 # ═══════════════════════════════════════════════════════════════════════════════
 
-class Hoverable(Protocol):
-    """ホバー可能なアイテムのプロトコル"""
-    _hovered: bool
+@dataclass
+class UIState:
+    """
+    UI 状態の集中管理
 
-    def on_hover_enter(self) -> None: ...
-    def on_hover_leave(self) -> None: ...
+    ID ベースで状態を管理し、描画時に参照する。
+    これにより、各アイテムが個別に状態を持つ必要がなくなる。
+    """
+    hovered_id: Optional[str] = None
+    pressed_id: Optional[str] = None
+    focused_id: Optional[str] = None
+    dragging_id: Optional[str] = None
+
+    def clear(self) -> None:
+        """すべての状態をクリア"""
+        self.hovered_id = None
+        self.pressed_id = None
+        self.focused_id = None
+        self.dragging_id = None
+
+    def is_hovered(self, item_id: str) -> bool:
+        """指定 ID がホバー中かどうか"""
+        return self.hovered_id == item_id
+
+    def is_pressed(self, item_id: str) -> bool:
+        """指定 ID がプレス中かどうか"""
+        return self.pressed_id == item_id
+
+    def is_focused(self, item_id: str) -> bool:
+        """指定 ID がフォーカス中かどうか"""
+        return self.focused_id == item_id
 
 
-class Pressable(Protocol):
-    """プレス可能なアイテムのプロトコル"""
-    _pressed: bool
+@dataclass
+class ItemRenderState:
+    """
+    描画時に参照するアイテム状態
 
-    def on_press(self) -> None: ...
-    def on_release(self, inside: bool) -> None: ...
+    HitTestManager.get_render_state() で取得し、
+    描画メソッドに渡す。
+    """
+    hovered: bool = False
+    pressed: bool = False
+    focused: bool = False
+    enabled: bool = True
+
+    @property
+    def active(self) -> bool:
+        """アクティブ状態（ホバーまたはプレス）"""
+        return self.hovered or self.pressed
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -53,7 +89,8 @@ class HitRect:
 
     # 関連データ
     item: Any = None  # 関連付けられたアイテム
-    tag: str = ""     # 識別用タグ
+    item_id: str = ""  # 状態管理用の一意識別子（UIState で使用）
+    tag: str = ""     # 識別用タグ（デバッグ表示用）
     enabled: bool = True
     z_index: int = 0  # 重なり順（大きいほど前面）
 
@@ -156,6 +193,7 @@ class HitTestManager:
     def __init__(self):
         self._rects: list[HitRect] = []
         self._state = InteractionState()
+        self._ui_state = UIState()  # 集中状態管理
 
     @property
     def state(self) -> InteractionState:
@@ -172,6 +210,51 @@ class HitTestManager:
         """現在プレス中の HitRect"""
         return self._state.pressed
 
+    @property
+    def ui_state(self) -> UIState:
+        """集中状態管理（ID ベース）"""
+        return self._ui_state
+
+    def get_render_state(self, item_id: str, enabled: bool = True) -> ItemRenderState:
+        """
+        描画用のアイテム状態を取得
+
+        Args:
+            item_id: アイテムの一意識別子
+            enabled: アイテムが有効かどうか
+
+        Returns:
+            描画時に参照する状態
+        """
+        return ItemRenderState(
+            hovered=self._ui_state.is_hovered(item_id),
+            pressed=self._ui_state.is_pressed(item_id),
+            focused=self._ui_state.is_focused(item_id),
+            enabled=enabled,
+        )
+
+    def get_render_state_for_rect(self, rect: HitRect) -> ItemRenderState:
+        """
+        HitRect から描画用の状態を取得
+
+        Args:
+            rect: HitRect インスタンス
+
+        Returns:
+            描画時に参照する状態
+        """
+        # item_id があればそれを使用、なければ HitRect の参照比較で判定
+        if rect.item_id:
+            return self.get_render_state(rect.item_id, rect.enabled)
+
+        # フォールバック: HitRect の参照比較
+        return ItemRenderState(
+            hovered=self._state.hovered is rect,
+            pressed=self._state.pressed is rect,
+            focused=False,
+            enabled=rect.enabled,
+        )
+
     # ─────────────────────────────────────────────────────────────────────────
     # 登録・解除
     # ─────────────────────────────────────────────────────────────────────────
@@ -180,12 +263,13 @@ class HitTestManager:
         """HitRect を登録"""
         self._rects.append(rect)
 
-    def register_item(self, item: Any, **callbacks) -> HitRect:
+    def register_item(self, item: Any, item_id: str = "", **callbacks) -> HitRect:
         """
         LayoutItem から HitRect を作成して登録
 
         Args:
             item: LayoutItem インスタンス
+            item_id: 状態管理用の一意識別子（省略時は id(item) を使用）
             **callbacks: on_hover_enter, on_hover_leave, on_click, etc.
 
         Returns:
@@ -193,27 +277,17 @@ class HitTestManager:
         """
         rect = HitRect.from_item(item)
 
+        # item_id を設定（UIState で使用）
+        rect.item_id = item_id or str(id(item))
+
         # コールバックを設定
         for key, callback in callbacks.items():
             if hasattr(rect, key):
                 setattr(rect, key, callback)
 
-        # アイテムが Hoverable/Pressable なら自動バインド
-        if hasattr(item, '_hovered'):
-            if rect.on_hover_enter is None:
-                rect.on_hover_enter = lambda: setattr(item, '_hovered', True)
-            if rect.on_hover_leave is None:
-                rect.on_hover_leave = lambda: setattr(item, '_hovered', False)
-
-        if hasattr(item, '_pressed'):
-            if rect.on_press is None:
-                rect.on_press = lambda: setattr(item, '_pressed', True)
-            if rect.on_release is None:
-                def on_release(inside: bool):
-                    item._pressed = False
-                    if inside and hasattr(item, 'on_click') and item.on_click:
-                        item.on_click()
-                rect.on_release = on_release
+        # on_click コールバックがアイテムにあれば自動バインド
+        if hasattr(item, 'on_click') and item.on_click and rect.on_click is None:
+            rect.on_click = item.on_click
 
         self._rects.append(rect)
         return rect
@@ -326,22 +400,15 @@ class HitTestManager:
 
         if new_hover is not old_hover:
             # 旧ホバーを解除
-            if old_hover:
-                if old_hover.on_hover_leave:
-                    old_hover.on_hover_leave()
-                # アイテムの状態も更新
-                if old_hover.item and hasattr(old_hover.item, '_hovered'):
-                    old_hover.item._hovered = False
+            if old_hover and old_hover.on_hover_leave:
+                old_hover.on_hover_leave()
 
             # 新ホバーを設定
-            if new_hover:
-                if new_hover.on_hover_enter:
-                    new_hover.on_hover_enter()
-                # アイテムの状態も更新
-                if new_hover.item and hasattr(new_hover.item, '_hovered'):
-                    new_hover.item._hovered = True
+            if new_hover and new_hover.on_hover_enter:
+                new_hover.on_hover_enter()
 
             self._state.hovered = new_hover
+            self._ui_state.hovered_id = new_hover.item_id if new_hover else None
 
         return new_hover is not None
 
@@ -354,18 +421,16 @@ class HitTestManager:
         self._state.pressed = hit
         self._state.drag_start_x = x
         self._state.drag_start_y = y
+        self._ui_state.pressed_id = hit.item_id if hit.item_id else None
 
         # ドラッグ可能な場合はドラッグ開始
         if hit.draggable:
             self._state.is_dragging = True
             self._state.dragging_rect = hit
+            self._ui_state.dragging_id = hit.item_id if hit.item_id else None
 
         if hit.on_press:
             hit.on_press()
-
-        # アイテムの状態も更新
-        if hit.item and hasattr(hit.item, '_pressed'):
-            hit.item._pressed = True
 
         return True
 
@@ -380,10 +445,6 @@ class HitTestManager:
         if pressed.on_release:
             pressed.on_release(inside)
 
-        # アイテムの状態も更新
-        if pressed.item and hasattr(pressed.item, '_pressed'):
-            pressed.item._pressed = False
-
         # クリック判定
         if inside and pressed.on_click:
             pressed.on_click()
@@ -391,6 +452,8 @@ class HitTestManager:
         self._state.pressed = None
         self._state.is_dragging = False
         self._state.dragging_rect = None
+        self._ui_state.pressed_id = None
+        self._ui_state.dragging_id = None
 
         return True
 

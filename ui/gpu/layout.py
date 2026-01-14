@@ -108,6 +108,9 @@ class GPULayout:
 
         self._hit_manager: Optional[HitTestManager] = None
 
+        # Dirty Flag: レイアウト再計算が必要かどうか
+        self._dirty: bool = True
+
     # ─────────────────────────────────────────────────────────────────────────
     # コンテナメソッド（UILayout 互換）
     # ─────────────────────────────────────────────────────────────────────────
@@ -116,6 +119,17 @@ class GPULayout:
     def hit_manager(self) -> Optional[HitTestManager]:
         """HitTestManager（未使用なら None）"""
         return self._hit_manager
+
+    @property
+    def dirty(self) -> bool:
+        """レイアウト再計算が必要かどうか"""
+        return self._dirty
+
+    def mark_dirty(self) -> None:
+        """レイアウトの再計算が必要であることをマーク"""
+        self._dirty = True
+        for child in self._children:
+            child.mark_dirty()
 
     def row(self, align: bool = False) -> GPULayout:
         """
@@ -343,6 +357,7 @@ class GPULayout:
 
     def _add_item(self, item: LayoutItem) -> None:
         """アイテムを追加"""
+        self._dirty = True  # アイテム追加でレイアウト再計算が必要
         item_width, item_height = item.calc_size(self.style)
         available_width = self._get_available_width()
 
@@ -482,6 +497,7 @@ class GPULayout:
             def on_drag(dx: float, dy: float):
                 self.x += dx
                 self.y += dy
+                self.mark_dirty()
 
             self._title_bar_rect = HitRect(
                 x=drag_x,
@@ -543,8 +559,16 @@ class GPULayout:
     # レイアウト計算
     # ─────────────────────────────────────────────────────────────────────────
 
-    def layout(self) -> None:
-        """レイアウトを計算（子レイアウトの位置を確定）"""
+    def layout(self, *, force: bool = False) -> None:
+        """
+        レイアウトを計算（子レイアウトの位置を確定）
+
+        Args:
+            force: True の場合、Dirty Flag に関係なく再計算
+        """
+        if not self._dirty and not force:
+            return  # 変更がなければスキップ
+
         # 自身のアイテムを再配置
         self._relayout_items()
 
@@ -566,7 +590,7 @@ class GPULayout:
         for child in self._children:
             child.x = cursor_x
             child.y = cursor_y
-            child.layout()
+            child.layout(force=force)
 
             if self.direction == Direction.VERTICAL:
                 cursor_y -= child.calc_height() + spacing
@@ -578,6 +602,8 @@ class GPULayout:
 
         if self._hit_manager:
             self._hit_manager.update_positions()
+
+        self._dirty = False  # レイアウト完了
 
     def _relayout_items(self) -> None:
         """アイテムの位置を再計算"""
@@ -619,13 +645,13 @@ class GPULayout:
     # ─────────────────────────────────────────────────────────────────────────
 
     def draw(self) -> None:
-        """GPU 描画を実行"""
-        # レイアウト計算
-        self.layout()
+        """
+        GPU 描画を実行
 
-        # タイトルバーの HitRect 登録/更新
-        self._register_title_bar()
-
+        Note:
+            この関数は描画のみを行います。レイアウト計算が必要な場合は
+            事前に layout() を呼び出すか、update_and_draw() を使用してください。
+        """
         content_height = self.calc_height()
         total_height = content_height
         if self._show_title_bar:
@@ -654,11 +680,27 @@ class GPULayout:
 
         # アイテム描画
         for item in self._items:
-            item.draw(self.style)
+            # インタラクティブなアイテムには状態を渡す
+            if self._hit_manager and isinstance(item, (ButtonItem, ToggleItem)):
+                # item_id を取得（登録時に設定される）
+                item_id = str(id(item))
+                state = self._hit_manager.get_render_state(item_id, item.enabled)
+                item.draw(self.style, state)
+            else:
+                item.draw(self.style)
 
         # 子レイアウト描画
         for child in self._children:
             child.draw()
+
+    def update_and_draw(self) -> None:
+        """
+        レイアウト計算と描画を一度に実行
+
+        便利メソッド。layout() + draw() と同等。
+        """
+        self.layout()
+        self.draw()
 
     def _draw_title_bar(self) -> None:
         """タイトルバーを描画"""

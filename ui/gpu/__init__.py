@@ -73,6 +73,8 @@ from .interactive import (
     HitRect,
     HitTestManager,
     InteractionState,
+    UIState,
+    ItemRenderState,
 )
 
 
@@ -103,4 +105,6 @@ __all__ = [
     'HitRect',
     'HitTestManager',
     'InteractionState',
+    'UIState',
+    'ItemRenderState',
 ]

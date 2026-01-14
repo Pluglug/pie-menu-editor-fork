@@ -212,7 +212,7 @@ class TEST_OT_gpu_layout(Operator):
             line_demo._draw_background = True
             line_demo._draw_outline = True
             line_demo.label(text="Line Drawing Comparison")
-            line_demo.draw()
+            line_demo.update_and_draw()
 
             y -= line_demo.calc_height() + 10
 
@@ -244,7 +244,7 @@ class TEST_OT_gpu_layout(Operator):
             shadow_demo._draw_background = True
             shadow_demo._draw_outline = True
             shadow_demo.label(text="Drop Shadow Demo")
-            shadow_demo.draw()
+            shadow_demo.update_and_draw()
 
             y -= shadow_demo.calc_height() + 30
 
@@ -568,8 +568,8 @@ class TEST_OT_gpu_interactive(Operator):
                     style.shadow_blur
                 )
 
-            # メインレイアウト描画
-            self._layout.draw()
+            # メインレイアウト描画（layout() + draw()）
+            self._layout.update_and_draw()
 
             # デバッグ表示
             if self._debug_mode and self._layout and self._layout.hit_manager:
