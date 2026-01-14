@@ -49,6 +49,18 @@ class LayoutItem:
         """イベント処理"""
         return False
 
+    def get_clip_rect(self, padding: int = 0) -> tuple[float, float, float, float]:
+        """
+        このアイテムのクリップ矩形を取得
+
+        Args:
+            padding: 内側のパディング
+
+        Returns:
+            (xmin, ymin, xmax, ymax) - blf.clipping 用の矩形
+        """
+        return BLFDrawing.calc_clip_rect(self.x, self.y, self.width, self.height, padding)
+
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # Display Items - 表示専用
@@ -85,9 +97,15 @@ class LabelItem(LayoutItem):
         text_size = style.scaled_text_size()
 
         # コンテンツサイズを計算
-        text_w, text_h = BLFDrawing.get_text_dimensions(self.text, text_size)
         icon_size = style.scaled_icon_size() if self.icon != "NONE" else 0
         icon_spacing = style.scaled_spacing() if self.icon != "NONE" else 0
+
+        # テキストの利用可能幅を計算（アイコンとスペーシングを除く）
+        text_area_width = self.width - icon_size - icon_spacing
+
+        # テキストが利用可能幅を超える場合は省略記号を追加
+        display_text = BLFDrawing.get_text_with_ellipsis(self.text, text_area_width, text_size)
+        text_w, text_h = BLFDrawing.get_text_dimensions(display_text, text_size)
         content_w = icon_size + icon_spacing + text_w
 
         # alignment に応じた X 位置を計算
@@ -110,15 +128,18 @@ class LabelItem(LayoutItem):
             IconDrawing.draw_icon(content_x, icon_y, self.icon, alpha=alpha)
             text_x += icon_size + icon_spacing
 
-        # テキスト
+        # クリップ矩形を取得（テキスト領域用）
+        clip_rect = self.get_clip_rect()
+
+        # テキスト（クリッピング付き）
         if style.text_shadow_enabled:
-            BLFDrawing.draw_text_with_shadow(
-                text_x, text_y, self.text, color, text_size,
+            BLFDrawing.draw_text_clipped_with_shadow(
+                text_x, text_y, display_text, color, text_size, clip_rect,
                 style.text_shadow_color, style.text_shadow_alpha,
-                style.text_shadow_offset
+                style.scaled_text_shadow_offset()
             )
         else:
-            BLFDrawing.draw_text(text_x, text_y, self.text, color, text_size)
+            BLFDrawing.draw_text_clipped(text_x, text_y, display_text, color, text_size, clip_rect)
 
 
 @dataclass
@@ -185,12 +206,18 @@ class PropDisplayItem(LayoutItem):
         label_color = style.text_color_secondary if self.enabled else style.text_color_disabled
         value_color = style.text_color if self.enabled else style.text_color_disabled
 
-        # ラベル
-        BLFDrawing.draw_text(self.x, text_y, f"{label}: ", label_color, text_size)
+        # クリップ矩形を取得
+        clip_rect = self.get_clip_rect()
 
-        # 値
-        label_w, _ = BLFDrawing.get_text_dimensions(f"{label}: ", text_size)
-        BLFDrawing.draw_text(self.x + label_w, text_y, value, value_color, text_size)
+        # ラベル
+        label_text = f"{label}: "
+        label_w, _ = BLFDrawing.get_text_dimensions(label_text, text_size)
+        BLFDrawing.draw_text_clipped(self.x, text_y, label_text, label_color, text_size, clip_rect)
+
+        # 値（利用可能幅を超える場合は省略記号を追加）
+        available_width = self.width - label_w
+        display_value = BLFDrawing.get_text_with_ellipsis(value, available_width, text_size)
+        BLFDrawing.draw_text_clipped(self.x + label_w, text_y, display_value, value_color, text_size, clip_rect)
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -240,12 +267,19 @@ class ButtonItem(LayoutItem):
         # テキスト
         text_color = style.button_text_color if enabled else style.text_color_disabled
         text_size = style.scaled_text_size()
-        text_w, text_h = BLFDrawing.get_text_dimensions(self.text, text_size)
+        padding = style.scaled_padding()
+
+        # ボタン内で利用可能なテキスト幅（省略記号用）
+        available_width = self.width - padding * 2
+        display_text = BLFDrawing.get_text_with_ellipsis(self.text, available_width, text_size)
+        text_w, text_h = BLFDrawing.get_text_dimensions(display_text, text_size)
 
         text_x = self.x + (self.width - text_w) / 2
         text_y = self.y - (self.height + text_h) / 2
 
-        BLFDrawing.draw_text(text_x, text_y, self.text, text_color, text_size)
+        # クリップ矩形（ボタン全体、角丸背景がテキストを制約）
+        clip_rect = self.get_clip_rect()
+        BLFDrawing.draw_text_clipped(text_x, text_y, display_text, text_color, text_size, clip_rect)
 
 
 @dataclass
@@ -293,12 +327,19 @@ class ToggleItem(LayoutItem):
         # テキスト
         text_color = style.button_text_color if enabled else style.text_color_disabled
         text_size = style.scaled_text_size()
-        text_w, text_h = BLFDrawing.get_text_dimensions(self.text, text_size)
+        padding = style.scaled_padding()
+
+        # ボタン内で利用可能なテキスト幅（省略記号用）
+        available_width = self.width - padding * 2
+        display_text = BLFDrawing.get_text_with_ellipsis(self.text, available_width, text_size)
+        text_w, text_h = BLFDrawing.get_text_dimensions(display_text, text_size)
 
         text_x = self.x + (self.width - text_w) / 2
         text_y = self.y - (self.height + text_h) / 2
 
-        BLFDrawing.draw_text(text_x, text_y, self.text, text_color, text_size)
+        # クリップ矩形（ボタン全体、角丸背景がテキストを制約）
+        clip_rect = self.get_clip_rect()
+        BLFDrawing.draw_text_clipped(text_x, text_y, display_text, text_color, text_size, clip_rect)
 
 
 # ═══════════════════════════════════════════════════════════════════════════════

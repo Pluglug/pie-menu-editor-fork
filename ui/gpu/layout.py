@@ -748,9 +748,27 @@ class GPULayout:
             if IS_MAC and self._show_close_button:
                 text_x = self.x + close_btn_size + close_btn_margin * 2 + int(self.style.ui_scale(4))
             text_y = title_bar_y - title_bar_height / 2 - int(self.style.ui_scale(4))
-            BLFDrawing.draw_text(
-                text_x, text_y, self._title,
-                self.style.text_color, self.style.scaled_text_size()
+            text_size = self.style.scaled_text_size()
+
+            # 利用可能なテキスト幅を計算（パディングとクローズボタンを考慮）
+            padding = self.style.scaled_padding()
+            if self._show_close_button:
+                available_width = self.width - close_btn_size - close_btn_margin * 2 - padding * 2
+            else:
+                available_width = self.width - padding * 2
+
+            # テキストが利用可能幅を超える場合は省略記号を追加
+            display_title = BLFDrawing.get_text_with_ellipsis(self._title, available_width, text_size)
+
+            # クリップ矩形を計算（タイトルバー領域内）
+            clip_rect = BLFDrawing.calc_clip_rect(
+                self.x + padding, title_bar_y,
+                self.width - padding * 2, title_bar_height
+            )
+
+            BLFDrawing.draw_text_clipped(
+                text_x, text_y, display_title,
+                self.style.text_color, text_size, clip_rect
             )
 
         # クローズボタン

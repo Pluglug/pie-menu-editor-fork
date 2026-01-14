@@ -559,6 +559,170 @@ class BLFDrawing:
 
         return lines
 
+    @classmethod
+    def get_line_height(cls, size: int = 13, line_spacing: float = 1.2,
+                        font_id: int = FONT_ID) -> float:
+        """
+        行の高さを取得（行間を含む）
+
+        Args:
+            size: フォントサイズ
+            line_spacing: 行間係数（デフォルト 1.2x）
+            font_id: フォント ID
+
+        Returns:
+            行の高さ（ピクセル）
+        """
+        blf.size(font_id, size)
+        _, text_height = blf.dimensions(font_id, "Wg")  # 基準文字
+        return text_height * line_spacing
+
+    @classmethod
+    def get_text_with_ellipsis(cls, text: str, max_width: float,
+                                size: int = 13, font_id: int = FONT_ID,
+                                ellipsis: str = "…") -> str:
+        """
+        テキストが max_width を超える場合、末尾に省略記号を追加
+
+        二分探索で最適な切り詰め位置を見つける。
+        日本語など CJK 文字も文字単位で正しく処理される。
+
+        Args:
+            text: 元のテキスト
+            max_width: 最大幅（ピクセル）
+            size: フォントサイズ
+            font_id: フォント ID
+            ellipsis: 省略記号（デフォルト: Unicode HORIZONTAL ELLIPSIS）
+
+        Returns:
+            max_width に収まるテキスト（必要に応じて省略記号付き）
+        """
+        blf.size(font_id, size)
+        text_width, _ = blf.dimensions(font_id, text)
+
+        if text_width <= max_width:
+            return text
+
+        ellipsis_width, _ = blf.dimensions(font_id, ellipsis)
+        available_width = max_width - ellipsis_width
+
+        if available_width <= 0:
+            return ellipsis
+
+        # 二分探索で最適な切り詰め位置を見つける
+        low, high = 0, len(text)
+        while low < high:
+            mid = (low + high + 1) // 2
+            test_width, _ = blf.dimensions(font_id, text[:mid])
+            if test_width <= available_width:
+                low = mid
+            else:
+                high = mid - 1
+
+        return text[:low] + ellipsis if low > 0 else ellipsis
+
+    @classmethod
+    def draw_text_clipped(cls, x: float, y: float, text: str,
+                          color: tuple[float, float, float, float],
+                          size: int, clip_rect: tuple[float, float, float, float],
+                          font_id: int = FONT_ID) -> None:
+        """
+        クリッピング付きテキスト描画
+
+        テキストが clip_rect の範囲外にはみ出す部分は描画されない。
+        GPU レベルでのクリッピングなので、正確かつ高速。
+
+        Args:
+            x, y: テキスト位置（y は baseline）
+            text: 描画するテキスト
+            color: 色 (RGBA)
+            size: フォントサイズ
+            clip_rect: クリップ領域 (xmin, ymin, xmax, ymax)
+            font_id: フォント ID
+        """
+        blf.size(font_id, size)
+        blf.color(font_id, *color)
+        blf.position(font_id, x, y, 0)
+
+        # クリッピング有効化
+        blf.enable(font_id, blf.CLIPPING)
+        blf.clipping(font_id, clip_rect[0], clip_rect[1],
+                     clip_rect[2], clip_rect[3])
+
+        blf.draw(font_id, text)
+
+        blf.disable(font_id, blf.CLIPPING)
+
+    @classmethod
+    def draw_text_clipped_with_shadow(cls, x: float, y: float, text: str,
+                                       color: tuple[float, float, float, float],
+                                       size: int,
+                                       clip_rect: tuple[float, float, float, float],
+                                       shadow_color: float = 0.0,
+                                       shadow_alpha: float = 0.5,
+                                       shadow_offset: tuple[int, int] = (1, -1),
+                                       font_id: int = FONT_ID) -> None:
+        """
+        シャドウ + クリッピング付きテキスト描画
+
+        テキストシャドウとクリッピングを組み合わせて、
+        パネル内に収まる影付きテキストを描画する。
+
+        Args:
+            x, y: テキスト位置（y は baseline）
+            text: 描画するテキスト
+            color: 色 (RGBA)
+            size: フォントサイズ
+            clip_rect: クリップ領域 (xmin, ymin, xmax, ymax)
+            shadow_color: シャドウの色（0.0=黒, 1.0=白）
+            shadow_alpha: シャドウの透明度
+            shadow_offset: シャドウのオフセット (x, y)
+            font_id: フォント ID
+        """
+        blf.size(font_id, size)
+
+        # クリッピング有効化
+        blf.enable(font_id, blf.CLIPPING)
+        blf.clipping(font_id, clip_rect[0], clip_rect[1],
+                     clip_rect[2], clip_rect[3])
+
+        # シャドウ有効化
+        blf.enable(font_id, blf.SHADOW)
+        blf.shadow(font_id, 3, shadow_color, shadow_color, shadow_color, shadow_alpha)
+        blf.shadow_offset(font_id, shadow_offset[0], shadow_offset[1])
+
+        blf.color(font_id, *color)
+        blf.position(font_id, x, y, 0)
+        blf.draw(font_id, text)
+
+        # 無効化（順序は問わない）
+        blf.disable(font_id, blf.SHADOW)
+        blf.disable(font_id, blf.CLIPPING)
+
+    @classmethod
+    def calc_clip_rect(cls, x: float, y: float, width: float, height: float,
+                       padding: int = 0) -> tuple[float, float, float, float]:
+        """
+        GPULayout 座標系からクリップ矩形を計算
+
+        GPULayout では y は上端を指し、高さは下方向に伸びる。
+        blf.clipping は (xmin, ymin, xmax, ymax) を期待する。
+
+        Args:
+            x, y: 左上座標（GPULayout 座標系）
+            width, height: サイズ
+            padding: 内側のパディング（オプション）
+
+        Returns:
+            クリップ矩形 (xmin, ymin, xmax, ymax)
+        """
+        return (
+            x + padding,              # xmin
+            y - height + padding,     # ymin (GPULayout: y - height が下端)
+            x + width - padding,      # xmax
+            y - padding               # ymax (GPULayout: y が上端)
+        )
+
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # Icon Drawing - アイコン描画
