@@ -16,7 +16,7 @@ from bpy.types import Operator
 
 from . import (
     GPULayout, GPULayoutStyle, GPUTooltip, GPUDrawing, BLFDrawing, IconDrawing,
-    Alignment
+    Alignment, HitTestManager, HitRect, ButtonItem
 )
 
 
@@ -366,12 +366,224 @@ class TEST_OT_gpu_layout(Operator):
             traceback.print_exc()
 
 
-def register():
-    bpy.utils.register_class(TEST_OT_gpu_layout)
+class TEST_OT_gpu_interactive(Operator):
+    """GPULayout インタラクティブテスト"""
+    bl_idname = "test.gpu_interactive"
+    bl_label = "Test GPU Interactive"
+    bl_options = {'REGISTER'}
 
+    _handler = None
+    _timer = None
+    _hit_manager: HitTestManager = None
+    _layout: GPULayout = None
+    _click_label = None
+    _action_label = None
+    _click_count: int = 0
+    _last_action: str = ""
+    _debug_mode: bool = True
 
-def unregister():
-    bpy.utils.unregister_class(TEST_OT_gpu_layout)
+    def modal(self, context, event):
+        context.area.tag_redraw()
+
+        if event.type == 'ESC':
+            self.cancel(context)
+            return {'CANCELLED'}
+
+        # D キーでデバッグモード切り替え
+        if event.type == 'D' and event.value == 'PRESS':
+            self._debug_mode = not self._debug_mode
+            return {'RUNNING_MODAL'}
+
+        # HitTestManager でイベント処理
+        if self._hit_manager:
+            region = self._get_window_region(context)
+            self._rebuild_layout(context, region)
+
+            consumed = self._hit_manager.handle_event(event, region)
+            if consumed:
+                return {'RUNNING_MODAL'}
+
+        return {'PASS_THROUGH'}
+
+    def invoke(self, context, event):
+        if context.area.type != 'VIEW_3D':
+            self.report({'WARNING'}, "3D Viewport で実行してください")
+            return {'CANCELLED'}
+
+        # HitTestManager を初期化
+        self._hit_manager = HitTestManager()
+        self._click_count = 0
+        self._last_action = "Ready"
+        self._debug_mode = True
+        self._layout = None
+        self._click_label = None
+        self._action_label = None
+
+        # 描画ハンドラを登録
+        args = (self, context)
+        self._handler = bpy.types.SpaceView3D.draw_handler_add(
+            self.draw_callback, args, 'WINDOW', 'POST_PIXEL'
+        )
+
+        self._timer = context.window_manager.event_timer_add(0.05, window=context.window)
+        context.window_manager.modal_handler_add(self)
+
+        self.report({'INFO'}, "インタラクティブテスト開始 - ESC で終了, D でデバッグ表示切替")
+        return {'RUNNING_MODAL'}
+
+    def cancel(self, context):
+        if self._handler:
+            bpy.types.SpaceView3D.draw_handler_remove(self._handler, 'WINDOW')
+            self._handler = None
+
+        if self._timer:
+            context.window_manager.event_timer_remove(self._timer)
+            self._timer = None
+
+        self._hit_manager = None
+        self._layout = None
+        self.report({'INFO'}, "インタラクティブテスト終了")
+
+    @staticmethod
+    def _get_window_region(context):
+        region = context.region
+        if region and region.type == 'WINDOW':
+            return region
+        area = context.area
+        if area:
+            for r in area.regions:
+                if r.type == 'WINDOW':
+                    return r
+        return None
+
+    def _rebuild_layout(self, context, region=None) -> None:
+        """レイアウトを再構築"""
+        if not self._hit_manager:
+            return
+
+        region = region or self._get_window_region(context)
+        if region is None:
+            return
+
+        style = GPULayoutStyle.from_blender_theme('PANEL')
+        x = 50
+        y = region.height - 50
+        width = 300
+
+        if self._layout is None:
+            layout = GPULayout(x=x, y=y, width=width, style=style)
+            layout._draw_background = True
+            layout._draw_outline = True
+
+            layout.label(text="Interactive Test", icon='MOUSE_LMB')
+            layout.separator()
+
+            # クリックカウンター
+            layout.label(text=f"Click Count: {self._click_count}")
+            self._click_label = layout._items[-1]
+            layout.label(text=f"Last Action: {self._last_action}")
+            self._action_label = layout._items[-1]
+            layout.separator()
+
+            # ボタン 1
+            def on_click_1():
+                self._click_count += 1
+                self._last_action = "Button 1 clicked!"
+
+            layout.operator(text="Click Me!", on_click=on_click_1)
+
+            # ボタン 2
+            def on_click_2():
+                self._click_count += 1
+                self._last_action = "Button 2 clicked!"
+
+            layout.operator(text="Me Too!", on_click=on_click_2)
+
+            # ボタン 3 (disabled)
+            btn3 = layout.operator(text="Disabled Button")
+            btn3.enabled = False
+
+            layout.separator()
+            layout.label(text="Press D to toggle debug view")
+            layout.label(text="Press ESC to exit")
+
+            # レイアウト計算
+            layout.layout()
+
+            # HitRect を登録
+            for item in layout._items:
+                if isinstance(item, ButtonItem):
+                    rect = self._hit_manager.register_item(item)
+                    rect.tag = item.text
+
+            self._layout = layout
+        else:
+            self._layout.x = x
+            self._layout.y = y
+
+        if self._click_label:
+            self._click_label.text = f"Click Count: {self._click_count}"
+        if self._action_label:
+            self._action_label.text = f"Last Action: {self._last_action}"
+
+        self._layout.layout()
+        self._hit_manager.update_positions()
+
+    @staticmethod
+    def draw_callback(self, context):
+        """描画コールバック"""
+        try:
+            region = self._get_window_region(context)
+            self._rebuild_layout(context, region)
+
+            # シャドウ
+            style = self._layout.style
+            height = self._layout.calc_height()
+            if style.shadow_enabled:
+                GPUDrawing.draw_drop_shadow(
+                    self._layout.x, self._layout.y,
+                    self._layout.width, height,
+                    style.border_radius,
+                    style.shadow_color,
+                    style.shadow_offset,
+                    style.shadow_blur
+                )
+
+            # メインレイアウト描画
+            self._layout.draw()
+
+            # デバッグ表示
+            if self._debug_mode and self._hit_manager:
+                self._hit_manager.debug_draw()
+
+                # 状態表示
+                state = self._hit_manager.state
+                debug_y = self._layout.y - height - 30
+                debug_style = GPULayoutStyle.from_blender_theme('TOOLTIP')
+
+                info_lines = [
+                    f"Mouse: ({state.mouse_x:.0f}, {state.mouse_y:.0f})",
+                    f"Hovered: {self._hit_manager.hovered.tag if self._hit_manager.hovered else 'None'}",
+                    f"Pressed: {self._hit_manager.pressed.tag if self._hit_manager.pressed else 'None'}",
+                    f"HitRects: {len(self._hit_manager._rects)}",
+                ]
+
+                # 各 HitRect の座標も表示
+                for i, rect in enumerate(self._hit_manager._rects):
+                    info_lines.append(
+                        f"  [{i}] x={rect.x:.0f} y={rect.y:.0f} w={rect.width:.0f} h={rect.height:.0f}"
+                    )
+
+                for i, line in enumerate(info_lines):
+                    BLFDrawing.draw_text(
+                        60, debug_y - i * 18, line,
+                        debug_style.text_color, 11
+                    )
+
+        except Exception as e:
+            import traceback
+            print(f"Draw error: {e}")
+            traceback.print_exc()
 
 
 if __name__ == "__main__":
@@ -381,4 +593,5 @@ if __name__ == "__main__":
         pass
 
     register()
-    bpy.ops.test.gpu_layout('INVOKE_DEFAULT')
+    # bpy.ops.test.gpu_layout('INVOKE_DEFAULT')
+    bpy.ops.test.gpu_interactive('INVOKE_DEFAULT')

@@ -68,6 +68,13 @@ from .layout import GPULayout
 # Tooltip
 from .tooltip import GPUTooltip
 
+# Interactive
+from .interactive import (
+    HitRect,
+    HitTestManager,
+    InteractionState,
+)
+
 
 __all__ = [
     # Style
@@ -92,4 +99,8 @@ __all__ = [
     'GPULayout',
     # Tooltip
     'GPUTooltip',
+    # Interactive
+    'HitRect',
+    'HitTestManager',
+    'InteractionState',
 ]
