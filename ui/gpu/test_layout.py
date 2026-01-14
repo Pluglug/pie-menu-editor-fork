@@ -115,22 +115,10 @@ class TEST_OT_gpu_layout(Operator):
             panel.separator()
             panel.operator(text="Sample Button")
 
-            # レイアウト計算して高さを取得
+            # レイアウト計算と描画（影は draw() 内で自動描画）
             panel.layout()
-            panel_height = panel.calc_height()
-
-            # シャドウを先に描画（正確な高さを使用）
-            if panel_style.shadow_enabled:
-                GPUDrawing.draw_drop_shadow(
-                    col1_x, y, 300, panel_height,
-                    panel_style.scaled_border_radius(),
-                    panel_style.shadow_color,
-                    panel_style.scaled_shadow_offset(),
-                    panel_style.scaled_shadow_blur()
-                )
-
             panel.draw()
-            y -= panel_height + margin + 20
+            y -= panel.calc_height() + margin + 20
 
             # ───────────────────────────────────────────────────────────────
             # メニュースタイル（MENU）
@@ -151,21 +139,10 @@ class TEST_OT_gpu_layout(Operator):
             menu.separator(factor=0.5)
             menu.label(text="Delete", icon='X')
 
-            # レイアウト計算して高さを取得
+            # レイアウト計算と描画（影は draw() 内で自動描画）
             menu.layout()
-            menu_height = menu.calc_height()
-
-            # ドロップシャドウ（正確な高さを使用）
-            GPUDrawing.draw_drop_shadow(
-                col1_x, y, 280, menu_height,
-                menu_style.scaled_border_radius(),
-                menu_style.shadow_color,
-                menu_style.scaled_shadow_offset(),
-                menu_style.scaled_shadow_blur()
-            )
-
             menu.draw()
-            y -= menu_height + margin + 20
+            y -= menu.calc_height() + margin + 20
 
             # ───────────────────────────────────────────────────────────────
             # 選択状態のカラーデモ
@@ -289,19 +266,10 @@ class TEST_OT_gpu_layout(Operator):
                 demo.label(text=f"Style: {style_name}")
                 demo.label(text=f"roundness: {style.roundness:.2f}")
 
-                # レイアウト計算して正確な高さを取得
+                # レイアウト計算と描画（影は draw() 内で自動描画）
                 demo.layout()
-                demo_height = demo.calc_height()
-
-                # シャドウ（正確な高さを使用）
-                GPUDrawing.draw_drop_shadow(
-                    col3_x, y, 220, demo_height,
-                    style.scaled_border_radius(), style.shadow_color,
-                    style.scaled_shadow_offset(), style.scaled_shadow_blur()
-                )
-
                 demo.draw()
-                y -= demo_height + margin + 10
+                y -= demo.calc_height() + margin + 10
 
             # ───────────────────────────────────────────────────────────────
             # roundness テスト
@@ -360,17 +328,8 @@ class TEST_OT_gpu_layout(Operator):
             tip_panel.label(text=f"roundness: {tooltip_style.roundness:.2f}")
             tip_panel.label(text=f"border_radius: {tooltip_style.border_radius}")
 
+            # レイアウト計算と描画（影は draw() 内で自動描画）
             tip_panel.layout()
-            tip_height = tip_panel.calc_height()
-
-            # シャドウ
-            GPUDrawing.draw_drop_shadow(
-                col4_x, y, 260, tip_height,
-                tooltip_style.scaled_border_radius(),
-                (0.0, 0.0, 0.0, 0.4),
-                tooltip_style.scaled_shadow_offset(),
-                tooltip_style.scaled_shadow_blur()
-            )
             tip_panel.draw()
 
         except Exception as e:
