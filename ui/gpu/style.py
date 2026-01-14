@@ -93,24 +93,44 @@ class GPULayoutStyle:
     # 区切り線
     separator_color: tuple[float, float, float, float] = (0.15, 0.15, 0.15, 1.0)
 
-    # レイアウト
-    padding: int = 10
-    spacing: int = 4
-    item_height: int = 22
-    border_radius: int = 6
-    roundness: float = 0.4  # 0.0-1.0、テーマから取得
+    # ═══════════════════════════════════════════════════════════════════════════
+    # レイアウト調整用パラメータ（Blender 標準 UI 準拠）
+    # ═══════════════════════════════════════════════════════════════════════════
 
+    # パディング: パネル内側の余白（ピクセル、UI スケール前）
+    padding_x: int = 7   # 左右パディング [推奨: 4-10]
+    padding_y: int = 5   # 上下パディング [推奨: 3-8]
+
+    # スペーシング: 要素間の間隔（ピクセル、UI スケール前）
+    spacing: int = 2     # アイテム間の垂直スペース [推奨: 1-4, Blender標準≈2]
+
+    # アイテムサイズ
+    item_height: int = 20  # 各アイテムの高さ [推奨: 18-24, Blender標準≈20]
+
+    # 角丸
+    border_radius: int = 4  # パネル/ボタンの角丸 [推奨: 2-8, Blender標準≈4]
+    roundness: float = 0.4  # テーマから取得する角丸係数 [0.0-1.0]
+
+    # タイトルバー
+    title_bar_height: int = 22  # タイトルバー高さ [推奨: 20-26, Blender標準≈22]
+
+    # ═══════════════════════════════════════════════════════════════════════════
     # ドロップシャドウ（パネル/メニュー用）
-    shadow_enabled: bool = True
-    shadow_color: tuple[float, float, float, float] = (0.0, 0.0, 0.0, 0.3)
-    shadow_offset: tuple[int, int] = (4, -4)
-    shadow_blur: int = 8  # ぼかし半径
+    # ═══════════════════════════════════════════════════════════════════════════
 
+    shadow_enabled: bool = True  # シャドウ有効/無効
+    shadow_color: tuple[float, float, float, float] = (0.0, 0.0, 0.0, 0.25)  # RGBA [α: 0.1-0.4]
+    shadow_offset: tuple[int, int] = (3, -3)   # (x, y) オフセット [推奨: 2-6]
+    shadow_blur: int = 6  # ぼかし半径 [推奨: 4-12]
+
+    # ═══════════════════════════════════════════════════════════════════════════
     # テキストシャドウ
-    text_shadow_enabled: bool = True
-    text_shadow_color: float = 0.0  # 0.0 = 黒, 1.0 = 白
-    text_shadow_alpha: float = 0.5
-    text_shadow_offset: tuple[int, int] = (1, -1)
+    # ═══════════════════════════════════════════════════════════════════════════
+
+    text_shadow_enabled: bool = True  # テキストシャドウ有効/無効
+    text_shadow_color: float = 0.0    # シャドウ色 [0.0=黒, 1.0=白]
+    text_shadow_alpha: float = 0.5    # シャドウ透明度 [0.0-1.0]
+    text_shadow_offset: tuple[int, int] = (1, -1)  # (x, y) オフセット [推奨: 1-2]
 
     @classmethod
     def from_blender_theme(cls, style_name: str = 'TOOLTIP') -> GPULayoutStyle:
@@ -242,8 +262,17 @@ class GPULayoutStyle:
         """
         return bpy.context.preferences.system.ui_line_width
 
+    def scaled_padding_x(self) -> int:
+        """スケーリングされた左右パディング"""
+        return int(self.ui_scale(self.padding_x))
+
+    def scaled_padding_y(self) -> int:
+        """スケーリングされた上下パディング"""
+        return int(self.ui_scale(self.padding_y))
+
     def scaled_padding(self) -> int:
-        return int(self.ui_scale(self.padding))
+        """後方互換用（左右パディングを返す）"""
+        return self.scaled_padding_x()
 
     def scaled_spacing(self) -> int:
         return int(self.ui_scale(self.spacing))
@@ -276,7 +305,7 @@ class GPULayoutStyle:
 
     def scaled_title_bar_height(self) -> int:
         """スケーリングされたタイトルバー高さ"""
-        return int(self.ui_scale(24))  # base: 24px
+        return int(self.ui_scale(self.title_bar_height))
 
     def scaled_icon_size(self) -> int:
         """スケーリングされたアイコンサイズ"""

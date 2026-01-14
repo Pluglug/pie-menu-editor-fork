@@ -80,8 +80,8 @@ class GPULayout:
         self._children: list[GPULayout] = []
 
         # カーソル位置
-        self._cursor_x = x + self.style.scaled_padding()
-        self._cursor_y = y - self.style.scaled_padding()
+        self._cursor_x = x + self.style.scaled_padding_x()
+        self._cursor_y = y - self.style.scaled_padding_y()
 
         # 状態プロパティ（UILayout 互換）
         self.active: bool = True
@@ -361,7 +361,7 @@ class GPULayout:
 
     def _get_available_width(self) -> float:
         """利用可能な幅を取得"""
-        return self.width - self.style.scaled_padding() * 2
+        return self.width - self.style.scaled_padding_x() * 2
 
     def _get_spacing(self) -> int:
         """アイテム間のスペースを取得（align=True で 0）"""
@@ -412,11 +412,11 @@ class GPULayout:
     def calc_height(self) -> float:
         """合計高さを計算"""
         if not self._items and not self._children:
-            return self.style.scaled_padding() * 2
+            return self.style.scaled_padding_y() * 2
 
         spacing = self._get_spacing()
         if self.direction == Direction.VERTICAL:
-            height = self.style.scaled_padding() * 2
+            height = self.style.scaled_padding_y() * 2
             for item in self._items:
                 _, h = item.calc_size(self.style)
                 height += h * self.scale_y + spacing
@@ -440,7 +440,7 @@ class GPULayout:
 
         spacing = self._get_spacing()
         if self.direction == Direction.HORIZONTAL:
-            width = self.style.scaled_padding() * 2
+            width = self.style.scaled_padding_x() * 2
             for item in self._items:
                 w, _ = item.calc_size(self.style)
                 width += w * self.scale_x + spacing
@@ -707,8 +707,8 @@ class GPULayout:
         spacing = self._get_spacing()
 
         # 子レイアウトを配置
-        cursor_y = self.y - self.style.scaled_padding()
-        cursor_x = self.x + self.style.scaled_padding()
+        cursor_y = self.y - self.style.scaled_padding_y()
+        cursor_x = self.x + self.style.scaled_padding_x()
 
         # 既存アイテムの後からカーソル位置を取得
         if self._items:
@@ -740,8 +740,8 @@ class GPULayout:
 
     def _relayout_items(self) -> None:
         """アイテムの位置を再計算"""
-        cursor_x = self.x + self.style.scaled_padding()
-        cursor_y = self.y - self.style.scaled_padding()
+        cursor_x = self.x + self.style.scaled_padding_x()
+        cursor_y = self.y - self.style.scaled_padding_y()
         available_width = self._get_available_width()
         spacing = self._get_spacing()
 
@@ -879,26 +879,26 @@ class GPULayout:
 
         # タイトルテキスト
         if self._title:
-            text_x = self.x + self.style.scaled_padding()
+            text_x = self.x + self.style.scaled_padding_x()
             if IS_MAC and self._show_close_button:
                 text_x = self.x + close_btn_size + close_btn_margin * 2 + int(self.style.ui_scale(4))
             text_y = title_bar_y - title_bar_height / 2 - int(self.style.ui_scale(4))
             text_size = self.style.scaled_text_size()
 
             # 利用可能なテキスト幅を計算（パディングとクローズボタンを考慮）
-            padding = self.style.scaled_padding()
+            padding_x = self.style.scaled_padding_x()
             if self._show_close_button:
-                available_width = self.width - close_btn_size - close_btn_margin * 2 - padding * 2
+                available_width = self.width - close_btn_size - close_btn_margin * 2 - padding_x * 2
             else:
-                available_width = self.width - padding * 2
+                available_width = self.width - padding_x * 2
 
             # テキストが利用可能幅を超える場合は省略記号を追加
             display_title = BLFDrawing.get_text_with_ellipsis(self._title, available_width, text_size)
 
             # クリップ矩形を計算（タイトルバー領域内）
             clip_rect = BLFDrawing.calc_clip_rect(
-                self.x + padding, title_bar_y,
-                self.width - padding * 2, title_bar_height
+                self.x + padding_x, title_bar_y,
+                self.width - padding_x * 2, title_bar_height
             )
 
             BLFDrawing.draw_text_clipped(

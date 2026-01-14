@@ -355,9 +355,9 @@ class BoxItem(LayoutItem):
 
     def calc_size(self, style: GPULayoutStyle) -> tuple[float, float]:
         if not self.items:
-            return (self.width, style.scaled_padding() * 2)
+            return (self.width, style.scaled_padding_y() * 2)
 
-        total_height = style.scaled_padding() * 2
+        total_height = style.scaled_padding_y() * 2
         for item in self.items:
             _, h = item.calc_size(style)
             total_height += h + style.scaled_spacing()
