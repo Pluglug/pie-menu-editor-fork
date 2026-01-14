@@ -28,6 +28,7 @@ class TEST_OT_gpu_layout(Operator):
 
     _handler = None
     _timer = None
+    _target_region_pointer: int = 0  # 描画対象リージョンのポインタ
 
     def modal(self, context, event):
         context.area.tag_redraw()
@@ -45,6 +46,9 @@ class TEST_OT_gpu_layout(Operator):
         if context.area.type != 'VIEW_3D':
             self.report({'WARNING'}, "3D Viewport で実行してください")
             return {'CANCELLED'}
+
+        # 呼び出し時のリージョンを記憶（他のリージョンでは描画しない）
+        self._target_region_pointer = context.region.as_pointer()
 
         args = (self, context)
         self._handler = bpy.types.SpaceView3D.draw_handler_add(
@@ -71,6 +75,10 @@ class TEST_OT_gpu_layout(Operator):
     @staticmethod
     def draw_callback(self, context):
         """描画コールバック"""
+        # 対象リージョン以外では描画しない（マルチビューポート対応）
+        if context.region.as_pointer() != self._target_region_pointer:
+            return
+
         try:
             margin = 20
             col1_x = 50
@@ -380,6 +388,7 @@ class TEST_OT_gpu_interactive(Operator):
     _click_count: int = 0
     _last_action: str = ""
     _debug_mode: bool = True
+    _target_region_pointer: int = 0  # 描画対象リージョンのポインタ
 
     def modal(self, context, event):
         context.area.tag_redraw()
@@ -411,6 +420,9 @@ class TEST_OT_gpu_interactive(Operator):
         self._layout = None
         self._click_label = None
         self._action_label = None
+
+        # 呼び出し時のリージョンを記憶（他のリージョンでは描画しない）
+        self._target_region_pointer = context.region.as_pointer()
 
         # 描画ハンドラを登録
         args = (self, context)
@@ -509,6 +521,10 @@ class TEST_OT_gpu_interactive(Operator):
     @staticmethod
     def draw_callback(self, context):
         """描画コールバック"""
+        # 対象リージョン以外では描画しない（マルチビューポート対応）
+        if context.region.as_pointer() != self._target_region_pointer:
+            return
+
         try:
             region = self._get_window_region(context)
             self._rebuild_layout(context, region)
