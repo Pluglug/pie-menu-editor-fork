@@ -796,6 +796,16 @@ class GPULayout:
         # スケーリングされた値を取得
         border_radius = self.style.scaled_border_radius()
 
+        # ドロップシャドウ描画（背景の前に描画）
+        if self.style.shadow_enabled and self._draw_background:
+            GPUDrawing.draw_drop_shadow(
+                self.x, draw_y, self.width, total_height,
+                border_radius,
+                self.style.shadow_color,
+                self.style.scaled_shadow_offset(),
+                self.style.scaled_shadow_blur()
+            )
+
         # 背景描画（タイトルバー含む）
         if self._draw_background:
             GPUDrawing.draw_rounded_rect(

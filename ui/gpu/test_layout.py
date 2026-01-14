@@ -566,20 +566,8 @@ class TEST_OT_gpu_interactive(Operator):
             region = self._get_window_region(context)
             self._rebuild_layout(context, region)
 
-            # シャドウ
-            style = self._layout.style
-            height = self._layout.calc_height()
-            if style.shadow_enabled:
-                GPUDrawing.draw_drop_shadow(
-                    self._layout.x, self._layout.y,
-                    self._layout.width, height,
-                    style.scaled_border_radius(),
-                    style.shadow_color,
-                    style.scaled_shadow_offset(),
-                    style.scaled_shadow_blur()
-                )
-
             # メインレイアウト描画（layout() + draw()）
+            # Note: 影描画は GPULayout.draw() 内で自動的に行われる
             self._layout.update_and_draw()
 
             # デバッグ表示
@@ -589,7 +577,7 @@ class TEST_OT_gpu_interactive(Operator):
 
                 # 状態表示
                 state = hit_manager.state
-                debug_y = self._layout.y - height - 30
+                debug_y = self._layout.y - self._layout.calc_height() - 30
                 debug_style = GPULayoutStyle.from_blender_theme('TOOLTIP')
 
                 info_lines = [
