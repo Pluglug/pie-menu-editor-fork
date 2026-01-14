@@ -64,6 +64,10 @@ class HitRect:
     on_press: Optional[Callable[[], None]] = None
     on_release: Optional[Callable[[bool], None]] = None  # bool = inside
 
+    # ドラッグ
+    draggable: bool = False
+    on_drag: Optional[Callable[[float, float], None]] = None  # (delta_x, delta_y)
+
     def contains(self, px: float, py: float) -> bool:
         """点が矩形内にあるかどうか"""
         return (self.x <= px <= self.x + self.width and
@@ -113,6 +117,7 @@ class InteractionState:
     drag_start_x: float = 0
     drag_start_y: float = 0
     is_dragging: bool = False
+    dragging_rect: Optional[HitRect] = None  # ドラッグ中の HitRect
 
     def update_mouse(self, x: float, y: float) -> None:
         """マウス位置を更新"""
@@ -303,6 +308,19 @@ class HitTestManager:
 
     def _handle_mouse_move(self, x: float, y: float) -> bool:
         """マウス移動を処理"""
+        # ドラッグ中の処理
+        if self._state.is_dragging and self._state.dragging_rect:
+            dx = x - self._state.drag_start_x
+            dy = y - self._state.drag_start_y
+
+            if self._state.dragging_rect.on_drag:
+                self._state.dragging_rect.on_drag(dx, dy)
+
+            # ドラッグ開始位置を更新（累積移動のため）
+            self._state.drag_start_x = x
+            self._state.drag_start_y = y
+            return True
+
         new_hover = self.hit_test(x, y)
         old_hover = self._state.hovered
 
@@ -337,6 +355,11 @@ class HitTestManager:
         self._state.drag_start_x = x
         self._state.drag_start_y = y
 
+        # ドラッグ可能な場合はドラッグ開始
+        if hit.draggable:
+            self._state.is_dragging = True
+            self._state.dragging_rect = hit
+
         if hit.on_press:
             hit.on_press()
 
@@ -367,6 +390,7 @@ class HitTestManager:
 
         self._state.pressed = None
         self._state.is_dragging = False
+        self._state.dragging_rect = None
 
         return True
 

@@ -7,18 +7,22 @@ Blender UILayout API を模した GPU 描画レイアウトシステム。
 
 from __future__ import annotations
 
+import sys
 from typing import TYPE_CHECKING, Any, Callable, Optional
 
 from .style import GPULayoutStyle, Direction, Alignment
-from .drawing import GPUDrawing
+from .drawing import GPUDrawing, BLFDrawing
 from .items import (
     LayoutItem, LabelItem, SeparatorItem, ButtonItem, ToggleItem,
     PropDisplayItem, BoxItem
 )
-from .interactive import HitTestManager
+from .interactive import HitTestManager, HitRect
 
 if TYPE_CHECKING:
     from bpy.types import Event
+
+# プラットフォーム検出
+IS_MAC = sys.platform == 'darwin'
 
 
 class GPULayout:
@@ -91,6 +95,16 @@ class GPULayout:
         # ボックス描画フラグ
         self._draw_background: bool = False
         self._draw_outline: bool = False
+
+        # タイトルバー
+        self._show_title_bar: bool = False
+        self._title: str = ""
+        self._title_bar_height: float = 24
+        self._show_close_button: bool = False
+        self._on_close: Optional[Callable[[], None]] = None
+        self._title_bar_rect: Optional[HitRect] = None
+        self._close_button_rect: Optional[HitRect] = None
+        self._close_button_hovered: bool = False
 
         self._hit_manager: Optional[HitTestManager] = None
 
@@ -410,6 +424,122 @@ class GPULayout:
             return self.width
 
     # ─────────────────────────────────────────────────────────────────────────
+    # タイトルバー設定
+    # ─────────────────────────────────────────────────────────────────────────
+
+    def set_title_bar(self, title: str = "", show_close: bool = True,
+                      on_close: Optional[Callable[[], None]] = None) -> None:
+        """
+        タイトルバーを有効化
+
+        Args:
+            title: タイトル文字列
+            show_close: クローズボタンを表示するか
+            on_close: クローズボタンのコールバック
+        """
+        self._show_title_bar = True
+        self._title = title
+        self._show_close_button = show_close
+        self._on_close = on_close
+
+    def _get_title_bar_y(self) -> float:
+        """タイトルバーの Y 座標（上端）を取得"""
+        return self.y + self._title_bar_height
+
+    def _get_content_y(self) -> float:
+        """コンテンツ領域の Y 座標（上端）を取得"""
+        if self._show_title_bar:
+            return self.y  # タイトルバーの下
+        return self.y
+
+    def _register_title_bar(self) -> None:
+        """タイトルバーの HitRect を登録"""
+        if not self._show_title_bar:
+            return
+
+        manager = self._ensure_hit_manager()
+        title_bar_y = self._get_title_bar_y()
+
+        # クローズボタン領域を除いたタイトルバー
+        close_btn_size = 16
+        close_btn_margin = 6
+
+        if self._show_close_button:
+            if IS_MAC:
+                # Mac: 左側にクローズボタン
+                drag_x = self.x + close_btn_size + close_btn_margin * 2
+                drag_width = self.width - close_btn_size - close_btn_margin * 2
+            else:
+                # Windows/Linux: 右側にクローズボタン
+                drag_x = self.x
+                drag_width = self.width - close_btn_size - close_btn_margin * 2
+        else:
+            drag_x = self.x
+            drag_width = self.width
+
+        # タイトルバーのドラッグ領域
+        if self._title_bar_rect is None:
+            def on_drag(dx: float, dy: float):
+                self.x += dx
+                self.y += dy
+
+            self._title_bar_rect = HitRect(
+                x=drag_x,
+                y=title_bar_y,
+                width=drag_width,
+                height=self._title_bar_height,
+                tag="title_bar",
+                draggable=True,
+                on_drag=on_drag,
+                z_index=100  # 他の要素より優先
+            )
+            manager.register(self._title_bar_rect)
+        else:
+            # 位置を更新
+            self._title_bar_rect.x = drag_x
+            self._title_bar_rect.y = title_bar_y
+            self._title_bar_rect.width = drag_width
+
+        # クローズボタン
+        if self._show_close_button and self._close_button_rect is None:
+            if IS_MAC:
+                close_x = self.x + close_btn_margin
+            else:
+                close_x = self.x + self.width - close_btn_size - close_btn_margin
+
+            close_y = title_bar_y - (self._title_bar_height - close_btn_size) / 2
+
+            def on_close_hover_enter():
+                self._close_button_hovered = True
+
+            def on_close_hover_leave():
+                self._close_button_hovered = False
+
+            def on_close_click():
+                if self._on_close:
+                    self._on_close()
+
+            self._close_button_rect = HitRect(
+                x=close_x,
+                y=close_y,
+                width=close_btn_size,
+                height=close_btn_size,
+                tag="close_button",
+                on_hover_enter=on_close_hover_enter,
+                on_hover_leave=on_close_hover_leave,
+                on_click=on_close_click,
+                z_index=101  # タイトルバーより優先
+            )
+            manager.register(self._close_button_rect)
+        elif self._close_button_rect is not None:
+            # 位置を更新
+            if IS_MAC:
+                self._close_button_rect.x = self.x + close_btn_margin
+            else:
+                self._close_button_rect.x = self.x + self.width - close_btn_size - close_btn_margin
+            self._close_button_rect.y = title_bar_y - (self._title_bar_height - close_btn_size) / 2
+
+    # ─────────────────────────────────────────────────────────────────────────
     # レイアウト計算
     # ─────────────────────────────────────────────────────────────────────────
 
@@ -442,6 +572,9 @@ class GPULayout:
                 cursor_y -= child.calc_height() + spacing
             else:
                 cursor_x += child.calc_width() + spacing
+
+        # タイトルバーの HitRect を登録（handle_event で呼ばれた場合も対応）
+        self._register_title_bar()
 
         if self._hit_manager:
             self._hit_manager.update_positions()
@@ -489,21 +622,35 @@ class GPULayout:
         """GPU 描画を実行"""
         # レイアウト計算
         self.layout()
-        height = self.calc_height()
 
-        # 背景描画
+        # タイトルバーの HitRect 登録/更新
+        self._register_title_bar()
+
+        content_height = self.calc_height()
+        total_height = content_height
+        if self._show_title_bar:
+            total_height += self._title_bar_height
+
+        # 描画の基準 Y 座標
+        draw_y = self._get_title_bar_y() if self._show_title_bar else self.y
+
+        # 背景描画（タイトルバー含む）
         if self._draw_background:
             GPUDrawing.draw_rounded_rect(
-                self.x, self.y, self.width, height,
+                self.x, draw_y, self.width, total_height,
                 self.style.border_radius, self.style.bg_color
             )
 
         # アウトライン描画
         if self._draw_outline:
             GPUDrawing.draw_rounded_rect_outline(
-                self.x, self.y, self.width, height,
+                self.x, draw_y, self.width, total_height,
                 self.style.border_radius, self.style.outline_color
             )
+
+        # タイトルバー描画
+        if self._show_title_bar:
+            self._draw_title_bar()
 
         # アイテム描画
         for item in self._items:
@@ -512,6 +659,57 @@ class GPULayout:
         # 子レイアウト描画
         for child in self._children:
             child.draw()
+
+    def _draw_title_bar(self) -> None:
+        """タイトルバーを描画"""
+        title_bar_y = self._get_title_bar_y()
+        close_btn_size = 16
+        close_btn_margin = 6
+
+        # タイトルバー背景（少し暗め）
+        title_bg = tuple(c * 0.8 for c in self.style.bg_color[:3]) + (self.style.bg_color[3],)
+        # corners: (bottomLeft, topLeft, topRight, bottomRight)
+        # タイトルバーは上の角だけ丸める
+        GPUDrawing.draw_rounded_rect(
+            self.x, title_bar_y, self.width, self._title_bar_height,
+            self.style.border_radius, title_bg,
+            corners=(False, True, True, False)
+        )
+
+        # タイトルバー下部の境界線
+        line_y = title_bar_y - self._title_bar_height
+        GPUDrawing.draw_line(
+            self.x + 1, line_y,
+            self.x + self.width - 1, line_y,
+            self.style.outline_color, 1.0
+        )
+
+        # タイトルテキスト
+        if self._title:
+            text_x = self.x + self.style.scaled_padding()
+            if IS_MAC and self._show_close_button:
+                text_x = self.x + close_btn_size + close_btn_margin * 2 + 4
+            text_y = title_bar_y - self._title_bar_height / 2 - 4
+            BLFDrawing.draw_text(
+                text_x, text_y, self._title,
+                self.style.text_color, self.style.text_size
+            )
+
+        # クローズボタン
+        if self._show_close_button:
+            if IS_MAC:
+                btn_x = self.x + close_btn_margin + close_btn_size / 2
+            else:
+                btn_x = self.x + self.width - close_btn_margin - close_btn_size / 2
+            btn_y = title_bar_y - self._title_bar_height / 2
+
+            # ホバー時は明るく
+            if self._close_button_hovered:
+                btn_color = (0.9, 0.3, 0.3, 1.0)  # 明るい赤
+            else:
+                btn_color = (0.7, 0.25, 0.25, 1.0)  # 暗めの赤
+
+            GPUDrawing.draw_circle(btn_x, btn_y, close_btn_size / 2, btn_color)
 
     # ─────────────────────────────────────────────────────────────────────────
     # イベント処理

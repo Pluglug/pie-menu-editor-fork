@@ -389,11 +389,15 @@ class TEST_OT_gpu_interactive(Operator):
     _last_action: str = ""
     _debug_mode: bool = True
     _target_region_pointer: int = 0  # 描画対象リージョンのポインタ
+    _should_close: bool = False  # クローズボタンで閉じるフラグ
+    _panel_x: float | None = None
+    _panel_y: float | None = None
 
     def modal(self, context, event):
         context.area.tag_redraw()
 
-        if event.type == 'ESC':
+        # クローズボタンまたは ESC で終了
+        if self._should_close or event.type == 'ESC':
             self.cancel(context)
             return {'CANCELLED'}
 
@@ -404,8 +408,12 @@ class TEST_OT_gpu_interactive(Operator):
 
         region = self._get_window_region(context)
         self._rebuild_layout(context, region)
-        if self._layout and self._layout.handle_event(event, region):
-            return {'RUNNING_MODAL'}
+        if self._layout:
+            handled = self._layout.handle_event(event, region)
+            self._panel_x = self._layout.x
+            self._panel_y = self._layout.y
+            if handled:
+                return {'RUNNING_MODAL'}
 
         return {'PASS_THROUGH'}
 
@@ -417,9 +425,12 @@ class TEST_OT_gpu_interactive(Operator):
         self._click_count = 0
         self._last_action = "Ready"
         self._debug_mode = True
+        self._should_close = False
         self._layout = None
         self._click_label = None
         self._action_label = None
+        self._panel_x = None
+        self._panel_y = None
 
         # 呼び出し時のリージョンを記憶（他のリージョンでは描画しない）
         self._target_region_pointer = context.region.as_pointer()
@@ -471,12 +482,27 @@ class TEST_OT_gpu_interactive(Operator):
         y = region.height - 50
         width = 300
 
+        if self._panel_x is None:
+            self._panel_x = x
+        if self._panel_y is None:
+            self._panel_y = y
+
         if self._layout is None:
-            layout = GPULayout(x=x, y=y, width=width, style=style)
+            layout = GPULayout(x=self._panel_x, y=self._panel_y, width=width, style=style)
             layout._draw_background = True
             layout._draw_outline = True
 
-            layout.label(text="Interactive Test", icon='MOUSE_LMB')
+            # タイトルバーとクローズボタンを有効化
+            # Note: on_close はフラグを立てるだけ。実際の cancel は modal() で処理
+            def request_close():
+                self._should_close = True
+
+            layout.set_title_bar(
+                title="Interactive Test",
+                show_close=True,
+                on_close=request_close
+            )
+
             layout.separator()
 
             # クリックカウンター
@@ -510,8 +536,8 @@ class TEST_OT_gpu_interactive(Operator):
 
             self._layout = layout
         else:
-            self._layout.x = x
-            self._layout.y = y
+            self._layout.x = self._panel_x
+            self._layout.y = self._panel_y
 
         if self._click_label:
             self._click_label.text = f"Click Count: {self._click_count}"
