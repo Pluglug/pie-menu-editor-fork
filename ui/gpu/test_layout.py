@@ -16,7 +16,7 @@ from bpy.types import Operator
 
 from . import (
     GPULayout, GPULayoutStyle, GPUTooltip, GPUDrawing, BLFDrawing, IconDrawing,
-    Alignment
+    Alignment, GPUPanelManager
 )
 
 
@@ -344,15 +344,17 @@ class TEST_OT_gpu_interactive(Operator):
     bl_label = "Test GPU Interactive"
     bl_options = {'REGISTER'}
 
-    _handler = None
-    _timer = None
+    # パネルの uid（重複チェックに使用）
+    PANEL_UID = "test_interactive_panel"
+
+    # インスタンス変数（オペレーター実行ごとに初期化）
+    _manager: GPUPanelManager = None
     _layout: GPULayout = None
     _click_label = None
     _action_label = None
     _click_count: int = 0
     _last_action: str = ""
     _debug_mode: bool = True
-    _target_region_pointer: int = 0  # 描画対象リージョンのポインタ
     _should_close: bool = False  # クローズボタンで閉じるフラグ
     _panel_x: float | None = None
     _panel_y: float | None = None
@@ -372,10 +374,13 @@ class TEST_OT_gpu_interactive(Operator):
 
         region = self._get_window_region(context)
         self._rebuild_layout(context, region)
-        if self._layout:
-            handled = self._layout.handle_event(event, region)
-            self._panel_x = self._layout.x
-            self._panel_y = self._layout.y
+
+        # イベント処理は manager 経由
+        if self._manager:
+            handled = self._manager.handle_event(event, context)
+            if self._layout:
+                self._panel_x = self._layout.x
+                self._panel_y = self._layout.y
             if handled:
                 return {'RUNNING_MODAL'}
 
@@ -386,39 +391,47 @@ class TEST_OT_gpu_interactive(Operator):
             self.report({'WARNING'}, "3D Viewport で実行してください")
             return {'CANCELLED'}
 
+        # 重複チェック: 同じパネルが既に開いていれば何もしない
+        if GPUPanelManager.is_active(self.PANEL_UID):
+            self.report({'INFO'}, "パネルは既に開いています")
+            return {'CANCELLED'}
+
+        # インスタンス変数の初期化
         self._click_count = 0
         self._last_action = "Ready"
         self._debug_mode = True
         self._should_close = False
         self._layout = None
+        self._manager = None
         self._click_label = None
         self._action_label = None
         self._panel_x = None
         self._panel_y = None
 
-        # 呼び出し時のリージョンを記憶（他のリージョンでは描画しない）
-        self._target_region_pointer = context.region.as_pointer()
+        # レイアウトを事前構築
+        region = self._get_window_region(context)
+        self._rebuild_layout(context, region)
 
-        # 描画ハンドラを登録
-        args = (self, context)
-        self._handler = bpy.types.SpaceView3D.draw_handler_add(
-            self.draw_callback, args, 'WINDOW', 'POST_PIXEL'
-        )
+        if self._layout is None:
+            self.report({'ERROR'}, "レイアウトの作成に失敗しました")
+            return {'CANCELLED'}
 
-        self._timer = context.window_manager.event_timer_add(0.05, window=context.window)
+        # GPUPanelManager を作成してパネルを開く
+        self._manager = GPUPanelManager(self.PANEL_UID, self._layout)
+
+        if not self._manager.open(context, self.draw_callback, 'VIEW_3D', timer_interval=0.05):
+            self.report({'ERROR'}, "パネルを開けませんでした")
+            return {'CANCELLED'}
+
         context.window_manager.modal_handler_add(self)
-
         self.report({'INFO'}, "インタラクティブテスト開始 - ESC で終了, D でデバッグ表示切替")
         return {'RUNNING_MODAL'}
 
     def cancel(self, context):
-        if self._handler:
-            bpy.types.SpaceView3D.draw_handler_remove(self._handler, 'WINDOW')
-            self._handler = None
-
-        if self._timer:
-            context.window_manager.event_timer_remove(self._timer)
-            self._timer = None
+        # GPUPanelManager がハンドラとタイマーをクリーンアップ
+        if self._manager:
+            self._manager.close(context)
+            self._manager = None
 
         self._layout = None
         self.report({'INFO'}, "インタラクティブテスト終了")
@@ -469,7 +482,7 @@ class TEST_OT_gpu_interactive(Operator):
 
             # リサイズと位置の永続化を有効化
             layout.set_panel_config(
-                uid="test_interactive_panel",
+                uid=self.PANEL_UID,
                 resizable=True
             )
 
@@ -523,23 +536,25 @@ class TEST_OT_gpu_interactive(Operator):
         if self._action_label:
             self._action_label.text = f"Last Action: {self._last_action}"
 
-    @staticmethod
-    def draw_callback(self, context):
-        """描画コールバック"""
+    def draw_callback(self, manager: GPUPanelManager, context):
+        """描画コールバック（GPUPanelManager から呼び出される）"""
         # 対象リージョン以外では描画しない（マルチビューポート対応）
-        if context.region.as_pointer() != self._target_region_pointer:
+        if not manager.should_draw(context):
             return
 
         try:
             region = self._get_window_region(context)
             self._rebuild_layout(context, region)
 
+            if self._layout is None:
+                return
+
             # メインレイアウト描画（layout() + draw()）
             # Note: 影描画は GPULayout.draw() 内で自動的に行われる
             self._layout.update_and_draw()
 
             # デバッグ表示
-            if self._debug_mode and self._layout and self._layout.hit_manager:
+            if self._debug_mode and self._layout.hit_manager:
                 hit_manager = self._layout.hit_manager
                 hit_manager.debug_draw()
 

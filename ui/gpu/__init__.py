@@ -79,6 +79,12 @@ from .interactive import (
     ItemRenderState,
 )
 
+# Panel Manager
+from .panel_manager import (
+    GPUPanelManager,
+    PanelState,
+)
+
 
 __all__ = [
     # Style
@@ -111,4 +117,7 @@ __all__ = [
     'InteractionState',
     'UIState',
     'ItemRenderState',
+    # Panel Manager
+    'GPUPanelManager',
+    'PanelState',
 ]

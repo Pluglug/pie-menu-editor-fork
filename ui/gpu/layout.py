@@ -486,6 +486,10 @@ class GPULayout:
             uid: 永続化用の一意識別子（pm.uid）
             resizable: 右下コーナーでリサイズ可能にする
             min_width: 最小幅の制約
+
+        Note:
+            重複起動防止は GPUPanelManager が担当します。
+            このメソッドは位置・サイズの永続化とリサイズ機能のみを設定します。
         """
         self._panel_uid = uid
         self._show_resize_handle = resizable
