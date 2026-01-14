@@ -158,7 +158,7 @@ class SeparatorItem(LayoutItem):
         GPUDrawing.draw_line(
             self.x, y,
             self.x + self.width, y,
-            style.separator_color, 1.0
+            style.separator_color, 1.0  # セパレーターは固定太さ
         )
 
 

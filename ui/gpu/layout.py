@@ -869,12 +869,22 @@ class GPULayout:
             corners=(False, True, True, False)
         )
 
-        # タイトルバー下部の境界線
+        # タイトルバーのアウトライン（上と左右、パネルアウトラインと同じ太さ）
+        # タイトルバー背景がパネルのアウトラインを上書きするため再描画
+        GPUDrawing.draw_rounded_rect_outline(
+            self.x, title_bar_y, self.width, title_bar_height,
+            border_radius, self.style.outline_color,
+            corners=(False, True, True, False)
+        )
+
+        # タイトルバー下部の境界線（パネルアウトラインと同じ太さ）
         line_y = title_bar_y - title_bar_height
-        GPUDrawing.draw_line(
-            self.x + 1, line_y,
-            self.x + self.width - 1, line_y,
-            self.style.outline_color, 1.0
+        line_width = self.style.line_width()
+        # 矩形として描画（ストローク方式のアウトラインと見た目を統一）
+        GPUDrawing.draw_rect(
+            self.x + 1, line_y + line_width / 2,
+            self.width - 2, line_width,
+            self.style.outline_color
         )
 
         # タイトルテキスト
