@@ -1375,6 +1375,8 @@ class WM_OT_pme_user_pie_menu_call(Operator):
 
         layout = menu.layout.menu_pie()
         # CTU.keep_pie_open(layout)
+        # Debug-only: pie menus bypass draw_pme_layout; expose root for PME1 parity checks.
+        pme.context.root_layout = layout
 
         lh.lt(layout, operator_context='INVOKE_DEFAULT')
 

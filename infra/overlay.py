@@ -455,14 +455,14 @@ class OverlayPrefs(PropertyGroup):
         name="Offset X",
         description="Offset from area edges",
         subtype='PIXEL',
-        default=10,
+        default=100,
         min=0,
     )
     offset_y: IntProperty(
         name="Offset Y",
         description="Offset from area edges",
         subtype='PIXEL',
-        default=10,
+        default=100,
         min=0,
     )
     shadow: BoolProperty(
