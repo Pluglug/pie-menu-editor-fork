@@ -626,6 +626,36 @@ class GPULayout:
             return self.y  # タイトルバーの下
         return self.y
 
+    def contains_point(self, x: float, y: float) -> bool:
+        """
+        指定した点がパネル境界内（タイトルバー含む）にあるかどうか
+
+        Args:
+            x: X 座標（リージョン座標系）
+            y: Y 座標（リージョン座標系）
+
+        Returns:
+            境界内なら True
+
+        Note:
+            リサイズハンドルやドロップシャドウ領域は含みません。
+            タイトルバーがある場合はタイトルバーも含みます。
+        """
+        # 上端: タイトルバーがあればその上端、なければコンテンツ上端
+        if self._show_title_bar:
+            top_y = self._get_title_bar_y()
+            total_height = self.calc_height() + self._get_title_bar_height()
+        else:
+            top_y = self.y
+            total_height = self.calc_height()
+
+        # 下端
+        bottom_y = top_y - total_height
+
+        # 境界判定
+        return (self.x <= x <= self.x + self.width and
+                bottom_y <= y <= top_y)
+
     def _register_title_bar(self) -> None:
         """タイトルバーの HitRect を登録"""
         if not self._show_title_bar:

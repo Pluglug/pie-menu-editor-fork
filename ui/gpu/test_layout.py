@@ -359,6 +359,12 @@ class TEST_OT_gpu_interactive(Operator):
     _panel_x: float | None = None
     _panel_y: float | None = None
 
+    # パネル内で消費すべきマウスイベント
+    _CONSUME_EVENTS = {
+        'LEFTMOUSE', 'RIGHTMOUSE', 'MIDDLEMOUSE',
+        'WHEELUPMOUSE', 'WHEELDOWNMOUSE',
+    }
+
     def modal(self, context, event):
         context.area.tag_redraw()
 
@@ -383,6 +389,11 @@ class TEST_OT_gpu_interactive(Operator):
                 self._panel_y = self._layout.y
             if handled:
                 return {'RUNNING_MODAL'}
+
+            # パネル内でのマウスイベントは消費（View3D への貫通を防止）
+            if event.type in self._CONSUME_EVENTS:
+                if self._manager.contains_point(event.mouse_region_x, event.mouse_region_y):
+                    return {'RUNNING_MODAL'}
 
         return {'PASS_THROUGH'}
 

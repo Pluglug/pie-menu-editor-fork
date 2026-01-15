@@ -325,6 +325,25 @@ class GPUPanelManager:
 
         return layout.handle_event(event, region)
 
+    def contains_point(self, x: float, y: float) -> bool:
+        """
+        指定した点がパネル境界内にあるかどうか
+
+        Args:
+            x: X 座標（リージョン座標系）
+            y: Y 座標（リージョン座標系）
+
+        Returns:
+            パネル境界内なら True
+
+        Note:
+            パネルが開いていない、または layout が GC されている場合は False
+        """
+        layout = self.layout
+        if layout is None:
+            return False
+        return layout.contains_point(x, y)
+
     # ─────────────────────────────────────────────────────────────────────────
     # プライベートメソッド
     # ─────────────────────────────────────────────────────────────────────────
