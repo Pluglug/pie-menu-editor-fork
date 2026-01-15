@@ -99,12 +99,12 @@ class HitRect:
     on_hover_enter: Optional[Callable[[], None]] = None
     on_hover_leave: Optional[Callable[[], None]] = None
     on_click: Optional[Callable[[], None]] = None
-    on_press: Optional[Callable[[], None]] = None
+    on_press: Optional[Callable[[float, float], None]] = None  # (mouse_x, mouse_y)
     on_release: Optional[Callable[[bool], None]] = None  # bool = inside
 
     # ドラッグ
     draggable: bool = False
-    on_drag: Optional[Callable[[float, float], None]] = None  # (delta_x, delta_y)
+    on_drag: Optional[Callable[[float, float, float, float], None]] = None  # (dx, dy, abs_x, abs_y)
 
     def contains(self, px: float, py: float) -> bool:
         """点が矩形内にあるかどうか"""
@@ -413,7 +413,7 @@ class HitTestManager:
             dy = y - self._state.drag_start_y
 
             if self._state.dragging_rect.on_drag:
-                self._state.dragging_rect.on_drag(dx, dy)
+                self._state.dragging_rect.on_drag(dx, dy, x, y)
 
             # ドラッグ開始位置を更新（累積移動のため）
             self._state.drag_start_x = x
@@ -455,7 +455,7 @@ class HitTestManager:
             self._ui_state.dragging_id = hit.item_id if hit.item_id else None
 
         if hit.on_press:
-            hit.on_press()
+            hit.on_press(x, y)
 
         return True
 

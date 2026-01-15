@@ -18,6 +18,7 @@ from . import (
     GPULayout, GPULayoutStyle, GPUTooltip, GPUDrawing, BLFDrawing, IconDrawing,
     Alignment, GPUPanelManager
 )
+from .items import SliderItem
 
 
 class TEST_OT_gpu_layout(Operator):
@@ -358,6 +359,10 @@ class TEST_OT_gpu_interactive(Operator):
     _should_close: bool = False  # クローズボタンで閉じるフラグ
     _panel_x: float | None = None
     _panel_y: float | None = None
+    # スライダーデモ用
+    _slider_value: float = 0.5
+    _slider_label = None
+    _slider_item: SliderItem = None
 
     # パネル内で消費すべきマウスイベント
     _CONSUME_EVENTS = {
@@ -418,6 +423,9 @@ class TEST_OT_gpu_interactive(Operator):
         self._action_label = None
         self._panel_x = None
         self._panel_y = None
+        self._slider_value = 0.5
+        self._slider_label = None
+        self._slider_item = None
 
         # レイアウトを事前構築
         region = self._get_window_region(context)
@@ -528,6 +536,39 @@ class TEST_OT_gpu_interactive(Operator):
             btn3.enabled = False
 
             layout.separator()
+
+            # スライダーセクション
+            layout.label(text="Slider Demo (wcol_numslider)")
+
+            # スライダー値の表示
+            layout.label(text=f"Value: {self._slider_value:.2f}")
+            self._slider_label = layout._items[-1]
+
+            # スライダーコールバック
+            def on_slider_change(value: float):
+                self._slider_value = value
+                self._last_action = f"Slider: {value:.2f}"
+
+            # スライダー追加
+            self._slider_item = layout.slider(
+                value=self._slider_value,
+                min_val=0.0,
+                max_val=1.0,
+                precision=2,
+                text="Opacity",
+                on_change=on_slider_change
+            )
+
+            # 2つ目のスライダー（範囲指定）
+            layout.slider(
+                value=50,
+                min_val=0,
+                max_val=100,
+                precision=0,
+                text="Size"
+            )
+
+            layout.separator()
             layout.label(text="Press D to toggle debug view")
             layout.label(text="Press ESC to exit")
 
@@ -546,6 +587,8 @@ class TEST_OT_gpu_interactive(Operator):
             self._click_label.text = f"Click Count: {self._click_count}"
         if self._action_label:
             self._action_label.text = f"Last Action: {self._last_action}"
+        if self._slider_label:
+            self._slider_label.text = f"Value: {self._slider_value:.2f}"
 
     def draw_callback(self, manager: GPUPanelManager, context):
         """描画コールバック（GPUPanelManager から呼び出される）"""

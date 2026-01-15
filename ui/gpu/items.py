@@ -10,7 +10,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any, Callable, Optional
 
-from .style import GPULayoutStyle, Alignment
+from .style import GPULayoutStyle, Alignment, WidgetType
 from .drawing import GPUDrawing, BLFDrawing, IconDrawing
 
 if TYPE_CHECKING:
@@ -430,3 +430,197 @@ class BoxItem(LayoutItem):
             if item.handle_event(event, mouse_x, mouse_y):
                 return True
         return False
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# Widget Items - ウィジェット（テーマカラー対応）
+# ═══════════════════════════════════════════════════════════════════════════════
+
+@dataclass
+class SliderItem(LayoutItem):
+    """
+    スライダー（wcol_numslider テーマ対応）
+
+    数値の範囲選択に使用。ドラッグで値を変更。
+
+    Attributes:
+        value: 現在値
+        min_val: 最小値
+        max_val: 最大値
+        precision: 表示精度（小数点以下の桁数）
+        text: ラベルテキスト（空の場合は値のみ表示）
+        on_change: 値変更時のコールバック
+    """
+    value: float = 0.0
+    min_val: float = 0.0
+    max_val: float = 1.0
+    precision: int = 2
+    text: str = ""
+    on_change: Optional[Callable[[float], None]] = None
+
+    # 状態（layout 側から設定される）
+    _hovered: bool = field(default=False, repr=False)
+    _dragging: bool = field(default=False, repr=False)
+
+    def calc_size(self, style: GPULayoutStyle) -> tuple[float, float]:
+        """スライダーのサイズを計算"""
+        text_size = style.scaled_text_size()
+        display_text = self._get_display_text()
+        text_w, _ = BLFDrawing.get_text_dimensions(display_text, text_size)
+        padding = style.scaled_padding()
+        # 最小幅を確保（テキスト + パディング、または 100px）
+        min_width = max(text_w + padding * 4, style.ui_scale(100))
+        return (max(self.width, min_width), style.scaled_item_height())
+
+    def _get_display_text(self) -> str:
+        """表示用テキストを生成"""
+        value_str = f"{self.value:.{self.precision}f}"
+        if self.text:
+            return f"{self.text}: {value_str}"
+        return value_str
+
+    def _get_normalized_value(self) -> float:
+        """値を 0.0〜1.0 の範囲に正規化（クランプ付き）"""
+        if self.max_val == self.min_val:
+            return 0.0
+        normalized = (self.value - self.min_val) / (self.max_val - self.min_val)
+        return max(0.0, min(1.0, normalized))  # 範囲外の値をクランプ
+
+    def set_value_from_position(self, x: float) -> None:
+        """X 座標から値を設定（ドラッグ時に使用）"""
+        # 幅が 0 以下の場合は安全にスキップ
+        if self.width <= 0:
+            return
+        # 相対位置を計算
+        rel_x = (x - self.x) / self.width
+        rel_x = max(0.0, min(1.0, rel_x))
+        # 値に変換
+        new_value = self.min_val + rel_x * (self.max_val - self.min_val)
+        if new_value != self.value:
+            self.value = new_value
+            if self.on_change:
+                self.on_change(new_value)
+
+    def draw(self, style: GPULayoutStyle, state: Optional[ItemRenderState] = None) -> None:
+        """スライダーを描画（wcol_numslider テーマ使用）"""
+        if not self.visible:
+            return
+
+        # テーマカラーを取得
+        wcol = style.get_widget_colors(WidgetType.SLIDER)
+        if wcol is None:
+            # フォールバック: 通常のボタンスタイルで描画
+            self._draw_fallback(style, state)
+            return
+
+        # 状態の判定
+        hovered = state.hovered if state else self._hovered
+        dragging = state.pressed if state else self._dragging
+        enabled = state.enabled if state else self.enabled
+
+        # 角丸半径を計算（roundness を適用）
+        base_radius = style.scaled_border_radius()
+        radius = int(base_radius * wcol.roundness) if wcol.roundness < 1.0 else base_radius
+
+        # === 1. 背景描画 ===
+        if dragging:
+            bg_color = wcol.inner_sel
+        elif hovered:
+            # ホバー時は inner を少し明るく
+            bg_color = tuple(min(1.0, c * 1.15) for c in wcol.inner[:3]) + (wcol.inner[3],)
+        else:
+            bg_color = wcol.inner
+
+        if not enabled:
+            bg_color = tuple(c * 0.5 for c in bg_color[:3]) + (bg_color[3],)
+
+        GPUDrawing.draw_rounded_rect(
+            self.x, self.y, self.width, self.height,
+            radius, bg_color
+        )
+
+        # === 2. 値バー描画（item カラー） ===
+        normalized = self._get_normalized_value()
+        if normalized > 0.001:  # 0% に近い場合はスキップ
+            bar_width = self.width * normalized
+            # 値バーも同じ角丸だが、右端は値に応じて調整
+            # 左端のみ角丸、右端は直角（値バーが背景より短い場合）
+            if normalized >= 0.99:
+                # 100% に近い場合は完全な角丸
+                bar_radius = radius
+            else:
+                # それ以外は左端のみ角丸
+                bar_radius = radius
+
+            item_color = wcol.item if enabled else tuple(c * 0.5 for c in wcol.item[:3]) + (wcol.item[3],)
+            GPUDrawing.draw_rounded_rect(
+                self.x, self.y, bar_width, self.height,
+                bar_radius, item_color
+            )
+
+        # === 3. アウトライン描画 ===
+        # ドラッグ中は outline_sel を使用
+        base_outline = wcol.outline_sel if dragging else wcol.outline
+        outline_color = base_outline if enabled else tuple(c * 0.5 for c in base_outline[:3]) + (base_outline[3],)
+        GPUDrawing.draw_rounded_rect_outline(
+            self.x, self.y, self.width, self.height,
+            radius, outline_color,
+            line_width=style.line_width()
+        )
+
+        # === 4. テキスト描画 ===
+        text_color = wcol.text_sel if dragging else wcol.text
+        if not enabled:
+            text_color = tuple(c * 0.5 for c in text_color[:3]) + (text_color[3],)
+
+        display_text = self._get_display_text()
+        text_size = style.scaled_text_size()
+        text_w, text_h = BLFDrawing.get_text_dimensions(display_text, text_size)
+
+        # 中央揃え
+        text_x = self.x + (self.width - text_w) / 2
+        text_y = self.y - (self.height + text_h) / 2
+
+        clip_rect = self.get_clip_rect()
+        BLFDrawing.draw_text_clipped(text_x, text_y, display_text, text_color, text_size, clip_rect)
+
+    def _draw_fallback(self, style: GPULayoutStyle, state: Optional[ItemRenderState] = None) -> None:
+        """テーマがない場合のフォールバック描画"""
+        hovered = state.hovered if state else self._hovered
+        dragging = state.pressed if state else self._dragging
+        enabled = state.enabled if state else self.enabled
+
+        radius = style.scaled_border_radius()
+
+        # 背景
+        bg_color = style.button_press_color if dragging else (
+            style.button_hover_color if hovered else style.button_color
+        )
+        if not enabled:
+            bg_color = tuple(c * 0.5 for c in bg_color[:3]) + (bg_color[3],)
+
+        GPUDrawing.draw_rounded_rect(self.x, self.y, self.width, self.height, radius, bg_color)
+
+        # 値バー
+        normalized = self._get_normalized_value()
+        if normalized > 0.001:
+            bar_width = self.width * normalized
+            bar_color = style.highlight_color if enabled else tuple(c * 0.5 for c in style.highlight_color[:3]) + (style.highlight_color[3],)
+            GPUDrawing.draw_rounded_rect(self.x, self.y, bar_width, self.height, radius, bar_color)
+
+        # アウトライン
+        GPUDrawing.draw_rounded_rect_outline(
+            self.x, self.y, self.width, self.height,
+            radius, style.outline_color,
+            line_width=style.line_width()
+        )
+
+        # テキスト
+        text_color = style.button_text_color if enabled else style.text_color_disabled
+        display_text = self._get_display_text()
+        text_size = style.scaled_text_size()
+        text_w, text_h = BLFDrawing.get_text_dimensions(display_text, text_size)
+        text_x = self.x + (self.width - text_w) / 2
+        text_y = self.y - (self.height + text_h) / 2
+        clip_rect = self.get_clip_rect()
+        BLFDrawing.draw_text_clipped(text_x, text_y, display_text, text_color, text_size, clip_rect)

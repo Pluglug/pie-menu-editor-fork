@@ -15,7 +15,7 @@ from .style import GPULayoutStyle, Direction, Alignment
 from .drawing import GPUDrawing, BLFDrawing
 from .items import (
     LayoutItem, LabelItem, SeparatorItem, ButtonItem, ToggleItem,
-    PropDisplayItem, BoxItem
+    PropDisplayItem, BoxItem, SliderItem
 )
 from .interactive import HitTestManager, HitRect
 
@@ -290,6 +290,44 @@ class GPULayout:
             text=text or operator,
             icon=icon,
             on_click=on_click,
+            enabled=self.enabled and self.active
+        )
+        self._add_item(item)
+        return item
+
+    def slider(self, *, value: float = 0.0, min_val: float = 0.0, max_val: float = 1.0,
+               precision: int = 2, text: str = "",
+               on_change: Optional[Callable[[float], None]] = None) -> SliderItem:
+        """
+        スライダーを追加
+
+        Args:
+            value: 初期値
+            min_val: 最小値
+            max_val: 最大値
+            precision: 表示精度（小数点以下の桁数）
+            text: ラベルテキスト（空の場合は値のみ表示）
+            on_change: 値変更時のコールバック
+
+        Returns:
+            作成された SliderItem（外部から値を取得/設定可能）
+
+        使用例:
+            # 基本的な使い方
+            layout.slider(value=0.5, text="Opacity")
+
+            # コールバック付き
+            def on_value_change(value):
+                print(f"Value: {value}")
+            layout.slider(value=50, min_val=0, max_val=100, text="Size", on_change=on_value_change)
+        """
+        item = SliderItem(
+            value=value,
+            min_val=min_val,
+            max_val=max_val,
+            precision=precision,
+            text=text,
+            on_change=on_change,
             enabled=self.enabled and self.active
         )
         self._add_item(item)
@@ -684,7 +722,7 @@ class GPULayout:
 
         # タイトルバーのドラッグ領域
         if self._title_bar_rect is None:
-            def on_drag(dx: float, dy: float):
+            def on_drag(dx: float, dy: float, abs_x: float, abs_y: float):
                 self.x += dx
                 self.y += dy
                 self._save_panel_state()
@@ -777,7 +815,7 @@ class GPULayout:
         handle_y = base_y - total_height + handle_size + margin
 
         if self._resize_handle_rect is None:
-            def on_resize_drag(dx: float, dy: float):
+            def on_resize_drag(dx: float, dy: float, abs_x: float, abs_y: float):
                 new_width = self.width + dx
                 self.width = max(new_width, self._min_width)
                 self._save_panel_state()
@@ -952,7 +990,7 @@ class GPULayout:
         # アイテム描画
         for item in self._items:
             # インタラクティブなアイテムには状態を渡す
-            if self._hit_manager and isinstance(item, (ButtonItem, ToggleItem)):
+            if self._hit_manager and isinstance(item, (ButtonItem, ToggleItem, SliderItem)):
                 # item_id を取得（登録時に設定される）
                 item_id = str(id(item))
                 state = self._hit_manager.get_render_state(item_id, item.enabled)
@@ -1144,7 +1182,7 @@ class GPULayout:
         return self._hit_manager
 
     def _register_interactive_item(self, item: LayoutItem) -> None:
-        if not isinstance(item, (ButtonItem, ToggleItem)):
+        if not isinstance(item, (ButtonItem, ToggleItem, SliderItem)):
             return
 
         manager = self._ensure_hit_manager()
@@ -1156,6 +1194,43 @@ class GPULayout:
                     item.on_toggle(item.value)
 
             rect = manager.register_item(item, on_click=on_click)
+        elif isinstance(item, SliderItem):
+            # スライダー: ドラッグで値を変更
+            def on_hover_enter():
+                item._hovered = True
+
+            def on_hover_leave():
+                item._hovered = False
+
+            def on_drag_start(mouse_x: float, mouse_y: float):
+                item._dragging = True
+                # ドラッグ開始時にクリック位置から値を設定
+                item.set_value_from_position(mouse_x)
+
+            def on_drag(dx: float, dy: float, mouse_x: float, mouse_y: float):
+                # ドラッグ中は絶対位置から値を更新
+                item.set_value_from_position(mouse_x)
+
+            def on_drag_end(inside: bool):
+                item._dragging = False
+
+            rect = HitRect(
+                x=item.x,
+                y=item.y,
+                width=item.width,
+                height=item.height,
+                item=item,  # update_positions() で位置同期するため必須
+                tag=item.text or "slider",
+                draggable=True,
+                on_hover_enter=on_hover_enter,
+                on_hover_leave=on_hover_leave,
+                on_press=on_drag_start,
+                on_drag=on_drag,
+                on_release=on_drag_end,
+            )
+            manager.register(rect)
+            # item_id を保存（状態取得用）
+            rect.item_id = str(id(item))
         else:
             rect = manager.register_item(item)
 
