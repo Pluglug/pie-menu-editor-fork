@@ -8,8 +8,9 @@ Blender テーマ統合とスタイル定義。
 from __future__ import annotations
 
 import bpy
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from enum import Enum, auto
+from typing import Optional
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -46,6 +47,101 @@ class Alignment(Enum):
     CENTER = auto()
     RIGHT = auto()
     EXPAND = auto()
+
+
+class WidgetType(Enum):
+    """
+    ウィジェットタイプ（Blender の uiWidgetTypeEnum に対応）
+
+    layout.prop() で使用するウィジェットの種類を指定。
+    """
+    REGULAR = auto()      # 通常ボタン（デフォルト）
+    TOGGLE = auto()       # トグルボタン（Boolean with icon）
+    OPTION = auto()       # チェックボックス（Boolean without icon）
+    RADIO = auto()        # ラジオボタン（Enum expanded）
+    NUMBER = auto()       # 数値フィールド（Int/Float）
+    SLIDER = auto()       # スライダー（Int/Float with PERCENTAGE/FACTOR）
+    TEXT = auto()         # テキスト入力（String）
+    MENU = auto()         # メニューボタン（Enum dropdown）
+    TOOL = auto()         # ツールボタン
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# ThemeWidgetColors - Blender ウィジェットテーマ
+# ═══════════════════════════════════════════════════════════════════════════════
+
+@dataclass
+class ThemeWidgetColors:
+    """
+    Blender の ThemeWidgetColors に対応するデータクラス
+
+    各ウィジェットタイプ（スライダー、チェックボックス等）の
+    カラー定義を保持する。
+
+    Attributes:
+        inner: 内部塗りつぶし（通常状態）- RGBA
+        inner_sel: 内部塗りつぶし（選択状態）- RGBA
+        item: アイテム色（スライダーつまみ、チェックマーク等）- RGBA
+        outline: アウトライン（通常状態）- RGBA
+        outline_sel: アウトライン（選択状態、存在しない場合は outline と同じ）- RGBA
+        text: テキスト色（通常状態）- RGBA
+        text_sel: テキスト色（選択状態）- RGBA
+        roundness: 角丸係数 [0.0-1.0]
+        shadetop: 上部シェーディング [-100, 100]（グラデーション用）
+        shadedown: 下部シェーディング [-100, 100]（グラデーション用）
+        show_shaded: シェーディング有効化フラグ
+
+    Note:
+        - Blender テーマの wcol_* 属性から直接読み込むことを想定。
+        - GPU 描画では shadetop/shadedown を使わず inner を直接使用することが多い。
+        - **重要**: Blender API では text/text_sel は RGB (3要素) だが、
+          このクラスでは GPU 描画の便宜上 RGBA (4要素) で保持する。
+          from_blender_wcol() で自動的に alpha=1.0 を追加。
+    """
+    inner: tuple[float, float, float, float] = (0.3, 0.3, 0.3, 1.0)
+    inner_sel: tuple[float, float, float, float] = (0.4, 0.5, 0.7, 1.0)
+    item: tuple[float, float, float, float] = (0.5, 0.5, 0.5, 1.0)
+    outline: tuple[float, float, float, float] = (0.1, 0.1, 0.1, 1.0)
+    outline_sel: tuple[float, float, float, float] = (0.2, 0.3, 0.5, 1.0)
+    text: tuple[float, float, float, float] = (1.0, 1.0, 1.0, 1.0)
+    text_sel: tuple[float, float, float, float] = (1.0, 1.0, 1.0, 1.0)
+    roundness: float = 0.4
+    shadetop: int = 0
+    shadedown: int = 0
+    show_shaded: bool = False
+
+    @classmethod
+    def from_blender_wcol(cls, wcol) -> ThemeWidgetColors:
+        """
+        Blender の wcol_* 属性から ThemeWidgetColors を作成
+
+        Args:
+            wcol: bpy.context.preferences.themes[0].user_interface.wcol_*
+
+        Returns:
+            ThemeWidgetColors インスタンス
+        """
+        def to_rgba(color, alpha: float = 1.0) -> tuple[float, float, float, float]:
+            """色を RGBA タプルに変換"""
+            c = tuple(color)
+            if len(c) == 3:
+                return c + (alpha,)
+            return c
+
+        return cls(
+            inner=to_rgba(wcol.inner),
+            inner_sel=to_rgba(wcol.inner_sel),
+            item=to_rgba(wcol.item),
+            outline=to_rgba(wcol.outline),
+            # outline_sel は一部のテーマにしか存在しない
+            outline_sel=to_rgba(wcol.outline) if not hasattr(wcol, 'outline_sel') else to_rgba(wcol.outline_sel),
+            text=to_rgba(wcol.text),
+            text_sel=to_rgba(wcol.text_sel),
+            roundness=wcol.roundness,
+            shadetop=wcol.shadetop,
+            shadedown=wcol.shadedown,
+            show_shaded=wcol.show_shaded,
+        )
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -132,6 +228,43 @@ class GPULayoutStyle:
     text_shadow_alpha: float = 0.5    # シャドウ透明度 [0.0-1.0]
     text_shadow_offset: tuple[int, int] = (1, -1)  # (x, y) オフセット [推奨: 1-2]
 
+    # ═══════════════════════════════════════════════════════════════════════════
+    # ウィジェットテーマ（layout.prop() 用）
+    # ═══════════════════════════════════════════════════════════════════════════
+    #
+    # 各ウィジェットタイプに対応したテーマカラー。
+    # Blender の wcol_* 属性から読み込む。
+    #
+    # 対応マッピング（gpu_theme_widget_mapping.md 参照）:
+    #   wcol_numslider → スライダー (PERCENTAGE/FACTOR)
+    #   wcol_num       → 数値フィールド (Int/Float)
+    #   wcol_option    → チェックボックス (Boolean without icon)
+    #   wcol_toggle    → トグルボタン (Boolean with icon)
+    #   wcol_text      → テキスト入力 (String)
+    #   wcol_menu      → メニューボタン (Enum dropdown)
+    #   wcol_menu_back → メニューパネル背景
+    #   wcol_menu_item → メニューアイテム
+    #   wcol_pulldown  → プルダウンメニュー（ヘッダー）
+    #   wcol_pie_menu  → パイメニュー
+    #   wcol_radio     → ラジオボタン (Enum expanded)
+    #   wcol_regular   → 通常ボタン (デフォルト)
+    #   wcol_tool      → ツールボタン
+    #
+
+    wcol_regular: Optional[ThemeWidgetColors] = field(default=None)
+    wcol_numslider: Optional[ThemeWidgetColors] = field(default=None)
+    wcol_num: Optional[ThemeWidgetColors] = field(default=None)
+    wcol_option: Optional[ThemeWidgetColors] = field(default=None)
+    wcol_toggle: Optional[ThemeWidgetColors] = field(default=None)
+    wcol_text: Optional[ThemeWidgetColors] = field(default=None)
+    wcol_menu: Optional[ThemeWidgetColors] = field(default=None)
+    wcol_menu_back: Optional[ThemeWidgetColors] = field(default=None)
+    wcol_menu_item: Optional[ThemeWidgetColors] = field(default=None)
+    wcol_pulldown: Optional[ThemeWidgetColors] = field(default=None)
+    wcol_pie_menu: Optional[ThemeWidgetColors] = field(default=None)
+    wcol_radio: Optional[ThemeWidgetColors] = field(default=None)
+    wcol_tool: Optional[ThemeWidgetColors] = field(default=None)
+
     @classmethod
     def from_blender_theme(cls, style_name: str = 'TOOLTIP') -> GPULayoutStyle:
         """
@@ -152,6 +285,7 @@ class GPULayoutStyle:
             ui_styles = prefs.ui_styles[0]
 
             # スタイル名からテーマ属性を取得
+            # Note: MENU は「ドロップダウンボタン」、MENU_BACK は「メニューパネル背景」
             style_map = {
                 'TOOLTIP': 'wcol_tooltip',
                 'BOX': 'wcol_box',
@@ -160,8 +294,10 @@ class GPULayoutStyle:
                 'TOOL': 'wcol_tool',
                 'RADIO': 'wcol_radio',
                 'PIE_MENU': 'wcol_pie_menu',
-                'MENU': 'wcol_menu',
+                'MENU': 'wcol_menu',           # ドロップダウンボタン
+                'MENU_BACK': 'wcol_menu_back', # メニューパネル背景
                 'MENU_ITEM': 'wcol_menu_item',
+                'PULLDOWN': 'wcol_pulldown',   # プルダウンメニュー（ヘッダー）
                 'TOGGLE': 'wcol_toggle',
                 'OPTION': 'wcol_option',
                 'NUM': 'wcol_num',
@@ -190,6 +326,21 @@ class GPULayoutStyle:
             # roundness 1.0 で約 10px、スケールを考慮
             roundness_val = wcol.roundness
             base_radius = int(roundness_val * 10)
+
+            # ウィジェットテーマを読み込み（layout.prop() 用）
+            # 各 wcol_* から ThemeWidgetColors を作成
+            widget_themes = {}
+            for wcol_attr in ['wcol_regular', 'wcol_numslider', 'wcol_num',
+                              'wcol_option', 'wcol_toggle', 'wcol_text',
+                              'wcol_menu', 'wcol_menu_back', 'wcol_menu_item',
+                              'wcol_pulldown', 'wcol_pie_menu',
+                              'wcol_radio', 'wcol_tool']:
+                try:
+                    widget_themes[wcol_attr] = ThemeWidgetColors.from_blender_wcol(
+                        getattr(ui, wcol_attr)
+                    )
+                except Exception:
+                    widget_themes[wcol_attr] = None
 
             return cls(
                 # 背景（通常状態）
@@ -227,7 +378,7 @@ class GPULayoutStyle:
                 separator_color=to_rgba(wcol.outline, 0.5),
 
                 # レイアウト
-                border_radius=max(4, base_radius),
+                border_radius=base_radius,  # roundness を忠実に反映
                 roundness=roundness_val,
 
                 # ドロップシャドウ（widget_emboss を使用）
@@ -238,6 +389,21 @@ class GPULayoutStyle:
                 text_shadow_color=font_style.shadow_value,  # 0.0=黒, 1.0=白
                 text_shadow_alpha=font_style.shadow_alpha,
                 text_shadow_offset=(font_style.shadow_offset_x, font_style.shadow_offset_y),
+
+                # ウィジェットテーマ（layout.prop() 用）
+                wcol_regular=widget_themes.get('wcol_regular'),
+                wcol_numslider=widget_themes.get('wcol_numslider'),
+                wcol_num=widget_themes.get('wcol_num'),
+                wcol_option=widget_themes.get('wcol_option'),
+                wcol_toggle=widget_themes.get('wcol_toggle'),
+                wcol_text=widget_themes.get('wcol_text'),
+                wcol_menu=widget_themes.get('wcol_menu'),
+                wcol_menu_back=widget_themes.get('wcol_menu_back'),
+                wcol_menu_item=widget_themes.get('wcol_menu_item'),
+                wcol_pulldown=widget_themes.get('wcol_pulldown'),
+                wcol_pie_menu=widget_themes.get('wcol_pie_menu'),
+                wcol_radio=widget_themes.get('wcol_radio'),
+                wcol_tool=widget_themes.get('wcol_tool'),
             )
         except Exception:
             # フォールバック
@@ -310,3 +476,81 @@ class GPULayoutStyle:
     def scaled_icon_size(self) -> int:
         """スケーリングされたアイコンサイズ"""
         return int(self.ui_scale(20))  # base: 20px (Blender standard)
+
+    # ═══════════════════════════════════════════════════════════════════════════
+    # ウィジェットテーマ取得
+    # ═══════════════════════════════════════════════════════════════════════════
+
+    def get_widget_colors(self, widget_type: WidgetType) -> ThemeWidgetColors:
+        """
+        ウィジェットタイプに応じたテーマカラーを取得
+
+        Args:
+            widget_type: ウィジェットの種類 (WidgetType 列挙)
+
+        Returns:
+            対応する ThemeWidgetColors。
+            見つからない場合は wcol_regular、それもなければデフォルト値。
+
+        Example:
+            style = GPULayoutStyle.from_blender_theme('TOOLTIP')
+            slider_colors = style.get_widget_colors(WidgetType.SLIDER)
+            # slider_colors.inner, slider_colors.item などで描画
+        """
+        # WidgetType → wcol_* 属性マッピング
+        mapping = {
+            WidgetType.REGULAR: self.wcol_regular,
+            WidgetType.TOGGLE: self.wcol_toggle,
+            WidgetType.OPTION: self.wcol_option,
+            WidgetType.RADIO: self.wcol_radio,
+            WidgetType.NUMBER: self.wcol_num,
+            WidgetType.SLIDER: self.wcol_numslider,
+            WidgetType.TEXT: self.wcol_text,
+            WidgetType.MENU: self.wcol_menu,
+            WidgetType.TOOL: self.wcol_tool,
+        }
+
+        colors = mapping.get(widget_type)
+
+        # フォールバック: wcol_regular → デフォルト
+        if colors is None:
+            colors = self.wcol_regular
+        if colors is None:
+            colors = ThemeWidgetColors()
+
+        return colors
+
+    def get_widget_colors_by_name(self, wcol_name: str) -> ThemeWidgetColors:
+        """
+        テーマ属性名から直接テーマカラーを取得
+
+        Args:
+            wcol_name: 'wcol_numslider', 'wcol_num' など
+
+        Returns:
+            対応する ThemeWidgetColors。
+            見つからない場合はデフォルト値。
+        """
+        attr_map = {
+            'wcol_regular': self.wcol_regular,
+            'wcol_numslider': self.wcol_numslider,
+            'wcol_num': self.wcol_num,
+            'wcol_option': self.wcol_option,
+            'wcol_toggle': self.wcol_toggle,
+            'wcol_text': self.wcol_text,
+            'wcol_menu': self.wcol_menu,
+            'wcol_menu_back': self.wcol_menu_back,
+            'wcol_menu_item': self.wcol_menu_item,
+            'wcol_pulldown': self.wcol_pulldown,
+            'wcol_pie_menu': self.wcol_pie_menu,
+            'wcol_radio': self.wcol_radio,
+            'wcol_tool': self.wcol_tool,
+        }
+
+        colors = attr_map.get(wcol_name)
+        if colors is None:
+            colors = self.wcol_regular
+        if colors is None:
+            colors = ThemeWidgetColors()
+
+        return colors
