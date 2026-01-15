@@ -10,7 +10,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any, Callable, Optional
 
-from .style import GPULayoutStyle, Alignment, WidgetType
+from .style import GPULayoutStyle, Alignment, WidgetType, ThemeWidgetColors
 from .drawing import GPUDrawing, BLFDrawing, IconDrawing
 
 if TYPE_CHECKING:
@@ -607,6 +607,231 @@ class SliderItem(LayoutItem):
             bar_width = self.width * normalized
             bar_color = style.highlight_color if enabled else tuple(c * 0.5 for c in style.highlight_color[:3]) + (style.highlight_color[3],)
             GPUDrawing.draw_rounded_rect(self.x, self.y, bar_width, self.height, radius, bar_color)
+
+        # アウトライン
+        GPUDrawing.draw_rounded_rect_outline(
+            self.x, self.y, self.width, self.height,
+            radius, style.outline_color,
+            line_width=style.line_width()
+        )
+
+        # テキスト
+        text_color = style.button_text_color if enabled else style.text_color_disabled
+        display_text = self._get_display_text()
+        text_size = style.scaled_text_size()
+        text_w, text_h = BLFDrawing.get_text_dimensions(display_text, text_size)
+        text_x = self.x + (self.width - text_w) / 2
+        text_y = self.y - (self.height + text_h) / 2
+        clip_rect = self.get_clip_rect()
+        BLFDrawing.draw_text_clipped(text_x, text_y, display_text, text_color, text_size, clip_rect)
+
+
+@dataclass
+class NumberItem(LayoutItem):
+    """
+    数値フィールド（wcol_num テーマ対応）
+
+    数値の表示・編集に使用。ドラッグまたは増減ボタンで値を変更。
+
+    Attributes:
+        value: 現在値
+        min_val: 最小値
+        max_val: 最大値
+        step: ドラッグ時の変化量（ピクセルあたり）
+        precision: 表示精度（小数点以下の桁数）
+        text: ラベルテキスト（空の場合は値のみ表示）
+        show_buttons: 増減ボタン（◀ ▶）を表示するか
+        on_change: 値変更時のコールバック
+    """
+    value: float = 0.0
+    min_val: float = -float('inf')
+    max_val: float = float('inf')
+    step: float = 0.01
+    precision: int = 2
+    text: str = ""
+    show_buttons: bool = False
+    on_change: Optional[Callable[[float], None]] = None
+
+    # 状態（layout 側から設定される）
+    _hovered: bool = field(default=False, repr=False)
+    _dragging: bool = field(default=False, repr=False)
+
+    def calc_size(self, style: GPULayoutStyle) -> tuple[float, float]:
+        """数値フィールドのサイズを計算"""
+        text_size = style.scaled_text_size()
+        display_text = self._get_display_text()
+        text_w, _ = BLFDrawing.get_text_dimensions(display_text, text_size)
+        padding = style.scaled_padding()
+        button_width = self._get_button_width(style) if self.show_buttons else 0
+        # 最小幅を確保（テキスト + パディング + ボタン、または 80px）
+        min_width = max(text_w + padding * 4 + button_width * 2, style.ui_scale(80))
+        return (max(self.width, min_width), style.scaled_item_height())
+
+    def _get_display_text(self) -> str:
+        """表示用テキストを生成"""
+        value_str = f"{self.value:.{self.precision}f}"
+        if self.text:
+            return f"{self.text}: {value_str}"
+        return value_str
+
+    def _get_button_width(self, style: GPULayoutStyle) -> float:
+        """増減ボタンの幅を取得"""
+        return style.ui_scale(16)
+
+    def set_value_from_delta(self, dx: float) -> None:
+        """ドラッグ移動量から値を設定"""
+        new_value = self.value + dx * self.step
+        # 範囲内にクランプ
+        new_value = max(self.min_val, min(self.max_val, new_value))
+        if new_value != self.value:
+            self.value = new_value
+            if self.on_change:
+                self.on_change(new_value)
+
+    def increment(self) -> None:
+        """値を1ステップ増加"""
+        # step の 10 倍を増分として使用（ボタン用）
+        new_value = self.value + self.step * 10
+        new_value = min(self.max_val, new_value)
+        if new_value != self.value:
+            self.value = new_value
+            if self.on_change:
+                self.on_change(new_value)
+
+    def decrement(self) -> None:
+        """値を1ステップ減少"""
+        new_value = self.value - self.step * 10
+        new_value = max(self.min_val, new_value)
+        if new_value != self.value:
+            self.value = new_value
+            if self.on_change:
+                self.on_change(new_value)
+
+    def draw(self, style: GPULayoutStyle, state: Optional[ItemRenderState] = None) -> None:
+        """数値フィールドを描画（wcol_num テーマ使用）"""
+        if not self.visible:
+            return
+
+        # テーマカラーを取得
+        wcol = style.get_widget_colors(WidgetType.NUMBER)
+        if wcol is None:
+            # フォールバック: 通常のボタンスタイルで描画
+            self._draw_fallback(style, state)
+            return
+
+        # 状態の判定
+        hovered = state.hovered if state else self._hovered
+        dragging = state.pressed if state else self._dragging
+        enabled = state.enabled if state else self.enabled
+
+        # 角丸半径を計算（roundness を適用）
+        base_radius = style.scaled_border_radius()
+        radius = int(base_radius * wcol.roundness) if wcol.roundness < 1.0 else base_radius
+
+        # === 1. 背景描画 ===
+        if dragging:
+            bg_color = wcol.inner_sel
+        elif hovered:
+            # ホバー時は inner を少し明るく
+            bg_color = tuple(min(1.0, c * 1.15) for c in wcol.inner[:3]) + (wcol.inner[3],)
+        else:
+            bg_color = wcol.inner
+
+        if not enabled:
+            bg_color = tuple(c * 0.5 for c in bg_color[:3]) + (bg_color[3],)
+
+        GPUDrawing.draw_rounded_rect(
+            self.x, self.y, self.width, self.height,
+            radius, bg_color
+        )
+
+        # === 2. アウトライン描画 ===
+        base_outline = wcol.outline_sel if dragging else wcol.outline
+        outline_color = base_outline if enabled else tuple(c * 0.5 for c in base_outline[:3]) + (base_outline[3],)
+        GPUDrawing.draw_rounded_rect_outline(
+            self.x, self.y, self.width, self.height,
+            radius, outline_color,
+            line_width=style.line_width()
+        )
+
+        # === 3. 増減ボタン描画（オプション） ===
+        button_width = 0
+        if self.show_buttons:
+            button_width = self._get_button_width(style)
+            self._draw_buttons(style, wcol, enabled, button_width)
+
+        # === 4. テキスト描画 ===
+        text_color = wcol.text_sel if dragging else wcol.text
+        if not enabled:
+            text_color = tuple(c * 0.5 for c in text_color[:3]) + (text_color[3],)
+
+        display_text = self._get_display_text()
+        text_size = style.scaled_text_size()
+        text_w, text_h = BLFDrawing.get_text_dimensions(display_text, text_size)
+
+        # 中央揃え（ボタンを考慮）
+        text_area_x = self.x + button_width
+        text_area_width = self.width - button_width * 2
+        text_x = text_area_x + (text_area_width - text_w) / 2
+        text_y = self.y - (self.height + text_h) / 2
+
+        # クリップ矩形（ボタン領域を除く）
+        clip_rect = BLFDrawing.calc_clip_rect(
+            text_area_x, self.y, text_area_width, self.height, 0
+        )
+        BLFDrawing.draw_text_clipped(text_x, text_y, display_text, text_color, text_size, clip_rect)
+
+    def _draw_buttons(self, style: GPULayoutStyle, wcol: ThemeWidgetColors,
+                      enabled: bool, button_width: float) -> None:
+        """増減ボタンを描画"""
+        # ボタンの高さはアイテムの高さと同じ
+        button_height = self.height
+
+        # 左ボタン（◀ 減少）
+        left_x = self.x
+        left_center_x = left_x + button_width / 2
+        center_y = self.y - self.height / 2
+
+        # 右ボタン（▶ 増加）
+        right_x = self.x + self.width - button_width
+        right_center_x = right_x + button_width / 2
+
+        # 三角形のサイズ
+        tri_size = style.ui_scale(5)
+        tri_color = wcol.text if enabled else tuple(c * 0.5 for c in wcol.text[:3]) + (wcol.text[3],)
+
+        # 左三角形（◀）
+        GPUDrawing.draw_triangle(
+            left_center_x + tri_size / 2, center_y - tri_size,
+            left_center_x + tri_size / 2, center_y + tri_size,
+            left_center_x - tri_size / 2, center_y,
+            tri_color
+        )
+
+        # 右三角形（▶）
+        GPUDrawing.draw_triangle(
+            right_center_x - tri_size / 2, center_y - tri_size,
+            right_center_x - tri_size / 2, center_y + tri_size,
+            right_center_x + tri_size / 2, center_y,
+            tri_color
+        )
+
+    def _draw_fallback(self, style: GPULayoutStyle, state: Optional[ItemRenderState] = None) -> None:
+        """テーマがない場合のフォールバック描画"""
+        hovered = state.hovered if state else self._hovered
+        dragging = state.pressed if state else self._dragging
+        enabled = state.enabled if state else self.enabled
+
+        radius = style.scaled_border_radius()
+
+        # 背景
+        bg_color = style.button_press_color if dragging else (
+            style.button_hover_color if hovered else style.button_color
+        )
+        if not enabled:
+            bg_color = tuple(c * 0.5 for c in bg_color[:3]) + (bg_color[3],)
+
+        GPUDrawing.draw_rounded_rect(self.x, self.y, self.width, self.height, radius, bg_color)
 
         # アウトライン
         GPUDrawing.draw_rounded_rect_outline(

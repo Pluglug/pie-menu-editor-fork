@@ -363,6 +363,10 @@ class TEST_OT_gpu_interactive(Operator):
     _slider_value: float = 0.5
     _slider_label = None
     _slider_item: SliderItem = None
+    # 数値フィールドデモ用
+    _number_value: float = 10.0
+    _number_label = None
+    _number_item = None
 
     # パネル内で消費すべきマウスイベント
     _CONSUME_EVENTS = {
@@ -426,6 +430,9 @@ class TEST_OT_gpu_interactive(Operator):
         self._slider_value = 0.5
         self._slider_label = None
         self._slider_item = None
+        self._number_value = 10.0
+        self._number_label = None
+        self._number_item = None
 
         # レイアウトを事前構築
         region = self._get_window_region(context)
@@ -569,6 +576,42 @@ class TEST_OT_gpu_interactive(Operator):
             )
 
             layout.separator()
+
+            # ── Number フィールドデモ ──
+            layout.label(text="Number Fields:")
+
+            # 数値フィールド値の表示
+            layout.label(text=f"Number: {self._number_value:.1f}")
+            self._number_label = layout._items[-1]
+
+            # 数値フィールドコールバック
+            def on_number_change(value: float):
+                self._number_value = value
+                self._last_action = f"Number: {value:.1f}"
+
+            # 数値フィールド追加（ドラッグで値変更）
+            self._number_item = layout.number(
+                value=self._number_value,
+                min_val=0.0,
+                max_val=100.0,
+                step=0.1,
+                precision=1,
+                text="Count",
+                on_change=on_number_change
+            )
+
+            # 増減ボタン付き数値フィールド
+            layout.number(
+                value=5,
+                min_val=0,
+                max_val=20,
+                step=0.05,
+                precision=0,
+                text="Level",
+                show_buttons=True
+            )
+
+            layout.separator()
             layout.label(text="Press D to toggle debug view")
             layout.label(text="Press ESC to exit")
 
@@ -589,6 +632,8 @@ class TEST_OT_gpu_interactive(Operator):
             self._action_label.text = f"Last Action: {self._last_action}"
         if self._slider_label:
             self._slider_label.text = f"Value: {self._slider_value:.2f}"
+        if self._number_label:
+            self._number_label.text = f"Number: {self._number_value:.1f}"
 
     def draw_callback(self, manager: GPUPanelManager, context):
         """描画コールバック（GPUPanelManager から呼び出される）"""

@@ -63,6 +63,20 @@ class GPUDrawing:
         gpu.state.blend_set('NONE')
 
     @classmethod
+    def draw_triangle(cls, x1: float, y1: float, x2: float, y2: float,
+                      x3: float, y3: float,
+                      color: tuple[float, float, float, float]) -> None:
+        """三角形を描画"""
+        shader = cls.get_shader()
+        vertices = ((x1, y1), (x2, y2), (x3, y3))
+        batch = batch_for_shader(shader, 'TRIS', {"pos": vertices})
+        shader.bind()
+        shader.uniform_float("color", color)
+        gpu.state.blend_set('ALPHA')
+        batch.draw(shader)
+        gpu.state.blend_set('NONE')
+
+    @classmethod
     def draw_rounded_rect(cls, x: float, y: float, width: float, height: float,
                           radius: int, color: tuple[float, float, float, float],
                           corners: tuple[bool, bool, bool, bool] = (True, True, True, True)) -> None:

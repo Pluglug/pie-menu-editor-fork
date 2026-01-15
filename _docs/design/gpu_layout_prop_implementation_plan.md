@@ -249,11 +249,44 @@ Phase 4 (テスト)
 
 ---
 
+## 将来の改善点（TODO）
+
+### Slider 改善
+
+| 項目 | 詳細 | 優先度 |
+|------|------|--------|
+| **相対値モード** | クリック位置へジャンプせず、ドラッグ移動量のみ反映するモード | 中 |
+| **精度モード（Shift）** | Shift 押下中は step を 1/10 にして細かい調整を可能に | 高 |
+
+**実装案（精度モード）**:
+```python
+def on_drag(dx, dy, mouse_x, mouse_y, event):
+    if event.shift:
+        dx *= 0.1  # 精度モード
+    item.set_value_from_position(mouse_x)
+```
+
+### Number 改善
+
+| 項目 | 詳細 | 優先度 |
+|------|------|--------|
+| **増減ボタン HitRect** | `show_buttons=True` 時に左右ボタンに個別の HitRect を登録し、クリックで `increment()`/`decrement()` を呼び出す | 中 |
+| **精度モード（Shift）** | Slider 同様、Shift 押下中は step を 1/10 に | 高 |
+
+**実装案（ボタン HitRect）**:
+- 左ボタン: `on_click=item.decrement`
+- 右ボタン: `on_click=item.increment`
+- メイン領域: 既存のドラッグ対応
+
+---
+
 ## 進捗記録
 
 | 日付 | Phase | 内容 |
 |------|-------|------|
 | 2026-01-16 | - | 計画作成 |
+| 2026-01-16 | 2.1 | SliderItem 実装完了 |
+| 2026-01-16 | 2.2 | NumberItem 実装完了 |
 
 ---
 

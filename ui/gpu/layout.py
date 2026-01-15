@@ -15,7 +15,7 @@ from .style import GPULayoutStyle, Direction, Alignment
 from .drawing import GPUDrawing, BLFDrawing
 from .items import (
     LayoutItem, LabelItem, SeparatorItem, ButtonItem, ToggleItem,
-    PropDisplayItem, BoxItem, SliderItem
+    PropDisplayItem, BoxItem, SliderItem, NumberItem
 )
 from .interactive import HitTestManager, HitRect
 
@@ -327,6 +327,52 @@ class GPULayout:
             max_val=max_val,
             precision=precision,
             text=text,
+            on_change=on_change,
+            enabled=self.enabled and self.active
+        )
+        self._add_item(item)
+        return item
+
+    def number(self, *, value: float = 0.0, min_val: float = -float('inf'),
+               max_val: float = float('inf'), step: float = 0.01,
+               precision: int = 2, text: str = "", show_buttons: bool = False,
+               on_change: Optional[Callable[[float], None]] = None) -> NumberItem:
+        """
+        数値フィールドを追加
+
+        Args:
+            value: 初期値
+            min_val: 最小値（デフォルト: 無制限）
+            max_val: 最大値（デフォルト: 無制限）
+            step: ドラッグ時の変化量（ピクセルあたり）
+            precision: 表示精度（小数点以下の桁数）
+            text: ラベルテキスト（空の場合は値のみ表示）
+            show_buttons: 増減ボタン（◀ ▶）を表示するか
+            on_change: 値変更時のコールバック
+
+        Returns:
+            作成された NumberItem（外部から値を取得/設定可能）
+
+        使用例:
+            # 基本的な使い方
+            layout.number(value=10.0, text="Count")
+
+            # 範囲とボタン付き
+            layout.number(value=5, min_val=0, max_val=100, show_buttons=True, text="Level")
+
+            # コールバック付き
+            def on_value_change(value):
+                print(f"Value: {value}")
+            layout.number(value=0.5, step=0.1, text="Factor", on_change=on_value_change)
+        """
+        item = NumberItem(
+            value=value,
+            min_val=min_val,
+            max_val=max_val,
+            step=step,
+            precision=precision,
+            text=text,
+            show_buttons=show_buttons,
             on_change=on_change,
             enabled=self.enabled and self.active
         )
@@ -1182,7 +1228,7 @@ class GPULayout:
         return self._hit_manager
 
     def _register_interactive_item(self, item: LayoutItem) -> None:
-        if not isinstance(item, (ButtonItem, ToggleItem, SliderItem)):
+        if not isinstance(item, (ButtonItem, ToggleItem, SliderItem, NumberItem)):
             return
 
         manager = self._ensure_hit_manager()
@@ -1230,6 +1276,40 @@ class GPULayout:
             )
             manager.register(rect)
             # item_id を保存（状態取得用）
+            rect.item_id = str(id(item))
+        elif isinstance(item, NumberItem):
+            # 数値フィールド: ドラッグで値を変更（dx に応じて）
+            def on_hover_enter():
+                item._hovered = True
+
+            def on_hover_leave():
+                item._hovered = False
+
+            def on_drag_start(mouse_x: float, mouse_y: float):
+                item._dragging = True
+
+            def on_drag(dx: float, dy: float, mouse_x: float, mouse_y: float):
+                # ドラッグ移動量から値を更新
+                item.set_value_from_delta(dx)
+
+            def on_drag_end(inside: bool):
+                item._dragging = False
+
+            rect = HitRect(
+                x=item.x,
+                y=item.y,
+                width=item.width,
+                height=item.height,
+                item=item,  # update_positions() で位置同期するため必須
+                tag=item.text or "number",
+                draggable=True,
+                on_hover_enter=on_hover_enter,
+                on_hover_leave=on_hover_leave,
+                on_press=on_drag_start,
+                on_drag=on_drag,
+                on_release=on_drag_end,
+            )
+            manager.register(rect)
             rect.item_id = str(id(item))
         else:
             rect = manager.register_item(item)
