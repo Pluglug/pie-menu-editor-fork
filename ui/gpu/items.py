@@ -301,13 +301,28 @@ class ButtonItem(LayoutItem):
 
 @dataclass
 class ToggleItem(LayoutItem):
-    """トグルボタン（ON/OFF）"""
+    """
+    トグルボタン（wcol_toggle テーマ対応）
+
+    Boolean プロパティをボタン形状で表示。ON/OFF でアイコン切り替え可能。
+
+    Attributes:
+        text: ボタンラベル
+        icon: デフォルトアイコン
+        icon_on: ON 状態のアイコン（指定時のみ）
+        icon_off: OFF 状態のアイコン（指定時のみ）
+        value: 現在値
+        on_toggle: 値変更時のコールバック
+    """
     text: str = ""
     icon: str = "NONE"
     icon_on: str = "NONE"
     icon_off: str = "NONE"
     value: bool = False
     on_toggle: Optional[Callable[[bool], None]] = None
+
+    # 状態（layout 側から設定される）
+    _hovered: bool = field(default=False, repr=False)
 
     def calc_size(self, style: GPULayoutStyle) -> tuple[float, float]:
         text_w, text_h = BLFDrawing.get_text_dimensions(self.text, style.scaled_text_size())
@@ -324,12 +339,99 @@ class ToggleItem(LayoutItem):
             return self.icon_off
         return self.icon
 
+    def toggle(self) -> None:
+        """値をトグル"""
+        self.value = not self.value
+        if self.on_toggle:
+            self.on_toggle(self.value)
+
     def draw(self, style: GPULayoutStyle, state: Optional[ItemRenderState] = None) -> None:
+        """トグルボタンを描画（wcol_toggle テーマ使用）"""
         if not self.visible:
             return
 
-        # 状態から色を決定
-        hovered = state.hovered if state else False
+        # テーマカラーを取得
+        wcol = style.get_widget_colors(WidgetType.TOGGLE)
+        if wcol is None:
+            # フォールバック: 従来の描画
+            self._draw_fallback(style, state)
+            return
+
+        # 状態の判定
+        hovered = state.hovered if state else self._hovered
+        enabled = state.enabled if state else self.enabled
+
+        # 角丸半径を計算（roundness を適用）
+        base_radius = style.scaled_border_radius()
+        radius = int(base_radius * wcol.roundness) if wcol.roundness < 1.0 else base_radius
+
+        # === 1. 背景描画 ===
+        if self.value:
+            # ON 状態: inner_sel
+            bg_color = wcol.inner_sel
+            if hovered:
+                bg_color = tuple(min(1.0, c * 1.15) for c in bg_color[:3]) + (bg_color[3],)
+        else:
+            # OFF 状態: inner
+            bg_color = wcol.inner
+            if hovered:
+                bg_color = tuple(min(1.0, c * 1.15) for c in bg_color[:3]) + (bg_color[3],)
+
+        if not enabled:
+            bg_color = tuple(c * 0.5 for c in bg_color[:3]) + (bg_color[3],)
+
+        GPUDrawing.draw_rounded_rect(
+            self.x, self.y, self.width, self.height,
+            radius, bg_color
+        )
+
+        # === 2. アウトライン描画 ===
+        outline_color = wcol.outline if enabled else tuple(c * 0.5 for c in wcol.outline[:3]) + (wcol.outline[3],)
+        GPUDrawing.draw_rounded_rect_outline(
+            self.x, self.y, self.width, self.height,
+            radius, outline_color,
+            line_width=style.line_width()
+        )
+
+        # === 3. アイコンとテキスト描画 ===
+        text_color = wcol.text_sel if self.value else wcol.text
+        if not enabled:
+            text_color = tuple(c * 0.5 for c in text_color[:3]) + (text_color[3],)
+
+        text_size = style.scaled_text_size()
+        padding = style.scaled_padding()
+
+        display_icon = self._get_display_icon()
+        icon_size = style.scaled_icon_size() if display_icon != "NONE" else 0
+        icon_spacing = style.scaled_spacing() if display_icon != "NONE" else 0
+
+        # ボタン内で利用可能なテキスト幅
+        available_width = self.width - padding * 2 - icon_size - icon_spacing
+        display_text = BLFDrawing.get_text_with_ellipsis(self.text, available_width, text_size)
+        text_w, text_h = BLFDrawing.get_text_dimensions(display_text, text_size)
+
+        # コンテンツ全体の幅（アイコン + スペース + テキスト）
+        content_w = icon_size + icon_spacing + text_w
+
+        # 中央揃えでコンテンツを配置
+        content_x = self.x + (self.width - content_w) / 2
+        text_y = self.y - (self.height + text_h) / 2
+
+        # アイコン描画
+        text_x = content_x
+        if display_icon != "NONE":
+            icon_y = self.y - (self.height - icon_size) / 2
+            alpha = 1.0 if enabled else 0.5
+            IconDrawing.draw_icon(content_x, icon_y, display_icon, alpha=alpha)
+            text_x += icon_size + icon_spacing
+
+        # テキスト描画
+        clip_rect = self.get_clip_rect()
+        BLFDrawing.draw_text_clipped(text_x, text_y, display_text, text_color, text_size, clip_rect)
+
+    def _draw_fallback(self, style: GPULayoutStyle, state: Optional[ItemRenderState] = None) -> None:
+        """テーマがない場合のフォールバック描画"""
+        hovered = state.hovered if state else self._hovered
         enabled = state.enabled if state else self.enabled
 
         # 背景色（ON 状態で強調）
@@ -379,6 +481,188 @@ class ToggleItem(LayoutItem):
             text_x += icon_size + icon_spacing
 
         # クリップ矩形（ボタン全体、角丸背景がテキストを制約）
+        clip_rect = self.get_clip_rect()
+        BLFDrawing.draw_text_clipped(text_x, text_y, display_text, text_color, text_size, clip_rect)
+
+
+@dataclass
+class CheckboxItem(LayoutItem):
+    """
+    チェックボックス（wcol_option テーマ対応）
+
+    Boolean プロパティを四角形 + チェックマーク + ラベルで表示。
+
+    Attributes:
+        text: ラベルテキスト
+        value: 現在値
+        on_toggle: 値変更時のコールバック
+    """
+    text: str = ""
+    value: bool = False
+    on_toggle: Optional[Callable[[bool], None]] = None
+
+    # 状態（layout 側から設定される）
+    _hovered: bool = field(default=False, repr=False)
+
+    def calc_size(self, style: GPULayoutStyle) -> tuple[float, float]:
+        """チェックボックスのサイズを計算"""
+        text_size = style.scaled_text_size()
+        text_w, _ = BLFDrawing.get_text_dimensions(self.text, text_size)
+        box_size = self._get_box_size(style)
+        spacing = style.scaled_spacing()
+        # ボックス + スペース + テキスト
+        return (box_size + spacing + text_w, style.scaled_item_height())
+
+    def _get_box_size(self, style: GPULayoutStyle) -> float:
+        """チェックボックスの四角形サイズを取得"""
+        # Blender 標準に近いサイズ
+        return style.ui_scale(10)
+
+    def toggle(self) -> None:
+        """値をトグル"""
+        self.value = not self.value
+        if self.on_toggle:
+            self.on_toggle(self.value)
+
+    def draw(self, style: GPULayoutStyle, state: Optional[ItemRenderState] = None) -> None:
+        """チェックボックスを描画（wcol_option テーマ使用）"""
+        if not self.visible:
+            return
+
+        # テーマカラーを取得
+        wcol = style.get_widget_colors(WidgetType.OPTION)
+        if wcol is None:
+            # フォールバック
+            self._draw_fallback(style, state)
+            return
+
+        # 状態の判定
+        hovered = state.hovered if state else self._hovered
+        enabled = state.enabled if state else self.enabled
+
+        box_size = self._get_box_size(style)
+        spacing = style.scaled_spacing()
+        text_size = style.scaled_text_size()
+
+        # ボックスの位置（垂直中央揃え）
+        box_x = self.x
+        box_y = self.y - (self.height - box_size) / 2
+
+        # 角丸半径（ボックスサイズに対して roundness を適用）
+        radius = int(box_size * 0.2 * wcol.roundness)
+
+        # === 1. ボックス背景 ===
+        if self.value:
+            bg_color = wcol.inner_sel
+        else:
+            bg_color = wcol.inner
+
+        if hovered:
+            bg_color = tuple(min(1.0, c * 1.15) for c in bg_color[:3]) + (bg_color[3],)
+
+        if not enabled:
+            bg_color = tuple(c * 0.5 for c in bg_color[:3]) + (bg_color[3],)
+
+        GPUDrawing.draw_rounded_rect(
+            box_x, box_y, box_size, box_size,
+            radius, bg_color
+        )
+
+        # === 2. ボックスアウトライン ===
+        outline_color = wcol.outline if enabled else tuple(c * 0.5 for c in wcol.outline[:3]) + (wcol.outline[3],)
+        GPUDrawing.draw_rounded_rect_outline(
+            box_x, box_y, box_size, box_size,
+            radius, outline_color,
+            line_width=style.line_width()
+        )
+
+        # === 3. チェックマーク描画（ON 状態のみ） ===
+        if self.value:
+            check_color = wcol.item if enabled else tuple(c * 0.5 for c in wcol.item[:3]) + (wcol.item[3],)
+            self._draw_checkmark(box_x, box_y, box_size, check_color, style)
+
+        # === 4. ラベル描画 ===
+        text_color = wcol.text if enabled else tuple(c * 0.5 for c in wcol.text[:3]) + (wcol.text[3],)
+        text_x = box_x + box_size + spacing
+        _, text_h = BLFDrawing.get_text_dimensions("Wg", text_size)
+        text_y = self.y - (self.height + text_h) / 2
+
+        # 利用可能幅でテキストを省略
+        available_width = self.width - box_size - spacing
+        display_text = BLFDrawing.get_text_with_ellipsis(self.text, available_width, text_size)
+
+        clip_rect = self.get_clip_rect()
+        BLFDrawing.draw_text_clipped(text_x, text_y, display_text, text_color, text_size, clip_rect)
+
+    def _draw_checkmark(self, box_x: float, box_y: float, box_size: float,
+                        color: tuple[float, float, float, float], style: GPULayoutStyle) -> None:
+        """チェックマークを描画（レ字型）"""
+        # 線の太さ
+        line_width = 1.0
+
+        # チェックマークのパディング
+        padding = box_size * 0.2
+
+        # チェックマークの座標（レ字型）
+        # 左下 → 中央下 → 右上
+        x1 = box_x + padding
+        y1 = box_y - box_size * 0.5
+        x2 = box_x + box_size * 0.4
+        y2 = box_y - box_size + padding
+        x3 = box_x + box_size - padding
+        y3 = box_y - padding
+
+        # 2本の線でチェックマークを描画
+        GPUDrawing.draw_line(x1, y1, x2, y2, color, line_width)
+        GPUDrawing.draw_line(x2, y2, x3, y3, color, line_width)
+
+    def _draw_fallback(self, style: GPULayoutStyle, state: Optional[ItemRenderState] = None) -> None:
+        """テーマがない場合のフォールバック描画"""
+        hovered = state.hovered if state else self._hovered
+        enabled = state.enabled if state else self.enabled
+
+        box_size = self._get_box_size(style)
+        spacing = style.scaled_spacing()
+        text_size = style.scaled_text_size()
+
+        box_x = self.x
+        box_y = self.y - (self.height - box_size) / 2
+
+        radius = int(box_size * 0.2)
+
+        # ボックス背景
+        if self.value:
+            bg_color = style.highlight_color
+        else:
+            bg_color = style.button_color
+
+        if hovered:
+            bg_color = tuple(min(1.0, c * 1.15) for c in bg_color[:3]) + (bg_color[3],)
+        if not enabled:
+            bg_color = tuple(c * 0.5 for c in bg_color[:3]) + (bg_color[3],)
+
+        GPUDrawing.draw_rounded_rect(box_x, box_y, box_size, box_size, radius, bg_color)
+
+        # ボックスアウトライン
+        GPUDrawing.draw_rounded_rect_outline(
+            box_x, box_y, box_size, box_size,
+            radius, style.outline_color,
+            line_width=style.line_width()
+        )
+
+        # チェックマーク
+        if self.value:
+            self._draw_checkmark(box_x, box_y, box_size, style.text_color, style)
+
+        # ラベル
+        text_color = style.text_color if enabled else style.text_color_disabled
+        text_x = box_x + box_size + spacing
+        _, text_h = BLFDrawing.get_text_dimensions("Wg", text_size)
+        text_y = self.y - (self.height + text_h) / 2
+
+        available_width = self.width - box_size - spacing
+        display_text = BLFDrawing.get_text_with_ellipsis(self.text, available_width, text_size)
+
         clip_rect = self.get_clip_rect()
         BLFDrawing.draw_text_clipped(text_x, text_y, display_text, text_color, text_size, clip_rect)
 

@@ -15,7 +15,7 @@ from .style import GPULayoutStyle, Direction, Alignment
 from .drawing import GPUDrawing, BLFDrawing
 from .items import (
     LayoutItem, LabelItem, SeparatorItem, ButtonItem, ToggleItem,
-    PropDisplayItem, BoxItem, SliderItem, NumberItem
+    PropDisplayItem, BoxItem, SliderItem, NumberItem, CheckboxItem
 )
 from .interactive import HitTestManager, HitRect
 
@@ -374,6 +374,79 @@ class GPULayout:
             text=text,
             show_buttons=show_buttons,
             on_change=on_change,
+            enabled=self.enabled and self.active
+        )
+        self._add_item(item)
+        return item
+
+    def checkbox(self, *, text: str = "", value: bool = False,
+                 on_toggle: Optional[Callable[[bool], None]] = None) -> CheckboxItem:
+        """
+        チェックボックスを追加
+
+        Args:
+            text: ラベルテキスト
+            value: 初期値
+            on_toggle: 値変更時のコールバック
+
+        Returns:
+            作成された CheckboxItem（外部から値を取得/設定可能）
+
+        使用例:
+            # 基本的な使い方
+            layout.checkbox(text="Enable Feature", value=True)
+
+            # コールバック付き
+            def on_toggle(value):
+                print(f"Checkbox: {value}")
+            layout.checkbox(text="Auto Save", on_toggle=on_toggle)
+        """
+        item = CheckboxItem(
+            text=text,
+            value=value,
+            on_toggle=on_toggle,
+            enabled=self.enabled and self.active
+        )
+        self._add_item(item)
+        return item
+
+    def toggle(self, *, text: str = "", icon: str = "NONE",
+               icon_on: str = "NONE", icon_off: str = "NONE",
+               value: bool = False,
+               on_toggle: Optional[Callable[[bool], None]] = None) -> ToggleItem:
+        """
+        トグルボタンを追加
+
+        Args:
+            text: ボタンラベル
+            icon: デフォルトアイコン
+            icon_on: ON 状態のアイコン（指定時のみ）
+            icon_off: OFF 状態のアイコン（指定時のみ）
+            value: 初期値
+            on_toggle: 値変更時のコールバック
+
+        Returns:
+            作成された ToggleItem（外部から値を取得/設定可能）
+
+        使用例:
+            # 基本的な使い方
+            layout.toggle(text="Preview", value=True)
+
+            # アイコン切り替え
+            layout.toggle(text="Visible", icon_on='RESTRICT_VIEW_OFF', icon_off='RESTRICT_VIEW_ON')
+
+            # コールバック付き
+            def on_toggle(value):
+                print(f"Toggle: {value}")
+            layout.toggle(text="Active", icon='BLENDER', on_toggle=on_toggle)
+        """
+        item = ToggleItem(
+            text=text,
+            icon=icon,
+            icon_on=icon_on,
+            icon_off=icon_off,
+            value=value,
+            on_toggle=on_toggle,
             enabled=self.enabled and self.active
         )
         self._add_item(item)
@@ -1036,7 +1109,7 @@ class GPULayout:
         # アイテム描画
         for item in self._items:
             # インタラクティブなアイテムには状態を渡す
-            if self._hit_manager and isinstance(item, (ButtonItem, ToggleItem, SliderItem)):
+            if self._hit_manager and isinstance(item, (ButtonItem, ToggleItem, SliderItem, NumberItem, CheckboxItem)):
                 # item_id を取得（登録時に設定される）
                 item_id = str(id(item))
                 state = self._hit_manager.get_render_state(item_id, item.enabled)
@@ -1228,18 +1301,59 @@ class GPULayout:
         return self._hit_manager
 
     def _register_interactive_item(self, item: LayoutItem) -> None:
-        if not isinstance(item, (ButtonItem, ToggleItem, SliderItem, NumberItem)):
+        if not isinstance(item, (ButtonItem, ToggleItem, SliderItem, NumberItem, CheckboxItem)):
             return
 
         manager = self._ensure_hit_manager()
 
-        if isinstance(item, ToggleItem):
-            def on_click():
-                item.value = not item.value
-                if item.on_toggle:
-                    item.on_toggle(item.value)
+        if isinstance(item, CheckboxItem):
+            # チェックボックス: クリックでトグル
+            def on_hover_enter():
+                item._hovered = True
 
-            rect = manager.register_item(item, on_click=on_click)
+            def on_hover_leave():
+                item._hovered = False
+
+            def on_click():
+                item.toggle()
+
+            rect = HitRect(
+                x=item.x,
+                y=item.y,
+                width=item.width,
+                height=item.height,
+                item=item,  # update_positions() で位置同期するため必須
+                tag=item.text or "checkbox",
+                on_hover_enter=on_hover_enter,
+                on_hover_leave=on_hover_leave,
+                on_click=on_click,
+            )
+            manager.register(rect)
+            rect.item_id = str(id(item))
+        elif isinstance(item, ToggleItem):
+            # トグルボタン: クリックでトグル
+            def on_hover_enter():
+                item._hovered = True
+
+            def on_hover_leave():
+                item._hovered = False
+
+            def on_click():
+                item.toggle()
+
+            rect = HitRect(
+                x=item.x,
+                y=item.y,
+                width=item.width,
+                height=item.height,
+                item=item,  # update_positions() で位置同期するため必須
+                tag=item.text or "toggle",
+                on_hover_enter=on_hover_enter,
+                on_hover_leave=on_hover_leave,
+                on_click=on_click,
+            )
+            manager.register(rect)
+            rect.item_id = str(id(item))
         elif isinstance(item, SliderItem):
             # スライダー: ドラッグで値を変更
             def on_hover_enter():

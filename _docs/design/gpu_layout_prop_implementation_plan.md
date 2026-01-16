@@ -287,6 +287,8 @@ def on_drag(dx, dy, mouse_x, mouse_y, event):
 | 2026-01-16 | - | 計画作成 |
 | 2026-01-16 | 2.1 | SliderItem 実装完了 |
 | 2026-01-16 | 2.2 | NumberItem 実装完了 |
+| 2026-01-16 | 2.3 | CheckboxItem 実装完了（wcol_option テーマ対応） |
+| 2026-01-16 | 2.4 | ToggleItem 拡張完了（wcol_toggle テーマ対応） |
 
 ---
 

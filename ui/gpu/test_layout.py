@@ -367,6 +367,11 @@ class TEST_OT_gpu_interactive(Operator):
     _number_value: float = 10.0
     _number_label = None
     _number_item = None
+    # チェックボックス/トグルデモ用
+    _checkbox_value: bool = True
+    _toggle_value: bool = False
+    _checkbox_item = None
+    _toggle_item = None
 
     # パネル内で消費すべきマウスイベント
     _CONSUME_EVENTS = {
@@ -433,6 +438,10 @@ class TEST_OT_gpu_interactive(Operator):
         self._number_value = 10.0
         self._number_label = None
         self._number_item = None
+        self._checkbox_value = True
+        self._toggle_value = False
+        self._checkbox_item = None
+        self._toggle_item = None
 
         # レイアウトを事前構築
         region = self._get_window_region(context)
@@ -609,6 +618,48 @@ class TEST_OT_gpu_interactive(Operator):
                 precision=0,
                 text="Level",
                 show_buttons=True
+            )
+
+            layout.separator()
+
+            # ── Checkbox / Toggle デモ ──
+            layout.label(text="Checkbox & Toggle:")
+
+            # チェックボックスコールバック
+            def on_checkbox_toggle(value: bool):
+                self._checkbox_value = value
+                self._last_action = f"Checkbox: {value}"
+
+            # チェックボックス追加
+            self._checkbox_item = layout.checkbox(
+                text="Enable Feature",
+                value=self._checkbox_value,
+                on_toggle=on_checkbox_toggle
+            )
+
+            # もう1つのチェックボックス（無効状態）
+            disabled_checkbox = layout.checkbox(
+                text="Disabled Option",
+                value=False
+            )
+            disabled_checkbox.enabled = False
+
+            # トグルボタンコールバック
+            def on_toggle_change(value: bool):
+                self._toggle_value = value
+                self._last_action = f"Toggle: {value}"
+
+            # トグルボタン追加
+            self._toggle_item = layout.toggle(
+                text="Preview Mode",
+                value=self._toggle_value,
+                on_toggle=on_toggle_change
+            )
+
+            # もう1つのトグル
+            layout.toggle(
+                text="Auto Save",
+                value=True
             )
 
             layout.separator()
