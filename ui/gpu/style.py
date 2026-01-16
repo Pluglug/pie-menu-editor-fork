@@ -207,6 +207,10 @@ class GPULayoutStyle:
     border_radius: int = 4  # パネル/ボタンの角丸 [推奨: 2-8, Blender標準≈4]
     roundness: float = 0.4  # テーマから取得する角丸係数 [0.0-1.0]
 
+    # プロパティスプリット (use_property_split=True 時のラベル/ウィジェット分割)
+    # Blender 標準では約 0.4 (40%) がラベル領域
+    split_factor: float = 0.4  # ラベル領域の幅比率 [0.2-0.5, Blender標準≈0.4]
+
     # タイトルバー
     title_bar_height: int = 22  # タイトルバー高さ [推奨: 20-26, Blender標準≈22]
 

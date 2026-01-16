@@ -1055,7 +1055,7 @@ class GPULayout:
         self._register_resize_handle()
 
         if self._hit_manager:
-            self._hit_manager.update_positions()
+            self._hit_manager.update_positions(self.style)
 
         self._dirty = False  # レイアウト完了
 
@@ -1349,7 +1349,9 @@ class GPULayout:
         manager = self._ensure_hit_manager()
 
         if isinstance(item, ColorItem):
-            # カラースウォッチ: クリックでコールバック
+            # カラースウォッチ: カラーバー部分のみをヒット領域に設定
+            bar_x, bar_y, bar_width, bar_height = item.get_bar_rect(self.style)
+
             def on_hover_enter():
                 item._hovered = True
 
@@ -1360,10 +1362,10 @@ class GPULayout:
                 item.click()
 
             rect = HitRect(
-                x=item.x,
-                y=item.y,
-                width=item.width,
-                height=item.height,
+                x=bar_x,
+                y=bar_y,
+                width=bar_width,
+                height=bar_height,
                 item=item,  # update_positions() で位置同期するため必須
                 tag=item.text or "color",
                 on_hover_enter=on_hover_enter,
@@ -1372,6 +1374,8 @@ class GPULayout:
             )
             manager.register(rect)
             rect.item_id = str(id(item))
+            # ColorItem用のフラグを設定（update_positions()で使用）
+            rect._is_color_bar = True
         elif isinstance(item, CheckboxItem):
             # チェックボックス: クリックでトグル
             def on_hover_enter():

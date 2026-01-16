@@ -554,6 +554,48 @@ class BLFDrawing:
         return blf.dimensions(font_id, text)
 
     @classmethod
+    def truncate_text(cls, text: str, size: int, max_width: float,
+                      ellipsis: str = "...", font_id: int = FONT_ID) -> str:
+        """
+        テキストを指定幅に収まるよう省略
+
+        Args:
+            text: 元のテキスト
+            size: フォントサイズ
+            max_width: 最大幅（ピクセル）
+            ellipsis: 省略記号（デフォルト: "..."）
+            font_id: フォントID
+
+        Returns:
+            省略されたテキスト（収まる場合は元のまま）
+        """
+        blf.size(font_id, size)
+        width, _ = blf.dimensions(font_id, text)
+
+        if width <= max_width:
+            return text
+
+        # 省略記号の幅を取得
+        ellipsis_width, _ = blf.dimensions(font_id, ellipsis)
+        target_width = max_width - ellipsis_width
+
+        if target_width <= 0:
+            return ellipsis
+
+        # 二分探索で適切な長さを見つける
+        low, high = 0, len(text)
+        while low < high:
+            mid = (low + high + 1) // 2
+            test_text = text[:mid]
+            w, _ = blf.dimensions(font_id, test_text)
+            if w <= target_width:
+                low = mid
+            else:
+                high = mid - 1
+
+        return text[:low] + ellipsis if low < len(text) else text
+
+    @classmethod
     def wrap_text(cls, text: str, max_width: float, size: int = 13,
                   font_id: int = FONT_ID) -> list[str]:
         """テキストを指定幅で折り返し"""

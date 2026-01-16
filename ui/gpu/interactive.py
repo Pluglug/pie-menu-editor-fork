@@ -486,18 +486,29 @@ class HitTestManager:
     # ユーティリティ
     # ─────────────────────────────────────────────────────────────────────────
 
-    def update_positions(self) -> None:
+    def update_positions(self, style=None) -> None:
         """
         登録済み HitRect の位置をアイテムから再取得
 
         レイアウト後に呼び出して位置を同期する。
+
+        Args:
+            style: GPULayoutStyle（ColorItem の get_bar_rect() に必要）
         """
         for rect in self._rects:
             if rect.item is not None:
-                rect.x = rect.item.x
-                rect.y = rect.item.y
-                rect.width = rect.item.width
-                rect.height = rect.item.height
+                # ColorItem の場合はカラーバー部分のみをヒット領域に
+                if getattr(rect, '_is_color_bar', False) and style is not None:
+                    bar_x, bar_y, bar_width, bar_height = rect.item.get_bar_rect(style)
+                    rect.x = bar_x
+                    rect.y = bar_y
+                    rect.width = bar_width
+                    rect.height = bar_height
+                else:
+                    rect.x = rect.item.x
+                    rect.y = rect.item.y
+                    rect.width = rect.item.width
+                    rect.height = rect.item.height
                 rect.enabled = getattr(rect.item, 'enabled', True)
                 rect.visible = getattr(rect.item, 'visible', True)
 

@@ -1143,16 +1143,18 @@ class ColorItem(LayoutItem):
     Blender スタイルの横長カラーバーを描画。
     左側に RGB（不透明）、右側にチェッカー+RGBA（アルファ表示）。
 
+    現在の実装:
+        - use_property_split=True スタイル: ラベルを固定比率領域（split_factor）に右揃え
+        - カラーバーは残りの領域に配置（整列される）
+
     Attributes:
         color: 表示する色 (R, G, B, A) - 各値は 0.0-1.0
         text: ラベルテキスト（空の場合はカラーバーのみ）
         on_click: クリック時のコールバック
 
-    TODO(layout.prop統合):
-        - use_property_split=True: ラベルは左側に配置（GPULayout側で処理）
-        - use_property_split=False: ラベル+コロンを上の行に表示（2行構成）
-        - text="": カラーバーのみ1行
-        - ヒットポイントはカラーバー部分のみ（ラベル除外）
+    TODO(将来の拡張):
+        - use_property_split=False スタイル: ラベル+コロンを上の行、カラーバーを下の行（2行構成）
+        - layout.prop() との統合時に HitRect をカラーバー部分のみに設定（get_bar_rect() 使用）
     """
     color: tuple[float, float, float, float] = (1.0, 1.0, 1.0, 1.0)
     text: str = ""
@@ -1169,9 +1171,9 @@ class ColorItem(LayoutItem):
     def calc_size(self, style: GPULayoutStyle) -> tuple[float, float]:
         """サイズを計算
 
-        TODO(layout.prop統合):
-            - 現在は width を外部から設定する想定（row 全体に広がる）
-            - use_property_split 時はラベル幅を除いた残りが bar_width
+        Note:
+            width は親レイアウトから設定される（row 全体に広がる）。
+            ラベル領域は split_factor で固定比率（約40%）として確保される。
         """
         height = style.scaled_item_height()
         # width は親レイアウトから設定される（row 全体に広がる）
@@ -1193,20 +1195,29 @@ class ColorItem(LayoutItem):
         bar_height = self._get_bar_height(style)
         spacing = style.scaled_spacing()
 
-        # TODO(layout.prop統合): use_property_split 時はラベルを除いた領域を計算
-        # 現在はテキストがある場合、左側にラベルを表示（暫定実装）
+        # use_property_split=True スタイル: ラベルを固定比率領域に右揃え
         if self.text:
             text_size = style.scaled_text_size()
-            text_w, text_h = BLFDrawing.get_text_dimensions(self.text + ":", text_size)
-            label_width = text_w + spacing
+            label_text = self.text + ":"
 
-            # ラベル描画
+            # 固定比率でラベル領域を確保（split_factor: 約40%）
+            label_region_width = self.width * style.split_factor
+
+            # テキストがラベル領域に収まるか確認、収まらない場合は省略
+            available_width = label_region_width - spacing * 2
+            label_text = BLFDrawing.truncate_text(label_text, text_size, available_width)
+            text_w, text_h = BLFDrawing.get_text_dimensions(label_text, text_size)
+
+            # ラベルを右揃えで描画（ラベル領域内）
             text_color = style.text_color if enabled else style.text_color_disabled
             text_y = self.y - (self.height + text_h) / 2
-            BLFDrawing.draw_text(self.x, text_y, self.text + ":", text_color, text_size)
+            text_x = self.x + label_region_width - text_w - spacing  # 右揃え
+            # 左端を超えないようにクリップ
+            text_x = max(text_x, self.x + spacing)
+            BLFDrawing.draw_text(text_x, text_y, label_text, text_color, text_size)
 
-            bar_x = self.x + label_width
-            bar_width = self.width - label_width
+            bar_x = self.x + label_region_width
+            bar_width = self.width - label_region_width
         else:
             bar_x = self.x
             bar_width = self.width
@@ -1337,14 +1348,12 @@ class ColorItem(LayoutItem):
             - _register_interactive_item でこのメソッドを使って HitRect を設定
         """
         bar_height = self._get_bar_height(style)
-        spacing = style.scaled_spacing()
 
+        # use_property_split=True スタイル: 固定比率でバー位置を計算
         if self.text:
-            text_size = style.scaled_text_size()
-            text_w, _ = BLFDrawing.get_text_dimensions(self.text + ":", text_size)
-            label_width = text_w + spacing
-            bar_x = self.x + label_width
-            bar_width = self.width - label_width
+            label_region_width = self.width * style.split_factor
+            bar_x = self.x + label_region_width
+            bar_width = self.width - label_region_width
         else:
             bar_x = self.x
             bar_width = self.width
