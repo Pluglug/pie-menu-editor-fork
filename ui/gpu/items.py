@@ -1164,9 +1164,14 @@ class ColorItem(LayoutItem):
     # カラーバーの高さ比率（アイテム高さに対して）
     BAR_HEIGHT_RATIO: float = 0.8
 
-    def _get_bar_height(self, style: GPULayoutStyle) -> float:
-        """カラーバーの高さを取得"""
-        return style.scaled_item_height() * self.BAR_HEIGHT_RATIO
+    def _get_bar_height(self) -> float:
+        """カラーバーの高さを取得
+
+        Note:
+            self.height は layout.py で scale_y を適用済みなので、
+            ここでは self.height を使用して scale_y に追従する。
+        """
+        return self.height * self.BAR_HEIGHT_RATIO
 
     def calc_size(self, style: GPULayoutStyle) -> tuple[float, float]:
         """サイズを計算
@@ -1192,7 +1197,7 @@ class ColorItem(LayoutItem):
         hovered = state.hovered if state else self._hovered
         enabled = state.enabled if state else self.enabled
 
-        bar_height = self._get_bar_height(style)
+        bar_height = self._get_bar_height()
         spacing = style.scaled_spacing()
 
         # use_property_split=True スタイル: ラベルを固定比率領域に右揃え
@@ -1205,16 +1210,20 @@ class ColorItem(LayoutItem):
 
             # テキストがラベル領域に収まるか確認、収まらない場合は省略
             available_width = label_region_width - spacing * 2
-            label_text = BLFDrawing.truncate_text(label_text, text_size, available_width)
-            text_w, text_h = BLFDrawing.get_text_dimensions(label_text, text_size)
 
-            # ラベルを右揃えで描画（ラベル領域内）
-            text_color = style.text_color if enabled else style.text_color_disabled
-            text_y = self.y - (self.height + text_h) / 2
-            text_x = self.x + label_region_width - text_w - spacing  # 右揃え
-            # 左端を超えないようにクリップ
-            text_x = max(text_x, self.x + spacing)
-            BLFDrawing.draw_text(text_x, text_y, label_text, text_color, text_size)
+            # ラベル領域が十分にある場合のみテキストを描画
+            if available_width > 0:
+                label_text = BLFDrawing.truncate_text(label_text, text_size, available_width)
+                text_w, text_h = BLFDrawing.get_text_dimensions(label_text, text_size)
+
+                # テキスト幅がラベル領域に収まる場合のみ描画
+                if text_w <= available_width:
+                    text_color = style.text_color if enabled else style.text_color_disabled
+                    text_y = self.y - (self.height + text_h) / 2
+                    text_x = self.x + label_region_width - text_w - spacing  # 右揃え
+                    # 左端を超えないようにクリップ
+                    text_x = max(text_x, self.x + spacing)
+                    BLFDrawing.draw_text(text_x, text_y, label_text, text_color, text_size)
 
             bar_x = self.x + label_region_width
             bar_width = self.width - label_region_width
@@ -1347,7 +1356,7 @@ class ColorItem(LayoutItem):
         TODO(layout.prop統合):
             - _register_interactive_item でこのメソッドを使って HitRect を設定
         """
-        bar_height = self._get_bar_height(style)
+        bar_height = self._get_bar_height()
 
         # use_property_split=True スタイル: 固定比率でバー位置を計算
         if self.text:
