@@ -290,7 +290,8 @@ def on_drag(dx, dy, mouse_x, mouse_y, event):
 | 2026-01-16 | 2.3 | CheckboxItem 実装完了（wcol_option テーマ対応） |
 | 2026-01-16 | 2.4 | ToggleItem 拡張完了（wcol_toggle テーマ対応） |
 | 2026-01-16 | 2.8 | ColorItem 実装完了（チェッカーパターン・透明色対応） |
+| 2026-01-17 | 2.7 | RadioGroupItem 実装完了（wcol_radio テーマ対応、on_move コールバック追加） |
 
 ---
 
-*Last Updated: 2026-01-16*
+*Last Updated: 2026-01-17*

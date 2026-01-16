@@ -16,7 +16,7 @@ from .drawing import GPUDrawing, BLFDrawing
 from .items import (
     LayoutItem, LabelItem, SeparatorItem, ButtonItem, ToggleItem,
     PropDisplayItem, BoxItem, SliderItem, NumberItem, CheckboxItem,
-    ColorItem
+    ColorItem, RadioGroupItem, RadioOption
 )
 from .interactive import HitTestManager, HitRect
 
@@ -406,6 +406,55 @@ class GPULayout:
             text=text,
             value=value,
             on_toggle=on_toggle,
+            enabled=self.enabled and self.active
+        )
+        self._add_item(item)
+        return item
+
+    def radio_group(self, *, options: list = None, value: str = "",
+                    on_change: Optional[Callable[[str], None]] = None) -> RadioGroupItem:
+        """
+        ラジオボタングループを追加
+
+        Args:
+            options: 選択肢のリスト。以下の形式をサポート:
+                - RadioOption オブジェクト
+                - (value, label, icon) タプル
+                - (value, label) タプル
+                - (value,) タプル
+                - 文字列（value として使用）
+            value: 初期選択値
+            on_change: 値変更時のコールバック
+
+        Returns:
+            作成された RadioGroupItem（外部から値を取得/設定可能）
+
+        使用例:
+            # 基本的な使い方
+            layout.radio_group(
+                options=[("A", "Option A"), ("B", "Option B"), ("C", "Option C")],
+                value="A"
+            )
+
+            # アイコン付き
+            layout.radio_group(
+                options=[
+                    ("OBJECT", "Object", "OBJECT_DATA"),
+                    ("EDIT", "Edit", "EDITMODE_HLT"),
+                    ("SCULPT", "Sculpt", "SCULPTMODE_HLT"),
+                ],
+                value="OBJECT"
+            )
+
+            # コールバック付き
+            def on_mode_change(value):
+                print(f"Mode: {value}")
+            layout.radio_group(options=["A", "B", "C"], on_change=on_mode_change)
+        """
+        item = RadioGroupItem(
+            options=options or [],
+            value=value,
+            on_change=on_change,
             enabled=self.enabled and self.active
         )
         self._add_item(item)
@@ -1343,7 +1392,7 @@ class GPULayout:
         return self._hit_manager
 
     def _register_interactive_item(self, item: LayoutItem) -> None:
-        if not isinstance(item, (ButtonItem, ToggleItem, SliderItem, NumberItem, CheckboxItem, ColorItem)):
+        if not isinstance(item, (ButtonItem, ToggleItem, SliderItem, NumberItem, CheckboxItem, ColorItem, RadioGroupItem)):
             return
 
         manager = self._ensure_hit_manager()
@@ -1376,6 +1425,41 @@ class GPULayout:
             rect.item_id = str(id(item))
             # ColorItem用のフラグを設定（update_positions()で使用）
             rect._is_color_bar = True
+        elif isinstance(item, RadioGroupItem):
+            # ラジオボタングループ: ホバーとクリックで個々のボタンを判定
+            # style への参照をクロージャでキャプチャ
+            style = self.style
+
+            def on_hover_enter():
+                pass  # on_move で詳細な処理
+
+            def on_hover_leave():
+                item._hovered_index = -1
+
+            def on_move(x: float, y: float):
+                # ホバー中のボタンを判定
+                item._hovered_index = item.get_button_at(x, y, style)
+
+            def on_click():
+                # クリックされたボタンを選択
+                # 最後のホバーインデックスを使用
+                if item._hovered_index >= 0:
+                    item.select_by_index(item._hovered_index)
+
+            rect = HitRect(
+                x=item.x,
+                y=item.y,
+                width=item.width,
+                height=item.height,
+                item=item,  # update_positions() で位置同期するため必須
+                tag="radio_group",
+                on_hover_enter=on_hover_enter,
+                on_hover_leave=on_hover_leave,
+                on_move=on_move,
+                on_click=on_click,
+            )
+            manager.register(rect)
+            rect.item_id = str(id(item))
         elif isinstance(item, CheckboxItem):
             # チェックボックス: クリックでトグル
             def on_hover_enter():

@@ -98,6 +98,7 @@ class HitRect:
     # コールバック
     on_hover_enter: Optional[Callable[[], None]] = None
     on_hover_leave: Optional[Callable[[], None]] = None
+    on_move: Optional[Callable[[float, float], None]] = None  # (mouse_x, mouse_y) - ホバー中のマウス移動
     on_click: Optional[Callable[[], None]] = None
     on_press: Optional[Callable[[float, float], None]] = None  # (mouse_x, mouse_y)
     on_release: Optional[Callable[[bool], None]] = None  # bool = inside
@@ -434,6 +435,10 @@ class HitTestManager:
 
             self._state.hovered = new_hover
             self._ui_state.hovered_id = new_hover.item_id if new_hover else None
+
+        # ホバー中のマウス移動を通知（RadioGroupItem などで使用）
+        if new_hover and new_hover.on_move:
+            new_hover.on_move(x, y)
 
         return new_hover is not None
 

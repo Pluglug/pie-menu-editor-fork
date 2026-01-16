@@ -372,6 +372,9 @@ class TEST_OT_gpu_interactive(Operator):
     _toggle_value: bool = False
     _checkbox_item = None
     _toggle_item = None
+    # ラジオグループデモ用
+    _radio_value: str = "OBJECT"
+    _radio_item = None
 
     # パネル内で消費すべきマウスイベント
     _CONSUME_EVENTS = {
@@ -442,6 +445,8 @@ class TEST_OT_gpu_interactive(Operator):
         self._toggle_value = False
         self._checkbox_item = None
         self._toggle_item = None
+        self._radio_value = "OBJECT"
+        self._radio_item = None
 
         # レイアウトを事前構築
         region = self._get_window_region(context)
@@ -690,6 +695,39 @@ class TEST_OT_gpu_interactive(Operator):
             # row = layout.row()
             # row.color(color=(1.0, 0.2, 0.2, 1.0))
             # row.color(color=(0.2, 1.0, 0.2, 1.0))
+
+            layout.separator()
+
+            # ── Radio Group デモ (Enum expanded スタイル) ──
+            layout.label(text="Radio Group (Enum):")
+
+            # ラジオグループコールバック
+            def on_radio_change(value: str):
+                self._radio_value = value
+                self._last_action = f"Radio: {value}"
+
+            # 基本的なラジオグループ
+            self._radio_item = layout.radio_group(
+                options=[
+                    ("OBJECT", "Object"),
+                    ("EDIT", "Edit"),
+                    ("SCULPT", "Sculpt"),
+                ],
+                value=getattr(self, '_radio_value', 'OBJECT'),
+                on_change=on_radio_change
+            )
+
+            # テキストのみのラジオグループ
+            layout.radio_group(
+                options=[("A", "Option A"), ("B", "Option B"), ("C", "Option C")],
+                value="B"
+            )
+
+            # シンプルなラジオグループ（value のみ）
+            layout.radio_group(
+                options=["Low", "Medium", "High"],
+                value="Medium"
+            )
 
             layout.separator()
             layout.label(text="Press D to toggle debug view")

@@ -1136,6 +1136,309 @@ class NumberItem(LayoutItem):
 
 
 @dataclass
+class RadioOption:
+    """RadioGroupItem の個々の選択肢"""
+    value: str  # 内部値（識別子）
+    label: str = ""  # 表示ラベル（空の場合は value を使用）
+    icon: str = "NONE"  # アイコン名
+
+    @property
+    def display_label(self) -> str:
+        """表示用ラベルを取得"""
+        return self.label if self.label else self.value
+
+
+@dataclass
+class RadioGroupItem(LayoutItem):
+    """
+    ラジオボタングループ（wcol_radio テーマ対応）
+
+    Enum プロパティを横並びのボタングループで表示。1つのみ選択可能。
+    Blender の `expand=True` 時の Enum 表示に相当。
+
+    Attributes:
+        options: 選択肢のリスト (RadioOption または (value, label, icon) タプル)
+        value: 現在選択されている値
+        on_change: 値変更時のコールバック
+
+    Note:
+        - 左端ボタンは左側のみ角丸、右端ボタンは右側のみ角丸
+        - 中間ボタンは角丸なし（連結されたボタン群の見た目）
+        - 選択されたボタンは inner_sel で強調
+    """
+    options: list[RadioOption] = field(default_factory=list)
+    value: str = ""
+    on_change: Optional[Callable[[str], None]] = None
+
+    # 状態（layout 側から設定される）
+    _hovered_index: int = field(default=-1, repr=False)
+
+    def __post_init__(self):
+        """options を RadioOption に正規化"""
+        normalized = []
+        for opt in self.options:
+            if isinstance(opt, RadioOption):
+                normalized.append(opt)
+            elif isinstance(opt, (list, tuple)):
+                # (value,) or (value, label) or (value, label, icon)
+                value = opt[0] if len(opt) > 0 else ""
+                label = opt[1] if len(opt) > 1 else ""
+                icon = opt[2] if len(opt) > 2 else "NONE"
+                normalized.append(RadioOption(value=value, label=label, icon=icon))
+            else:
+                # 文字列として扱う
+                normalized.append(RadioOption(value=str(opt)))
+        self.options = normalized
+
+    def calc_size(self, style: GPULayoutStyle) -> tuple[float, float]:
+        """グループ全体のサイズを計算"""
+        if not self.options:
+            return (0, style.scaled_item_height())
+
+        text_size = style.scaled_text_size()
+        padding = style.scaled_padding()
+        icon_size = style.scaled_icon_size()
+        spacing = style.scaled_spacing()
+
+        total_width = 0
+        for opt in self.options:
+            # 各オプションの幅を計算
+            text_w, _ = BLFDrawing.get_text_dimensions(opt.display_label, text_size)
+            icon_w = icon_size + spacing if opt.icon != "NONE" else 0
+            button_width = text_w + icon_w + padding * 2
+            total_width += button_width
+
+        return (total_width, style.scaled_item_height())
+
+    def get_button_rects(self, style: GPULayoutStyle) -> list[tuple[float, float, float, float]]:
+        """各ボタンの矩形を取得（x, y, width, height）"""
+        if not self.options:
+            return []
+
+        text_size = style.scaled_text_size()
+        padding = style.scaled_padding()
+        icon_size = style.scaled_icon_size()
+        spacing = style.scaled_spacing()
+
+        # 各ボタンの自然幅を計算
+        button_widths = []
+        for opt in self.options:
+            text_w, _ = BLFDrawing.get_text_dimensions(opt.display_label, text_size)
+            icon_w = icon_size + spacing if opt.icon != "NONE" else 0
+            button_widths.append(text_w + icon_w + padding * 2)
+
+        # 幅が設定されている場合は均等分割
+        total_natural_width = sum(button_widths)
+        if self.width > total_natural_width:
+            # 均等に拡張
+            button_widths = [self.width / len(self.options)] * len(self.options)
+        elif self.width > 0 and self.width < total_natural_width:
+            # 比率を維持して縮小
+            scale = self.width / total_natural_width
+            button_widths = [w * scale for w in button_widths]
+
+        # 矩形リストを作成
+        rects = []
+        current_x = self.x
+        for width in button_widths:
+            rects.append((current_x, self.y, width, self.height))
+            current_x += width
+
+        return rects
+
+    def get_button_at(self, x: float, y: float, style: GPULayoutStyle) -> int:
+        """指定座標にあるボタンのインデックスを返す（-1: なし）"""
+        if not self.is_inside(x, y):
+            return -1
+
+        rects = self.get_button_rects(style)
+        for i, (bx, by, bw, bh) in enumerate(rects):
+            if bx <= x <= bx + bw and by - bh <= y <= by:
+                return i
+        return -1
+
+    def select(self, value: str) -> None:
+        """指定値を選択"""
+        if value != self.value:
+            self.value = value
+            if self.on_change:
+                self.on_change(value)
+
+    def select_by_index(self, index: int) -> None:
+        """インデックスで選択"""
+        if 0 <= index < len(self.options):
+            self.select(self.options[index].value)
+
+    def draw(self, style: GPULayoutStyle, state: Optional[ItemRenderState] = None) -> None:
+        """ラジオボタングループを描画（wcol_radio テーマ使用）"""
+        if not self.visible or not self.options:
+            return
+
+        # テーマカラーを取得
+        wcol = style.get_widget_colors(WidgetType.RADIO)
+        if wcol is None:
+            self._draw_fallback(style, state)
+            return
+
+        # 状態の判定
+        enabled = state.enabled if state else self.enabled
+        hovered_index = self._hovered_index
+
+        # 角丸半径を計算（roundness を適用）
+        base_radius = style.scaled_border_radius()
+        radius = int(base_radius * wcol.roundness) if wcol.roundness < 1.0 else base_radius
+
+        # 各ボタンの矩形を取得
+        rects = self.get_button_rects(style)
+
+        # 各ボタンを描画
+        for i, (bx, by, bw, bh) in enumerate(rects):
+            opt = self.options[i]
+            is_selected = (opt.value == self.value)
+            is_hovered = (i == hovered_index)
+
+            # 角丸の設定（左端/右端のみ角丸）
+            is_first = (i == 0)
+            is_last = (i == len(self.options) - 1)
+            corners = (is_first, is_first, is_last, is_last)  # (top_left, bottom_left, top_right, bottom_right)
+
+            self._draw_button(
+                bx, by, bw, bh,
+                opt, is_selected, is_hovered, enabled,
+                radius, corners, style, wcol
+            )
+
+    def _draw_button(self, x: float, y: float, width: float, height: float,
+                     opt: RadioOption, is_selected: bool, is_hovered: bool, enabled: bool,
+                     radius: int, corners: tuple[bool, bool, bool, bool],
+                     style: GPULayoutStyle, wcol: ThemeWidgetColors) -> None:
+        """個々のボタンを描画"""
+        # === 1. 背景描画 ===
+        if is_selected:
+            bg_color = wcol.inner_sel
+            if is_hovered:
+                bg_color = tuple(min(1.0, c * 1.15) for c in bg_color[:3]) + (bg_color[3],)
+        else:
+            bg_color = wcol.inner
+            if is_hovered:
+                bg_color = tuple(min(1.0, c * 1.15) for c in bg_color[:3]) + (bg_color[3],)
+
+        if not enabled:
+            bg_color = tuple(c * 0.5 for c in bg_color[:3]) + (bg_color[3],)
+
+        GPUDrawing.draw_rounded_rect(
+            x, y, width, height,
+            radius, bg_color, corners
+        )
+
+        # === 2. アウトライン描画 ===
+        outline_color = wcol.outline if enabled else tuple(c * 0.5 for c in wcol.outline[:3]) + (wcol.outline[3],)
+        GPUDrawing.draw_rounded_rect_outline(
+            x, y, width, height,
+            radius, outline_color,
+            line_width=style.line_width(),
+            corners=corners
+        )
+
+        # === 3. アイコンとテキスト描画 ===
+        text_color = wcol.text_sel if is_selected else wcol.text
+        if not enabled:
+            text_color = tuple(c * 0.5 for c in text_color[:3]) + (text_color[3],)
+
+        text_size = style.scaled_text_size()
+        padding = style.scaled_padding()
+
+        icon_size = style.scaled_icon_size() if opt.icon != "NONE" else 0
+        icon_spacing = style.scaled_spacing() if opt.icon != "NONE" else 0
+
+        # ボタン内で利用可能なテキスト幅
+        available_width = width - padding * 2 - icon_size - icon_spacing
+        display_text = BLFDrawing.get_text_with_ellipsis(opt.display_label, available_width, text_size)
+        text_w, text_h = BLFDrawing.get_text_dimensions(display_text, text_size)
+
+        # コンテンツ全体の幅（アイコン + スペース + テキスト）
+        content_w = icon_size + icon_spacing + text_w
+
+        # 中央揃えでコンテンツを配置
+        content_x = x + (width - content_w) / 2
+        text_y = y - (height + text_h) / 2
+
+        # アイコン描画
+        text_x = content_x
+        if opt.icon != "NONE":
+            icon_y = y - (height - icon_size) / 2
+            alpha = 1.0 if enabled else 0.5
+            IconDrawing.draw_icon(content_x, icon_y, opt.icon, alpha=alpha)
+            text_x += icon_size + icon_spacing
+
+        # テキスト描画
+        clip_rect = BLFDrawing.calc_clip_rect(x, y, width, height, 0)
+        BLFDrawing.draw_text_clipped(text_x, text_y, display_text, text_color, text_size, clip_rect)
+
+    def _draw_fallback(self, style: GPULayoutStyle, state: Optional[ItemRenderState] = None) -> None:
+        """テーマがない場合のフォールバック描画"""
+        enabled = state.enabled if state else self.enabled
+        hovered_index = self._hovered_index
+
+        radius = style.scaled_border_radius()
+        rects = self.get_button_rects(style)
+
+        for i, (bx, by, bw, bh) in enumerate(rects):
+            opt = self.options[i]
+            is_selected = (opt.value == self.value)
+            is_hovered = (i == hovered_index)
+
+            is_first = (i == 0)
+            is_last = (i == len(self.options) - 1)
+            corners = (is_first, is_first, is_last, is_last)
+
+            # 背景色
+            if is_selected:
+                bg_color = style.highlight_color
+                if is_hovered:
+                    bg_color = tuple(min(1.0, c * 1.2) for c in bg_color[:3]) + (bg_color[3],)
+            else:
+                bg_color = style.button_hover_color if is_hovered else style.button_color
+
+            if not enabled:
+                bg_color = tuple(c * 0.5 for c in bg_color[:3]) + (bg_color[3],)
+
+            GPUDrawing.draw_rounded_rect(bx, by, bw, bh, radius, bg_color, corners)
+            GPUDrawing.draw_rounded_rect_outline(
+                bx, by, bw, bh,
+                radius, style.outline_color,
+                line_width=style.line_width(),
+                corners=corners
+            )
+
+            # テキスト
+            text_color = style.button_text_color if enabled else style.text_color_disabled
+            text_size = style.scaled_text_size()
+            padding = style.scaled_padding()
+
+            icon_size = style.scaled_icon_size() if opt.icon != "NONE" else 0
+            icon_spacing = style.scaled_spacing() if opt.icon != "NONE" else 0
+
+            available_width = bw - padding * 2 - icon_size - icon_spacing
+            display_text = BLFDrawing.get_text_with_ellipsis(opt.display_label, available_width, text_size)
+            text_w, text_h = BLFDrawing.get_text_dimensions(display_text, text_size)
+
+            content_w = icon_size + icon_spacing + text_w
+            content_x = bx + (bw - content_w) / 2
+            text_y = by - (bh + text_h) / 2
+
+            text_x = content_x
+            if opt.icon != "NONE":
+                icon_y = by - (bh - icon_size) / 2
+                alpha = 1.0 if enabled else 0.5
+                IconDrawing.draw_icon(content_x, icon_y, opt.icon, alpha=alpha)
+                text_x += icon_size + icon_spacing
+
+            clip_rect = BLFDrawing.calc_clip_rect(bx, by, bw, bh, 0)
+            BLFDrawing.draw_text_clipped(text_x, text_y, display_text, text_color, text_size, clip_rect)
+
+
+@dataclass
 class ColorItem(LayoutItem):
     """
     カラースウォッチ（色の表示・選択ウィジェット）
