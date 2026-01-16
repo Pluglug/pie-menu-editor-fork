@@ -459,30 +459,31 @@ class GPULayout:
         """
         カラースウォッチを追加
 
-        角丸の色付き矩形を表示。透明度がある場合はチェッカーパターンで背景を表示。
+        Blender スタイルの横長カラーバー。左=RGB、右=RGBA(チェッカー)。
 
         Args:
             color: 表示する色 (R, G, B, A) - 各値は 0.0-1.0
-            text: ラベルテキスト（空の場合はスウォッチのみ）
+            text: ラベルテキスト（空の場合はカラーバーのみ）
             on_click: クリック時のコールバック
 
         Returns:
             作成された ColorItem（外部から色を取得/設定可能）
 
+        TODO(layout.prop統合):
+            - use_property_split=True: ラベルをレイアウト側で左に配置
+            - use_property_split=False: text+":"を上の行、カラーバーを下の行（2行構成）
+            - text="": カラーバーのみ
+            - HitRect をカラーバー部分のみに設定（get_bar_rect() 使用）
+
         使用例:
-            # 基本的な使い方
+            # 基本的な使い方（row 全体に広がる）
             layout.color(color=(1.0, 0.0, 0.0, 1.0))
 
             # ラベル付き
-            layout.color(color=(0.2, 0.5, 1.0, 1.0), text="Diffuse Color")
+            layout.color(color=(0.2, 0.5, 1.0, 1.0), text="Diffuse")
 
-            # 半透明
+            # 半透明（右側にチェッカーが表示される）
             layout.color(color=(1.0, 1.0, 0.0, 0.5), text="Alpha 50%")
-
-            # クリックコールバック
-            def on_click():
-                print("Color clicked!")
-            layout.color(color=(0.0, 1.0, 0.0, 1.0), on_click=on_click)
         """
         item = ColorItem(
             color=color,

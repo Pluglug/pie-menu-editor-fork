@@ -1140,80 +1140,133 @@ class ColorItem(LayoutItem):
     """
     カラースウォッチ（色の表示・選択ウィジェット）
 
-    角丸の矩形で色を表示。オプションでラベルテキストを表示。
-    透明度がある場合はチェッカーパターンで背景を表示。
+    Blender スタイルの横長カラーバーを描画。
+    左側に RGB（不透明）、右側にチェッカー+RGBA（アルファ表示）。
 
     Attributes:
         color: 表示する色 (R, G, B, A) - 各値は 0.0-1.0
-        text: ラベルテキスト（空の場合はスウォッチのみ）
+        text: ラベルテキスト（空の場合はカラーバーのみ）
         on_click: クリック時のコールバック
+
+    TODO(layout.prop統合):
+        - use_property_split=True: ラベルは左側に配置（GPULayout側で処理）
+        - use_property_split=False: ラベル+コロンを上の行に表示（2行構成）
+        - text="": カラーバーのみ1行
+        - ヒットポイントはカラーバー部分のみ（ラベル除外）
     """
     color: tuple[float, float, float, float] = (1.0, 1.0, 1.0, 1.0)
     text: str = ""
     on_click: Optional[Callable[[], None]] = None
     _hovered: bool = field(default=False, repr=False)
 
-    # スウォッチサイズ定数
-    SWATCH_SIZE_RATIO: float = 0.8  # アイテム高さに対する比率
+    # カラーバーの高さ比率（アイテム高さに対して）
+    BAR_HEIGHT_RATIO: float = 0.8
 
-    def _get_swatch_size(self, style: GPULayoutStyle) -> float:
-        """スウォッチのサイズを取得"""
-        return style.scaled_item_height() * self.SWATCH_SIZE_RATIO
+    def _get_bar_height(self, style: GPULayoutStyle) -> float:
+        """カラーバーの高さを取得"""
+        return style.scaled_item_height() * self.BAR_HEIGHT_RATIO
 
     def calc_size(self, style: GPULayoutStyle) -> tuple[float, float]:
-        """サイズを計算"""
-        swatch_size = self._get_swatch_size(style)
+        """サイズを計算
+
+        TODO(layout.prop統合):
+            - 現在は width を外部から設定する想定（row 全体に広がる）
+            - use_property_split 時はラベル幅を除いた残りが bar_width
+        """
         height = style.scaled_item_height()
-
-        if self.text:
-            text_size = style.scaled_text_size()
-            text_w, _ = BLFDrawing.get_text_dimensions(self.text, text_size)
-            width = swatch_size + style.scaled_spacing() + text_w
-        else:
-            width = swatch_size
-
-        return (width, height)
+        # width は親レイアウトから設定される（row 全体に広がる）
+        # デフォルトは最小幅として適当な値を返す
+        min_width = style.scaled_item_height() * 4  # 最小幅
+        return (self.width if self.width > 0 else min_width, height)
 
     def draw(self, style: GPULayoutStyle, state: Optional[ItemRenderState] = None) -> None:
-        """描画"""
+        """描画
+
+        Blender スタイル: [  RGB (不透明)  |  RGBA (チェッカー)  ]
+        """
         if not self.visible:
             return
 
         hovered = state.hovered if state else self._hovered
         enabled = state.enabled if state else self.enabled
 
-        swatch_size = self._get_swatch_size(style)
+        bar_height = self._get_bar_height(style)
         spacing = style.scaled_spacing()
 
-        # スウォッチの位置（垂直中央揃え）
-        swatch_x = self.x
-        swatch_y = self.y - (self.height - swatch_size) / 2
+        # TODO(layout.prop統合): use_property_split 時はラベルを除いた領域を計算
+        # 現在はテキストがある場合、左側にラベルを表示（暫定実装）
+        if self.text:
+            text_size = style.scaled_text_size()
+            text_w, text_h = BLFDrawing.get_text_dimensions(self.text + ":", text_size)
+            label_width = text_w + spacing
+
+            # ラベル描画
+            text_color = style.text_color if enabled else style.text_color_disabled
+            text_y = self.y - (self.height + text_h) / 2
+            BLFDrawing.draw_text(self.x, text_y, self.text + ":", text_color, text_size)
+
+            bar_x = self.x + label_width
+            bar_width = self.width - label_width
+        else:
+            bar_x = self.x
+            bar_width = self.width
+
+        # カラーバーの位置（垂直中央揃え）
+        bar_y = self.y - (self.height - bar_height) / 2
 
         # 角丸半径
-        radius = int(swatch_size * 0.15)
+        radius = int(bar_height * 0.15)
 
-        # === 1. チェッカーパターン背景（透明度がある場合） ===
-        if self.color[3] < 1.0:
-            self._draw_checker_pattern(swatch_x, swatch_y, swatch_size, radius, style)
+        # バー幅が小さすぎる場合は描画しない
+        if bar_width < bar_height:
+            return
 
-        # === 2. カラースウォッチ描画 ===
-        display_color = self.color
+        # === Blender スタイル: 左=RGB、右=RGBA(チェッカー) ===
+        # 左右の分割位置（50:50）
+        rgb_width = bar_width / 2
+        alpha_width = bar_width - rgb_width
+
+        # 色の計算
+        rgb_color = (self.color[0], self.color[1], self.color[2], 1.0)  # 不透明
+        rgba_color = self.color  # アルファ込み
+
         if not enabled:
             # 無効時は彩度を下げる
             gray = 0.299 * self.color[0] + 0.587 * self.color[1] + 0.114 * self.color[2]
-            display_color = (
+            rgb_color = (
                 self.color[0] * 0.5 + gray * 0.5,
                 self.color[1] * 0.5 + gray * 0.5,
                 self.color[2] * 0.5 + gray * 0.5,
+                1.0
+            )
+            rgba_color = (
+                rgb_color[0], rgb_color[1], rgb_color[2],
                 self.color[3] * 0.5
             )
 
-        GPUDrawing.draw_rounded_rect(
-            swatch_x, swatch_y, swatch_size, swatch_size,
-            radius, display_color
+        # === 1. 右側: チェッカーパターン背景 ===
+        alpha_x = bar_x + rgb_width
+        self._draw_checker_pattern_rect(
+            alpha_x, bar_y, alpha_width, bar_height,
+            radius, style,
+            corners=(False, False, True, True)  # 右側のみ角丸
         )
 
-        # === 3. アウトライン ===
+        # === 2. 右側: RGBA カラー（チェッカーの上に半透明で描画） ===
+        GPUDrawing.draw_rounded_rect(
+            alpha_x, bar_y, alpha_width, bar_height,
+            radius, rgba_color,
+            corners=(False, False, True, True)
+        )
+
+        # === 3. 左側: RGB カラー（不透明） ===
+        GPUDrawing.draw_rounded_rect(
+            bar_x, bar_y, rgb_width, bar_height,
+            radius, rgb_color,
+            corners=(True, True, False, False)  # 左側のみ角丸
+        )
+
+        # === 4. アウトライン（全体） ===
         if hovered:
             outline_color = style.highlight_color
             line_width = style.line_width() * 1.5
@@ -1225,44 +1278,32 @@ class ColorItem(LayoutItem):
             outline_color = tuple(c * 0.5 for c in outline_color[:3]) + (outline_color[3],)
 
         GPUDrawing.draw_rounded_rect_outline(
-            swatch_x, swatch_y, swatch_size, swatch_size,
+            bar_x, bar_y, bar_width, bar_height,
             radius, outline_color,
             line_width=line_width
         )
 
-        # === 4. ラベル描画（テキストがある場合） ===
-        if self.text:
-            text_color = style.text_color if enabled else style.text_color_disabled
-            text_size = style.scaled_text_size()
-            text_x = swatch_x + swatch_size + spacing
-            _, text_h = BLFDrawing.get_text_dimensions("Wg", text_size)
-            text_y = self.y - (self.height + text_h) / 2
-
-            available_width = self.width - swatch_size - spacing
-            display_text = BLFDrawing.get_text_with_ellipsis(self.text, available_width, text_size)
-
-            clip_rect = self.get_clip_rect()
-            BLFDrawing.draw_text_clipped(text_x, text_y, display_text, text_color, text_size, clip_rect)
-
-    def _draw_checker_pattern(self, x: float, y: float, size: float,
-                               radius: int, style: GPULayoutStyle) -> None:
-        """チェッカーパターンを描画（透明色の背景）"""
+    def _draw_checker_pattern_rect(self, x: float, y: float, width: float, height: float,
+                                    radius: int, style: GPULayoutStyle,
+                                    corners: tuple[bool, bool, bool, bool] = (True, True, True, True)) -> None:
+        """チェッカーパターンを矩形領域に描画"""
         cell_size = max(4, style.ui_scale(4))  # 4px (scaled)
         light_color = (0.7, 0.7, 0.7, 1.0)
         dark_color = (0.4, 0.4, 0.4, 1.0)
 
         # まず背景色（明るい方）で角丸矩形を塗りつぶす
-        GPUDrawing.draw_rounded_rect(x, y, size, size, radius, light_color)
+        GPUDrawing.draw_rounded_rect(x, y, width, height, radius, light_color, corners)
 
-        # 暗いセルを描画（角丸のクリッピングなしの簡易版）
-        # Note: 正確な角丸クリッピングは将来シェーダーで実装
-        margin = radius * 0.5  # 角丸部分を避けるマージン
+        # 暗いセルを描画（簡易版 - 角丸クリッピングなし）
+        # TODO: 正確な角丸クリッピングは将来シェーダーで実装
+        margin = radius * 0.3
         inner_x = x + margin
         inner_y = y - margin
-        inner_size = size - margin * 2
+        inner_width = width - margin * 2
+        inner_height = height - margin * 2
 
-        cols = int(inner_size / cell_size) + 1
-        rows = int(inner_size / cell_size) + 1
+        cols = int(inner_width / cell_size) + 1
+        rows = int(inner_height / cell_size) + 1
 
         for row in range(rows):
             for col in range(cols):
@@ -1270,12 +1311,44 @@ class ColorItem(LayoutItem):
                     cell_x = inner_x + col * cell_size
                     cell_y = inner_y - row * cell_size
                     # 範囲内にクリップ
-                    cell_w = min(cell_size, inner_x + inner_size - cell_x)
-                    cell_h = min(cell_size, cell_y - (inner_y - inner_size))
+                    cell_w = min(cell_size, inner_x + inner_width - cell_x)
+                    cell_h = min(cell_size, cell_y - (inner_y - inner_height))
                     if cell_w > 0 and cell_h > 0:
                         GPUDrawing.draw_rect(cell_x, cell_y, cell_w, cell_h, dark_color)
 
     def click(self) -> None:
-        """クリック処理"""
+        """クリック処理
+
+        TODO(layout.prop統合):
+            - ヒットポイントはカラーバー部分のみ
+            - ラベル部分はクリック対象外
+            - layout.py の _register_interactive_item で HitRect を調整
+        """
         if self.enabled and self.on_click:
             self.on_click()
+
+    def get_bar_rect(self, style: GPULayoutStyle) -> tuple[float, float, float, float]:
+        """カラーバー部分の矩形を取得（ヒットテスト用）
+
+        Returns:
+            (x, y, width, height) - カラーバーの位置とサイズ
+
+        TODO(layout.prop統合):
+            - _register_interactive_item でこのメソッドを使って HitRect を設定
+        """
+        bar_height = self._get_bar_height(style)
+        spacing = style.scaled_spacing()
+
+        if self.text:
+            text_size = style.scaled_text_size()
+            text_w, _ = BLFDrawing.get_text_dimensions(self.text + ":", text_size)
+            label_width = text_w + spacing
+            bar_x = self.x + label_width
+            bar_width = self.width - label_width
+        else:
+            bar_x = self.x
+            bar_width = self.width
+
+        bar_y = self.y - (self.height - bar_height) / 2
+
+        return (bar_x, bar_y, bar_width, bar_height)
