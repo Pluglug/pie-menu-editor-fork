@@ -15,7 +15,8 @@ from .style import GPULayoutStyle, Direction, Alignment
 from .drawing import GPUDrawing, BLFDrawing
 from .items import (
     LayoutItem, LabelItem, SeparatorItem, ButtonItem, ToggleItem,
-    PropDisplayItem, BoxItem, SliderItem, NumberItem, CheckboxItem
+    PropDisplayItem, BoxItem, SliderItem, NumberItem, CheckboxItem,
+    ColorItem
 )
 from .interactive import HitTestManager, HitRect
 
@@ -447,6 +448,46 @@ class GPULayout:
             icon_off=icon_off,
             value=value,
             on_toggle=on_toggle,
+            enabled=self.enabled and self.active
+        )
+        self._add_item(item)
+        return item
+
+    def color(self, *, color: tuple[float, float, float, float] = (1.0, 1.0, 1.0, 1.0),
+              text: str = "",
+              on_click: Optional[Callable[[], None]] = None) -> ColorItem:
+        """
+        カラースウォッチを追加
+
+        角丸の色付き矩形を表示。透明度がある場合はチェッカーパターンで背景を表示。
+
+        Args:
+            color: 表示する色 (R, G, B, A) - 各値は 0.0-1.0
+            text: ラベルテキスト（空の場合はスウォッチのみ）
+            on_click: クリック時のコールバック
+
+        Returns:
+            作成された ColorItem（外部から色を取得/設定可能）
+
+        使用例:
+            # 基本的な使い方
+            layout.color(color=(1.0, 0.0, 0.0, 1.0))
+
+            # ラベル付き
+            layout.color(color=(0.2, 0.5, 1.0, 1.0), text="Diffuse Color")
+
+            # 半透明
+            layout.color(color=(1.0, 1.0, 0.0, 0.5), text="Alpha 50%")
+
+            # クリックコールバック
+            def on_click():
+                print("Color clicked!")
+            layout.color(color=(0.0, 1.0, 0.0, 1.0), on_click=on_click)
+        """
+        item = ColorItem(
+            color=color,
+            text=text,
+            on_click=on_click,
             enabled=self.enabled and self.active
         )
         self._add_item(item)
@@ -1109,7 +1150,7 @@ class GPULayout:
         # アイテム描画
         for item in self._items:
             # インタラクティブなアイテムには状態を渡す
-            if self._hit_manager and isinstance(item, (ButtonItem, ToggleItem, SliderItem, NumberItem, CheckboxItem)):
+            if self._hit_manager and isinstance(item, (ButtonItem, ToggleItem, SliderItem, NumberItem, CheckboxItem, ColorItem)):
                 # item_id を取得（登録時に設定される）
                 item_id = str(id(item))
                 state = self._hit_manager.get_render_state(item_id, item.enabled)
@@ -1301,12 +1342,36 @@ class GPULayout:
         return self._hit_manager
 
     def _register_interactive_item(self, item: LayoutItem) -> None:
-        if not isinstance(item, (ButtonItem, ToggleItem, SliderItem, NumberItem, CheckboxItem)):
+        if not isinstance(item, (ButtonItem, ToggleItem, SliderItem, NumberItem, CheckboxItem, ColorItem)):
             return
 
         manager = self._ensure_hit_manager()
 
-        if isinstance(item, CheckboxItem):
+        if isinstance(item, ColorItem):
+            # カラースウォッチ: クリックでコールバック
+            def on_hover_enter():
+                item._hovered = True
+
+            def on_hover_leave():
+                item._hovered = False
+
+            def on_click():
+                item.click()
+
+            rect = HitRect(
+                x=item.x,
+                y=item.y,
+                width=item.width,
+                height=item.height,
+                item=item,  # update_positions() で位置同期するため必須
+                tag=item.text or "color",
+                on_hover_enter=on_hover_enter,
+                on_hover_leave=on_hover_leave,
+                on_click=on_click,
+            )
+            manager.register(rect)
+            rect.item_id = str(id(item))
+        elif isinstance(item, CheckboxItem):
             # チェックボックス: クリックでトグル
             def on_hover_enter():
                 item._hovered = True

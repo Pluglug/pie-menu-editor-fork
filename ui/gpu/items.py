@@ -1133,3 +1133,149 @@ class NumberItem(LayoutItem):
         text_y = self.y - (self.height + text_h) / 2
         clip_rect = self.get_clip_rect()
         BLFDrawing.draw_text_clipped(text_x, text_y, display_text, text_color, text_size, clip_rect)
+
+
+@dataclass
+class ColorItem(LayoutItem):
+    """
+    カラースウォッチ（色の表示・選択ウィジェット）
+
+    角丸の矩形で色を表示。オプションでラベルテキストを表示。
+    透明度がある場合はチェッカーパターンで背景を表示。
+
+    Attributes:
+        color: 表示する色 (R, G, B, A) - 各値は 0.0-1.0
+        text: ラベルテキスト（空の場合はスウォッチのみ）
+        on_click: クリック時のコールバック
+    """
+    color: tuple[float, float, float, float] = (1.0, 1.0, 1.0, 1.0)
+    text: str = ""
+    on_click: Optional[Callable[[], None]] = None
+    _hovered: bool = field(default=False, repr=False)
+
+    # スウォッチサイズ定数
+    SWATCH_SIZE_RATIO: float = 0.8  # アイテム高さに対する比率
+
+    def _get_swatch_size(self, style: GPULayoutStyle) -> float:
+        """スウォッチのサイズを取得"""
+        return style.scaled_item_height() * self.SWATCH_SIZE_RATIO
+
+    def calc_size(self, style: GPULayoutStyle) -> tuple[float, float]:
+        """サイズを計算"""
+        swatch_size = self._get_swatch_size(style)
+        height = style.scaled_item_height()
+
+        if self.text:
+            text_size = style.scaled_text_size()
+            text_w, _ = BLFDrawing.get_text_dimensions(self.text, text_size)
+            width = swatch_size + style.scaled_spacing() + text_w
+        else:
+            width = swatch_size
+
+        return (width, height)
+
+    def draw(self, style: GPULayoutStyle, state: Optional[ItemRenderState] = None) -> None:
+        """描画"""
+        if not self.visible:
+            return
+
+        hovered = state.hovered if state else self._hovered
+        enabled = state.enabled if state else self.enabled
+
+        swatch_size = self._get_swatch_size(style)
+        spacing = style.scaled_spacing()
+
+        # スウォッチの位置（垂直中央揃え）
+        swatch_x = self.x
+        swatch_y = self.y - (self.height - swatch_size) / 2
+
+        # 角丸半径
+        radius = int(swatch_size * 0.15)
+
+        # === 1. チェッカーパターン背景（透明度がある場合） ===
+        if self.color[3] < 1.0:
+            self._draw_checker_pattern(swatch_x, swatch_y, swatch_size, radius, style)
+
+        # === 2. カラースウォッチ描画 ===
+        display_color = self.color
+        if not enabled:
+            # 無効時は彩度を下げる
+            gray = 0.299 * self.color[0] + 0.587 * self.color[1] + 0.114 * self.color[2]
+            display_color = (
+                self.color[0] * 0.5 + gray * 0.5,
+                self.color[1] * 0.5 + gray * 0.5,
+                self.color[2] * 0.5 + gray * 0.5,
+                self.color[3] * 0.5
+            )
+
+        GPUDrawing.draw_rounded_rect(
+            swatch_x, swatch_y, swatch_size, swatch_size,
+            radius, display_color
+        )
+
+        # === 3. アウトライン ===
+        if hovered:
+            outline_color = style.highlight_color
+            line_width = style.line_width() * 1.5
+        else:
+            outline_color = style.outline_color
+            line_width = style.line_width()
+
+        if not enabled:
+            outline_color = tuple(c * 0.5 for c in outline_color[:3]) + (outline_color[3],)
+
+        GPUDrawing.draw_rounded_rect_outline(
+            swatch_x, swatch_y, swatch_size, swatch_size,
+            radius, outline_color,
+            line_width=line_width
+        )
+
+        # === 4. ラベル描画（テキストがある場合） ===
+        if self.text:
+            text_color = style.text_color if enabled else style.text_color_disabled
+            text_size = style.scaled_text_size()
+            text_x = swatch_x + swatch_size + spacing
+            _, text_h = BLFDrawing.get_text_dimensions("Wg", text_size)
+            text_y = self.y - (self.height + text_h) / 2
+
+            available_width = self.width - swatch_size - spacing
+            display_text = BLFDrawing.get_text_with_ellipsis(self.text, available_width, text_size)
+
+            clip_rect = self.get_clip_rect()
+            BLFDrawing.draw_text_clipped(text_x, text_y, display_text, text_color, text_size, clip_rect)
+
+    def _draw_checker_pattern(self, x: float, y: float, size: float,
+                               radius: int, style: GPULayoutStyle) -> None:
+        """チェッカーパターンを描画（透明色の背景）"""
+        cell_size = max(4, style.ui_scale(4))  # 4px (scaled)
+        light_color = (0.7, 0.7, 0.7, 1.0)
+        dark_color = (0.4, 0.4, 0.4, 1.0)
+
+        # まず背景色（明るい方）で角丸矩形を塗りつぶす
+        GPUDrawing.draw_rounded_rect(x, y, size, size, radius, light_color)
+
+        # 暗いセルを描画（角丸のクリッピングなしの簡易版）
+        # Note: 正確な角丸クリッピングは将来シェーダーで実装
+        margin = radius * 0.5  # 角丸部分を避けるマージン
+        inner_x = x + margin
+        inner_y = y - margin
+        inner_size = size - margin * 2
+
+        cols = int(inner_size / cell_size) + 1
+        rows = int(inner_size / cell_size) + 1
+
+        for row in range(rows):
+            for col in range(cols):
+                if (row + col) % 2 == 1:
+                    cell_x = inner_x + col * cell_size
+                    cell_y = inner_y - row * cell_size
+                    # 範囲内にクリップ
+                    cell_w = min(cell_size, inner_x + inner_size - cell_x)
+                    cell_h = min(cell_size, cell_y - (inner_y - inner_size))
+                    if cell_w > 0 and cell_h > 0:
+                        GPUDrawing.draw_rect(cell_x, cell_y, cell_w, cell_h, dark_color)
+
+    def click(self) -> None:
+        """クリック処理"""
+        if self.enabled and self.on_click:
+            self.on_click()

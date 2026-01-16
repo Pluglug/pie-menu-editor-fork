@@ -663,6 +663,34 @@ class TEST_OT_gpu_interactive(Operator):
             )
 
             layout.separator()
+
+            # ── Color デモ ──
+            layout.label(text="Color Swatches:")
+
+            # 基本的なカラー（不透明）
+            row = layout.row()
+            row.color(color=(1.0, 0.2, 0.2, 1.0))  # 赤
+            row.color(color=(0.2, 1.0, 0.2, 1.0))  # 緑
+            row.color(color=(0.2, 0.4, 1.0, 1.0))  # 青
+
+            # ラベル付きカラー
+            layout.color(color=(1.0, 0.8, 0.2, 1.0), text="Diffuse Color")
+
+            # 半透明カラー（チェッカーパターン表示）
+            row2 = layout.row()
+            row2.color(color=(1.0, 0.0, 0.0, 0.5), text="50%")
+            row2.color(color=(0.0, 0.5, 1.0, 0.25), text="25%")
+
+            # クリックコールバック付き
+            def on_color_click():
+                self._last_action = "Color clicked!"
+            layout.color(color=(0.8, 0.3, 0.9, 1.0), text="Click me!", on_click=on_color_click)
+
+            # 無効状態
+            disabled_color = layout.color(color=(0.5, 0.5, 0.5, 1.0), text="Disabled")
+            disabled_color.enabled = False
+
+            layout.separator()
             layout.label(text="Press D to toggle debug view")
             layout.label(text="Press ESC to exit")
 
