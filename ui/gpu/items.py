@@ -1477,7 +1477,8 @@ class ColorItem(LayoutItem):
     _hovered: bool = field(default=False, repr=False)
 
     # カラーバーの高さ比率（アイテム高さに対して）
-    BAR_HEIGHT_RATIO: float = 0.8
+    # 1.0 = フル高さ（他のウィジェットと統一）
+    BAR_HEIGHT_RATIO: float = 1.0
 
     def _get_bar_height(self) -> float:
         """カラーバーの高さを取得
@@ -1511,6 +1512,9 @@ class ColorItem(LayoutItem):
 
         hovered = state.hovered if state else self._hovered
         enabled = state.enabled if state else self.enabled
+
+        # テーマカラーを取得（角丸計算用）
+        wcol = style.get_widget_colors(WidgetType.REGULAR)
 
         bar_height = self._get_bar_height()
         spacing = style.scaled_spacing()
@@ -1549,8 +1553,11 @@ class ColorItem(LayoutItem):
         # カラーバーの位置（垂直中央揃え）
         bar_y = self.y - (self.height - bar_height) / 2
 
-        # 角丸半径
-        radius = int(bar_height * 0.15)
+        # 角丸半径（Blender 準拠: roundness × height × 0.5）
+        if wcol is not None:
+            radius = int(wcol.roundness * bar_height * 0.5)
+        else:
+            radius = int(0.4 * bar_height * 0.5)
 
         # バー幅が小さすぎる場合は描画しない
         if bar_width < bar_height:
