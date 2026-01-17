@@ -154,6 +154,16 @@ class PMIItem(PropertyGroup):
         name="Enable/Disable", description="Enable/Disable", default=True
     )
 
+    # Phase 9-X (#102): Dynamic description for COMMAND mode (fallback only)
+    # Used by WM_OT_pme_user_command_exec.description() classmethod
+    # When Blender operator is directly callable, Blender's description is used instead
+    description: StringProperty(
+        name="Description",
+        description="Tooltip text for this item (COMMAND mode only)",
+        default="",
+        maxlen=CC.MAX_STR_LEN,
+    )
+
     def get_pmi_label(self):
         return self.name
 
@@ -366,6 +376,15 @@ class PMItem(PropertyGroup):
         description="Unique identifier for the menu",
         default="",
         options={'HIDDEN'},
+    )
+
+    # Phase 9-X (#102): Dynamic description for PM tooltip
+    # Used by WM_OT_pme_user_pie_menu_call.description() classmethod
+    description: StringProperty(
+        name="Description",
+        description="Tooltip text displayed when hovering over this menu",
+        default="",
+        maxlen=CC.MAX_STR_LEN,
     )
 
     def update_keymap_item(self, context):

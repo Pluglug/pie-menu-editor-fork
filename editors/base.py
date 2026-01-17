@@ -418,6 +418,10 @@ class EditorBase:
         pass
 
     def draw_extra_settings(self, layout, pm):
+        # Description field for dynamic tooltip (#102)
+        layout.prop(pm, "description", text="", icon=ic('INFO'))
+
+        # Poll condition
         row = layout.row(align=True)
         sub = row.row(align=True)
         sub.alert = pm.name in pm.poll_methods and pm.poll_methods[pm.name] is None

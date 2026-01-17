@@ -204,6 +204,26 @@ class WM_OT_pme_user_command_exec(Operator):
         options={'SKIP_SAVE', 'HIDDEN'},
     )
 
+    # Phase 9-X (#102): Dynamic description for COMMAND mode fallback
+    # This is only used when Blender operator is NOT directly callable
+    # (e.g., has positional args, or is complex Python code)
+    @classmethod
+    def description(cls, context, properties):
+        """Return dynamic tooltip based on pmi.description field."""
+        pr = get_prefs()
+        pm = pr.pie_menus.get(properties.menu)
+        if not pm:
+            return "Execute python code"
+
+        # Find pmi by slot name
+        for pmi in pm.pmis:
+            if pmi.name == properties.slot:
+                if pmi.description:
+                    return pmi.description
+                break
+
+        return "Execute python code"
+
     def execute(self, context):
         pme.context.exec_operator = self
         exec_globals = pme.context.gen_globals()
@@ -1151,6 +1171,18 @@ class WM_OT_pme_user_pie_menu_call(Operator):
     invoke_mode: StringProperty(options={'SKIP_SAVE'})
     keymap: StringProperty(options={'HIDDEN', 'SKIP_SAVE'})
     slot: IntProperty(default=-1, options={'SKIP_SAVE'})
+
+    # Phase 9-X (#102): Dynamic description for PM tooltip
+    @classmethod
+    def description(cls, context, properties):
+        """Return dynamic tooltip based on the target menu's description field."""
+        pr = get_prefs()
+        pm = pr.pie_menus.get(properties.pie_menu_name)
+        if not pm:
+            return "Call PME menu"
+        if pm.description:
+            return pm.description
+        return f"Call {pm.name}"
 
     # @staticmethod
     # def restore_pie_menu_prefs():
