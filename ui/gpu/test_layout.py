@@ -1235,8 +1235,8 @@ class DEMO_OT_selection_tracker(Operator):
         if context.object is None:
             self.report({'WARNING'}, "Select an active object first")
             return {'CANCELLED'}
-        if context.object.data is None or not hasattr(context.object.data, "use_auto_smooth"):
-            self.report({'WARNING'}, "Select a mesh object for C.object.data demo")
+        if context.object.data is None:
+            self.report({'WARNING'}, "Select an object with data for C.object.data demo")
             return {'CANCELLED'}
 
         if GPUPanelManager.is_active(self.PANEL_UID):
@@ -1296,7 +1296,7 @@ class DEMO_OT_selection_tracker(Operator):
 
         if self._layout is None:
             if self._context_tracker is None:
-                from ..bl_utils import bl_context
+                from ...bl_utils import bl_context
                 self._context_tracker = ContextTracker(bl_context)
 
             layout = GPULayout(
@@ -1328,9 +1328,8 @@ class DEMO_OT_selection_tracker(Operator):
             layout.prop(C.object, "pass_index", text="Pass Index")
 
             layout.separator()
-            layout.label(text="Object Data (C.object.data - mesh only)")
-            layout.prop(C.object.data, "use_auto_smooth", text="Auto Smooth", toggle=1)
-            layout.prop(C.object.data, "auto_smooth_angle", text="Smooth Angle")
+            layout.label(text="Object Data (C.object.data)")
+            layout.prop(C.object.data, "use_fake_user", text="Use Fake User", toggle=1)
 
             layout.separator()
             layout.label(text="Delete active object to see widgets disable")
