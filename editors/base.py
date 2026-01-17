@@ -373,6 +373,7 @@ class EditorBase:
         data.mode = pmi.mode if pmi.mode != 'EMPTY' else 'COMMAND'
         data.name = pmi.name
         data.icon = pmi.icon
+        data.description = pmi.description  # Phase 9-X (#102)
 
         data_mode = 'COMMAND' if data.mode in MODAL_CMD_MODES else data.mode
 

@@ -722,6 +722,7 @@ class WM_OT_pmi_data_edit(Operator):
 
             pmi.name = data.name
             pmi.icon = data.icon
+            pmi.description = data.description  # Phase 9-X (#102)
 
             ed = pm.ed
             if ed:

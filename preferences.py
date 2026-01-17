@@ -921,6 +921,12 @@ class PMEPreferences(AddonPreferences):
             icon = 'ERROR' if data.has_errors(CC.W_PMI_SYNTAX) else 'NONE'
             lh.prop(data, "cmd", "", icon)
 
+            # Phase 9-X (#102): Description field for COMMAND mode fallback tooltip
+            # Only shown for Pie Menu, Regular Menu, and Popup Dialog
+            if pm.mode in ('PMENU', 'RMENU', 'DIALOG'):
+                lh.row(subcol)
+                lh.prop(data, "description", "", ic('INFO'))
+
             if (
                 pm.mode == 'STICKY'
                 and PME_OT_sticky_key_edit.pmi_prop

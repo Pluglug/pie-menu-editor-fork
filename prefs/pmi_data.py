@@ -118,6 +118,14 @@ class PMIData(PropertyGroup):
             self.name = self.sname
 
     sname: StringProperty(description="Suggested name", update=sname_update)
+
+    # Phase 9-X (#102): description field for COMMAND mode fallback tooltip
+    description: StringProperty(
+        name="Description",
+        description="Tooltip text for this item (COMMAND mode only)",
+        maxlen=CC.MAX_STR_LEN,
+    )
+
     key: EnumProperty(
         items=keymap_helper.key_items, description="Key pressed", update=update_data
     )
