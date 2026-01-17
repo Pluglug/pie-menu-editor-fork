@@ -506,6 +506,55 @@ class GPUDrawing:
                 layer_color
             )
 
+    @classmethod
+    def draw_panel_shadow(cls, x: float, y: float, width: float, height: float,
+                          radius: int, shadow_width: int, alpha: float) -> None:
+        """
+        Blender スタイルのパネルシャドウ（3辺: 左、下、右）
+
+        Blender の ui_draw_dropshadow() に準拠した影描画。
+        上辺には影を描画せず、左・下・右の3辺に影を表示する。
+
+        Args:
+            x, y: パネル左上座標
+            width, height: パネルサイズ
+            radius: パネル角丸半径
+            shadow_width: 影の幅（テーマの menu_shadow_width）
+            alpha: 影の透明度（テーマの menu_shadow_fac）
+
+        Note:
+            Blender の減衰曲線: alpha * (falloff² * 0.722 + falloff * 0.277)
+            複数レイヤーで近似する。
+        """
+        if shadow_width <= 0 or alpha <= 0:
+            return
+
+        # 複数レイヤーでグラデーションを近似
+        layers = min(shadow_width, 6)  # 最大6レイヤー
+
+        for i in range(layers, 0, -1):
+            # 外側のレイヤーほど大きく、透明に
+            # falloff: 1.0（内側）→ 0.0（外側）
+            falloff = 1.0 - (i - 1) / layers
+            expand = i * (shadow_width / layers)
+
+            # Blender の減衰曲線を近似: falloff² * 0.722 + falloff * 0.277
+            layer_alpha = alpha * (falloff * falloff * 0.722 + falloff * 0.277)
+
+            # 影の矩形（上辺は拡張しない、左・下・右のみ）
+            shadow_x = x - expand           # 左に拡張
+            shadow_y = y                    # 上辺は拡張しない
+            shadow_w = width + expand * 2   # 左右に拡張
+            shadow_h = height + expand      # 下に拡張
+
+            layer_color = (0.0, 0.0, 0.0, layer_alpha)
+            cls.draw_rounded_rect(
+                shadow_x, shadow_y,
+                shadow_w, shadow_h,
+                radius + int(expand / 2),
+                layer_color
+            )
+
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # BLF Drawing - テキスト描画

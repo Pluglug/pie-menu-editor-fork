@@ -219,9 +219,8 @@ class GPULayoutStyle:
     # ═══════════════════════════════════════════════════════════════════════════
 
     shadow_enabled: bool = True  # シャドウ有効/無効
-    shadow_color: tuple[float, float, float, float] = (0.0, 0.0, 0.0, 0.25)  # RGBA [α: 0.1-0.4]
-    shadow_offset: tuple[int, int] = (3, -3)   # (x, y) オフセット [推奨: 2-6]
-    shadow_blur: int = 6  # ぼかし半径 [推奨: 4-12]
+    shadow_width: int = 6        # 影の幅 [menu_shadow_width から取得]
+    shadow_alpha: float = 0.2    # 影の透明度 [menu_shadow_fac から取得]
 
     # ═══════════════════════════════════════════════════════════════════════════
     # テキストシャドウ
@@ -385,8 +384,9 @@ class GPULayoutStyle:
                 border_radius=base_radius,  # roundness を忠実に反映
                 roundness=roundness_val,
 
-                # ドロップシャドウ（widget_emboss を使用）
-                shadow_color=to_rgba(ui.widget_emboss),
+                # ドロップシャドウ（Blender テーマから取得、GPU描画用に調整）
+                shadow_width=ui.menu_shadow_width,
+                shadow_alpha=ui.menu_shadow_fac * 0.75,  # GPU描画は濃く見えるため調整
 
                 # テキストシャドウ（ThemeFontStyle から取得）
                 text_shadow_enabled=shadow_enabled,
@@ -456,15 +456,9 @@ class GPULayoutStyle:
     def scaled_border_radius(self) -> int:
         return int(self.ui_scale(self.border_radius))
 
-    def scaled_shadow_offset(self) -> tuple[int, int]:
-        """スケーリングされたドロップシャドウオフセット"""
-        return (
-            int(self.ui_scale(self.shadow_offset[0])),
-            int(self.ui_scale(self.shadow_offset[1]))
-        )
-
-    def scaled_shadow_blur(self) -> int:
-        return int(self.ui_scale(self.shadow_blur))
+    def scaled_shadow_width(self) -> int:
+        """スケーリングされた影の幅"""
+        return int(self.ui_scale(self.shadow_width))
 
     def scaled_text_shadow_offset(self) -> tuple[int, int]:
         """スケーリングされたテキストシャドウオフセット"""

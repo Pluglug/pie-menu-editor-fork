@@ -220,28 +220,29 @@ class TEST_OT_gpu_layout(Operator):
             y -= len(line_widths) * 40 + margin
 
             # ───────────────────────────────────────────────────────────────
-            # ドロップシャドウデモ
+            # パネルシャドウデモ（Blender スタイル: 3辺シャドウ）
             # ───────────────────────────────────────────────────────────────
             shadow_demo = GPULayout(x=col2_x, y=y, width=260, style=panel_style)
             shadow_demo._draw_background = True
             shadow_demo._draw_outline = True
-            shadow_demo.label(text="Drop Shadow Demo")
+            shadow_demo.label(text="Panel Shadow Demo (3-sided)")
             shadow_demo.update_and_draw()
 
             y -= shadow_demo.calc_height() + 30
 
-            shadow_colors = [
-                ((0.0, 0.0, 0.0, 0.5), "Black"),
-                ((0.0, 0.2, 0.5, 0.4), "Blue"),
-                ((0.5, 0.2, 0.0, 0.4), "Orange"),
+            # 異なる shadow_width でデモ
+            shadow_widths = [
+                (4, "Width: 4"),
+                (6, "Width: 6"),
+                (10, "Width: 10"),
             ]
 
-            for i, (color, name) in enumerate(shadow_colors):
+            for i, (shadow_width, name) in enumerate(shadow_widths):
                 bx = col2_x + i * 85 + 10
                 by = y
 
-                # シャドウ
-                GPUDrawing.draw_drop_shadow(bx, by, 70, 50, 6, color, (4, -4), 8)
+                # パネルシャドウ（上辺なし、3辺のみ）
+                GPUDrawing.draw_panel_shadow(bx, by, 70, 50, 6, shadow_width, 0.2)
 
                 # ボックス
                 GPUDrawing.draw_rounded_rect(bx, by, 70, 50, 6, panel_style.bg_color)
