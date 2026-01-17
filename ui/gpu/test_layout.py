@@ -19,6 +19,7 @@ from . import (
     Alignment, GPUPanelManager
 )
 from .items import SliderItem
+from .context import ContextTracker
 
 
 class TEST_OT_gpu_layout(Operator):
@@ -1181,7 +1182,182 @@ class DEMO_OT_quick_render(Operator):
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# Demo 3: Quick UV - UVエディタ向け常時表示パネル
+# ---------------------------------------------------------------------------
+# Demo 3: Selection Tracker - reactive context demo
+# ---------------------------------------------------------------------------
+
+class DEMO_OT_selection_tracker(Operator):
+    """Selection Tracker - reactive context demo"""
+    bl_idname = "demo.selection_tracker"
+    bl_label = "Demo: Selection Tracker"
+    bl_options = {'REGISTER'}
+
+    PANEL_UID = "demo_selection_tracker"
+
+    _manager: GPUPanelManager = None
+    _layout: GPULayout = None
+    _should_close: bool = False
+    _panel_x: float = None
+    _panel_y: float = None
+    _context_tracker: ContextTracker = None
+
+    def modal(self, context, event):
+        context.area.tag_redraw()
+
+        if self._should_close or event.type == 'ESC':
+            self.cancel(context)
+            return {'CANCELLED'}
+
+        region = self._get_window_region(context)
+        self._rebuild_layout(context, region)
+
+        if self._layout:
+            self._layout.sync_props()
+
+        if self._manager:
+            handled = self._manager.handle_event(event, context)
+            if self._layout:
+                self._panel_x = self._layout.x
+                self._panel_y = self._layout.y
+            if handled:
+                return {'RUNNING_MODAL'}
+
+            if event.type in {'LEFTMOUSE', 'RIGHTMOUSE', 'MIDDLEMOUSE'}:
+                if self._manager.contains_point(event.mouse_region_x, event.mouse_region_y):
+                    return {'RUNNING_MODAL'}
+
+        return {'PASS_THROUGH'}
+
+    def invoke(self, context, event):
+        if context.area.type != 'VIEW_3D':
+            self.report({'WARNING'}, "Run in 3D Viewport")
+            return {'CANCELLED'}
+        if context.object is None:
+            self.report({'WARNING'}, "Select an active object first")
+            return {'CANCELLED'}
+        if context.object.data is None or not hasattr(context.object.data, "use_auto_smooth"):
+            self.report({'WARNING'}, "Select a mesh object for C.object.data demo")
+            return {'CANCELLED'}
+
+        if GPUPanelManager.is_active(self.PANEL_UID):
+            self.report({'INFO'}, "Panel already open")
+            return {'CANCELLED'}
+
+        self._should_close = False
+        self._layout = None
+        self._manager = None
+        self._panel_x = None
+        self._panel_y = None
+        self._context_tracker = None
+
+        region = self._get_window_region(context)
+        self._rebuild_layout(context, region)
+
+        if self._layout is None:
+            self.report({'ERROR'}, "Failed to build layout")
+            return {'CANCELLED'}
+
+        self._manager = GPUPanelManager(self.PANEL_UID, self._layout)
+        if not self._manager.open(context, self.draw_callback, 'VIEW_3D', timer_interval=0.05):
+            self.report({'ERROR'}, "Failed to open panel")
+            return {'CANCELLED'}
+
+        context.window_manager.modal_handler_add(self)
+        return {'RUNNING_MODAL'}
+
+    def cancel(self, context):
+        if self._manager:
+            self._manager.close(context)
+            self._manager = None
+        self._layout = None
+        self._context_tracker = None
+
+    @staticmethod
+    def _get_window_region(context):
+        region = context.region
+        if region and region.type == 'WINDOW':
+            return region
+        area = context.area
+        if area:
+            for r in area.regions:
+                if r.type == 'WINDOW':
+                    return r
+        return None
+
+    def _rebuild_layout(self, context, region=None) -> None:
+        region = region or self._get_window_region(context)
+        if region is None:
+            return
+
+        if self._panel_x is None:
+            self._panel_x = 50
+        if self._panel_y is None:
+            self._panel_y = region.height - 50
+
+        if self._layout is None:
+            if self._context_tracker is None:
+                from ..bl_utils import bl_context
+                self._context_tracker = ContextTracker(bl_context)
+
+            layout = GPULayout(
+                x=self._panel_x,
+                y=self._panel_y,
+                width=260,
+                style=GPULayoutStyle.from_blender_theme('PANEL'),
+            )
+            layout._draw_background = True
+            layout._draw_outline = True
+            layout._context_tracker = self._context_tracker
+
+            def request_close():
+                self._should_close = True
+
+            layout.set_title_bar(
+                title="Selection Tracker",
+                show_close=True,
+                on_close=request_close,
+            )
+            layout.set_panel_config(uid=self.PANEL_UID, resizable=True)
+            layout.set_region_bounds(region.width, region.height)
+
+            C = self._context_tracker
+
+            layout.label(text="Active Object (C.object)")
+            layout.prop(C.object, "hide_viewport", text="Hide Viewport", toggle=1)
+            layout.prop(C.object, "hide_render", text="Hide Render", toggle=1)
+            layout.prop(C.object, "pass_index", text="Pass Index")
+
+            layout.separator()
+            layout.label(text="Object Data (C.object.data - mesh only)")
+            layout.prop(C.object.data, "use_auto_smooth", text="Auto Smooth", toggle=1)
+            layout.prop(C.object.data, "auto_smooth_angle", text="Smooth Angle")
+
+            layout.separator()
+            layout.label(text="Delete active object to see widgets disable")
+
+            self._layout = layout
+        else:
+            self._layout.x = self._panel_x
+            self._layout.y = self._panel_y
+            self._layout.set_region_bounds(region.width, region.height)
+
+        self._panel_x = self._layout.x
+        self._panel_y = self._layout.y
+
+    def draw_callback(self, manager: GPUPanelManager, context):
+        if not manager.should_draw(context):
+            return
+        try:
+            region = self._get_window_region(context)
+            self._rebuild_layout(context, region)
+            if self._layout:
+                self._layout.update_and_draw()
+        except Exception as e:
+            import traceback
+            print(f"Draw error: {e}")
+            traceback.print_exc()
+
+# Demo 4: Quick UV - UVエディタ向け常時表示パネル
 # ═══════════════════════════════════════════════════════════════════════════════
 
 class DEMO_OT_quick_uv(Operator):
@@ -1362,4 +1538,6 @@ class DEMO_OT_quick_uv(Operator):
             import traceback
             print(f"Draw error: {e}")
             traceback.print_exc()
+
+
 
