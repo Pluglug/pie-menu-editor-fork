@@ -21,8 +21,10 @@ from .items import (
 from .interactive import HitTestManager, HitRect
 from .rna_utils import (
     get_property_info, get_property_value, set_property_value,
-    get_enum_display_name, PropType, WidgetHint, PropertyInfo
+    PropType, WidgetHint, PropertyInfo
 )
+from .binding import ContextResolverCache, PropertyBinding
+from .context import TrackedAccess
 
 if TYPE_CHECKING:
     from bpy.types import Event
@@ -135,9 +137,12 @@ class GPULayout:
         self._region_width: Optional[float] = None
         self._region_height: Optional[float] = None
 
-        # prop() で作成されたウィジェットの RNA バインディング
-        # [(item, data, property_name), ...]
-        self._prop_bindings: list[tuple[LayoutItem, Any, str]] = []
+        # prop() reactive bindings (context-resolved) and static fallback
+        self._context_tracker: Optional[Any] = None
+        self._context_cache = ContextResolverCache()
+        self._bindings: list[PropertyBinding] = []
+        self._static_bindings: list[PropertyBinding] = []
+        self._epoch = 0
 
     # ─────────────────────────────────────────────────────────────────────────
     # コンテナメソッド（UILayout 互換）
@@ -555,6 +560,40 @@ class GPULayout:
     # プロパティメソッド
     # ─────────────────────────────────────────────────────────────────────────
 
+    def _unwrap_data(self, data: Any) -> Any:
+        if isinstance(data, TrackedAccess):
+            return data.unwrapped
+        return data
+
+    def _infer_resolver(self, data: Any) -> Optional[Callable[[Any], Any]]:
+        path = None
+        if isinstance(data, TrackedAccess):
+            path = getattr(data, "_path", None)
+            if self._context_tracker:
+                self._context_tracker.last_access = None
+        elif self._context_tracker and self._context_tracker.last_access:
+            path = self._context_tracker.last_access
+            self._context_tracker.last_access = None
+
+        if not path:
+            return None
+
+        return lambda ctx: self._context_cache.resolve(ctx, path)
+
+    def _make_setter(
+        self,
+        resolver: Optional[Callable[[Any], Any]],
+        data: Any,
+        prop_name: str,
+    ) -> Callable[[Any, Any], None]:
+        def setter(context: Any, value: Any) -> None:
+            target = resolver(context) if resolver else data
+            if target is None:
+                return
+            set_property_value(target, prop_name, value)
+
+        return setter
+
     def prop(self, data: Any, property: str, *, text: str = "",
              icon: str = "NONE", expand: bool = False, slider: bool = False,
              toggle: int = -1, icon_only: bool = False) -> Optional[LayoutItem]:
@@ -598,10 +637,13 @@ class GPULayout:
             layout.prop(C.object.active_material, "diffuse_color")
         """
         # プロパティ情報を取得
-        info = get_property_info(data, property)
+        resolver = self._infer_resolver(data)
+        raw_data = self._unwrap_data(data)
+
+        info = get_property_info(raw_data, property) if raw_data is not None else None
         if info is None:
             # プロパティが存在しない場合はフォールバック
-            self.prop_display(data, property, text=text, icon=icon)
+            self.prop_display(raw_data, property, text=text, icon=icon)
             return None
 
         # 表示テキストの決定
@@ -609,11 +651,11 @@ class GPULayout:
 
         # 読み取り専用の場合は表示のみ
         if info.is_readonly:
-            self.prop_display(data, property, text=display_text, icon=icon)
+            self.prop_display(raw_data, property, text=display_text, icon=icon)
             return None
 
         # 現在値を取得
-        current_value = get_property_value(data, property)
+        current_value = get_property_value(raw_data, property)
 
         # ウィジェットヒントに応じてアイテムを作成
         hint = info.widget_hint
@@ -635,13 +677,44 @@ class GPULayout:
         elif toggle == 0 and hint == WidgetHint.TOGGLE:
             hint = WidgetHint.CHECKBOX
 
-        return self._create_prop_widget(
-            data, property, info, hint, display_text, icon, current_value
+        set_value = self._make_setter(resolver, raw_data, property)
+        item = self._create_prop_widget(
+            raw_data, property, info, hint, display_text, icon,
+            current_value, set_value
         )
+        if item:
+            self._add_item(item)
+            meta = {
+                "is_dynamic_enum": info.is_dynamic_enum,
+                "label_prefix": display_text,
+            }
+            if resolver:
+                binding = PropertyBinding(
+                    resolve_data=resolver,
+                    set_value=set_value,
+                    prop_name=property,
+                    widget=item,
+                    meta=meta,
+                )
+                self._bindings.append(binding)
+            else:
+                def resolve_static(_ctx, data=raw_data):
+                    return data
+                binding = PropertyBinding(
+                    resolve_data=resolve_static,
+                    set_value=set_value,
+                    prop_name=property,
+                    widget=item,
+                    meta=meta,
+                )
+                self._static_bindings.append(binding)
+
+        return item
 
     def _create_prop_widget(
         self, data: Any, property: str, info: PropertyInfo,
-        hint: WidgetHint, text: str, icon: str, value: Any
+        hint: WidgetHint, text: str, icon: str, value: Any,
+        set_value: Callable[[Any, Any], None]
     ) -> Optional[LayoutItem]:
         """
         プロパティ用ウィジェットを作成
@@ -653,7 +726,7 @@ class GPULayout:
         # Boolean → Checkbox
         if hint == WidgetHint.CHECKBOX:
             def on_toggle(new_value: bool):
-                set_property_value(data, property, new_value)
+                set_value(bpy.context, new_value)
 
             item = CheckboxItem(
                 text=text,
@@ -665,7 +738,7 @@ class GPULayout:
         # Boolean → Toggle
         elif hint == WidgetHint.TOGGLE:
             def on_toggle(new_value: bool):
-                set_property_value(data, property, new_value)
+                set_value(bpy.context, new_value)
 
             item = ToggleItem(
                 text=text,
@@ -681,7 +754,7 @@ class GPULayout:
                 # Int の場合は整数に変換
                 if info.prop_type == PropType.INT:
                     new_value = int(new_value)
-                set_property_value(data, property, new_value)
+                set_value(bpy.context, new_value)
 
             # soft_min/soft_max を使用（より自然な範囲）
             min_val = info.soft_min if info.soft_min is not None else (info.min_value or -1e9)
@@ -703,7 +776,7 @@ class GPULayout:
             def on_change(new_value: float):
                 if info.prop_type == PropType.INT:
                     new_value = int(new_value)
-                set_property_value(data, property, new_value)
+                set_value(bpy.context, new_value)
 
             min_val = info.soft_min if info.soft_min is not None else (info.min_value or 0.0)
             max_val = info.soft_max if info.soft_max is not None else (info.max_value or 1.0)
@@ -752,7 +825,7 @@ class GPULayout:
                 )
             else:
                 def on_change(new_value: str):
-                    set_property_value(data, property, new_value)
+                    set_value(bpy.context, new_value)
 
                 options = [
                     RadioOption(value=ident, label=name)
@@ -792,7 +865,7 @@ class GPULayout:
             # 通常 Enum は RadioGroup にフォールバック
             elif info.enum_items:
                 def on_change(new_value: str):
-                    set_property_value(data, property, new_value)
+                    set_value(bpy.context, new_value)
 
                 options = [
                     RadioOption(value=ident, label=name)
@@ -814,73 +887,43 @@ class GPULayout:
             self.prop_display(data, property, text=text, icon=icon)
             return None
 
-        if item:
-            self._add_item(item)
-            # RNA バインディングを登録（sync_props() で値を同期するため）
-            # 動的 Enum の場合は追加のメタデータを保存
-            binding_meta = {
-                'is_dynamic_enum': info.is_dynamic_enum,
-                'label_prefix': text,  # "Render Engine" など
-            }
-            self._prop_bindings.append((item, data, property, binding_meta))
-
         return item
 
-    def sync_props(self) -> None:
-        """
-        prop() で作成されたウィジェットの値を RNA から同期
+    def sync_reactive(self, context, epoch: int) -> bool:
+        self._context_cache.begin_tick(epoch)
+        any_changed = False
+        needs_relayout = False
 
-        毎フレーム呼び出すことで、外部で変更されたプロパティ値を
-        ウィジェットに反映できます。
-
-        使用例:
-            # modal() 内で
-            layout.sync_props()
-            layout.draw()
-        """
-        for item, data, prop_name, meta in self._prop_bindings:
+        for binding in self._bindings:
             try:
-                current_value = get_property_value(data, prop_name)
-                self._sync_item_value(item, data, prop_name, current_value, meta)
+                changed, relayout = binding.sync(context)
             except Exception:
-                pass  # データが無効になった場合は無視
+                continue
+            any_changed |= changed
+            needs_relayout = needs_relayout or relayout
 
-        # 子レイアウトも同期
+        for binding in self._static_bindings:
+            try:
+                changed, relayout = binding.sync(context)
+            except Exception:
+                continue
+            any_changed |= changed
+            needs_relayout = needs_relayout or relayout
+
         for child in self._children:
-            child.sync_props()
+            if child.sync_reactive(context, epoch):
+                any_changed = True
+            if child.dirty:
+                needs_relayout = True
 
-    def _sync_item_value(
-        self, item: LayoutItem, data: Any, prop_name: str,
-        value: Any, meta: dict
-    ) -> None:
-        """ウィジェットの値を同期（内部メソッド）"""
-        # 動的 Enum の LabelItem
-        if meta.get('is_dynamic_enum') and isinstance(item, LabelItem):
-            # 表示名を取得して更新
-            display_name = get_enum_display_name(data, prop_name, str(value))
-            prefix = meta.get('label_prefix', '')
-            item.text = f"{prefix}: {display_name}" if prefix else display_name
-            return
+        if needs_relayout:
+            self.mark_dirty()
 
-        # CheckboxItem / ToggleItem
-        if hasattr(item, 'value') and isinstance(getattr(item, 'value', None), bool):
-            item.value = bool(value)
+        return any_changed
 
-        # SliderItem / NumberItem
-        elif hasattr(item, 'value') and isinstance(getattr(item, 'value', None), (int, float)):
-            item.value = float(value) if value is not None else 0.0
-
-        # RadioGroupItem
-        elif hasattr(item, 'value') and hasattr(item, 'options'):
-            item.value = str(value) if value else ""
-
-        # ColorItem
-        elif hasattr(item, 'color'):
-            if isinstance(value, (list, tuple)):
-                if len(value) == 3:
-                    item.color = (*value, 1.0)
-                elif len(value) >= 4:
-                    item.color = tuple(value[:4])
+    def sync_props(self) -> None:
+        self._epoch += 1
+        self.sync_reactive(bpy.context, self._epoch)
 
     def prop_display(self, data: Any, property: str, *,
                      text: str = "", icon: str = "NONE") -> None:
@@ -1884,3 +1927,4 @@ class GPULayout:
 
         if hasattr(item, 'text') and item.text:
             rect.tag = item.text
+
