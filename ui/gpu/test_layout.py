@@ -398,6 +398,10 @@ class TEST_OT_gpu_interactive(Operator):
         region = self._get_window_region(context)
         self._rebuild_layout(context, region)
 
+        # prop() で作成されたウィジェットの値を RNA から同期
+        if self._layout:
+            self._layout.sync_props()
+
         # イベント処理は manager 経由
         if self._manager:
             handled = self._manager.handle_event(event, context)
@@ -728,6 +732,24 @@ class TEST_OT_gpu_interactive(Operator):
                 options=["Low", "Medium", "High"],
                 value="Medium"
             )
+
+            layout.separator()
+
+            # ── layout.prop() デモ (Blender プロパティとの双方向バインディング) ──
+            layout.label(text="layout.prop() Demo:")
+
+            # Boolean プロパティ（オブジェクトが存在する場合）
+            if context.object:
+                # チェックボックス（デフォルト）
+                layout.prop(context.object, "hide_viewport")
+                # トグルボタン（toggle=1）
+                layout.prop(context.object, "hide_render", toggle=1)
+
+            # 数値プロパティ（スライダー）
+            layout.prop(context.scene.render, "resolution_percentage", slider=True)
+
+            # Enum プロパティ（展開表示）
+            layout.prop(context.scene.render, "engine", expand=True)
 
             layout.separator()
             layout.label(text="Press D to toggle debug view")

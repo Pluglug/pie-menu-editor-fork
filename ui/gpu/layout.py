@@ -19,6 +19,10 @@ from .items import (
     ColorItem, RadioGroupItem, RadioOption
 )
 from .interactive import HitTestManager, HitRect
+from .rna_utils import (
+    get_property_info, get_property_value, set_property_value,
+    get_enum_display_name, PropType, WidgetHint, PropertyInfo
+)
 
 if TYPE_CHECKING:
     from bpy.types import Event
@@ -130,6 +134,10 @@ class GPULayout:
         # 境界クランプ用のリージョンサイズ（None = クランプ無効）
         self._region_width: Optional[float] = None
         self._region_height: Optional[float] = None
+
+        # prop() で作成されたウィジェットの RNA バインディング
+        # [(item, data, property_name), ...]
+        self._prop_bindings: list[tuple[LayoutItem, Any, str]] = []
 
     # ─────────────────────────────────────────────────────────────────────────
     # コンテナメソッド（UILayout 互換）
@@ -549,37 +557,330 @@ class GPULayout:
 
     def prop(self, data: Any, property: str, *, text: str = "",
              icon: str = "NONE", expand: bool = False, slider: bool = False,
-             toggle: int = -1, icon_only: bool = False) -> None:
+             toggle: int = -1, icon_only: bool = False) -> Optional[LayoutItem]:
         """
-        プロパティを表示（読み取り専用）
+        Blender プロパティを適切なウィジェットで表示・編集
 
-        Note: GPU 版では編集不可。表示のみ。
-              toggle=1 の場合は ToggleItem を使用。
+        RNA introspection を使用して、プロパティタイプに応じた
+        最適なウィジェットを自動選択します。
+
+        Args:
+            data: プロパティを持つオブジェクト（例: bpy.context.object）
+            property: プロパティ名（例: "location"）
+            text: 表示テキスト（空の場合はプロパティ名を使用）
+            icon: アイコン名
+            expand: Enum を展開表示（RadioGroup）するか
+            slider: 数値をスライダー表示するか
+            toggle: -1=自動, 0=チェックボックス, 1=トグルボタン
+            icon_only: アイコンのみ表示
+
+        Returns:
+            作成された LayoutItem（外部から値を取得/設定可能）
+
+        対応プロパティタイプ:
+            - Boolean → CheckboxItem / ToggleItem
+            - Int/Float → NumberItem / SliderItem
+            - Float[3-4] (COLOR) → ColorItem
+            - Enum → RadioGroupItem (expand=True) / ラベル表示
+            - String → ラベル表示（TextInputItem は未実装）
+
+        使用例:
+            # Boolean プロパティ
+            layout.prop(C.object, "hide_viewport")
+
+            # 数値プロパティ（スライダー）
+            layout.prop(C.scene.render, "resolution_percentage", slider=True)
+
+            # Enum プロパティ（展開）
+            layout.prop(C.scene.render, "engine", expand=True)
+
+            # カラープロパティ
+            layout.prop(C.object.active_material, "diffuse_color")
         """
-        if toggle == 1:
-            # トグルボタン
-            try:
-                value = getattr(data, property)
-            except AttributeError:
-                value = False
+        # プロパティ情報を取得
+        info = get_property_info(data, property)
+        if info is None:
+            # プロパティが存在しない場合はフォールバック
+            self.prop_display(data, property, text=text, icon=icon)
+            return None
 
+        # 表示テキストの決定
+        display_text = text if text else info.name
+
+        # 読み取り専用の場合は表示のみ
+        if info.is_readonly:
+            self.prop_display(data, property, text=display_text, icon=icon)
+            return None
+
+        # 現在値を取得
+        current_value = get_property_value(data, property)
+
+        # ウィジェットヒントに応じてアイテムを作成
+        hint = info.widget_hint
+
+        # スライダー/数値の強制切り替え
+        if slider and hint == WidgetHint.NUMBER:
+            hint = WidgetHint.SLIDER
+        elif not slider and hint == WidgetHint.SLIDER:
+            # slider=False は明示的に指定された場合のみ NUMBER に切り替え
+            pass  # デフォルトは維持
+
+        # Enum の expand 切り替え
+        if expand and hint == WidgetHint.MENU:
+            hint = WidgetHint.RADIO
+
+        # トグル/チェックボックスの明示的切り替え
+        if toggle == 1 and hint == WidgetHint.CHECKBOX:
+            hint = WidgetHint.TOGGLE
+        elif toggle == 0 and hint == WidgetHint.TOGGLE:
+            hint = WidgetHint.CHECKBOX
+
+        return self._create_prop_widget(
+            data, property, info, hint, display_text, icon, current_value
+        )
+
+    def _create_prop_widget(
+        self, data: Any, property: str, info: PropertyInfo,
+        hint: WidgetHint, text: str, icon: str, value: Any
+    ) -> Optional[LayoutItem]:
+        """
+        プロパティ用ウィジェットを作成
+
+        内部メソッド。hint に応じて適切なウィジェットを生成。
+        """
+        item: Optional[LayoutItem] = None
+
+        # Boolean → Checkbox
+        if hint == WidgetHint.CHECKBOX:
             def on_toggle(new_value: bool):
-                try:
-                    setattr(data, property, new_value)
-                except AttributeError:
-                    pass
+                set_property_value(data, property, new_value)
+
+            item = CheckboxItem(
+                text=text,
+                value=bool(value),
+                on_toggle=on_toggle,
+                enabled=self.enabled and self.active
+            )
+
+        # Boolean → Toggle
+        elif hint == WidgetHint.TOGGLE:
+            def on_toggle(new_value: bool):
+                set_property_value(data, property, new_value)
 
             item = ToggleItem(
-                text=text or property,
+                text=text,
                 icon=icon,
                 value=bool(value),
                 on_toggle=on_toggle,
                 enabled=self.enabled and self.active
             )
-            self._add_item(item)
-        else:
-            # 読み取り専用表示
+
+        # Number (Int/Float)
+        elif hint == WidgetHint.NUMBER:
+            def on_change(new_value: float):
+                # Int の場合は整数に変換
+                if info.prop_type == PropType.INT:
+                    new_value = int(new_value)
+                set_property_value(data, property, new_value)
+
+            # soft_min/soft_max を使用（より自然な範囲）
+            min_val = info.soft_min if info.soft_min is not None else (info.min_value or -1e9)
+            max_val = info.soft_max if info.soft_max is not None else (info.max_value or 1e9)
+
+            item = NumberItem(
+                value=float(value) if value is not None else 0.0,
+                min_val=min_val,
+                max_val=max_val,
+                step=info.step,
+                precision=info.precision if info.prop_type == PropType.FLOAT else 0,
+                text=text,
+                on_change=on_change,
+                enabled=self.enabled and self.active
+            )
+
+        # Slider (Int/Float with PERCENTAGE/FACTOR)
+        elif hint == WidgetHint.SLIDER:
+            def on_change(new_value: float):
+                if info.prop_type == PropType.INT:
+                    new_value = int(new_value)
+                set_property_value(data, property, new_value)
+
+            min_val = info.soft_min if info.soft_min is not None else (info.min_value or 0.0)
+            max_val = info.soft_max if info.soft_max is not None else (info.max_value or 1.0)
+
+            # SliderItem には step パラメータがない（位置ベースで値を決定）
+            item = SliderItem(
+                value=float(value) if value is not None else 0.0,
+                min_val=min_val,
+                max_val=max_val,
+                precision=info.precision if info.prop_type == PropType.FLOAT else 0,
+                text=text,
+                on_change=on_change,
+                enabled=self.enabled and self.active
+            )
+
+        # Color (Float array with COLOR subtype)
+        elif hint == WidgetHint.COLOR:
+            # 4要素に正規化
+            if isinstance(value, (list, tuple)):
+                if len(value) == 3:
+                    color = (*value, 1.0)
+                elif len(value) >= 4:
+                    color = tuple(value[:4])
+                else:
+                    color = (1.0, 1.0, 1.0, 1.0)
+            else:
+                color = (1.0, 1.0, 1.0, 1.0)
+
+            # TODO: on_click でカラーピッカーを開く
+            item = ColorItem(
+                color=color,
+                text=text,
+                enabled=self.enabled and self.active
+            )
+
+        # Radio (Enum expanded)
+        elif hint == WidgetHint.RADIO:
+            # 動的 Enum の場合は全アイテムを取得できないため、
+            # 現在値のみをラベルとして表示
+            if info.is_dynamic_enum:
+                # 動的 Enum: 現在値の表示名を取得してラベル表示
+                display_name = info.enum_items[0][1] if info.enum_items else str(value)
+                item = LabelItem(
+                    text=f"{text}: {display_name}",
+                    enabled=self.enabled and self.active
+                )
+            else:
+                def on_change(new_value: str):
+                    set_property_value(data, property, new_value)
+
+                options = [
+                    RadioOption(value=ident, label=name)
+                    for ident, name, _ in info.enum_items
+                ]
+
+                item = RadioGroupItem(
+                    options=options,
+                    value=str(value) if value else "",
+                    on_change=on_change,
+                    enabled=self.enabled and self.active
+                )
+
+        # Vector (Numeric array like XYZ)
+        elif hint == WidgetHint.VECTOR:
+            # TODO: 各要素を NumberItem で表示
+            # 現在は読み取り専用表示にフォールバック
             self.prop_display(data, property, text=text, icon=icon)
+            return None
+
+        # Text (String) - 未実装
+        elif hint == WidgetHint.TEXT:
+            # TODO: TextInputItem 実装後に対応
+            self.prop_display(data, property, text=text, icon=icon)
+            return None
+
+        # Menu (Enum dropdown) - 未実装
+        elif hint == WidgetHint.MENU:
+            # TODO: MenuButtonItem 実装後に対応
+            # 動的 Enum の場合はラベル表示
+            if info.is_dynamic_enum:
+                display_name = info.enum_items[0][1] if info.enum_items else str(value)
+                item = LabelItem(
+                    text=f"{text}: {display_name}",
+                    enabled=self.enabled and self.active
+                )
+            # 通常 Enum は RadioGroup にフォールバック
+            elif info.enum_items:
+                def on_change(new_value: str):
+                    set_property_value(data, property, new_value)
+
+                options = [
+                    RadioOption(value=ident, label=name)
+                    for ident, name, _ in info.enum_items
+                ]
+
+                item = RadioGroupItem(
+                    options=options,
+                    value=str(value) if value else "",
+                    on_change=on_change,
+                    enabled=self.enabled and self.active
+                )
+            else:
+                self.prop_display(data, property, text=text, icon=icon)
+                return None
+
+        # Unsupported
+        else:
+            self.prop_display(data, property, text=text, icon=icon)
+            return None
+
+        if item:
+            self._add_item(item)
+            # RNA バインディングを登録（sync_props() で値を同期するため）
+            # 動的 Enum の場合は追加のメタデータを保存
+            binding_meta = {
+                'is_dynamic_enum': info.is_dynamic_enum,
+                'label_prefix': text,  # "Render Engine" など
+            }
+            self._prop_bindings.append((item, data, property, binding_meta))
+
+        return item
+
+    def sync_props(self) -> None:
+        """
+        prop() で作成されたウィジェットの値を RNA から同期
+
+        毎フレーム呼び出すことで、外部で変更されたプロパティ値を
+        ウィジェットに反映できます。
+
+        使用例:
+            # modal() 内で
+            layout.sync_props()
+            layout.draw()
+        """
+        for item, data, prop_name, meta in self._prop_bindings:
+            try:
+                current_value = get_property_value(data, prop_name)
+                self._sync_item_value(item, data, prop_name, current_value, meta)
+            except Exception:
+                pass  # データが無効になった場合は無視
+
+        # 子レイアウトも同期
+        for child in self._children:
+            child.sync_props()
+
+    def _sync_item_value(
+        self, item: LayoutItem, data: Any, prop_name: str,
+        value: Any, meta: dict
+    ) -> None:
+        """ウィジェットの値を同期（内部メソッド）"""
+        # 動的 Enum の LabelItem
+        if meta.get('is_dynamic_enum') and isinstance(item, LabelItem):
+            # 表示名を取得して更新
+            display_name = get_enum_display_name(data, prop_name, str(value))
+            prefix = meta.get('label_prefix', '')
+            item.text = f"{prefix}: {display_name}" if prefix else display_name
+            return
+
+        # CheckboxItem / ToggleItem
+        if hasattr(item, 'value') and isinstance(getattr(item, 'value', None), bool):
+            item.value = bool(value)
+
+        # SliderItem / NumberItem
+        elif hasattr(item, 'value') and isinstance(getattr(item, 'value', None), (int, float)):
+            item.value = float(value) if value is not None else 0.0
+
+        # RadioGroupItem
+        elif hasattr(item, 'value') and hasattr(item, 'options'):
+            item.value = str(value) if value else ""
+
+        # ColorItem
+        elif hasattr(item, 'color'):
+            if isinstance(value, (list, tuple)):
+                if len(value) == 3:
+                    item.color = (*value, 1.0)
+                elif len(value) >= 4:
+                    item.color = tuple(value[:4])
 
     def prop_display(self, data: Any, property: str, *,
                      text: str = "", icon: str = "NONE") -> None:
