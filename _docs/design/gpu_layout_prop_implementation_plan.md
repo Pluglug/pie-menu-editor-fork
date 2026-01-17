@@ -291,6 +291,105 @@ def on_drag(dx, dy, mouse_x, mouse_y, event):
 | 2026-01-16 | 2.4 | ToggleItem 拡張完了（wcol_toggle テーマ対応） |
 | 2026-01-16 | 2.8 | ColorItem 実装完了（チェッカーパターン・透明色対応） |
 | 2026-01-17 | 2.7 | RadioGroupItem 実装完了（wcol_radio テーマ対応、on_move コールバック追加） |
+| 2026-01-17 | 3 | **layout.prop() 実装完了**（RNA introspection、双方向バインディング） |
+| 2026-01-17 | - | **リアクティブコンテキスト実装** (ContextProvider, PropertyBinding) |
+
+---
+
+## Phase 5: リアクティブコンテキスト（新規追加）
+
+**目的**: 常時表示パネルとして、コンテキスト変更（オブジェクト選択変更など）に自動追従
+
+**背景**: 従来の `prop(data, property)` はスナップショット参照を保持するため、
+オブジェクト選択変更後も古いオブジェクトを参照し続ける問題があった。
+
+### 5.1 ContextProvider
+
+**ファイル**: `ui/gpu/context.py`
+
+Blender コンテキストへの遅延アクセスを提供。
+
+```python
+provider = ContextProvider()
+# プリセット: "object", "scene", "render", "material" などは自動登録済み
+
+# 最新のデータを取得
+obj = provider.get("object", bpy.context)  # 常に最新の context.object
+```
+
+### 5.2 PropertyBinding
+
+プロパティとウィジェットのバインディング。遅延評価により常に最新のデータにアクセス。
+
+### 5.3 ContextHash
+
+コンテキスト変更を検知するためのハッシュ計算。
+
+### 5.4 リアクティブ API
+
+**ファイル**: `ui/gpu/layout.py`
+
+```python
+# プロバイダ設定
+layout.set_context_provider(provider)
+
+# リアクティブ prop（data_key を使用）
+layout.prop_reactive("object", "hide_viewport", text="Hide")
+
+# modal() 内で同期
+context_changed = layout.sync_reactive(context)
+if context_changed:
+    # UI 再構築が必要
+    rebuild_ui()
+```
+
+### 5.5 テスト用オペレーター
+
+**ファイル**: `ui/gpu/test_reactive.py`
+
+- `bpy.ops.pme.test_reactive_panel()` でテスト可能
+- オブジェクト選択変更で UI が自動更新されることを確認
+
+---
+
+## Phase 3 実装詳細
+
+### 3.1 RNA Introspection ユーティリティ
+
+**ファイル**: `ui/gpu/rna_utils.py`（新規作成）
+
+- `PropType` enum: BOOLEAN, INT, FLOAT, STRING, ENUM, POINTER, COLLECTION
+- `WidgetHint` enum: CHECKBOX, TOGGLE, NUMBER, SLIDER, COLOR, TEXT, MENU, RADIO, VECTOR
+- `PropertyInfo` dataclass: プロパティの全情報（タイプ、範囲、enum アイテムなど）
+- `get_property_info(data, prop_name)`: RNA プロパティを解析
+- `get_property_value()` / `set_property_value()`: 値の読み書き
+
+### 3.2 layout.prop() API
+
+**ファイル**: `ui/gpu/layout.py`
+
+```python
+layout.prop(data, property, *, text="", icon="", expand=False, slider=False, toggle=-1)
+```
+
+**対応状況**:
+
+| PropertyType | WidgetHint | Widget | 状態 |
+|--------------|------------|--------|------|
+| BOOLEAN | CHECKBOX | CheckboxItem | ✅ |
+| BOOLEAN | TOGGLE | ToggleItem | ✅ |
+| INT/FLOAT | NUMBER | NumberItem | ✅ |
+| INT/FLOAT | SLIDER | SliderItem | ✅ |
+| FLOAT[] (COLOR) | COLOR | ColorItem | ✅（表示のみ） |
+| ENUM | RADIO | RadioGroupItem | ✅ |
+| ENUM | MENU | RadioGroupItem | ✅（フォールバック） |
+| STRING | TEXT | - | ⏳ フォールバック |
+| FLOAT[] (VECTOR) | VECTOR | - | ⏳ フォールバック |
+
+### 3.3 双方向バインディング
+
+- 各ウィジェットの `on_change` / `on_toggle` コールバックで `set_property_value()` を呼び出し
+- 値変更が即座に Blender プロパティに反映される
 
 ---
 
