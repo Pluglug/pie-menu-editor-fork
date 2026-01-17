@@ -25,6 +25,7 @@ from .rna_utils import (
 )
 from .binding import ContextResolverCache, PropertyBinding
 from .context import TrackedAccess
+from .uilayout_stubs import UILayoutStubMixin
 from ...infra.debug import DBG_GPU, logi
 
 if TYPE_CHECKING:
@@ -42,7 +43,7 @@ RESIZE_HANDLE_SIZE = 16  # UI スケーリング前のピクセル
 CLAMP_MARGIN = 20  # エリア端からの最小マージン（ピクセル）
 
 
-class GPULayout:
+class GPULayout(UILayoutStubMixin):
     """
     Blender UILayout を模した GPU 描画レイアウトシステム
 
@@ -96,11 +97,21 @@ class GPULayout:
 
         # 状態プロパティ（UILayout 互換）
         self.active: bool = True
+        self.active_default: bool = False  # Return key activates operator button
+        self.activate_init: bool = False   # Auto-activate buttons in popups
         self.enabled: bool = True
         self.alert: bool = False
         self.scale_x: float = 1.0
         self.scale_y: float = 1.0
         self.alignment: Alignment = Alignment.EXPAND
+        # emboss: 'NORMAL', 'NONE', 'PULLDOWN_MENU', 'PIE_MENU', 'NONE_OR_STATUS'
+        self.emboss: str = "NORMAL"
+        # ui_units for fixed sizing
+        self.ui_units_x: float = 0.0
+        self.ui_units_y: float = 0.0
+        # Property layout options
+        self.use_property_split: bool = False
+        self.use_property_decorate: bool = False
 
         # アイテム間スペースを制御（align=True で 0）
         self._align: bool = False
@@ -284,8 +295,16 @@ class GPULayout:
         )
         self._add_item(item)
 
-    def separator(self, factor: float = 1.0) -> None:
-        """区切り線を追加"""
+    def separator(self, *, factor: float = 1.0, type: str = "AUTO") -> None:
+        """
+        区切り線を追加
+
+        Args:
+            factor: スペースの倍率（デフォルト 1.0）
+            type: 'AUTO', 'SPACE', 'LINE' (現在は LINE として描画)
+        """
+        # Note: type パラメータは UILayout 互換のため受け取るが、
+        # 現在は常に LINE スタイルで描画される
         item = SeparatorItem(factor=factor)
         self._add_item(item)
 
