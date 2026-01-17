@@ -25,6 +25,7 @@ from .rna_utils import (
 )
 from .binding import ContextResolverCache, PropertyBinding
 from .context import TrackedAccess
+from ...infra.debug import DBG_GPU, logi
 
 if TYPE_CHECKING:
     from bpy.types import Event
@@ -576,8 +577,12 @@ class GPULayout:
             self._context_tracker.last_access = None
 
         if not path:
+            if DBG_GPU:
+                logi("[GPU] Resolver inference failed for", type(data).__name__)
             return None
 
+        if DBG_GPU:
+            logi("[GPU] Inferred path:", path)
         return lambda ctx: self._context_cache.resolve(ctx, path)
 
     def _make_setter(
