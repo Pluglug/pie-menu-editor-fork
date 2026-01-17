@@ -223,21 +223,8 @@ def register():
 
     pme.context.add_global("tag_redraw", tag_redraw_windows)
 
-    # 開発モード時にテストオペレーターを登録
-    if DBG:
-        from . import test_gpu_layout
-        test_gpu_layout.register()
-
 
 def unregister():
     # bpy_types.UILayout.__getattribute__ = uilayout_getattribute
     if bpy_types.USERPREF_PT_addons.draw == draw_addons_maximized:
         bpy_types.USERPREF_PT_addons.draw = draw_addons_default
-
-    # テストオペレーターを解除
-    if DBG:
-        try:
-            from . import test_gpu_layout
-            test_gpu_layout.unregister()
-        except Exception:
-            pass
