@@ -249,6 +249,9 @@ class ButtonItem(LayoutItem):
         hovered = state.hovered if state else False
         enabled = state.enabled if state else self.enabled
 
+        # テーマカラーを取得（角丸計算用）
+        wcol = style.get_widget_colors(WidgetType.TOOL)
+
         # 背景色
         if pressed:
             bg_color = style.button_press_color
@@ -260,10 +263,17 @@ class ButtonItem(LayoutItem):
         if not enabled:
             bg_color = tuple(c * 0.5 for c in bg_color[:3]) + (bg_color[3],)
 
+        # 角丸半径を計算（Blender 準拠: roundness × height × 0.5）
+        # Blender は roundness を短辺の半分に対する比率として使用
+        if wcol is not None:
+            radius = int(wcol.roundness * self.height * 0.5)
+        else:
+            radius = style.scaled_border_radius()
+
         # 背景
         GPUDrawing.draw_rounded_rect(
             self.x, self.y, self.width, self.height,
-            style.scaled_border_radius(), bg_color
+            radius, bg_color
         )
 
         # アイコンとテキストのサイズ計算
@@ -361,9 +371,8 @@ class ToggleItem(LayoutItem):
         hovered = state.hovered if state else self._hovered
         enabled = state.enabled if state else self.enabled
 
-        # 角丸半径を計算（roundness を適用）
-        base_radius = style.scaled_border_radius()
-        radius = int(base_radius * wcol.roundness) if wcol.roundness < 1.0 else base_radius
+        # 角丸半径を計算（Blender 準拠: roundness × height × 0.5）
+        radius = int(wcol.roundness * self.height * 0.5)
 
         # === 1. 背景描画 ===
         if self.value:
@@ -434,6 +443,9 @@ class ToggleItem(LayoutItem):
         hovered = state.hovered if state else self._hovered
         enabled = state.enabled if state else self.enabled
 
+        # 角丸半径（デフォルト roundness 0.4、Blender 準拠: roundness × height × 0.5）
+        radius = int(0.4 * self.height * 0.5)
+
         # 背景色（ON 状態で強調）
         if self.value:
             bg_color = style.highlight_color if not hovered else tuple(
@@ -448,7 +460,7 @@ class ToggleItem(LayoutItem):
         # 背景
         GPUDrawing.draw_rounded_rect(
             self.x, self.y, self.width, self.height,
-            style.scaled_border_radius(), bg_color
+            radius, bg_color
         )
 
         # アイコンとテキストのサイズ計算
@@ -802,9 +814,8 @@ class SliderItem(LayoutItem):
         dragging = state.pressed if state else self._dragging
         enabled = state.enabled if state else self.enabled
 
-        # 角丸半径を計算（roundness を適用）
-        base_radius = style.scaled_border_radius()
-        radius = int(base_radius * wcol.roundness) if wcol.roundness < 1.0 else base_radius
+        # 角丸半径を計算（Blender 準拠: roundness × height × 0.5）
+        radius = int(wcol.roundness * self.height * 0.5)
 
         # === 1. 背景描画 ===
         if dragging:
@@ -874,7 +885,8 @@ class SliderItem(LayoutItem):
         dragging = state.pressed if state else self._dragging
         enabled = state.enabled if state else self.enabled
 
-        radius = style.scaled_border_radius()
+        # 角丸半径（デフォルト roundness 0.4、Blender 準拠: roundness × height × 0.5）
+        radius = int(0.4 * self.height * 0.5)
 
         # 背景
         bg_color = style.button_press_color if dragging else (
@@ -1008,9 +1020,8 @@ class NumberItem(LayoutItem):
         dragging = state.pressed if state else self._dragging
         enabled = state.enabled if state else self.enabled
 
-        # 角丸半径を計算（roundness を適用）
-        base_radius = style.scaled_border_radius()
-        radius = int(base_radius * wcol.roundness) if wcol.roundness < 1.0 else base_radius
+        # 角丸半径を計算（Blender 準拠: roundness × height × 0.5）
+        radius = int(wcol.roundness * self.height * 0.5)
 
         # === 1. 背景描画 ===
         if dragging:
@@ -1106,7 +1117,8 @@ class NumberItem(LayoutItem):
         dragging = state.pressed if state else self._dragging
         enabled = state.enabled if state else self.enabled
 
-        radius = style.scaled_border_radius()
+        # 角丸半径（デフォルト roundness 0.4、Blender 準拠: roundness × height × 0.5）
+        radius = int(0.4 * self.height * 0.5)
 
         # 背景
         bg_color = style.button_press_color if dragging else (
@@ -1284,9 +1296,8 @@ class RadioGroupItem(LayoutItem):
         enabled = state.enabled if state else self.enabled
         hovered_index = self._hovered_index
 
-        # 角丸半径を計算（roundness を適用）
-        base_radius = style.scaled_border_radius()
-        radius = int(base_radius * wcol.roundness) if wcol.roundness < 1.0 else base_radius
+        # 角丸半径を計算（Blender 準拠: roundness × height × 0.5）
+        radius = int(wcol.roundness * self.height * 0.5)
 
         # 各ボタンの矩形を取得
         rects = self.get_button_rects(style)
@@ -1380,7 +1391,8 @@ class RadioGroupItem(LayoutItem):
         enabled = state.enabled if state else self.enabled
         hovered_index = self._hovered_index
 
-        radius = style.scaled_border_radius()
+        # 角丸半径（デフォルト roundness 0.4、Blender 準拠: roundness × height × 0.5）
+        radius = int(0.4 * self.height * 0.5)
         rects = self.get_button_rects(style)
 
         for i, (bx, by, bw, bh) in enumerate(rects):
