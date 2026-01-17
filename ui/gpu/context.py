@@ -8,6 +8,7 @@ changing user scripts.
 
 from __future__ import annotations
 
+import bpy
 from typing import Any, List, Optional
 
 
@@ -109,4 +110,18 @@ class ContextTracker:
         return list(self._access_log)
 
 
-__all__ = ["ContextTracker", "TrackedAccess"]
+class BpyContextProxy:
+    """Proxy bpy module that returns a custom context."""
+
+    __slots__ = ("_context",)
+
+    def __init__(self, context: Any):
+        self._context = context
+
+    def __getattr__(self, name: str):
+        if name == "context":
+            return self._context
+        return getattr(bpy, name)
+
+
+__all__ = ["BpyContextProxy", "ContextTracker", "TrackedAccess"]
