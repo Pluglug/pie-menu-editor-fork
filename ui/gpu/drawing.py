@@ -27,6 +27,77 @@ CORNER_SEGMENTS: int = 16
 # 円のセグメント数 [推奨: 16-32, 高品質: 32]
 CIRCLE_SEGMENTS: int = 32
 
+# シャドウ用セグメント数（角丸コーナー）
+SHADOW_CORNER_SEGMENTS: int = 8
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# Shadow Shader - Blender 準拠シャドウ描画
+# ═══════════════════════════════════════════════════════════════════════════════
+
+# スムースシャドウを使用するかどうか（フォールバック用フラグ）
+USE_SMOOTH_SHADOW: bool = True
+
+
+class ShadowShader:
+    """
+    Blender 準拠のシャドウ描画
+
+    SMOOTH_COLOR 組み込みシェーダーを使用して、ピクセル単位の滑らかなグラデーションを実現。
+    各頂点に色（alpha 値）を設定し、GPU が自動的に補間。
+
+    減衰曲線（Blender 準拠）:
+        alpha * (falloff² × 0.722 + falloff × 0.277)
+        - falloff = 1.0（内側）: alpha
+        - falloff = 0.0（外側）: 0（透明）
+
+    Reference:
+        - blender/source/blender/gpu/shaders/gpu_shader_2D_widget_shadow_*.glsl
+        - blender/source/blender/editors/interface/interface_draw.cc:ui_draw_dropshadow()
+    """
+
+    _shader: gpu.types.GPUShader | None = None
+
+    @classmethod
+    def get_shader(cls) -> gpu.types.GPUShader:
+        """
+        SMOOTH_COLOR シェーダーを取得（キャッシュ）
+
+        Returns:
+            GPUShader（組み込みシェーダーなので常に成功）
+        """
+        if cls._shader is None:
+            cls._shader = gpu.shader.from_builtin('SMOOTH_COLOR')
+        return cls._shader
+
+    @staticmethod
+    def calc_shadow_alpha(falloff: float, base_alpha: float) -> float:
+        """
+        Blender の減衰曲線で alpha を計算
+
+        Args:
+            falloff: 0.0（外側、透明）〜 1.0（内側、影の色）
+            base_alpha: 基本 alpha 値
+
+        Returns:
+            計算された alpha 値
+
+        調整ガイド:
+            - 影を濃くする: 係数を大きくする or base_alpha を増やす
+            - 影を薄くする: 係数を小さくする or base_alpha を減らす
+            - グラデーションを急に: falloff² の係数を増やす
+            - グラデーションを緩やかに: falloff の係数を増やす
+        """
+        # ═══════════════════════════════════════════════════════════════════════
+        # 【調整可能】減衰曲線の係数
+        # Blender 標準: falloff² × 0.722 + falloff × 0.277
+        # 合計が 1.0 になるように調整すると falloff=1.0 で base_alpha になる
+        # ═══════════════════════════════════════════════════════════════════════
+        QUADRATIC_COEFF = 0.722  # 二次係数（大きいほど内側が急に濃くなる）
+        LINEAR_COEFF = 0.277    # 一次係数（大きいほど外側まで影が広がる）
+
+        return base_alpha * (falloff * falloff * QUADRATIC_COEFF + falloff * LINEAR_COEFF)
+
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # GPU Drawing - 図形描画
@@ -522,13 +593,267 @@ class GPUDrawing:
             shadow_width: 影の幅（テーマの menu_shadow_width）
             alpha: 影の透明度（テーマの menu_shadow_fac）
 
-        Note:
-            Blender の減衰曲線: alpha * (falloff² * 0.722 + falloff * 0.277)
-            複数レイヤーで近似する。
+        Implementation:
+            SMOOTH_COLOR シェーダーを使用してピクセル単位の滑らかなグラデーションを実現。
+            フラグで無効化された場合は、レイヤー方式にフォールバック。
         """
         if shadow_width <= 0 or alpha <= 0:
             return
 
+        # スムースシャドウを使用
+        if USE_SMOOTH_SHADOW:
+            cls._draw_panel_shadow_smooth(x, y, width, height, radius, shadow_width, alpha)
+            return
+
+        # フォールバック: レイヤー方式
+        cls._draw_panel_shadow_layered(x, y, width, height, radius, shadow_width, alpha)
+
+    @classmethod
+    def _draw_panel_shadow_smooth(cls, x: float, y: float, width: float, height: float,
+                                   radius: int, shadow_width: int, alpha: float) -> None:
+        """
+        SMOOTH_COLOR シェーダーを使用してパネルシャドウを描画
+
+        TRI_STRIP メッシュで外側（透明）と内側（影の色）の頂点を交互に配置し、
+        GPU が自動的に補間してピクセル単位の滑らかなグラデーションを生成。
+
+        Blender の GPU_SHADER_2D_WIDGET_SHADOW と同等の品質を実現。
+        """
+        shader = ShadowShader.get_shader()
+        positions, colors = cls._generate_shadow_mesh(
+            x, y, width, height, radius, shadow_width, alpha
+        )
+
+        batch = batch_for_shader(
+            shader, 'TRI_STRIP',
+            {"pos": positions, "color": colors}
+        )
+
+        shader.bind()
+        gpu.state.blend_set('ALPHA')
+        batch.draw(shader)
+        gpu.state.blend_set('NONE')
+
+    @classmethod
+    def _generate_shadow_mesh(cls, x: float, y: float, width: float, height: float,
+                               radius: int, shadow_width: int, alpha: float
+                               ) -> tuple[list[tuple[float, float]], list[tuple[float, float, float, float]]]:
+        """
+        影用の TRI_STRIP メッシュ頂点を生成
+
+        外側頂点（透明）と内側頂点（影の色）を交互に配置。
+        GPU が自動的に補間して滑らかなグラデーションを生成する。
+
+        3辺シャドウ（上辺なし）:
+        - 左、下、右の3辺は shadow_width だけ外側に拡張
+        - 上辺は拡張しない（上辺の外側頂点は内側と同じ位置）
+
+        Returns:
+            (positions, colors): 頂点座標と頂点色のタプル
+        """
+        positions: list[tuple[float, float]] = []
+        colors: list[tuple[float, float, float, float]] = []
+
+        # 外側頂点の色（透明）
+        outer_color = (0.0, 0.0, 0.0, 0.0)
+        # 内側頂点の色（Blender の減衰曲線で alpha 計算、falloff=1.0）
+        inner_alpha = ShadowShader.calc_shadow_alpha(1.0, alpha)
+        inner_color = (0.0, 0.0, 0.0, inner_alpha)
+
+        # 角丸半径を制限
+        r = min(radius, int(height / 2), int(width / 2))
+        r = max(0, r)
+
+        # 外側半径（影の外縁）
+        outer_r = r + shadow_width
+        # セグメント数
+        segments = SHADOW_CORNER_SEGMENTS
+
+        # パネル境界（内側）
+        inner_left = x
+        inner_right = x + width
+        inner_top = y
+        inner_bottom = y - height
+
+        # 影境界（外側）- 上辺は拡張しない
+        outer_left = x - shadow_width
+        outer_right = x + width + shadow_width
+        outer_top = y  # 上辺は拡張しない
+        outer_bottom = y - height - shadow_width
+
+        def add_vertex_pair(outer_pos: tuple[float, float],
+                           inner_pos: tuple[float, float],
+                           outer_col: tuple[float, float, float, float] = None,
+                           inner_col: tuple[float, float, float, float] = None) -> None:
+            """外側と内側の頂点ペアを追加"""
+            positions.append(outer_pos)
+            colors.append(outer_col if outer_col else outer_color)
+            positions.append(inner_pos)
+            colors.append(inner_col if inner_col else inner_color)
+
+        # ═══════════════════════════════════════════════════════════════════════
+        # 頂点生成順序: 左上 → 左 → 左下 → 下 → 右下 → 右 → 右上
+        # ═══════════════════════════════════════════════════════════════════════
+
+        # --- 左上（上辺は影なし → 外側頂点は内側と同じ位置） ---
+        if r > 0:
+            # 角丸コーナーの頂点
+            cx_inner = inner_left + r
+            cy_inner = inner_top - r
+            for j in range(segments + 1):
+                # 角度: 90° → 180°
+                angle = pi / 2 * (1 + j / segments)
+                # 内側頂点（パネル境界）
+                inner_x = cx_inner + r * cos(angle)
+                inner_y = cy_inner + r * sin(angle)
+
+                # 外側頂点: 上辺に近い部分は影なし（外側=内側）
+                # j=0 で angle=90°（上向き）、j=segments で angle=180°（左向き）
+                # 上向き（j=0）は影なし、左向き（j=segments）は影あり
+                shadow_factor = j / segments  # 0→1 で影の強さを変化
+                outer_expand = shadow_width * shadow_factor
+                outer_x = cx_inner + (r + outer_expand) * cos(angle) - outer_expand * (1 - shadow_factor)
+                outer_y = cy_inner + (r + outer_expand) * sin(angle)
+
+                # よりシンプルな計算: 外側座標を直接計算
+                outer_x = inner_x - shadow_factor * shadow_width
+                outer_y = inner_y  # 上部は影なし
+
+                add_vertex_pair((outer_x, outer_y), (inner_x, inner_y))
+        else:
+            # 角丸なし: 左上の点
+            add_vertex_pair((inner_left, inner_top), (inner_left, inner_top))
+
+        # --- 左辺（フル影） ---
+        # 左辺の中間点（必要に応じて）
+        if r > 0:
+            # 左上コーナーから左下コーナーへの直線部分
+            add_vertex_pair(
+                (outer_left, inner_top - r),
+                (inner_left, inner_top - r)
+            )
+            add_vertex_pair(
+                (outer_left, inner_bottom + r),
+                (inner_left, inner_bottom + r)
+            )
+        else:
+            add_vertex_pair(
+                (outer_left, inner_top),
+                (inner_left, inner_top)
+            )
+            add_vertex_pair(
+                (outer_left, inner_bottom),
+                (inner_left, inner_bottom)
+            )
+
+        # --- 左下コーナー（フル影） ---
+        if r > 0:
+            cx_inner = inner_left + r
+            cy_inner = inner_bottom + r
+            cx_outer = outer_left + outer_r
+            cy_outer = outer_bottom + outer_r
+            for j in range(segments + 1):
+                # 角度: 180° → 270°
+                angle = pi * (1 + 0.5 * j / segments)
+                inner_x = cx_inner + r * cos(angle)
+                inner_y = cy_inner + r * sin(angle)
+                outer_x = cx_outer + outer_r * cos(angle)
+                outer_y = cy_outer + outer_r * sin(angle)
+                add_vertex_pair((outer_x, outer_y), (inner_x, inner_y))
+        else:
+            add_vertex_pair((outer_left, outer_bottom), (inner_left, inner_bottom))
+
+        # --- 下辺（フル影） ---
+        if r > 0:
+            add_vertex_pair(
+                (outer_left + outer_r, outer_bottom),
+                (inner_left + r, inner_bottom)
+            )
+            add_vertex_pair(
+                (outer_right - outer_r, outer_bottom),
+                (inner_right - r, inner_bottom)
+            )
+        else:
+            add_vertex_pair(
+                (outer_left, outer_bottom),
+                (inner_left, inner_bottom)
+            )
+            add_vertex_pair(
+                (outer_right, outer_bottom),
+                (inner_right, inner_bottom)
+            )
+
+        # --- 右下コーナー（フル影） ---
+        if r > 0:
+            cx_inner = inner_right - r
+            cy_inner = inner_bottom + r
+            cx_outer = outer_right - outer_r
+            cy_outer = outer_bottom + outer_r
+            for j in range(segments + 1):
+                # 角度: 270° → 360°
+                angle = pi * (1.5 + 0.5 * j / segments)
+                inner_x = cx_inner + r * cos(angle)
+                inner_y = cy_inner + r * sin(angle)
+                outer_x = cx_outer + outer_r * cos(angle)
+                outer_y = cy_outer + outer_r * sin(angle)
+                add_vertex_pair((outer_x, outer_y), (inner_x, inner_y))
+        else:
+            add_vertex_pair((outer_right, outer_bottom), (inner_right, inner_bottom))
+
+        # --- 右辺（フル影） ---
+        if r > 0:
+            add_vertex_pair(
+                (outer_right, inner_bottom + r),
+                (inner_right, inner_bottom + r)
+            )
+            add_vertex_pair(
+                (outer_right, inner_top - r),
+                (inner_right, inner_top - r)
+            )
+        else:
+            add_vertex_pair(
+                (outer_right, inner_bottom),
+                (inner_right, inner_bottom)
+            )
+            add_vertex_pair(
+                (outer_right, inner_top),
+                (inner_right, inner_top)
+            )
+
+        # --- 右上（上辺は影なし → 外側頂点は内側と同じ位置） ---
+        if r > 0:
+            cx_inner = inner_right - r
+            cy_inner = inner_top - r
+            for j in range(segments + 1):
+                # 角度: 0° → 90°
+                angle = pi / 2 * j / segments
+                inner_x = cx_inner + r * cos(angle)
+                inner_y = cy_inner + r * sin(angle)
+
+                # 右向き（j=0）は影あり、上向き（j=segments）は影なし
+                shadow_factor = 1 - j / segments  # 1→0 で影の強さを変化
+                outer_x = inner_x + shadow_factor * shadow_width
+                outer_y = inner_y  # 上部は影なし
+
+                add_vertex_pair((outer_x, outer_y), (inner_x, inner_y))
+        else:
+            add_vertex_pair((inner_right, inner_top), (inner_right, inner_top))
+
+        return positions, colors
+
+    @classmethod
+    def _draw_panel_shadow_layered(cls, x: float, y: float, width: float, height: float,
+                                    radius: int, shadow_width: int, alpha: float) -> None:
+        """
+        レイヤー方式でパネルシャドウを描画（フォールバック）
+
+        複数の半透明レイヤーを重ねてグラデーションを近似。
+        シェーダーが使えない環境向けのフォールバック実装。
+
+        Note:
+            最大6レイヤーに制限されるため、shadow_width が大きい場合は
+            バンディング（段階）が目立つ可能性がある。
+        """
         # 複数レイヤーでグラデーションを近似
         layers = min(shadow_width, 6)  # 最大6レイヤー
 

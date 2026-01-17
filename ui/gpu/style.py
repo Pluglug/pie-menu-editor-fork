@@ -280,6 +280,7 @@ class GPULayoutStyle:
             - preferences.view.ui_scale: ユーザーが設定するスケール値 (0.5-6.0)
             - preferences.system.ui_scale: OS DPI × ユーザー設定 = 最終スケール
             - preferences.system.ui_line_width: 計算されたライン太さ（ピクセル）
+            - PANEL スタイルは panel_* 専用フィールドを使用（wcol_* ではない）
         """
         try:
             prefs = bpy.context.preferences
@@ -287,12 +288,135 @@ class GPULayoutStyle:
             ui = theme.user_interface
             ui_styles = prefs.ui_styles[0]
 
+            # ヘルパー関数: 色を RGBA に変換
+            def to_rgba(color, alpha: float = 1.0) -> tuple[float, float, float, float]:
+                """色を RGBA タプルに変換"""
+                c = tuple(color)
+                if len(c) == 3:
+                    return c + (alpha,)
+                return c
+
+            # ボタン用のカラーを取得（wcol_tool を使用）
+            wcol_button = ui.wcol_tool
+
+            # ThemeFontStyle からシャドウ設定を取得
+            font_style = ui_styles.widget
+            shadow_type = font_style.shadow  # 0=none, 3=shadow, 5=blur, 6=outline
+            shadow_enabled = shadow_type > 0
+
+            # ウィジェットテーマを読み込み（layout.prop() 用）
+            # 各 wcol_* から ThemeWidgetColors を作成
+            widget_themes = {}
+            for wcol_attr in ['wcol_regular', 'wcol_numslider', 'wcol_num',
+                              'wcol_option', 'wcol_toggle', 'wcol_text',
+                              'wcol_menu', 'wcol_menu_back', 'wcol_menu_item',
+                              'wcol_pulldown', 'wcol_pie_menu',
+                              'wcol_radio', 'wcol_tool']:
+                try:
+                    widget_themes[wcol_attr] = ThemeWidgetColors.from_blender_wcol(
+                        getattr(ui, wcol_attr)
+                    )
+                except Exception:
+                    widget_themes[wcol_attr] = None
+
+            # ═══════════════════════════════════════════════════════════════════════
+            # PANEL スタイル: 専用の panel_* フィールドを使用
+            # ═══════════════════════════════════════════════════════════════════════
+            #
+            # Blender には Panel 専用のテーマフィールドがある:
+            #   - panel_back: パネル背景
+            #   - panel_header: ヘッダー背景（ホバー/選択時に使用）
+            #   - panel_sub_back: サブパネル背景
+            #   - panel_outline: 非アクティブ時ボーダー
+            #   - panel_active: アクティブ時ボーダー
+            #   - panel_roundness: 角丸係数 [0.0-1.0]
+            #   - panel_title: タイトルテキスト色
+            #   - panel_text: 一般テキスト色
+            #
+            if style_name == 'PANEL':
+                roundness_val = ui.panel_roundness
+                base_radius = int(roundness_val * 10)
+
+                # TODO: panel_outline/panel_active はアルファが低く設定されていることが多い。
+                #       将来的に panel_* を使用する場合はアルファ補正を検討。
+                #       現時点では wcol_regular のアウトラインを使用。
+                wcol_regular = ui.wcol_regular
+
+                return cls(
+                    # 背景（通常状態）
+                    bg_color=to_rgba(ui.panel_back),
+                    outline_color=to_rgba(wcol_regular.outline),
+
+                    # 背景（選択/ホバー状態）
+                    bg_color_sel=to_rgba(ui.panel_header),
+                    outline_color_sel=to_rgba(wcol_regular.outline),
+
+                    # アイテム色（wcol_regular から取得）
+                    item_color=to_rgba(ui.wcol_regular.item),
+
+                    # テキスト（通常状態）
+                    text_color=to_rgba(ui.panel_text),
+                    text_color_secondary=to_rgba(ui.panel_text, 0.7),
+                    text_color_disabled=to_rgba(ui.panel_text, 0.4),
+
+                    # テキスト（選択状態）
+                    text_color_sel=to_rgba(ui.panel_title),
+
+                    text_size=int(font_style.points),
+
+                    # ボタン（wcol_tool から取得）
+                    button_color=to_rgba(wcol_button.inner),
+                    button_hover_color=to_rgba(wcol_button.inner_sel),
+                    button_press_color=to_rgba(wcol_button.item),
+                    button_text_color=to_rgba(wcol_button.text),
+
+                    # 特殊色
+                    alert_color=(0.8, 0.2, 0.2, 1.0),
+                    highlight_color=to_rgba(ui.panel_header),
+
+                    # 区切り線（アウトラインより少し暗く）
+                    separator_color=to_rgba(ui.panel_outline, 0.5),
+
+                    # レイアウト
+                    border_radius=base_radius,
+                    roundness=roundness_val,
+
+                    # ドロップシャドウ
+                    # 【調整可能】影の濃さ: ui.menu_shadow_fac * 係数 (例: * 1.2 で濃く, * 0.8 で薄く)
+                    shadow_width=ui.menu_shadow_width,
+                    shadow_alpha=ui.menu_shadow_fac,
+
+                    # テキストシャドウ
+                    text_shadow_enabled=shadow_enabled,
+                    text_shadow_color=font_style.shadow_value,
+                    text_shadow_alpha=font_style.shadow_alpha,
+                    text_shadow_offset=(font_style.shadow_offset_x, font_style.shadow_offset_y),
+
+                    # ウィジェットテーマ
+                    wcol_regular=widget_themes.get('wcol_regular'),
+                    wcol_numslider=widget_themes.get('wcol_numslider'),
+                    wcol_num=widget_themes.get('wcol_num'),
+                    wcol_option=widget_themes.get('wcol_option'),
+                    wcol_toggle=widget_themes.get('wcol_toggle'),
+                    wcol_text=widget_themes.get('wcol_text'),
+                    wcol_menu=widget_themes.get('wcol_menu'),
+                    wcol_menu_back=widget_themes.get('wcol_menu_back'),
+                    wcol_menu_item=widget_themes.get('wcol_menu_item'),
+                    wcol_pulldown=widget_themes.get('wcol_pulldown'),
+                    wcol_pie_menu=widget_themes.get('wcol_pie_menu'),
+                    wcol_radio=widget_themes.get('wcol_radio'),
+                    wcol_tool=widget_themes.get('wcol_tool'),
+                )
+
+            # ═══════════════════════════════════════════════════════════════════════
+            # その他のスタイル: wcol_* から取得
+            # ═══════════════════════════════════════════════════════════════════════
+
             # スタイル名からテーマ属性を取得
             # Note: MENU は「ドロップダウンボタン」、MENU_BACK は「メニューパネル背景」
             style_map = {
                 'TOOLTIP': 'wcol_tooltip',
                 'BOX': 'wcol_box',
-                'PANEL': 'wcol_regular',
                 'REGULAR': 'wcol_regular',
                 'TOOL': 'wcol_tool',
                 'RADIO': 'wcol_radio',
@@ -309,41 +433,10 @@ class GPULayoutStyle:
             wcol_name = style_map.get(style_name, 'wcol_tooltip')
             wcol = getattr(ui, wcol_name)
 
-            # ボタン用のカラーを取得（wcol_tool を使用）
-            wcol_button = ui.wcol_tool
-
-            # ヘルパー関数: 色を RGBA に変換
-            def to_rgba(color, alpha: float = 1.0) -> tuple[float, float, float, float]:
-                """色を RGBA タプルに変換"""
-                c = tuple(color)
-                if len(c) == 3:
-                    return c + (alpha,)
-                return c
-
-            # ThemeFontStyle からシャドウ設定を取得
-            font_style = ui_styles.widget
-            shadow_type = font_style.shadow  # 0=none, 3=shadow, 5=blur, 6=outline
-            shadow_enabled = shadow_type > 0
-
             # roundness から border_radius を計算（0-1 → ピクセル値）
             # roundness 1.0 で約 10px、スケールを考慮
             roundness_val = wcol.roundness
             base_radius = int(roundness_val * 10)
-
-            # ウィジェットテーマを読み込み（layout.prop() 用）
-            # 各 wcol_* から ThemeWidgetColors を作成
-            widget_themes = {}
-            for wcol_attr in ['wcol_regular', 'wcol_numslider', 'wcol_num',
-                              'wcol_option', 'wcol_toggle', 'wcol_text',
-                              'wcol_menu', 'wcol_menu_back', 'wcol_menu_item',
-                              'wcol_pulldown', 'wcol_pie_menu',
-                              'wcol_radio', 'wcol_tool']:
-                try:
-                    widget_themes[wcol_attr] = ThemeWidgetColors.from_blender_wcol(
-                        getattr(ui, wcol_attr)
-                    )
-                except Exception:
-                    widget_themes[wcol_attr] = None
 
             return cls(
                 # 背景（通常状態）
@@ -384,9 +477,10 @@ class GPULayoutStyle:
                 border_radius=base_radius,  # roundness を忠実に反映
                 roundness=roundness_val,
 
-                # ドロップシャドウ（Blender テーマから取得、GPU描画用に調整）
+                # ドロップシャドウ（Blender テーマから取得）
+                # 【調整可能】影の濃さ: ui.menu_shadow_fac * 係数 (例: * 1.2 で濃く, * 0.8 で薄く)
                 shadow_width=ui.menu_shadow_width,
-                shadow_alpha=ui.menu_shadow_fac * 0.75,  # GPU描画は濃く見えるため調整
+                shadow_alpha=ui.menu_shadow_fac,
 
                 # テキストシャドウ（ThemeFontStyle から取得）
                 text_shadow_enabled=shadow_enabled,
