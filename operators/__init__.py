@@ -219,7 +219,8 @@ class WM_OT_pme_user_command_exec(Operator):
         for pmi in pm.pmis:
             if pmi.name == properties.slot:
                 if pmi.description:
-                    return pmi.description
+                    # Convert literal \n to actual newline for multi-line tooltips
+                    return pmi.description.replace("\\n", "\n")
                 break
 
         return "Execute python code"
@@ -1181,7 +1182,8 @@ class WM_OT_pme_user_pie_menu_call(Operator):
         if not pm:
             return "Call PME menu"
         if pm.description:
-            return pm.description
+            # Convert literal \n to actual newline for multi-line tooltips
+            return pm.description.replace("\\n", "\n")
         return f"Call {pm.name}"
 
     # @staticmethod
