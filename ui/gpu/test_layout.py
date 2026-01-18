@@ -1,3 +1,4 @@
+# pyright: reportInvalidTypeForm=false
 """
 GPULayout テストスクリプト
 
@@ -1190,16 +1191,19 @@ class DEMO_OT_operator_props(Operator):
     """Demo operator for GPULayout.operator props."""
     bl_idname = "demo.operator_props"
     bl_label = "Demo: Operator Props"
-    bl_options = {'REGISTER'}
+    bl_options = {'REGISTER', 'UNDO'}
 
     count: bpy.props.IntProperty(name="Count", default=1, min=1, max=10)
     message: bpy.props.StringProperty(name="Message", default="Hello")
 
     def execute(self, context):
-        msg = f"{self.message} (count={self.count})"
+        msg = f"execute: {self.message} (count={self.count})"
         self.report({'INFO'}, msg)
         print(msg)
         return {'FINISHED'}
+
+    def invoke(self, context, event):
+        return self.execute(context)
 
 # ---------------------------------------------------------------------------
 # Demo 4: Selection Tracker - reactive context demo
@@ -1352,6 +1356,7 @@ class DEMO_OT_selection_tracker(Operator):
 
             layout.separator()
             layout.label(text="Operator Demo (layout.operator)")
+            layout.operator_context = "INVOKE_REGION_WIN"
             op = layout.operator(
                 "demo.operator_props",
                 text="Run Operator",
