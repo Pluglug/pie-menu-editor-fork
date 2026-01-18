@@ -112,6 +112,7 @@ class GPULayout(UILayoutStubMixin):
         # Property layout options
         self.use_property_split: bool = False
         self.use_property_decorate: bool = False
+        self.operator_context: str = "INVOKE_DEFAULT"
 
         # アイテム間スペースを制御（align=True で 0）
         self._align: bool = False
@@ -194,6 +195,7 @@ class GPULayout(UILayoutStubMixin):
         child.active = self.active
         child.enabled = self.enabled
         child.alert = self.alert
+        child.operator_context = self.operator_context
         child._align = align  # アイテム間スペースを制御
         self._children.append(child)
         return child
@@ -234,6 +236,7 @@ class GPULayout(UILayoutStubMixin):
         child.active = self.active
         child.enabled = self.enabled
         child.alert = self.alert
+        child.operator_context = self.operator_context
         child._align = align
         self._children.append(child)
 
@@ -278,6 +281,7 @@ class GPULayout(UILayoutStubMixin):
         child.active = self.active
         child.enabled = self.enabled
         child.alert = self.alert
+        child.operator_context = self.operator_context
         self._children.append(child)
         return child
 
@@ -347,6 +351,7 @@ class GPULayout(UILayoutStubMixin):
         Note:
             on_click が未指定の場合は bpy.ops を呼び出します。
             operator が空の場合はクリックしても何もしません。
+            operator_context は layout.operator_context を使用します。
 
             返り値の OperatorProperties は UILayout.operator() 互換のため、
             以下のような典型的な書き方が動作します：
@@ -383,11 +388,17 @@ class GPULayout(UILayoutStubMixin):
                     logi("[GPULayout] Operator not found:", operator)
                 return
 
+            context_mode = self.operator_context or "INVOKE_DEFAULT"
             try:
-                op_fn(**op_props.props)
+                op_fn(context_mode, **op_props.props)
             except Exception as exc:
                 if DBG_GPU:
-                    logi("[GPULayout] Operator failed:", operator, exc)
+                    logi("[GPULayout] Operator invoke failed:", operator, exc)
+                try:
+                    op_fn(**op_props.props)
+                except Exception as exc2:
+                    if DBG_GPU:
+                        logi("[GPULayout] Operator exec failed:", operator, exc2)
 
         click_handler = invoke_operator if (on_click is not None or operator) else None
 
