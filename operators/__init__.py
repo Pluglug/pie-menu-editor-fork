@@ -206,6 +206,11 @@ def _evaluate_description_expr(expr_text: str) -> str | None:
         return None
 
 
+def _format_description_text(text: str) -> str:
+    """Convert user-facing escape sequences to display text."""
+    return text.replace("\\n", "\n") if text else text
+
+
 class WM_OT_pme_user_command_exec(Operator):
     bl_idname = "wm.pme_user_command_exec"
     bl_label = ""
@@ -238,14 +243,13 @@ class WM_OT_pme_user_command_exec(Operator):
         for pmi in pm.pmis:
             if pmi.name == properties.slot:
                 if pmi.description:
-                    text = pmi.description.replace("\\n", "\n")
                     if pmi.description_is_expr:
-                        result = _evaluate_description_expr(text)
+                        result = _evaluate_description_expr(pmi.description)
                         if result is not None:
-                            return result
+                            return _format_description_text(result)
                         # Fallback on error or None
                     else:
-                        return text
+                        return _format_description_text(pmi.description)
                 break
 
         return "Execute python code"
@@ -1207,14 +1211,13 @@ class WM_OT_pme_user_pie_menu_call(Operator):
         if not pm:
             return "Call PME menu"
         if pm.description:
-            text = pm.description.replace("\\n", "\n")
             if pm.description_is_expr:
-                result = _evaluate_description_expr(text)
+                result = _evaluate_description_expr(pm.description)
                 if result is not None:
-                    return result
+                    return _format_description_text(result)
                 # Fallback on error or None
             else:
-                return text
+                return _format_description_text(pm.description)
         return f"Call {pm.name}"
 
     # @staticmethod
