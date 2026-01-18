@@ -41,13 +41,18 @@ class OperatorProperties:
         For real operator execution, use on_click callback instead.
     """
 
-    def __init__(self, bl_idname: str = ""):
+    def __init__(self, bl_idname: str = "", props: Optional[dict[str, Any]] = None):
         # Use object.__setattr__ to avoid triggering our custom __setattr__
         object.__setattr__(self, "_props", {})
         object.__setattr__(self, "_bl_idname", bl_idname)
+        if props:
+            self._props.update(props)
 
     def __setattr__(self, name: str, value: Any) -> None:
         """Accept any attribute assignment."""
+        if name.startswith("_"):
+            object.__setattr__(self, name, value)
+            return
         self._props[name] = value
 
     def __getattr__(self, name: str) -> Any:
@@ -57,6 +62,15 @@ class OperatorProperties:
             return props[name]
         # Return None for undefined properties (like Blender does)
         return None
+
+    @property
+    def props(self) -> dict[str, Any]:
+        """Return a copy of stored properties."""
+        return dict(self._props)
+
+    def update(self, props: dict[str, Any]) -> None:
+        """Merge properties into the stored props."""
+        self._props.update(props)
 
     def __repr__(self) -> str:
         bl_idname = object.__getattribute__(self, "_bl_idname")

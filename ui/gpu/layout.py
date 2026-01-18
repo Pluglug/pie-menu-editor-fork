@@ -312,8 +312,20 @@ class GPULayout(UILayoutStubMixin):
         """スペーサーを追加（separator のエイリアス）"""
         self.separator(factor=0.5)
 
-    def operator(self, operator: str = "", *, text: str = "", icon: str = "NONE",
-                 on_click: Optional[Callable[[], None]] = None) -> OperatorProperties:
+    def operator(
+        self,
+        operator: str = "",
+        *,
+        text: str = "",
+        icon: str = "NONE",
+        icon_value: int = 0,
+        emboss: bool = True,
+        depress: Optional[bool] = None,
+        enabled: bool = True,
+        active: bool = True,
+        on_click: Optional[Callable[[], None]] = None,
+        **props,
+    ) -> OperatorProperties:
         """
         オペレーターボタンを追加
 
@@ -321,36 +333,76 @@ class GPULayout(UILayoutStubMixin):
             operator: オペレーター bl_idname（例: "mesh.primitive_cube_add"）
             text: ボタンラベル（空の場合は operator 名を使用）
             icon: アイコン名
-            on_click: クリック時のコールバック
+            icon_value: カスタムアイコン ID（GPU 描画では未対応）
+            emboss: Blender 互換のフラグ（GPU 描画では未対応）
+            depress: Blender 互換のフラグ（GPU 描画では未対応）
+            enabled: ボタンの有効/無効
+            active: ボタンのアクティブ状態
+            on_click: クリック時のコールバック（指定時は operator を実行しない）
+            **props: オペレーターに渡すプロパティ
 
         Returns:
             OperatorProperties - プロパティ代入を受け付けるダミーオブジェクト
 
         Note:
-            実際の Blender オペレーターは呼び出せないため、
-            on_click コールバックで代替します。
+            on_click が未指定の場合は bpy.ops を呼び出します。
+            operator が空の場合はクリックしても何もしません。
 
             返り値の OperatorProperties は UILayout.operator() 互換のため、
             以下のような典型的な書き方が動作します：
                 op = layout.operator("mesh.primitive_cube_add")
-                op.size = 2.0  # AttributeError にならない
+                op.size = 2.0  # AttributeError にならない（PME 互換）
 
-            ただし、これらのプロパティは実際のオペレーター呼び出しには
-            使用されません。実際の動作には on_click を使用してください。
+            **props と後続の属性代入は結合され、クリック時に bpy.ops に渡されます。
         """
+        if icon_value and DBG_GPU:
+            logi("[GPULayout] operator() icon_value ignored:", icon_value)
+
+        op_props = OperatorProperties(operator, props)
+
+        def invoke_operator() -> None:
+            if on_click is not None:
+                on_click()
+                return
+
+            if not operator:
+                return
+
+            try:
+                module_name, op_name = operator.split(".", 1)
+            except ValueError:
+                if DBG_GPU:
+                    logi("[GPULayout] Invalid operator idname:", operator)
+                return
+
+            try:
+                module = getattr(bpy.ops, module_name)
+                op_fn = getattr(module, op_name)
+            except AttributeError:
+                if DBG_GPU:
+                    logi("[GPULayout] Operator not found:", operator)
+                return
+
+            try:
+                op_fn(**op_props.props)
+            except Exception as exc:
+                if DBG_GPU:
+                    logi("[GPULayout] Operator failed:", operator, exc)
+
+        click_handler = invoke_operator if (on_click is not None or operator) else None
+
         item = ButtonItem(
             text=text or operator,
             icon=icon,
-            on_click=on_click,
-            enabled=self.enabled and self.active
+            on_click=click_handler,
+            enabled=self.enabled and self.active and enabled and active,
         )
         self._add_item(item)
 
         # OperatorProperties を返す（プロパティ代入を受け付ける）
-        props = OperatorProperties(operator)
         # ButtonItem への参照を保持（将来の拡張用）
-        props._button_item = item
-        return props
+        object.__setattr__(op_props, "_button_item", item)
+        return op_props
 
     def slider(self, *, value: float = 0.0, min_val: float = 0.0, max_val: float = 1.0,
                precision: int = 2, text: str = "",
@@ -1974,4 +2026,3 @@ class GPULayout(UILayoutStubMixin):
 
         if hasattr(item, 'text') and item.text:
             rect.tag = item.text
-
