@@ -80,6 +80,10 @@ class NullLayout:
         """Return a no-op function for any method call."""
         return self._noop
 
+    def __bool__(self) -> bool:
+        """Collapsed panels should behave as falsy layouts."""
+        return False
+
     def _noop(self, *args, **kwargs) -> "NullLayout":
         """No-op that returns self for method chaining."""
         return self
@@ -170,6 +174,7 @@ class UILayoutStubMixin:
             for None won't crash.
         """
         self._stub_warn("panel")
+        # TODO: Implement interactive collapse and state persistence.
         default_closed = kwargs.get("default_closed", False)
         header = self.row()
         if default_closed:
@@ -194,6 +199,7 @@ class UILayoutStubMixin:
             If property is False, body is NullLayout (collapsed).
         """
         self._stub_warn("panel_prop")
+        # TODO: Implement interactive collapse and state persistence.
         # Try to read the property to determine state
         is_open = True
         try:
