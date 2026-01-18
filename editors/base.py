@@ -18,6 +18,7 @@ from ..core.constants import (
     F_RIGHT,
     KEYMAP_SPLITTER,
     MODAL_CMD_MODES,
+    W_PMI_DESC_SYNTAX,
     W_PMI_HOTKEY,
     W_PMI_MENU,
     W_PMI_SYNTAX,
@@ -306,6 +307,17 @@ class EditorBase:
                 except:
                     data.info(W_PMI_SYNTAX)
 
+            # Phase 9-X (#102): Check description expression syntax
+            if data.description and data.description_is_expr:
+                try:
+                    compile(
+                        "def _get_desc():" + data.description,
+                        '<description>',
+                        'exec'
+                    )
+                except:
+                    data.info(W_PMI_DESC_SYNTAX)
+
             data.sname = ""
             if not data.has_errors():
                 mo = re_operator.search(data.cmd)
@@ -374,6 +386,7 @@ class EditorBase:
         data.name = pmi.name
         data.icon = pmi.icon
         data.description = pmi.description  # Phase 9-X (#102)
+        data.description_is_expr = pmi.description_is_expr  # Phase 9-X (#102)
 
         data_mode = 'COMMAND' if data.mode in MODAL_CMD_MODES else data.mode
 
@@ -420,7 +433,17 @@ class EditorBase:
 
     def draw_extra_settings(self, layout, pm):
         # Description field for dynamic tooltip (#102)
-        layout.prop(pm, "description", text="", icon=ic('INFO'))
+        row = layout.row(align=True)
+        sub = row.row(align=True)
+        # Check expression syntax if is_expr is enabled
+        if pm.description and pm.description_is_expr:
+            try:
+                compile("def _get_desc():" + pm.description, '<description>', 'exec')
+                sub.alert = False
+            except:
+                sub.alert = True
+        sub.prop(pm, "description", text="", icon=ic('INFO'))
+        row.prop(pm, "description_is_expr", text="", icon=ic('SCRIPTPLUGINS'))
 
         # Poll condition
         row = layout.row(align=True)

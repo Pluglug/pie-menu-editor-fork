@@ -924,8 +924,10 @@ class PMEPreferences(AddonPreferences):
             # Phase 9-X (#102): Description field for COMMAND mode fallback tooltip
             # Only shown for Pie Menu, Regular Menu, and Popup Dialog
             if pm.mode in ('PMENU', 'RMENU', 'DIALOG'):
-                lh.row(subcol)
-                lh.prop(data, "description", "", ic('INFO'))
+                row = lh.row(subcol, align=True)
+                desc_icon = 'ERROR' if data.has_errors(CC.W_PMI_DESC_SYNTAX) else ic('INFO')
+                lh.prop(data, "description", "", desc_icon)
+                lh.prop(data, "description_is_expr", "", ic('SCRIPTPLUGINS'))
 
             if (
                 pm.mode == 'STICKY'

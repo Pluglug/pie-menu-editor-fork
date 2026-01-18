@@ -187,6 +187,25 @@ class WM_OT_pm_select(Operator):
 # PME_OT_pm_search_and_select moved to operators/search.py
 
 
+def _evaluate_description_expr(expr_text: str) -> str | None:
+    """Evaluate description expression (return statement style).
+
+    Like poll_cmd, uses 'return' statement.
+    Returns None on error or if expression returns None.
+
+    Example:
+        ao = C.active_object; return f'{ao.name}' if ao else None
+    """
+    exec_globals = pme.context.gen_globals()
+    try:
+        code = compile("def _get_desc():" + expr_text, "<description>", "exec")
+        exec(code, exec_globals)
+        result = exec_globals["_get_desc"]()
+        return str(result) if result is not None else None
+    except Exception:
+        return None
+
+
 class WM_OT_pme_user_command_exec(Operator):
     bl_idname = "wm.pme_user_command_exec"
     bl_label = ""
@@ -219,8 +238,14 @@ class WM_OT_pme_user_command_exec(Operator):
         for pmi in pm.pmis:
             if pmi.name == properties.slot:
                 if pmi.description:
-                    # Convert literal \n to actual newline for multi-line tooltips
-                    return pmi.description.replace("\\n", "\n")
+                    text = pmi.description.replace("\\n", "\n")
+                    if pmi.description_is_expr:
+                        result = _evaluate_description_expr(text)
+                        if result is not None:
+                            return result
+                        # Fallback on error or None
+                    else:
+                        return text
                 break
 
         return "Execute python code"
@@ -1182,8 +1207,14 @@ class WM_OT_pme_user_pie_menu_call(Operator):
         if not pm:
             return "Call PME menu"
         if pm.description:
-            # Convert literal \n to actual newline for multi-line tooltips
-            return pm.description.replace("\\n", "\n")
+            text = pm.description.replace("\\n", "\n")
+            if pm.description_is_expr:
+                result = _evaluate_description_expr(text)
+                if result is not None:
+                    return result
+                # Fallback on error or None
+            else:
+                return text
         return f"Call {pm.name}"
 
     # @staticmethod

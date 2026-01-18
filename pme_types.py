@@ -164,6 +164,41 @@ class PMIItem(PropertyGroup):
         maxlen=CC.MAX_STR_LEN,
     )
 
+    # Placeholder for preserving \n during escape (used by _update_description_is_expr)
+    _NEWLINE_PLACEHOLDER = "\x00NL\x00"
+
+    def _update_description_is_expr(self, context):
+        """Auto-convert between static text and expression format."""
+        if not self.description:
+            return
+
+        if self.description_is_expr:
+            # Static → Expression: wrap with return 'xxx'
+            text = self.description.strip()
+            if not text.startswith("return "):
+                # Preserve \n by using placeholder
+                temp = text.replace("\\n", self._NEWLINE_PLACEHOLDER)
+                temp = temp.replace("\\", "\\\\").replace("'", "\\'")
+                escaped = temp.replace(self._NEWLINE_PLACEHOLDER, "\\n")
+                self.description = f"return '{escaped}'"
+        else:
+            # Expression → Static: try to extract simple string
+            text = self.description.strip()
+            if text.startswith("return '") and text.endswith("'"):
+                inner = text[8:-1]
+                # Preserve \n by using placeholder
+                temp = inner.replace("\\n", self._NEWLINE_PLACEHOLDER)
+                temp = temp.replace("\\'", "'").replace("\\\\", "\\")
+                inner = temp.replace(self._NEWLINE_PLACEHOLDER, "\\n")
+                self.description = inner
+
+    description_is_expr: BoolProperty(
+        name="Expr",
+        description="Evaluate description as Python expression (return string)",
+        default=False,
+        update=_update_description_is_expr,
+    )
+
     def get_pmi_label(self):
         return self.name
 
@@ -385,6 +420,41 @@ class PMItem(PropertyGroup):
         description="Tooltip text displayed when hovering over this menu",
         default="",
         maxlen=CC.MAX_STR_LEN,
+    )
+
+    # Placeholder for preserving \n during escape (used by _update_description_is_expr)
+    _NEWLINE_PLACEHOLDER = "\x00NL\x00"
+
+    def _update_description_is_expr(self, context):
+        """Auto-convert between static text and expression format."""
+        if not self.description:
+            return
+
+        if self.description_is_expr:
+            # Static → Expression: wrap with return 'xxx'
+            text = self.description.strip()
+            if not text.startswith("return "):
+                # Preserve \n by using placeholder
+                temp = text.replace("\\n", self._NEWLINE_PLACEHOLDER)
+                temp = temp.replace("\\", "\\\\").replace("'", "\\'")
+                escaped = temp.replace(self._NEWLINE_PLACEHOLDER, "\\n")
+                self.description = f"return '{escaped}'"
+        else:
+            # Expression → Static: try to extract simple string
+            text = self.description.strip()
+            if text.startswith("return '") and text.endswith("'"):
+                inner = text[8:-1]
+                # Preserve \n by using placeholder
+                temp = inner.replace("\\n", self._NEWLINE_PLACEHOLDER)
+                temp = temp.replace("\\'", "'").replace("\\\\", "\\")
+                inner = temp.replace(self._NEWLINE_PLACEHOLDER, "\\n")
+                self.description = inner
+
+    description_is_expr: BoolProperty(
+        name="Expr",
+        description="Evaluate description as Python expression (return string)",
+        default=False,
+        update=_update_description_is_expr,
     )
 
     def update_keymap_item(self, context):

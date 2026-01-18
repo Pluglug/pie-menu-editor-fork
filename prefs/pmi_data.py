@@ -124,6 +124,42 @@ class PMIData(PropertyGroup):
         name="Description",
         description="Tooltip text for this item (COMMAND mode only)",
         maxlen=CC.MAX_STR_LEN,
+        update=update_data,
+    )
+
+    # Placeholder for preserving \n during escape
+    _NEWLINE_PLACEHOLDER = "\x00NL\x00"
+
+    def _update_description_is_expr(self, context):
+        """Auto-convert between static text and expression format."""
+        if self.description:
+            if self.description_is_expr:
+                # Static → Expression: wrap with return 'xxx'
+                text = self.description.strip()
+                if not text.startswith("return "):
+                    # Preserve \n by using placeholder
+                    temp = text.replace("\\n", self._NEWLINE_PLACEHOLDER)
+                    temp = temp.replace("\\", "\\\\").replace("'", "\\'")
+                    escaped = temp.replace(self._NEWLINE_PLACEHOLDER, "\\n")
+                    self.description = f"return '{escaped}'"
+            else:
+                # Expression → Static: try to extract simple string
+                text = self.description.strip()
+                if text.startswith("return '") and text.endswith("'"):
+                    inner = text[8:-1]
+                    # Preserve \n by using placeholder
+                    temp = inner.replace("\\n", self._NEWLINE_PLACEHOLDER)
+                    temp = temp.replace("\\'", "'").replace("\\\\", "\\")
+                    inner = temp.replace(self._NEWLINE_PLACEHOLDER, "\\n")
+                    self.description = inner
+        # Run error check after conversion
+        update_data(self, context)
+
+    description_is_expr: BoolProperty(
+        name="Expr",
+        description="Evaluate description as Python expression (return string)",
+        default=False,
+        update=_update_description_is_expr,
     )
 
     key: EnumProperty(
