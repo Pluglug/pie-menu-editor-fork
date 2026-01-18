@@ -24,6 +24,7 @@ DBG_PANEL = False
 DBG_PM = False
 DBG_PROP = False
 DBG_PROP_PATH = False
+DBG_GPU = False
 
 # 新規カテゴリ（後方互換を維持しつつ段階的に使用する）
 DBG_DEPS = True      # init_addon の依存解析・ロード順
@@ -87,6 +88,7 @@ _DBG_TABLE = {
     "pm": "DBG_PM",
     "prop": "DBG_PROP",
     "prop_path": "DBG_PROP_PATH",
+    "gpu": "DBG_GPU",
     "deps": "DBG_DEPS",
     "profile": "DBG_PROFILE",
     "runtime": "DBG_RUNTIME",

@@ -1351,23 +1351,54 @@ class WM_OT_pme_user_pie_menu_call(Operator):
         elif pmi.mode == 'CUSTOM':
             text, icon, *_ = pmi.parse()
             icon, icon_value = lh.parse_icon(icon)
-            pme.context.layout = lh.layout
             pme.context.text = text
             pme.context.icon = icon
             pme.context.icon_value = icon_value
+            layout = lh.layout
 
-            exec_globals = pme.context.gen_globals()
-            exec_globals.update(menu=pm.name, slot=pmi.name)
+            if layout is not None:
+                try:
+                    from ..ui.gpu.layout import GPULayout
+                except Exception:
+                    GPULayout = None
+            else:
+                GPULayout = None
 
-            try:
-                pme.context.exe(pmi.text, exec_globals, use_try=False)
-            except:
-                lh.error(text)
-                # print_exc()
-                # if pm.mode == 'DIALOG':
-                #     text and lh.spacer() or lh.blank()
-                # elif pm.mode == 'PMENU':
-                #     lh.sep()
+            if GPULayout and isinstance(layout, GPULayout):
+                from ..bl_utils import bl_context
+                from ..ui.gpu.context import BpyContextProxy, ContextTracker
+                from ..ui.gpu.execution import ExecutionFrame
+
+                tracker = ContextTracker(bl_context)
+                layout._context_tracker = tracker
+                bpy_proxy = BpyContextProxy(tracker)
+
+                with ExecutionFrame(
+                    pme.context,
+                    bpy.context,
+                    layout=layout,
+                    context_tracker=tracker,
+                    bpy_proxy=bpy_proxy,
+                ):
+                    exec_globals = pme.context.gen_globals()
+                    exec_globals.update(menu=pm.name, slot=pmi.name)
+                    try:
+                        pme.context.exe(pmi.text, exec_globals, use_try=False)
+                    except:
+                        lh.error(text)
+            else:
+                pme.context.layout = layout
+                exec_globals = pme.context.gen_globals()
+                exec_globals.update(menu=pm.name, slot=pmi.name)
+                try:
+                    pme.context.exe(pmi.text, exec_globals, use_try=False)
+                except:
+                    lh.error(text)
+                    # print_exc()
+                    # if pm.mode == 'DIALOG':
+                    #     text and lh.spacer() or lh.blank()
+                    # elif pm.mode == 'PMENU':
+                    #     lh.sep()
 
     def _draw_pm(self, menu, context):
         pr = get_prefs()
