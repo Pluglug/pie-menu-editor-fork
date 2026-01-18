@@ -22,6 +22,77 @@ if TYPE_CHECKING:
     from .layout import GPULayout
 
 
+# -----------------------------------------------------------------------------
+# Dummy OperatorProperties for UILayout.operator() compatibility
+# -----------------------------------------------------------------------------
+
+class OperatorProperties:
+    """
+    Dummy OperatorProperties for UILayout.operator() compatibility.
+
+    Accepts any attribute assignment (op.foo = value) and stores them
+    internally. This allows PME scripts using the typical pattern:
+        op = layout.operator("mesh.primitive_cube_add")
+        op.size = 2.0
+    to work without AttributeError.
+
+    Note:
+        These properties are stored but not actually used by GPULayout.
+        For real operator execution, use on_click callback instead.
+    """
+
+    def __init__(self, bl_idname: str = ""):
+        # Use object.__setattr__ to avoid triggering our custom __setattr__
+        object.__setattr__(self, "_props", {})
+        object.__setattr__(self, "_bl_idname", bl_idname)
+
+    def __setattr__(self, name: str, value: Any) -> None:
+        """Accept any attribute assignment."""
+        self._props[name] = value
+
+    def __getattr__(self, name: str) -> Any:
+        """Return stored property or None."""
+        props = object.__getattribute__(self, "_props")
+        if name in props:
+            return props[name]
+        # Return None for undefined properties (like Blender does)
+        return None
+
+    def __repr__(self) -> str:
+        bl_idname = object.__getattribute__(self, "_bl_idname")
+        props = object.__getattribute__(self, "_props")
+        return f"<OperatorProperties({bl_idname}) {props}>"
+
+
+# -----------------------------------------------------------------------------
+# Dummy Layout for panel() body=None emulation
+# -----------------------------------------------------------------------------
+
+class NullLayout:
+    """
+    Dummy layout that discards all operations.
+
+    Used when panel() returns body=None (collapsed state).
+    Any method call on this layout is silently ignored.
+    """
+
+    def __getattr__(self, name: str) -> Any:
+        """Return a no-op function for any method call."""
+        return self._noop
+
+    def _noop(self, *args, **kwargs) -> "NullLayout":
+        """No-op that returns self for method chaining."""
+        return self
+
+
+# Singleton instance
+_null_layout = NullLayout()
+
+
+# -----------------------------------------------------------------------------
+# UILayoutStubMixin
+# -----------------------------------------------------------------------------
+
 class UILayoutStubMixin:
     """
     Mixin class providing UILayout API compatibility stubs.
@@ -38,38 +109,40 @@ class UILayoutStubMixin:
         def prop(self, data: Any, property: str, **kwargs) -> Any: ...
         def color(self, **kwargs) -> Any: ...
 
-    # ─────────────────────────────────────────────────────────────────────────
+    # -------------------------------------------------------------------------
     # Warning utility
-    # ─────────────────────────────────────────────────────────────────────────
+    # -------------------------------------------------------------------------
 
     def _stub_warn(self, method_name: str) -> None:
         """Log warning for unimplemented UILayout method."""
         if DBG_GPU:
             logi(f"[GPULayout] '{method_name}' not implemented (stub)")
 
-    # ─────────────────────────────────────────────────────────────────────────
-    # Properties (as methods for compatibility)
-    # ─────────────────────────────────────────────────────────────────────────
-
-    # Note: activate_init, active_default are bool properties in UILayout
-    # GPULayout doesn't need these - they're for popup button behavior
-
-    # ─────────────────────────────────────────────────────────────────────────
+    # -------------------------------------------------------------------------
     # Layout Container Stubs
-    # ─────────────────────────────────────────────────────────────────────────
+    # -------------------------------------------------------------------------
 
     def grid_flow(self, *args, **kwargs) -> "GPULayout":
-        """Stub: grid_flow() → column() fallback."""
+        """
+        Stub: grid_flow() -> column() fallback.
+
+        Creates a grid-based layout. Falls back to column() since
+        GPU layout doesn't support grid flow.
+        """
         self._stub_warn("grid_flow")
         return self.column(align=kwargs.get("align", False))
 
     def column_flow(self, *args, **kwargs) -> "GPULayout":
-        """Stub: column_flow() → column() fallback."""
+        """
+        Stub: column_flow() -> column() fallback.
+
+        Creates a multi-column flow layout. Falls back to single column.
+        """
         self._stub_warn("column_flow")
         return self.column(align=kwargs.get("align", False))
 
     def menu_pie(self, *args, **kwargs) -> "GPULayout":
-        """Stub: menu_pie() - not applicable."""
+        """Stub: menu_pie() - not applicable for GPU panels."""
         self._stub_warn("menu_pie")
         return self
 
@@ -77,26 +150,65 @@ class UILayoutStubMixin:
         """
         Stub: panel() - collapsible panel.
 
-        Returns (header_layout, body_layout) where body is None if collapsed.
-        Fallback: Always returns (self, self) as if expanded.
+        Args:
+            idname: Panel identifier
+            default_closed: If True, panel starts collapsed (body=None)
+            **kwargs: Other UILayout.panel() parameters
+
+        Returns:
+            (header_layout, body_layout) where body is None if collapsed.
+
+        Note:
+            When body is None, callers typically skip drawing panel contents:
+                header, body = layout.panel("MY_PT_panel", default_closed=True)
+                header.label(text="Panel Title")
+                if body:
+                    body.label(text="Panel Contents")
+
+            GPULayout respects default_closed by returning NullLayout
+            (a no-op layout) instead of None, so code that doesn't check
+            for None won't crash.
         """
         self._stub_warn("panel")
-        # Return (header, body) - both point to self as fallback
-        return (self, self)
+        default_closed = kwargs.get("default_closed", False)
+        header = self.row()
+        if default_closed:
+            # Return NullLayout which silently discards all operations
+            return (header, _null_layout)
+        return (header, self)
 
     def panel_prop(self, data: Any, property: str, *args, **kwargs) -> Tuple[Any, Optional[Any]]:
         """
         Stub: panel_prop() - data-driven collapsible panel.
 
-        Returns (header_layout, body_layout) where body is None if collapsed.
-        Fallback: Always returns (self, self) as if expanded.
+        Args:
+            data: Object containing the boolean property
+            property: Name of the boolean property controlling open/closed state
+            **kwargs: Other UILayout.panel_prop() parameters
+
+        Returns:
+            (header_layout, body_layout) where body is NullLayout if collapsed.
+
+        Note:
+            Reads the property value to determine collapsed state.
+            If property is False, body is NullLayout (collapsed).
         """
         self._stub_warn("panel_prop")
-        return (self, self)
+        # Try to read the property to determine state
+        is_open = True
+        try:
+            is_open = bool(getattr(data, property, True))
+        except Exception:
+            pass
 
-    # ─────────────────────────────────────────────────────────────────────────
+        header = self.row()
+        if not is_open:
+            return (header, _null_layout)
+        return (header, self)
+
+    # -------------------------------------------------------------------------
     # Display Stubs
-    # ─────────────────────────────────────────────────────────────────────────
+    # -------------------------------------------------------------------------
 
     def progress(self, *args, **kwargs) -> None:
         """Stub: progress() → label with percentage."""
@@ -107,32 +219,47 @@ class UILayoutStubMixin:
         display = f"{text} {pct}%" if text else f"{pct}%"
         self.label(text=display)
 
-    # ─────────────────────────────────────────────────────────────────────────
+    # -------------------------------------------------------------------------
     # Operator Stubs
-    # ─────────────────────────────────────────────────────────────────────────
+    # -------------------------------------------------------------------------
 
-    def operator_enum(self, operator: str, property: str, *args, **kwargs) -> None:
-        """Stub: operator_enum() → label fallback."""
+    def operator_enum(self, operator: str, property: str, *args, **kwargs) -> OperatorProperties:
+        """
+        Stub: operator_enum() - enum expansion for operators.
+
+        Returns OperatorProperties so callers can set additional properties.
+        """
         self._stub_warn("operator_enum")
         self.label(text=f"[op_enum: {operator}]")
+        return OperatorProperties(operator)
 
-    def operator_menu_enum(self, operator: str, property: str, *args, **kwargs) -> None:
-        """Stub: operator_menu_enum() → label fallback."""
+    def operator_menu_enum(self, operator: str, property: str, *args, **kwargs) -> OperatorProperties:
+        """
+        Stub: operator_menu_enum() - enum menu for operators.
+
+        Returns OperatorProperties so callers can set additional properties.
+        """
         self._stub_warn("operator_menu_enum")
         text = kwargs.get("text", "") or f"[{operator}]"
         icon = kwargs.get("icon", "NONE")
         self.label(text=text, icon=icon)
+        return OperatorProperties(operator)
 
-    def operator_menu_hold(self, operator: str, *args, **kwargs) -> None:
-        """Stub: operator_menu_hold() → label fallback."""
+    def operator_menu_hold(self, operator: str, *args, **kwargs) -> OperatorProperties:
+        """
+        Stub: operator_menu_hold() - hold menu for operators.
+
+        Returns OperatorProperties so callers can set additional properties.
+        """
         self._stub_warn("operator_menu_hold")
         text = kwargs.get("text", "") or f"[{operator}]"
         icon = kwargs.get("icon", "NONE")
         self.label(text=text, icon=icon)
+        return OperatorProperties(operator)
 
-    # ─────────────────────────────────────────────────────────────────────────
+    # -------------------------------------------------------------------------
     # Property Stubs
-    # ─────────────────────────────────────────────────────────────────────────
+    # -------------------------------------------------------------------------
 
     def props_enum(self, data: Any, property: str, *args, **kwargs) -> None:
         """Stub: props_enum() → label fallback."""
@@ -188,36 +315,68 @@ class UILayoutStubMixin:
         icon = kwargs.get("icon", "NONE")
         self.prop(data, property, text=text, icon=icon)
 
-    # ─────────────────────────────────────────────────────────────────────────
+    # -------------------------------------------------------------------------
     # Menu Stubs
-    # ─────────────────────────────────────────────────────────────────────────
+    # -------------------------------------------------------------------------
 
     def menu(self, menu: str, *args, **kwargs) -> None:
-        """Stub: menu() → label fallback."""
+        """
+        Stub: menu() - dropdown menu.
+
+        Args:
+            menu: Menu class name (bl_idname)
+            text: Button text (default: menu name)
+            icon: Icon name (e.g., "DOWNARROW_HLT")
+            icon_value: Custom icon ID (currently logged but not displayed)
+            **kwargs: Other UILayout.menu() parameters
+
+        Note:
+            icon_value is accepted for compatibility but custom icons
+            are not rendered in GPU layout.
+        """
         self._stub_warn("menu")
         text = kwargs.get("text", "") or f"[Menu: {menu}]"
         icon = kwargs.get("icon", "") or "DOWNARROW_HLT"
+        icon_value = kwargs.get("icon_value", 0)
+        if icon_value and DBG_GPU:
+            logi(f"[GPULayout] menu() icon_value={icon_value} ignored")
         self.label(text=text, icon=icon)
 
     def menu_contents(self, menu: str, *args, **kwargs) -> None:
-        """Stub: menu_contents() → label fallback."""
+        """Stub: menu_contents() - inline menu contents."""
         self._stub_warn("menu_contents")
         self.label(text=f"[menu_contents: {menu}]")
 
     def popover(self, panel: str, *args, **kwargs) -> None:
-        """Stub: popover() → label fallback."""
+        """
+        Stub: popover() - popover panel.
+
+        Args:
+            panel: Panel class name (bl_idname)
+            text: Button text (default: panel name)
+            icon: Icon name (e.g., "DOWNARROW_HLT")
+            icon_value: Custom icon ID (currently logged but not displayed)
+            **kwargs: Other UILayout.popover() parameters
+
+        Note:
+            icon_value is accepted for compatibility but custom icons
+            are not rendered in GPU layout.
+        """
         self._stub_warn("popover")
         text = kwargs.get("text", "") or f"[Popover: {panel}]"
         icon = kwargs.get("icon", "") or "DOWNARROW_HLT"
+        icon_value = kwargs.get("icon_value", 0)
+        if icon_value and DBG_GPU:
+            logi(f"[GPULayout] popover() icon_value={icon_value} ignored")
         self.label(text=text, icon=icon)
 
     def popover_group(self, *args, **kwargs) -> None:
-        """Stub: popover_group() - not applicable."""
+        """Stub: popover_group() - not applicable for GPU layout."""
         self._stub_warn("popover_group")
 
-    # ─────────────────────────────────────────────────────────────────────────
+    # -------------------------------------------------------------------------
     # Context Stubs
-    # ─────────────────────────────────────────────────────────────────────────
+    # -------------------------------------------------------------------------
 
     def context_pointer_set(self, name: str, data: Any, *args, **kwargs) -> None:
         """Stub: context_pointer_set() - not implemented."""
@@ -227,9 +386,9 @@ class UILayoutStubMixin:
         """Stub: context_string_set() - not implemented."""
         self._stub_warn("context_string_set")
 
-    # ─────────────────────────────────────────────────────────────────────────
+    # -------------------------------------------------------------------------
     # Class Methods (static utilities)
-    # ─────────────────────────────────────────────────────────────────────────
+    # -------------------------------------------------------------------------
 
     @classmethod
     def icon(cls, data: Any, *args, **kwargs) -> int:
@@ -262,9 +421,9 @@ class UILayoutStubMixin:
             logi("[GPULayout] 'enum_item_icon' classmethod not implemented (stub)")
         return 0
 
-    # ─────────────────────────────────────────────────────────────────────────
+    # -------------------------------------------------------------------------
     # Template Stubs (commonly used)
-    # ─────────────────────────────────────────────────────────────────────────
+    # -------------------------------------------------------------------------
 
     def template_header(self, *args, **kwargs) -> None:
         """Stub: template_header() - not applicable."""
@@ -550,9 +709,9 @@ class UILayoutStubMixin:
     def template_constraint_header(self, *args, **kwargs) -> None:
         self._stub_warn("template_constraint_header")
 
-    # ─────────────────────────────────────────────────────────────────────────
+    # -------------------------------------------------------------------------
     # Introspection
-    # ─────────────────────────────────────────────────────────────────────────
+    # -------------------------------------------------------------------------
 
     def introspect(self, *args, **kwargs) -> list:
         """Stub: introspect() → returns empty list."""
@@ -560,4 +719,4 @@ class UILayoutStubMixin:
         return []
 
 
-__all__ = ["UILayoutStubMixin"]
+__all__ = ["UILayoutStubMixin", "OperatorProperties", "NullLayout"]

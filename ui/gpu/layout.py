@@ -25,7 +25,7 @@ from .rna_utils import (
 )
 from .binding import ContextResolverCache, PropertyBinding
 from .context import TrackedAccess
-from .uilayout_stubs import UILayoutStubMixin
+from .uilayout_stubs import UILayoutStubMixin, OperatorProperties
 from ...infra.debug import DBG_GPU, logi
 
 if TYPE_CHECKING:
@@ -313,12 +313,30 @@ class GPULayout(UILayoutStubMixin):
         self.separator(factor=0.5)
 
     def operator(self, operator: str = "", *, text: str = "", icon: str = "NONE",
-                 on_click: Optional[Callable[[], None]] = None) -> ButtonItem:
+                 on_click: Optional[Callable[[], None]] = None) -> OperatorProperties:
         """
         オペレーターボタンを追加
 
-        Note: 実際の Blender オペレーターは呼び出せないため、
-              on_click コールバックで代替する
+        Args:
+            operator: オペレーター bl_idname（例: "mesh.primitive_cube_add"）
+            text: ボタンラベル（空の場合は operator 名を使用）
+            icon: アイコン名
+            on_click: クリック時のコールバック
+
+        Returns:
+            OperatorProperties - プロパティ代入を受け付けるダミーオブジェクト
+
+        Note:
+            実際の Blender オペレーターは呼び出せないため、
+            on_click コールバックで代替します。
+
+            返り値の OperatorProperties は UILayout.operator() 互換のため、
+            以下のような典型的な書き方が動作します：
+                op = layout.operator("mesh.primitive_cube_add")
+                op.size = 2.0  # AttributeError にならない
+
+            ただし、これらのプロパティは実際のオペレーター呼び出しには
+            使用されません。実際の動作には on_click を使用してください。
         """
         item = ButtonItem(
             text=text or operator,
@@ -327,7 +345,12 @@ class GPULayout(UILayoutStubMixin):
             enabled=self.enabled and self.active
         )
         self._add_item(item)
-        return item
+
+        # OperatorProperties を返す（プロパティ代入を受け付ける）
+        props = OperatorProperties(operator)
+        # ButtonItem への参照を保持（将来の拡張用）
+        props._button_item = item
+        return props
 
     def slider(self, *, value: float = 0.0, min_val: float = 0.0, max_val: float = 1.0,
                precision: int = 2, text: str = "",
