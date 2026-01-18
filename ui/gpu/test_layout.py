@@ -1183,7 +1183,26 @@ class DEMO_OT_quick_render(Operator):
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # ---------------------------------------------------------------------------
-# Demo 3: Selection Tracker - reactive context demo
+# Demo 3: Operator Props - layout.operator demo
+# ---------------------------------------------------------------------------
+
+class DEMO_OT_operator_props(Operator):
+    """Demo operator for GPULayout.operator props."""
+    bl_idname = "demo.operator_props"
+    bl_label = "Demo: Operator Props"
+    bl_options = {'REGISTER'}
+
+    count: bpy.props.IntProperty(name="Count", default=1, min=1, max=10)
+    message: bpy.props.StringProperty(name="Message", default="Hello")
+
+    def execute(self, context):
+        msg = f"{self.message} (count={self.count})"
+        self.report({'INFO'}, msg)
+        print(msg)
+        return {'FINISHED'}
+
+# ---------------------------------------------------------------------------
+# Demo 4: Selection Tracker - reactive context demo
 # ---------------------------------------------------------------------------
 
 class DEMO_OT_selection_tracker(Operator):
@@ -1332,6 +1351,16 @@ class DEMO_OT_selection_tracker(Operator):
             layout.prop(C.object.data, "use_fake_user", text="Use Fake User", toggle=1)
 
             layout.separator()
+            layout.label(text="Operator Demo (layout.operator)")
+            op = layout.operator(
+                "demo.operator_props",
+                text="Run Operator",
+                count=2,
+                message="from kwargs",
+            )
+            op.message = "from attr"
+
+            layout.separator()
             layout.label(text="Delete active object to see widgets disable")
 
             self._layout = layout
@@ -1356,7 +1385,7 @@ class DEMO_OT_selection_tracker(Operator):
             print(f"Draw error: {e}")
             traceback.print_exc()
 
-# Demo 4: Quick UV - UVエディタ向け常時表示パネル
+# Demo 5: Quick UV - UVエディタ向け常時表示パネル
 # ═══════════════════════════════════════════════════════════════════════════════
 
 class DEMO_OT_quick_uv(Operator):
@@ -1537,6 +1566,3 @@ class DEMO_OT_quick_uv(Operator):
             import traceback
             print(f"Draw error: {e}")
             traceback.print_exc()
-
-
-
