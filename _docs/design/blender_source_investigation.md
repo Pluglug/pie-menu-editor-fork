@@ -101,13 +101,29 @@ void Layout::estimate()
 
 **v3 仮定**: scale_x は weight の倍率として機能
 
-**実際のロジック** (`interface_layout.cc:5249-5273`):
+**実際のロジック**:
+
+scale_x は **2 つの場所** で効果を発揮する：
+
+#### 3.1 推定サイズ計算時（`interface_layout.cc:432`）
+
+```cpp
+static int ui_text_icon_width_ex(Layout *layout, ...)
+{
+  const int unit_x = UI_UNIT_X * (layout->scale_x() ? layout->scale_x() : 1.0f);
+  // ...
+}
+```
+
+この時点では **layout 自身の scale_x** を参照する（親ではない）。
+
+#### 3.2 estimate 完了後（`interface_layout.cc:5265-5287`）
 
 ```cpp
 static void ui_item_scale(Layout *litem, const float scale[2])
 {
-  for (uiItem *item : litem->items()) {
-    if (item->type() != uiItemType::Button) {
+  for (Item *item : litem->items()) {
+    if (item->type() != ItemType::Button) {
       ui_item_scale(subitem, scale);  // 再帰
     }
 
@@ -123,11 +139,25 @@ static void ui_item_scale(Layout *litem, const float scale[2])
 }
 ```
 
+これは `Layout::estimate()` 内で呼ばれる（5305-5306行目）：
+```cpp
+if (this->scale_x() != 0.0f || this->scale_y() != 0.0f) {
+  ui_item_scale(this, float2{this->scale_x(), this->scale_y()});
+}
+this->estimate_impl();  // この後で estimate
+```
+
 **結論**:
 - `scale_x` は **子アイテムのサイズを直接倍率** する
-- これは estimate の**前**に実行される
+- estimate_impl() の**前**に実行される
 - v3 の「weight 倍率」とは異なる動作
-- **v3 設計要修正**: SizingPolicy に scale_x 対応を追加
+
+**⚠️ 実機テスト結果（2026-01-19）**:
+- `alignment=EXPAND` では効果が見えにくい
+  - A:B = 1:1 のサイズ比が 2:2 = 1:1 のまま
+  - EXPAND は比率で配分するため、結果は同じ
+- `alignment=LEFT/CENTER/RIGHT` で効果が確認できる
+  - 自然サイズを維持するため、scale_x の効果が visible
 
 ---
 

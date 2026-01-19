@@ -1,10 +1,10 @@
 # GPULayout Architecture v3 - Long-Term UI Framework Plan
 
-> Version: 0.2.0
+> Version: 0.2.1
 > Created: 2026-01-19
-> Updated: 2026-01-19 (Blender ソースコード調査結果を反映)
+> Updated: 2026-01-19 (実機テスト結果を反映: scale_x + alignment 相互作用)
 > Status: **RFC (Request for Comments)**
-> Related: `gpu_layout_issues_report.md`, `gpu_layout_architecture_v2.1.md`, `blender_source_investigation.md`, Issue #100
+> Related: `gpu_layout_issues_report.md`, `gpu_layout_architecture_v2.1.md`, `blender_source_investigation.md`, Issue #104
 > Reviewer: Codex (GPT-5)
 
 ---
@@ -148,13 +148,13 @@ def distribute_width(children, available_width, gap, alignment):
             child.width = child.estimated_width
 ```
 
-### 5.2 scale_x の動作（⚠️ v3.0.1 で修正）
+### 5.2 scale_x の動作（⚠️ v3.0.2 で追記）
 
-Blender の `scale_x` は **estimate 前に子アイテムのサイズを直接倍率** する。
+Blender の `scale_x` は **estimate_impl 前に子アイテムのサイズを直接倍率** する。
 
 ```python
 def apply_scale(layout, scale_x, scale_y):
-    """scale_x/y の適用（Blender interface_layout.cc:5249-5273 準拠）"""
+    """scale_x/y の適用（Blender interface_layout.cc:5265-5287 準拠）"""
     for child in layout.children:
         if isinstance(child, Layout):
             apply_scale(child, scale_x, scale_y)  # 再帰
@@ -169,9 +169,25 @@ def apply_scale(layout, scale_x, scale_y):
 ```
 
 **処理順序**:
-1. `scale_x/y` を子アイテムに適用
-2. `estimate_impl()` でサイズ計算
-3. `ui_units_x` が設定されていれば上書き
+1. 子の `estimate()` を再帰呼び出し
+2. `scale_x/y` を子アイテムに適用（ui_item_scale）
+3. `estimate_impl()` でサイズ計算
+4. `ui_units_x` が設定されていれば上書き
+
+**⚠️ 実機テスト結果（2026-01-19）**:
+
+| alignment | scale_x の効果 | 理由 |
+|-----------|---------------|------|
+| `EXPAND` | **見えにくい** | 比率 1:1 → 2:2 = 1:1、利用可能幅を同比率で配分 |
+| `LEFT/CENTER/RIGHT` | **見える** | 自然サイズを維持するため、倍率効果が visible |
+
+```python
+# scale_x の効果を確認するには alignment=LEFT を使用
+row = layout.row()
+row.alignment = 'LEFT'
+row.scale_x = 2.0  # 効果が visible
+row.operator("mesh.primitive_cube_add", text="A")
+```
 
 ### 5.3 alignment と幅の関係
 
