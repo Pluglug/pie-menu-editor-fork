@@ -831,180 +831,50 @@ class TEST_OT_gpu_interactive(Operator):
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# Demo 1: Quick Viewport - モデラー向け常時表示パネル
+# Demo 1: Quick Viewport - モデラー向け常時表示パネル（GPUPanelMixin 使用）
 # ═══════════════════════════════════════════════════════════════════════════════
 
-class DEMO_OT_quick_viewport(Operator):
-    """Quick Viewport Settings - 常時表示デモ（モデラー向け）"""
+from .panel_mixin import GPUPanelMixin
+
+
+class DEMO_OT_quick_viewport(Operator, GPUPanelMixin):
+    """Quick Viewport Settings - GPUPanelMixin デモ（モデラー向け）"""
     bl_idname = "demo.quick_viewport"
     bl_label = "Demo: Quick Viewport"
     bl_options = {'REGISTER'}
 
-    PANEL_UID = "demo_quick_viewport"
-
-    _manager: GPUPanelManager = None
-    _layout: GPULayout = None
-    _should_close: bool = False
-    _panel_x: float = None
-    _panel_y: float = None
+    # GPUPanelMixin 設定
+    gpu_panel_uid = "demo_quick_viewport"
+    gpu_title = "Quick Viewport"
+    gpu_width = 220
 
     def modal(self, context, event):
-        context.area.tag_redraw()
-
-        if self._should_close or event.type == 'ESC':
-            self.cancel(context)
-            return {'CANCELLED'}
-
-        region = self._get_window_region(context)
-        self._rebuild_layout(context, region)
-
-        if self._layout:
-            self._layout.sync_props()
-
-        if self._manager:
-            handled = self._manager.handle_event(event, context)
-            if self._layout:
-                self._panel_x = self._layout.x
-                self._panel_y = self._layout.y
-            if handled:
-                return {'RUNNING_MODAL'}
-
-            if event.type in {'LEFTMOUSE', 'RIGHTMOUSE', 'MIDDLEMOUSE'}:
-                if self._manager.contains_point(event.mouse_region_x, event.mouse_region_y):
-                    return {'RUNNING_MODAL'}
-
-        return {'PASS_THROUGH'}
+        return self._modal_impl(context, event)
 
     def invoke(self, context, event):
-        if context.area.type != 'VIEW_3D':
-            self.report({'WARNING'}, "3D Viewport で実行してください")
-            return {'CANCELLED'}
-
-        if GPUPanelManager.is_active(self.PANEL_UID):
-            self.report({'INFO'}, "パネルは既に開いています")
-            return {'CANCELLED'}
-
-        self._should_close = False
-        self._layout = None
-        self._manager = None
-        self._panel_x = None
-        self._panel_y = None
-
-        region = self._get_window_region(context)
-        self._rebuild_layout(context, region)
-
-        if self._layout is None:
-            self.report({'ERROR'}, "レイアウトの作成に失敗しました")
-            return {'CANCELLED'}
-
-        self._manager = GPUPanelManager(self.PANEL_UID, self._layout)
-        if not self._manager.open(context, self.draw_callback, 'VIEW_3D', timer_interval=0.05):
-            self.report({'ERROR'}, "パネルを開けませんでした")
-            return {'CANCELLED'}
-
-        context.window_manager.modal_handler_add(self)
-        return {'RUNNING_MODAL'}
+        return self._invoke_impl(context, event)
 
     def cancel(self, context):
-        if self._manager:
-            self._manager.close(context)
-            self._manager = None
-        self._layout = None
+        return self._cancel_impl(context)
 
-    @staticmethod
-    def _get_window_region(context):
-        region = context.region
-        if region and region.type == 'WINDOW':
-            return region
-        area = context.area
-        if area:
-            for r in area.regions:
-                if r.type == 'WINDOW':
-                    return r
-        return None
-
-    def _rebuild_layout(self, context, region=None) -> None:
-        """レイアウトを再構築"""
-        region = region or self._get_window_region(context)
-        if region is None:
-            return
-
-        # SpaceView3D と ToolSettings を取得
+    def draw_panel(self, layout, context):
+        """パネル内容の描画（GPUPanelMixin から呼び出される）"""
         space = context.space_data
         tool_settings = context.scene.tool_settings
 
-        if self._panel_x is None:
-            self._panel_x = 50
-        if self._panel_y is None:
-            self._panel_y = region.height - 50
+        # Viewport Display Section
+        layout.label(text="Display")
+        layout.prop(space.overlay, "show_overlays", text="Overlays", toggle=1)
+        layout.prop(space.overlay, "show_wireframes", text="Wireframes")
+        layout.prop(space, "show_gizmo", text="Gizmos")
 
-        if self._layout is None:
-            style = GPULayoutStyle.from_blender_theme('PANEL')
-            layout = GPULayout(x=self._panel_x, y=self._panel_y, width=220, style=style)
-            layout._draw_background = True
-            layout._draw_outline = True
+        layout.separator()
 
-            def request_close():
-                self._should_close = True
-
-            layout.set_title_bar(
-                title="Quick Viewport",
-                show_close=True,
-                on_close=request_close
-            )
-            layout.set_panel_config(uid=self.PANEL_UID, resizable=True)
-            layout.set_region_bounds(region.width, region.height)
-
-            # ──────────────────────────────────────────
-            # Viewport Display Section
-            # ──────────────────────────────────────────
-            layout.label(text="Display")
-
-            # オーバーレイ表示
-            layout.prop(space.overlay, "show_overlays", text="Overlays", toggle=1)
-            # ワイヤーフレーム
-            layout.prop(space.overlay, "show_wireframes", text="Wireframes")
-            # ギズモ
-            layout.prop(space, "show_gizmo", text="Gizmos")
-
-            layout.separator()
-
-            # ──────────────────────────────────────────
-            # Snapping Section
-            # ──────────────────────────────────────────
-            layout.label(text="Snapping")
-
-            # スナップ有効
-            layout.prop(tool_settings, "use_snap", text="Snap", toggle=1)
-            # プロポーショナル編集
-            layout.prop(tool_settings, "use_proportional_edit", text="Proportional")
-            # オートマージ
-            layout.prop(tool_settings, "use_mesh_automerge", text="Auto Merge")
-
-            # layout.separator()
-            # layout.label(text="ESC to close", icon='INFO')
-
-            self._layout = layout
-        else:
-            self._layout.x = self._panel_x
-            self._layout.y = self._panel_y
-            self._layout.set_region_bounds(region.width, region.height)
-
-        self._panel_x = self._layout.x
-        self._panel_y = self._layout.y
-
-    def draw_callback(self, manager: GPUPanelManager, context):
-        if not manager.should_draw(context):
-            return
-        try:
-            region = self._get_window_region(context)
-            self._rebuild_layout(context, region)
-            if self._layout:
-                self._layout.update_and_draw()
-        except Exception as e:
-            import traceback
-            print(f"Draw error: {e}")
-            traceback.print_exc()
+        # Snapping Section
+        layout.label(text="Snapping")
+        layout.prop(tool_settings, "use_snap", text="Snap", toggle=1)
+        layout.prop(tool_settings, "use_proportional_edit", text="Proportional")
+        layout.prop(tool_settings, "use_mesh_automerge", text="Auto Merge")
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
