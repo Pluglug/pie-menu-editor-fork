@@ -16,6 +16,9 @@ v2.0 の設計方向性は正しいが、以下の点で改良が必要：
 2. **Builder パターンの API 混乱** → UILayout 互換に修正
 3. **IMGUI 再構築コスト** → キャッシュ戦略を追加
 4. **split() の動作** → UILayout との互換性を明確化
+5. **Constraints の契約不明瞭** → root/child の tight/loose を明文化
+6. **row() の幅配分モデル不足** → flex/basis で均等分配と固定幅を両立
+7. **要素の恒久IDとヒットテスト** → 安定キーで状態/入力を維持
 
 本ドキュメントは v2.0 を基盤とし、上記を修正した **v2.1** を提案する。
 
@@ -40,6 +43,9 @@ v2.0 の設計方向性は正しいが、以下の点で改良が必要：
 | Builder パターンの返り値 | 新 Builder を返すと混乱 | Container を直接返す |
 | 毎フレーム再構築 | GC 負荷 | オブジェクトプール検討 |
 | split() の動作 | UILayout との乖離 | 2列専用に限定 |
+| Constraints 契約 | root/child の幅が曖昧 | tight/loose を明文化 |
+| row() の幅配分 | 固定幅/均等分配の両立なし | flex/basis で統一 |
+| 要素の恒久ID | IMGUI で状態/入力が不安定 | LayoutKey を必須化 |
 
 ---
 
@@ -120,6 +126,22 @@ split.label(text="70%")  # 70% 幅（暗黙の column）
 2. 2 列目以降は残り幅を等分
 3. `align=True` でアイテム間スペースをなくす
 
+### 2.5 row()/scale_x/alignment の補足仕様（GPULayout 側の解釈）
+
+test_layout.py / issues_report の観測結果を前提に、GPULayout 側で以下を仕様化する：
+
+1. **row() 既定は均等分配**（全子要素が同じ幅）
+2. **固定幅がある場合は先に確保**  
+   - `ui_units_x` / 明示的な `fixed_width` / prop の UI 仕様で決まる幅
+3. **残り幅は flex weight で分配**  
+   - 既定 weight=1  
+   - `scale_x` は weight の倍率として扱う
+4. **alignment は「余りが出た場合」の主軸配置**  
+   - `Alignment.EXPAND` は余りを分配  
+   - `LEFT/CENTER/RIGHT` はオフセットのみ
+5. **scale_y は高さ倍率**  
+   - `scale_x` は「親幅倍率」ではなく **子要素の幅係数**
+
 ---
 
 ## Part 3: 修正版アーキテクチャ
@@ -134,6 +156,7 @@ split.label(text="70%")  # 70% 幅（暗黙の column）
 | 4 | Intrinsic Size | ⚠️ 過剰 | 🔧 簡略化 |
 | 5 | Builder Pattern | ⚠️ 混乱 | 🔧 Container 直接返却 |
 | 6 | Object Pooling | ❌ なし | ➕ 追加 |
+| 7 | Stable Identity | ? なし | ? LayoutKey を追加 |
 
 ### 3.2 クラス階層（修正版）
 
@@ -145,6 +168,7 @@ split.label(text="70%")  # 70% 幅（暗黙の column）
 │  # Identity                                              │
 │  parent: Optional[LayoutElement]                         │
 │  tag: str  # デバッグ・識別用                            │
+│  key: LayoutKey  # 安定ID（状態/ヒット保持）              │
 │                                                          │
 │  # Computed (Layout Phase で確定)                        │
 │  x, y, width, height: float                              │
@@ -165,10 +189,43 @@ split.label(text="70%")  # 70% 幅（暗黙の column）
    │ natural_width   │  │ spacing: float  │
    │ min_height      │  │ align: bool     │
    │ natural_height  │  │                 │
-   └─────────────────┘  └─────────────────┘
+└─────────────────┘  └─────────────────┘
 ```
 
-### 3.3 IntrinsicSize 簡略化
+**補足**:
+- `LayoutKey` は **追加順序 + 明示キー** から生成する安定ID（状態/ヒット/プール再利用に必須）
+- `SizingPolicy` は **basis + flex(weight)** を保持し、row/column の幅配分に使用
+- `ContainerElement` は `padding` を持ち、constraints を **deflate** して子へ渡す
+
+### 3.3 Constraints 契約（tight/loose の明文化）
+
+**原則**: *Constraints go down, sizes go up, positions go down.*
+
+```python
+class BoxConstraints:
+    min_width: float
+    max_width: float
+    min_height: float
+    max_height: float
+
+    @staticmethod
+    def tight(width: float, height: float) -> "BoxConstraints":
+        return BoxConstraints(width, width, height, height)
+
+    @staticmethod
+    def loose(max_width: float, max_height: float) -> "BoxConstraints":
+        return BoxConstraints(0, max_width, 0, max_height)
+```
+
+**root の契約**:
+- パネル幅/リージョン幅は **tight** で固定（row の等分配がブレない）
+- 高さは `loose`（必要分だけ伸びる）
+- `set_region_bounds()` は root constraints を更新し **必ず re-layout** する
+
+**container の契約**:
+- padding を除外して子へ constraints を渡す（deflate）
+- 子の計測結果 + padding で自身の size を確定
+### 3.4 IntrinsicSize 簡略化
 
 ```python
 # v2.0（過剰）
@@ -211,7 +268,7 @@ class LeafElement:
 - 「拡張したいか」は Container レベルで制御（均等分配）
 - LeafElement は単に「自然サイズ」を報告するのみ
 
-### 3.4 ContainerElement（修正版）
+### 3.5 ContainerElement（修正版）
 
 ```python
 class ContainerElement(LayoutElement):
@@ -291,11 +348,13 @@ class ContainerElement(LayoutElement):
         return element
 ```
 
-### 3.5 Row の均等分配アルゴリズム
+### 3.6 Row の幅配分アルゴリズム（equal + fixed + flex）
+
+row() は **均等分配が既定**だが、固定幅や weight も扱えるようにする。
 
 ```python
 class RowElement(ContainerElement):
-    """水平レイアウト - アイテムを均等分配"""
+    """水平レイアウト - equal/fixed/flex を統一"""
 
     def __init__(self, align: bool = False):
         super().__init__()
@@ -303,53 +362,71 @@ class RowElement(ContainerElement):
         self.align = align
 
     def measure(self, constraints: BoxConstraints) -> Size:
-        """子要素を均等分配してサイズを決定"""
         n = len(self._elements)
         if n == 0:
             return Size(0, 0)
 
-        # スペーシング
         spacing = 0 if self.align else self.spacing
         total_spacing = spacing * (n - 1)
 
-        # 利用可能幅を均等分配
         available_width = constraints.max_width
-        content_width = available_width - total_spacing
-        child_width = content_width / n
+        content_width = max(0.0, available_width - total_spacing)
 
-        # 各子要素を配置
-        max_height = 0.0
+        fixed: list[tuple[LayoutElement, float]] = []
+        flex: list[tuple[LayoutElement, float]] = []
+
+        # 1) fixed/basis と flex(weight) を分離
         for child in self._elements:
-            # 子に「この幅を使え」と制約を渡す
-            child_constraints = BoxConstraints(
-                min_width=child_width,
-                max_width=child_width,
-                min_height=0,
-                max_height=constraints.max_height
-            )
-            child_size = child.measure(child_constraints)
-            max_height = max(max_height, child_size.height)
+            basis = child.sizing.basis_width  # None なら flex
+            weight = max(child.sizing.weight * self.scale_x, 0.0)
+            if basis is not None:
+                fixed.append((child, basis))
+            else:
+                flex.append((child, weight))
 
-        # scale_y を適用
+        fixed_total = sum(basis for _, basis in fixed)
+        remaining = max(0.0, content_width - fixed_total)
+        total_weight = sum(w for _, w in flex) or 1.0
+
+        max_height = 0.0
+        for child, basis in fixed:
+            size = child.measure(BoxConstraints.tight(basis, constraints.max_height))
+            max_height = max(max_height, size.height)
+
+        for child, weight in flex:
+            width = remaining * (weight / total_weight)
+            size = child.measure(BoxConstraints.tight(width, constraints.max_height))
+            max_height = max(max_height, size.height)
+
         return Size(available_width, max_height * self.scale_y)
 
     def arrange(self, x: float, y: float) -> None:
-        """子要素の位置を確定"""
-        n = len(self._elements)
-        if n == 0:
-            return
-
         spacing = 0 if self.align else self.spacing
-        child_width = (self.width - spacing * (n - 1)) / n
+        widths = self._measured_widths  # measure() で保存した結果を使用
 
-        cursor_x = x
-        for child in self._elements:
-            child.width = child_width
+        content_total = sum(widths) + spacing * (len(widths) - 1)
+        extra = max(0.0, self.width - content_total)
+
+        if self.alignment == Alignment.CENTER:
+            cursor_x = x + extra / 2
+        elif self.alignment == Alignment.RIGHT:
+            cursor_x = x + extra
+        else:
+            cursor_x = x
+
+        for child, width in zip(self._elements, widths):
+            child.width = width
             child.arrange(cursor_x, y)
-            cursor_x += child_width + spacing
+            cursor_x += width + spacing
 ```
 
-### 3.6 Split の実装
+**補足**:
+- `SizingPolicy.basis_width` は `ui_units_x` や明示幅から設定する
+- `SizingPolicy.weight` の既定は 1（均等分配になる）
+- `row.scale_x` は weight の倍率として適用
+- `self._measured_widths` は arrange で再利用するために保持
+
+### 3.7 Split の実装
 
 ```python
 class SplitElement(ContainerElement):
@@ -407,6 +484,10 @@ class SplitElement(ContainerElement):
 
         return Size(constraints.max_width, max_height)
 ```
+
+**補足**:
+- `split.label()/operator()` は **暗黙の column** として扱い、`_column_index` を進める
+- `n > 2` かつ `factor > 0` の場合は「最初だけ factor、残り等分」
 
 ---
 
@@ -509,6 +590,14 @@ class GPUPanel:
 - 差分更新
 - GPU バッチング
 
+### 4.5 LayoutKey と HitTest の安定化
+
+IMGUI であっても、**要素IDが安定していないと入力/状態が破綻**する。
+
+- `LayoutKey = (panel_uid, layout_path, explicit_key)` を基本とする
+- HitTest は **描画順と同じ要素順**で構築し、入力時は逆順で解決
+- プール/差分更新は `LayoutKey` で再利用対象を決定
+
 ---
 
 ## Part 5: 実装計画
@@ -577,11 +666,15 @@ def layout(self, constraints: BoxConstraints = None) -> None:
     self.arrange(self.x, self.y)
 ```
 
+**補足**:
+- `LayoutKey` を生成し、HitTest/状態管理のキーとして保存
+- パネルの `uid` と `layout_path` を組み合わせて衝突を回避
+
 ### 5.3 Phase 2: row() 均等分配
 
 **目標**: row() 内のアイテムを均等分配
 
-**実装**: 3.5 節の `RowElement.measure()` を参照
+**実装**: 3.6 節の `RowElement.measure()` を参照
 
 ### 5.4 Phase 3: 検証
 
@@ -602,6 +695,9 @@ def layout(self, constraints: BoxConstraints = None) -> None:
 | IntrinsicSize | expand_x/expand_y あり | 削除（簡略化） |
 | row() 返り値 | GPULayoutBuilder | RowElement（Container 直接） |
 | split() 動作 | 曖昧 | 2列専用、factor で最初の列を指定 |
+| Constraints 契約 | 未定義 | tight/loose を明文化 |
+| row() 幅配分 | 均等のみ | fixed + flex を統一 |
+| LayoutKey | 未検討 | 必須化 |
 | オブジェクトプール | 未検討 | Phase 1 以降で検討 |
 | 差分更新 | 未検討 | Phase 1 以降で検討 |
 | 実装優先順位 | Phase 0 のみ詳細 | Phase 0-3 を詳細化 |
@@ -623,6 +719,7 @@ def layout(self, constraints: BoxConstraints = None) -> None:
 |------|------|------|
 | `layout()` の変更 | 全レイアウトに影響 | 段階的テスト |
 | Constraints 導入 | 新概念 | v2/ に並行実装 |
+| LayoutKey / HitTest | 入力系に影響 | フラグで段階的切替 |
 
 ### 7.3 高リスク
 
@@ -642,7 +739,10 @@ v2.0 の基本設計は正しい。v2.1 では以下を改良：
 1. **IntrinsicSize 簡略化** → UILayout 互換性向上
 2. **Builder API 修正** → Container 直接返却で混乱解消
 3. **実装計画詳細化** → Phase 0-3 の明確な目標
-4. **パフォーマンス考慮** → Phase 1 以降で最適化
+4. **Constraints 契約** → root/child の width を明文化
+5. **row() 幅配分の統一** → fixed + flex を明確化
+6. **LayoutKey の導入** → 状態/入力の安定化
+7. **パフォーマンス考慮** → Phase 1 以降で最適化
 
 ### 8.2 実装順序
 
@@ -681,3 +781,4 @@ ui/gpu/v2/
 
 *Last Updated: 2026-01-19*
 *Reviewer: Claude Opus 4.5*
+
