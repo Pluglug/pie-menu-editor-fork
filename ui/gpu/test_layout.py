@@ -1260,7 +1260,307 @@ class DEMO_OT_selection_tracker(Operator):
             print(f"Draw error: {e}")
             traceback.print_exc()
 
-# Demo 5: Quick UV - UVエディタ向け常時表示パネル
+# Demo 5: Layout Structure Test - row, column, box のテスト
+# ═══════════════════════════════════════════════════════════════════════════════
+
+class DEMO_OT_layout_structure(Operator, GPUPanelMixin):
+    """Layout Structure Test - row, column, box のテスト"""
+    bl_idname = "demo.layout_structure"
+    bl_label = "Demo: Layout Structure"
+    bl_options = {'REGISTER'}
+
+    # GPUPanelMixin 設定
+    gpu_panel_uid = "demo_layout_structure"
+    gpu_title = "Layout Structure Test"
+    gpu_width = 350
+
+    def modal(self, context, event):
+        return self._modal_impl(context, event)
+
+    def invoke(self, context, event):
+        return self._invoke_impl(context, event)
+
+    def cancel(self, context):
+        return self._cancel_impl(context)
+
+    def draw_panel(self, layout, context):
+        """レイアウト構造のテスト"""
+
+        # ═══════════════════════════════════════════════════════════════
+        # 1. 基本的な row() テスト
+        # ═══════════════════════════════════════════════════════════════
+        layout.label(text="1. row() - Horizontal Layout")
+
+        row = layout.row()
+        row.label(text="Left")
+        row.label(text="Center")
+        row.label(text="Right")
+
+        layout.separator()
+
+        # ─── row(align=True) ───
+        layout.label(text="row(align=True)")
+        row_aligned = layout.row(align=True)
+        row_aligned.operator(text="A")
+        row_aligned.operator(text="B")
+        row_aligned.operator(text="C")
+
+        layout.separator()
+
+        # ═══════════════════════════════════════════════════════════════
+        # 2. column() テスト
+        # ═══════════════════════════════════════════════════════════════
+        layout.label(text="2. column() - Vertical Layout")
+
+        # row の中に column を入れる
+        row = layout.row()
+
+        col1 = row.column()
+        col1.label(text="Column 1")
+        col1.operator(text="Btn 1-A")
+        col1.operator(text="Btn 1-B")
+
+        col2 = row.column()
+        col2.label(text="Column 2")
+        col2.operator(text="Btn 2-A")
+        col2.operator(text="Btn 2-B")
+
+        col3 = row.column()
+        col3.label(text="Column 3")
+        col3.operator(text="Btn 3-A")
+        col3.operator(text="Btn 3-B")
+
+        layout.separator()
+
+        # ═══════════════════════════════════════════════════════════════
+        # 3. box() テスト
+        # ═══════════════════════════════════════════════════════════════
+        layout.label(text="3. box() - Bordered Container")
+
+        box = layout.box()
+        box.label(text="Inside Box")
+        box.operator(text="Box Button")
+
+        box_row = box.row()
+        box_row.label(text="L")
+        box_row.label(text="R")
+
+        layout.separator()
+
+        # ═══════════════════════════════════════════════════════════════
+        # 4. split() テスト
+        # ═══════════════════════════════════════════════════════════════
+        layout.label(text="4. split() - Proportional Split")
+
+        split = layout.split(factor=0.3)
+        split.label(text="30%")
+        split.label(text="70%")
+
+        split2 = layout.split(factor=0.5)
+        split2.operator(text="Half")
+        split2.operator(text="Half")
+
+        layout.separator()
+
+        # ═══════════════════════════════════════════════════════════════
+        # 5. ネストテスト
+        # ═══════════════════════════════════════════════════════════════
+        layout.label(text="5. Nested Layout")
+
+        outer_box = layout.box()
+        outer_box.label(text="Outer Box")
+
+        inner_row = outer_box.row()
+
+        inner_box1 = inner_row.box()
+        inner_box1.label(text="Inner 1")
+
+        inner_box2 = inner_row.box()
+        inner_box2.label(text="Inner 2")
+
+        layout.separator()
+
+        # ═══════════════════════════════════════════════════════════════
+        # 6. scale 系テスト
+        # ═══════════════════════════════════════════════════════════════
+        layout.label(text="6. scale_x / scale_y")
+
+        row = layout.row()
+        row.scale_x = 2.0
+        row.operator(text="scale_x=2.0")
+
+        row2 = layout.row()
+        row2.scale_y = 1.5
+        row2.operator(text="scale_y=1.5")
+
+        layout.separator()
+
+        # ═══════════════════════════════════════════════════════════════
+        # 7. alignment テスト
+        # ═══════════════════════════════════════════════════════════════
+        layout.label(text="7. alignment (if supported)")
+
+        row = layout.row()
+        row.alignment = 'LEFT'
+        row.label(text="LEFT align")
+
+        row2 = layout.row()
+        row2.alignment = 'CENTER'
+        row2.label(text="CENTER align")
+
+        row3 = layout.row()
+        row3.alignment = 'RIGHT'
+        row3.label(text="RIGHT align")
+
+
+# Demo 6: UILayout Reference - Blender 標準 UILayout との比較用
+# ═══════════════════════════════════════════════════════════════════════════════
+
+class DEMO_OT_uilayout_reference(Operator):
+    """UILayout Reference - Blender 標準 UILayout での同等レイアウト（比較用）"""
+    bl_idname = "demo.uilayout_reference"
+    bl_label = "Demo: UILayout Reference"
+    bl_options = {'REGISTER'}
+
+    def execute(self, context):
+        return {'FINISHED'}
+
+    def invoke(self, context, event):
+        # popup dialog として表示（幅 400）
+        return context.window_manager.invoke_popup(self, width=400)
+
+    def draw(self, context):
+        """Blender 標準 UILayout でのレイアウト（GPULayout と比較用）"""
+        layout = self.layout
+
+        # ═══════════════════════════════════════════════════════════════
+        # 1. 基本的な row() テスト
+        # ═══════════════════════════════════════════════════════════════
+        layout.label(text="1. row() - Horizontal Layout")
+
+        row = layout.row()
+        row.label(text="Left")
+        row.label(text="Center")
+        row.label(text="Right")
+
+        layout.separator()
+
+        # ─── row(align=True) ───
+        layout.label(text="row(align=True)")
+        row_aligned = layout.row(align=True)
+        row_aligned.operator("mesh.primitive_cube_add", text="A")
+        row_aligned.operator("mesh.primitive_cube_add", text="B")
+        row_aligned.operator("mesh.primitive_cube_add", text="C")
+
+        layout.separator()
+
+        # ═══════════════════════════════════════════════════════════════
+        # 2. column() テスト
+        # ═══════════════════════════════════════════════════════════════
+        layout.label(text="2. column() - Vertical Layout")
+
+        # row の中に column を入れる
+        row = layout.row()
+
+        col1 = row.column()
+        col1.label(text="Column 1")
+        col1.operator("mesh.primitive_cube_add", text="Btn 1-A")
+        col1.operator("mesh.primitive_cube_add", text="Btn 1-B")
+
+        col2 = row.column()
+        col2.label(text="Column 2")
+        col2.operator("mesh.primitive_cube_add", text="Btn 2-A")
+        col2.operator("mesh.primitive_cube_add", text="Btn 2-B")
+
+        col3 = row.column()
+        col3.label(text="Column 3")
+        col3.operator("mesh.primitive_cube_add", text="Btn 3-A")
+        col3.operator("mesh.primitive_cube_add", text="Btn 3-B")
+
+        layout.separator()
+
+        # ═══════════════════════════════════════════════════════════════
+        # 3. box() テスト
+        # ═══════════════════════════════════════════════════════════════
+        layout.label(text="3. box() - Bordered Container")
+
+        box = layout.box()
+        box.label(text="Inside Box")
+        box.operator("mesh.primitive_cube_add", text="Box Button")
+
+        box_row = box.row()
+        box_row.label(text="L")
+        box_row.label(text="R")
+
+        layout.separator()
+
+        # ═══════════════════════════════════════════════════════════════
+        # 4. split() テスト
+        # ═══════════════════════════════════════════════════════════════
+        layout.label(text="4. split() - Proportional Split")
+
+        split = layout.split(factor=0.3)
+        split.label(text="30%")
+        split.label(text="70%")
+
+        split2 = layout.split(factor=0.5)
+        split2.operator("mesh.primitive_cube_add", text="Half")
+        split2.operator("mesh.primitive_cube_add", text="Half")
+
+        layout.separator()
+
+        # ═══════════════════════════════════════════════════════════════
+        # 5. ネストテスト
+        # ═══════════════════════════════════════════════════════════════
+        layout.label(text="5. Nested Layout")
+
+        outer_box = layout.box()
+        outer_box.label(text="Outer Box")
+
+        inner_row = outer_box.row()
+
+        inner_box1 = inner_row.box()
+        inner_box1.label(text="Inner 1")
+
+        inner_box2 = inner_row.box()
+        inner_box2.label(text="Inner 2")
+
+        layout.separator()
+
+        # ═══════════════════════════════════════════════════════════════
+        # 6. scale 系テスト
+        # ═══════════════════════════════════════════════════════════════
+        layout.label(text="6. scale_x / scale_y")
+
+        row = layout.row()
+        row.scale_x = 2.0
+        row.operator("mesh.primitive_cube_add", text="scale_x=2.0")
+
+        row2 = layout.row()
+        row2.scale_y = 1.5
+        row2.operator("mesh.primitive_cube_add", text="scale_y=1.5")
+
+        layout.separator()
+
+        # ═══════════════════════════════════════════════════════════════
+        # 7. alignment テスト
+        # ═══════════════════════════════════════════════════════════════
+        layout.label(text="7. alignment")
+
+        row = layout.row()
+        row.alignment = 'LEFT'
+        row.label(text="LEFT align")
+
+        row2 = layout.row()
+        row2.alignment = 'CENTER'
+        row2.label(text="CENTER align")
+
+        row3 = layout.row()
+        row3.alignment = 'RIGHT'
+        row3.label(text="RIGHT align")
+
+
+# Demo 7: Quick UV - UVエディタ向け常時表示パネル
 # ═══════════════════════════════════════════════════════════════════════════════
 
 class DEMO_OT_quick_uv(Operator):
