@@ -1,9 +1,10 @@
 # GPULayout Architecture v3 - Long-Term UI Framework Plan
 
-> Version: 0.1.0
+> Version: 0.2.0
 > Created: 2026-01-19
+> Updated: 2026-01-19 (Blender ソースコード調査結果を反映)
 > Status: **RFC (Request for Comments)**
-> Related: `gpu_layout_issues_report.md`, `gpu_layout_architecture_v2.1.md`, Issue #100
+> Related: `gpu_layout_issues_report.md`, `gpu_layout_architecture_v2.1.md`, `blender_source_investigation.md`, Issue #100
 > Reviewer: Codex (GPT-5)
 
 ---
@@ -99,56 +100,89 @@ min_height <= height <= max_height
 
 ---
 
-## 5. SizingPolicy（equal + fixed + flex の統一モデル）
+## 5. SizingPolicy（Blender UILayout 互換モデル）
+
+> **Note**: Blender ソースコード調査結果に基づく（`blender_source_investigation.md` 参照）
 
 ```
 SizingPolicy:
-  basis_width: float?  # 固定幅（ui_units_x 等）
-  weight: float = 1.0  # flex weight（0 = 固定幅のみ）
+  estimated_width: float   # estimate() で計算されたサイズ
+  fixed_width: float?      # ui_units_x で上書きされた固定幅
+  is_fixed: bool = false   # fixed_size フラグ
   min_width: float = 0
   max_width: float = INF
 ```
 
 **Blender 互換ルール**:
-- row() の既定は `weight=1`（= 均等分配）
-- `ui_units_x` は `basis_width` を設定（固定幅）
-- `scale_x` は weight の倍率として解釈
+- `alignment = EXPAND` の場合のみ、推定サイズの比率で幅を拡大
+- `ui_units_x` は estimate 結果を**完全上書き**し、`is_fixed = true` を設定
+- `scale_x` は **子アイテムのサイズを直接倍率**（estimate 前に適用）
 
-### 5.1 幅配分アルゴリズム（Flex Row）
+### 5.1 幅配分アルゴリズム（Blender ui_item_fit 互換）
 
 ```python
-def distribute_width(children, available_width, gap):
-    """Row の幅配分アルゴリズム"""
-    # 1. 固定幅（basis）を先に確保
-    fixed_total = sum(c.basis_width or 0 for c in children)
-
-    # 2. 残り幅を計算
+def distribute_width(children, available_width, gap, alignment):
+    """Row の幅配分アルゴリズム（Blender interface_layout.cc:347-382 準拠）"""
     gaps_total = gap * (len(children) - 1)
-    remaining = available_width - fixed_total - gaps_total
+    available = available_width - gaps_total
 
-    # 3. weight の合計を計算
-    weight_total = sum(c.weight for c in children if c.basis_width is None)
+    # 各子の推定幅を合計
+    total_estimated = sum(c.estimated_width for c in children)
 
-    # 4. 各子の幅を決定
+    if total_estimated == 0:
+        return  # 何もしない
+
     for child in children:
-        if child.basis_width is not None:
-            child.width = child.basis_width
-        elif weight_total > 0:
-            child.width = remaining * (child.weight / weight_total)
+        if available == 0 or total_estimated == 0:
+            child.width = child.estimated_width
+            continue
+
+        if total_estimated > available:
+            # 内容が利用可能幅より大きい → 比例縮小
+            child.width = (child.estimated_width * available) / total_estimated
+        elif alignment == Alignment.EXPAND:
+            # EXPAND: 比例拡大
+            child.width = (child.estimated_width * available) / total_estimated
         else:
-            child.width = 0
+            # LEFT/CENTER/RIGHT: 元のサイズを維持
+            child.width = child.estimated_width
 ```
 
-### 5.2 alignment と weight の関係
+### 5.2 scale_x の動作（⚠️ v3.0.1 で修正）
 
-| 設定 | 意味 | weight の扱い |
-|------|------|--------------|
-| `alignment = EXPAND` | 子が利用可能幅を全て埋める | weight に従って分配 |
-| `alignment = LEFT` | 子は min(natural, weight分配) | 余白は右に |
-| `alignment = CENTER` | 子は min(natural, weight分配) | 余白は左右均等 |
-| `alignment = RIGHT` | 子は min(natural, weight分配) | 余白は左に |
+Blender の `scale_x` は **estimate 前に子アイテムのサイズを直接倍率** する。
 
-**重要**: alignment が EXPAND 以外の場合、子は「自然サイズ」を超えて拡張しない。
+```python
+def apply_scale(layout, scale_x, scale_y):
+    """scale_x/y の適用（Blender interface_layout.cc:5249-5273 準拠）"""
+    for child in layout.children:
+        if isinstance(child, Layout):
+            apply_scale(child, scale_x, scale_y)  # 再帰
+
+        if scale_x != 0.0:
+            child.offset_x *= scale_x
+            child.size_x *= scale_x  # ← サイズを直接倍率
+
+        if scale_y != 0.0:
+            child.offset_y *= scale_y
+            child.size_y *= scale_y
+```
+
+**処理順序**:
+1. `scale_x/y` を子アイテムに適用
+2. `estimate_impl()` でサイズ計算
+3. `ui_units_x` が設定されていれば上書き
+
+### 5.3 alignment と幅の関係
+
+| 設定 | 意味 | 子の幅 |
+|------|------|--------|
+| `alignment = EXPAND` | 子が利用可能幅を全て埋める | 推定サイズの比率で拡大 |
+| `alignment = LEFT` | 子は自然サイズを維持 | 余白は右に |
+| `alignment = CENTER` | 子は自然サイズを維持 | 余白は左右均等 |
+| `alignment = RIGHT` | 子は自然サイズを維持 | 余白は左に |
+
+**重要**: alignment が EXPAND 以外の場合、子は「推定サイズ」を超えて拡張しない。
 
 ---
 
@@ -169,35 +203,59 @@ def distribute_width(children, available_width, gap):
 
 ### 6.3 Split
 
-- factor は **最初の列の割合**
-- 2列目以降は残りを等分
-- `split.label()` は暗黙の column
+> **⚠️ v3.0.2 で修正**: Blender ソースコード調査により暗黙 column は存在しないことが判明
 
-**Split 詳細仕様**:
+- factor は **最初のアイテムの割合**
+- 2番目以降のアイテムは残りを等分
+- **暗黙の column 生成はない** — 直接追加されたアイテムがそれぞれ列として扱われる
+
+**Split 幅計算アルゴリズム** (`interface_layout.cc:4650-4690`):
 
 ```python
-# 2列（推奨）
-split = layout.split(factor=0.3)
-col1 = split.column()  # 30%
-col2 = split.column()  # 70%
+def resolve_split(items, total_width, gap, percentage):
+    """Split の幅配分（Blender 準拠）"""
+    if percentage == 0.0:
+        percentage = 1.0 / len(items)  # 均等分割
 
-# 3列以上（非推奨だが許容）
-split = layout.split(factor=0.25)
-col1 = split.column()  # 25%
-col2 = split.column()  # 37.5% (残り75%の半分)
-col3 = split.column()  # 37.5%
+    available = total_width - gap * (len(items) - 1)
+    first_width = available * percentage
+    remaining = available - first_width
 
-# 暗黙の column
-split = layout.split(factor=0.3)
-split.label(text="30%")   # ← 暗黙の column(index=0) に追加
-split.label(text="70%")   # ← 暗黙の column(index=1) に追加
+    for i, item in enumerate(items):
+        if i == 0:
+            item.width = first_width
+        else:
+            # 2番目以降: 残りを (n-1) で均等分割
+            item.width = remaining / (len(items) - 1)
 ```
 
-**暗黙 column のルール**:
-1. `split.column()` を呼ばずに `split.label()` 等を呼んだ場合
-2. 内部で自動的に column を生成し、そこに追加
-3. 次の `split.xxx()` 呼び出しは次の column に追加
-4. これは UILayout の動作と一致（要実機テスト）
+**使用例**:
+
+```python
+# パターン1: column を明示的に使う（推奨）
+split = layout.split(factor=0.3)
+col1 = split.column()  # items[0] → 30%
+col1.label(text="Label A")
+col1.label(text="Label B")
+col2 = split.column()  # items[1] → 70%
+col2.label(text="Label C")
+
+# パターン2: 直接アイテムを追加（各アイテムが列として扱われる）
+split = layout.split(factor=0.3)
+split.label(text="30%")   # items[0] → 30%
+split.label(text="70%")   # items[1] → 70%
+# ⚠️ 2つの label が横に並ぶ（暗黙の column は生成されない）
+
+# パターン3: 3列以上
+split = layout.split(factor=0.25)
+split.column()  # 25%
+split.column()  # 37.5% (残り75%の半分)
+split.column()  # 37.5%
+```
+
+**重要な違い**:
+- パターン1: 列内に複数のアイテムを縦に配置できる
+- パターン2: 各 label が独立した列として扱われる（縦配置不可）
 
 ### 6.4 Box
 
@@ -294,16 +352,32 @@ for i, item in enumerate(items):
 4. scale_x/scale_y の互換性
 5. alignment (LEFT/CENTER/RIGHT) の互換性
 
-### 10.2 Fixed + Flex 混在検証
+### 10.2 scale_x 動作検証
 
 ```python
-# テストケース: ui_units_x と均等分配の混在
+# テストケース: scale_x の効果
 row = layout.row()
-row.label(text="Fixed 100px")  # ui_units_x = 5 (≒100px)
-row.label(text="Flex 1")       # weight = 1
-row.label(text="Flex 2")       # weight = 2
+row.scale_x = 2.0  # 子アイテムのサイズを 2 倍
+row.operator("mesh.primitive_cube_add", text="A")
+row.operator("mesh.primitive_cube_add", text="B")
 
-# 期待: [100px][残りの1/3][残りの2/3]
+# 期待: A と B のボタン幅がそれぞれ 2 倍になる
+# ソースコード参照: interface_layout.cc:5249-5273
+```
+
+### 10.2b ui_units_x + 推定サイズ混在検証
+
+```python
+# テストケース: ui_units_x と通常アイテムの混在
+row = layout.row()
+sub = row.row()
+sub.ui_units_x = 5  # 固定幅 (≒100px)
+sub.label(text="Fixed")
+row.label(text="Flex 1")
+row.label(text="Flex 2")
+
+# 期待: [100px][残りを推定サイズ比で分配]
+# ソースコード参照: interface_layout.cc:5297-5300
 ```
 
 ### 10.3 LayoutKey 安定性検証
@@ -334,7 +408,28 @@ panel.width = 400
 ## 11. 結論
 
 v3 は **UILayout 完全模倣 + 長期運用**を同時に満たす最小構成である。
-v2.1 の改善点を保持しつつ、**キー安定性・Flex配分・パイプライン分離**を明文化する。
+v2.1 の改善点を保持しつつ、**キー安定性・推定サイズベース配分・パイプライン分離**を明文化する。
+
+### Blender ソースコード調査による修正点
+
+| 項目 | 当初の仮定 | 実際の動作 |
+|------|-----------|-----------|
+| scale_x | weight の倍率 | 子サイズの直接倍率 |
+| split 暗黙 column | 自動生成 | **なし** |
+| 幅配分 | weight ベース | 推定サイズベース |
+| alignment | weight に影響 | 拡張するかどうかのみ |
+
+詳細は `blender_source_investigation.md` を参照。
+
+---
+
+## 12. 参照ドキュメント
+
+| ドキュメント | 内容 |
+|-------------|------|
+| `blender_source_investigation.md` | Blender ソースコード調査レポート |
+| `gpu_layout_architecture_v2.1.md` | 前バージョンのアーキテクチャ |
+| `gpu_layout_issues_report.md` | 問題分析レポート |
 
 ---
 
