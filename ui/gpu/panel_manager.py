@@ -120,6 +120,11 @@ class GPUPanelManager:
         return uid in cls._active
 
     @classmethod
+    def list_active_uids(cls) -> list[str]:
+        """アクティブなパネルの uid リストを返す"""
+        return list(cls._active.keys())
+
+    @classmethod
     def close_by_uid(cls, uid: str, context: Optional[Context] = None) -> bool:
         """
         uid でパネルを閉じる

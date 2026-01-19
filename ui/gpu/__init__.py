@@ -85,6 +85,17 @@ from .panel_manager import (
     PanelState,
 )
 
+# Panel Mixin
+from .panel_mixin import GPUPanelMixin
+
+# Panel State (Persistence)
+from .state import (
+    GPUPanelState,
+    get_panel_state,
+    set_panel_state,
+    clear_panel_states,
+)
+
 
 __all__ = [
     # Style
@@ -120,4 +131,11 @@ __all__ = [
     # Panel Manager
     'GPUPanelManager',
     'PanelState',
+    # Panel Mixin
+    'GPUPanelMixin',
+    # Panel State
+    'GPUPanelState',
+    'get_panel_state',
+    'set_panel_state',
+    'clear_panel_states',
 ]
