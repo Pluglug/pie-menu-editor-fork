@@ -68,7 +68,7 @@ class GPUPanelMixin:
     """
 
     gpu_width: int = 250
-    """パネルの初期幅（ピクセル）。"""
+    """Initial width in UI units (scaled by system.ui_scale)."""
 
     gpu_style: str = 'PANEL'
     """GPULayoutStyle のプリセット名。
@@ -301,10 +301,11 @@ class GPUPanelMixin:
         if self._layout is None:
             # 新規作成
             style = GPULayoutStyle.from_blender_theme(self.gpu_style)
+            scaled_width = style.ui_scale(self.gpu_width)
             layout = GPULayout(
                 x=self._panel_x,
                 y=self._panel_y,
-                width=self.gpu_width,
+                width=scaled_width,
                 style=style
             )
             layout._draw_background = True
