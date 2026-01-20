@@ -1611,7 +1611,7 @@ class GPULayout(UILayoutStubMixin):
         垂直レイアウトのサイズ推定（v3 準拠）
 
         Changes (P1-3):
-            - scale_y を measure で適用しない（arrange で適用）
+            - 子要素の size に scale_x/y を measure で適用
             - 自然サイズを estimated_* に保存
         """
         spacing = self._get_spacing()
@@ -1643,8 +1643,10 @@ class GPULayout(UILayoutStubMixin):
                 element.sizing.estimated_width = w
                 element.estimated_height = h
 
+            element.sizing.estimated_width *= self.scale_x
+            element.estimated_height *= self.scale_y
+
             max_width = max(max_width, element.sizing.estimated_width)
-            # P1-3: scale_y は measure で適用しない（arrange で適用）
             total_height += element.estimated_height
             n_elements += 1
 
@@ -1673,7 +1675,7 @@ class GPULayout(UILayoutStubMixin):
 
         Changes (P1-1, P1-3, P1-4):
             - 均等分配 → 自然幅を取得して estimated_width に保存
-            - scale_y の適用を削除（arrange で適用）
+            - 子要素の size に scale_x/y を measure で適用
             - constraints.clamp_height() を適用
         """
         n = len(self._elements)
@@ -1719,8 +1721,10 @@ class GPULayout(UILayoutStubMixin):
                 element.sizing.estimated_width = w
                 element.estimated_height = h
 
+            element.sizing.estimated_width *= self.scale_x
+            element.estimated_height *= self.scale_y
+
             total_estimated_width += element.sizing.estimated_width
-            # P1-3: scale_y は measure で適用しない（arrange で適用）
             max_height = max(max_height, element.estimated_height)
 
         # 自身の推定サイズを記録
@@ -1903,8 +1907,8 @@ class GPULayout(UILayoutStubMixin):
         垂直レイアウトの位置確定（v3 準拠）
 
         Changes (P1-2, P1-3):
-            - scale_x/y を estimated_* に適用してから配置
-            - 重複する scale_y 適用を削除
+            - measure で適用済みの estimated_* を使用
+            - arrange での scale 適用は行わない
         """
         spacing = self._get_spacing()
         padding_x = self.style.scaled_padding_x()
@@ -1919,11 +1923,6 @@ class GPULayout(UILayoutStubMixin):
         if n == 0:
             return
 
-        # v3: scale_x/y を estimated_* に適用（配置前）
-        for element in self._elements:
-            element.sizing.estimated_width *= self.scale_x
-            element.estimated_height *= self.scale_y
-
         for i, element in enumerate(self._elements):
             if isinstance(element, GPULayout):
                 # 子レイアウトは親の幅に合わせる
@@ -1934,11 +1933,11 @@ class GPULayout(UILayoutStubMixin):
                 # LayoutItem の配置
                 # alignment に応じて幅と位置を計算
                 if self.alignment == Alignment.EXPAND:
-                    # EXPAND: 利用可能幅全体を使用（scale_x は既に estimated_* に適用済み）
+                    # EXPAND: 利用可能幅全体を使用
                     element.width = available_width
                     element.x = cursor_x
                 else:
-                    # 自然サイズを維持（scale_x 適用済みの estimated_width を使用）
+                    # 自然サイズを維持（measure で scale 済みの estimated_width を使用）
                     element.width = element.sizing.estimated_width
                     if self.alignment == Alignment.CENTER:
                         element.x = cursor_x + (available_width - element.width) / 2
@@ -1976,8 +1975,7 @@ class GPULayout(UILayoutStubMixin):
 
         Changes (P1-2, P1-3):
             - _distribute_width() を使用して幅を配分
-            - scale_x/y を estimated_* に適用してから配分
-            - 重複する scale_y 適用を削除
+            - measure で適用済みの estimated_* を使用
             - split レイアウトは専用の配分ロジックを使用
         """
         spacing = self._get_spacing()
@@ -1990,11 +1988,6 @@ class GPULayout(UILayoutStubMixin):
 
         cursor_y = self.y - padding_y
         available_width = max(0, self.width - padding_x * 2)
-
-        # v3: scale_x/y を estimated_* に適用（幅配分前）
-        for element in self._elements:
-            element.sizing.estimated_width *= self.scale_x
-            element.estimated_height *= self.scale_y
 
         # Split レイアウトの場合は専用の配分ロジック
         if self._is_split and n > 0:

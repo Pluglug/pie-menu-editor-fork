@@ -2,7 +2,7 @@
 
 > Version: 1.1.1
 > Created: 2026-01-20
-> Updated: 2026-01-20 (split factor=0 + naming + SizingPolicy を反映)
+> Updated: 2026-01-20 (split factor=0 + naming + SizingPolicy + scale_x を反映)
 > Status: **Active**
 > Primary Spec: `gpu_layout_architecture_v3.md`
 > Implementation Reference: `gpu_layout_architecture_v2.1.md` (構造・API 形のみ)
@@ -250,7 +250,7 @@ def distribute_width(children, available_width, gap, alignment):
 3. 親の `measure_impl()` でサイズ計算（scale 適用後の子サイズを使用）
 4. `ui_units_x` が設定されていれば上書き
 
-**[Partial] 重要**: `scale_x` は「子の measure 後、親の measure_impl 前」に適用される。
+**[Done] 重要**: `scale_x` は「子の measure 後、親の measure_impl 前」に適用される。
 「measure 前」と書くと曖昧なので、この順序を厳守すること。
 
 **[Partial] 重要な発見（実機テスト結果）**:
@@ -296,7 +296,7 @@ def resolve_split(items, total_width, gap, percentage):
 - [x] `BoxConstraints.deflate()` メソッド追加
 - [x] `SizingPolicy` クラス導入
 - [ ] `_measure_horizontal()` を `distribute_width` アルゴリズムに修正
-- [ ] `scale_x` の適用タイミングを修正（子 measure 後、親 measure_impl 前）
+- [x] `scale_x` の適用タイミングを修正（子 measure 後、親 measure_impl 前）
 - [x] `split` の幅計算を v3 準拠に修正（3列目以降 + factor==0）
 - [ ] Issue #116 の P1-1 〜 P1-5 を解決
 - [ ] `alignment` を v3 準拠に修正（EXPAND vs LEFT/CENTER/RIGHT）
