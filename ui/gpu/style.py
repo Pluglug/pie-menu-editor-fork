@@ -49,6 +49,104 @@ class Alignment(Enum):
     EXPAND = auto()
 
 
+# ═══════════════════════════════════════════════════════════════════════════════
+# Size / BoxConstraints - 2-pass レイアウト用
+# ═══════════════════════════════════════════════════════════════════════════════
+
+@dataclass
+class Size:
+    """
+    サイズ（measure/estimate 結果）
+
+    レイアウトアルゴリズムの Pass 1 (estimate) で計算されるサイズ。
+    """
+    width: float = 0.0
+    height: float = 0.0
+
+    def __iter__(self):
+        """(width, height) タプルとしてアンパック可能"""
+        yield self.width
+        yield self.height
+
+
+@dataclass
+class BoxConstraints:
+    """
+    親から子へ渡されるサイズ制約
+
+    Flutter の BoxConstraints に相当。
+    子要素は min_* 以上 max_* 以下のサイズに収まる必要がある。
+
+    使用例:
+        # 幅が固定、高さは無制限
+        constraints = BoxConstraints.tight_width(300)
+
+        # ゆるい制約（最大値のみ指定）
+        constraints = BoxConstraints.loose(max_width=400, max_height=600)
+    """
+    min_width: float = 0.0
+    max_width: float = float('inf')
+    min_height: float = 0.0
+    max_height: float = float('inf')
+
+    @classmethod
+    def tight(cls, width: float, height: float) -> 'BoxConstraints':
+        """幅と高さを固定（min=max）"""
+        return cls(min_width=width, max_width=width,
+                   min_height=height, max_height=height)
+
+    @classmethod
+    def tight_width(cls, width: float) -> 'BoxConstraints':
+        """幅のみ固定、高さは無制限"""
+        return cls(min_width=width, max_width=width)
+
+    @classmethod
+    def loose(cls, max_width: float = float('inf'),
+              max_height: float = float('inf')) -> 'BoxConstraints':
+        """ゆるい制約（最大値のみ指定）"""
+        return cls(max_width=max_width, max_height=max_height)
+
+    def clamp_width(self, width: float) -> float:
+        """幅を制約内にクランプ"""
+        return max(self.min_width, min(width, self.max_width))
+
+    def clamp_height(self, height: float) -> float:
+        """高さを制約内にクランプ"""
+        return max(self.min_height, min(height, self.max_height))
+
+    def clamp_size(self, size: Size) -> Size:
+        """サイズを制約内にクランプ"""
+        return Size(
+            self.clamp_width(size.width),
+            self.clamp_height(size.height)
+        )
+
+    def deflate(self, horizontal: float, vertical: float) -> 'BoxConstraints':
+        """
+        パディングを差し引いた内部制約を作成
+
+        Args:
+            horizontal: 左右のパディング合計
+            vertical: 上下のパディング合計
+        """
+        return BoxConstraints(
+            min_width=max(0, self.min_width - horizontal),
+            max_width=max(0, self.max_width - horizontal),
+            min_height=max(0, self.min_height - vertical),
+            max_height=max(0, self.max_height - vertical),
+        )
+
+    @property
+    def has_tight_width(self) -> bool:
+        """幅が固定されているか"""
+        return self.min_width == self.max_width
+
+    @property
+    def has_tight_height(self) -> bool:
+        """高さが固定されているか"""
+        return self.min_height == self.max_height
+
+
 class WidgetType(Enum):
     """
     ウィジェットタイプ（Blender の uiWidgetTypeEnum に対応）

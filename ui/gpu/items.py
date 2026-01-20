@@ -32,6 +32,11 @@ class LayoutItem:
     visible: bool = True
     enabled: bool = True
 
+    # Phase 2: 角丸制御（align=True 時に使用）
+    # (bottomLeft, topLeft, topRight, bottomRight)
+    # True = 角丸あり、False = 直角
+    corners: tuple[bool, bool, bool, bool] = (True, True, True, True)
+
     def calc_size(self, style: GPULayoutStyle) -> tuple[float, float]:
         """サイズを計算して返す (width, height)"""
         return (self.width, self.height)
@@ -270,10 +275,10 @@ class ButtonItem(LayoutItem):
         else:
             radius = style.scaled_border_radius()
 
-        # 背景
+        # 背景（align=True 時は corners で角丸を制御）
         GPUDrawing.draw_rounded_rect(
             self.x, self.y, self.width, self.height,
-            radius, bg_color
+            radius, bg_color, self.corners
         )
 
         # アイコンとテキストのサイズ計算
@@ -391,7 +396,7 @@ class ToggleItem(LayoutItem):
 
         GPUDrawing.draw_rounded_rect(
             self.x, self.y, self.width, self.height,
-            radius, bg_color
+            radius, bg_color, self.corners
         )
 
         # === 2. アウトライン描画 ===
@@ -399,7 +404,8 @@ class ToggleItem(LayoutItem):
         GPUDrawing.draw_rounded_rect_outline(
             self.x, self.y, self.width, self.height,
             radius, outline_color,
-            line_width=style.line_width()
+            line_width=style.line_width(),
+            corners=self.corners
         )
 
         # === 3. アイコンとテキスト描画 ===
@@ -457,10 +463,10 @@ class ToggleItem(LayoutItem):
         if not enabled:
             bg_color = tuple(c * 0.5 for c in bg_color[:3]) + (bg_color[3],)
 
-        # 背景
+        # 背景（align=True 時は corners で角丸を制御）
         GPUDrawing.draw_rounded_rect(
             self.x, self.y, self.width, self.height,
-            radius, bg_color
+            radius, bg_color, self.corners
         )
 
         # アイコンとテキストのサイズ計算
@@ -831,26 +837,27 @@ class SliderItem(LayoutItem):
 
         GPUDrawing.draw_rounded_rect(
             self.x, self.y, self.width, self.height,
-            radius, bg_color
+            radius, bg_color, self.corners
         )
 
         # === 2. 値バー描画（item カラー） ===
         normalized = self._get_normalized_value()
         if normalized > 0.001:  # 0% に近い場合はスキップ
             bar_width = self.width * normalized
-            # 値バーも同じ角丸だが、右端は値に応じて調整
-            # 左端のみ角丸、右端は直角（値バーが背景より短い場合）
+
+            # 値バー用 corners を計算
+            # 左側は self.corners を継承、右側は 100% 未満なら直角
             if normalized >= 0.99:
-                # 100% に近い場合は完全な角丸
-                bar_radius = radius
+                bar_corners = self.corners  # フルなので親と同じ
             else:
-                # それ以外は左端のみ角丸
-                bar_radius = radius
+                # 右側を直角に（値バーが背景より短い）
+                # corners: (bottomLeft, topLeft, topRight, bottomRight)
+                bar_corners = (self.corners[0], self.corners[1], False, False)
 
             item_color = wcol.item if enabled else tuple(c * 0.5 for c in wcol.item[:3]) + (wcol.item[3],)
             GPUDrawing.draw_rounded_rect(
                 self.x, self.y, bar_width, self.height,
-                bar_radius, item_color
+                radius, item_color, bar_corners
             )
 
         # === 3. アウトライン描画 ===
@@ -860,7 +867,8 @@ class SliderItem(LayoutItem):
         GPUDrawing.draw_rounded_rect_outline(
             self.x, self.y, self.width, self.height,
             radius, outline_color,
-            line_width=style.line_width()
+            line_width=style.line_width(),
+            corners=self.corners
         )
 
         # === 4. テキスト描画 ===
@@ -895,20 +903,28 @@ class SliderItem(LayoutItem):
         if not enabled:
             bg_color = tuple(c * 0.5 for c in bg_color[:3]) + (bg_color[3],)
 
-        GPUDrawing.draw_rounded_rect(self.x, self.y, self.width, self.height, radius, bg_color)
+        GPUDrawing.draw_rounded_rect(self.x, self.y, self.width, self.height, radius, bg_color, self.corners)
 
         # 値バー
         normalized = self._get_normalized_value()
         if normalized > 0.001:
             bar_width = self.width * normalized
             bar_color = style.highlight_color if enabled else tuple(c * 0.5 for c in style.highlight_color[:3]) + (style.highlight_color[3],)
-            GPUDrawing.draw_rounded_rect(self.x, self.y, bar_width, self.height, radius, bar_color)
+
+            # 値バー用 corners（左側は継承、右側は 100% 未満なら直角）
+            if normalized >= 0.99:
+                bar_corners = self.corners
+            else:
+                bar_corners = (self.corners[0], self.corners[1], False, False)
+
+            GPUDrawing.draw_rounded_rect(self.x, self.y, bar_width, self.height, radius, bar_color, bar_corners)
 
         # アウトライン
         GPUDrawing.draw_rounded_rect_outline(
             self.x, self.y, self.width, self.height,
             radius, style.outline_color,
-            line_width=style.line_width()
+            line_width=style.line_width(),
+            corners=self.corners
         )
 
         # テキスト
@@ -1037,7 +1053,7 @@ class NumberItem(LayoutItem):
 
         GPUDrawing.draw_rounded_rect(
             self.x, self.y, self.width, self.height,
-            radius, bg_color
+            radius, bg_color, self.corners
         )
 
         # === 2. アウトライン描画 ===
@@ -1046,7 +1062,8 @@ class NumberItem(LayoutItem):
         GPUDrawing.draw_rounded_rect_outline(
             self.x, self.y, self.width, self.height,
             radius, outline_color,
-            line_width=style.line_width()
+            line_width=style.line_width(),
+            corners=self.corners
         )
 
         # === 3. 増減ボタン描画（オプション） ===
@@ -1127,13 +1144,14 @@ class NumberItem(LayoutItem):
         if not enabled:
             bg_color = tuple(c * 0.5 for c in bg_color[:3]) + (bg_color[3],)
 
-        GPUDrawing.draw_rounded_rect(self.x, self.y, self.width, self.height, radius, bg_color)
+        GPUDrawing.draw_rounded_rect(self.x, self.y, self.width, self.height, radius, bg_color, self.corners)
 
         # アウトライン
         GPUDrawing.draw_rounded_rect_outline(
             self.x, self.y, self.width, self.height,
             radius, style.outline_color,
-            line_width=style.line_width()
+            line_width=style.line_width(),
+            corners=self.corners
         )
 
         # テキスト

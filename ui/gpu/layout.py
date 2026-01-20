@@ -11,7 +11,7 @@ import bpy
 import sys
 from typing import TYPE_CHECKING, Any, Callable, Optional
 
-from .style import GPULayoutStyle, Direction, Alignment
+from .style import GPULayoutStyle, Direction, Alignment, Size, BoxConstraints
 from .drawing import GPUDrawing, BLFDrawing
 from .items import (
     LayoutItem, LabelItem, SeparatorItem, ButtonItem, ToggleItem,
@@ -87,9 +87,13 @@ class GPULayout(UILayoutStubMixin):
         self.direction = direction
         self.parent = parent
 
-        # アイテムと子レイアウト
-        self._items: list[LayoutItem] = []
-        self._children: list[GPULayout] = []
+        # 統合要素リスト（追加順序を保持）
+        # Phase 1: _items と _children を _elements に統合
+        self._elements: list[LayoutItem | GPULayout] = []
+
+        # 2-pass レイアウト用の測定結果
+        self._measured_widths: list[float] = []
+        self.height: float = 0.0  # estimate() で計算される
 
         # カーソル位置
         self._cursor_x = x + self.style.scaled_padding_x()
@@ -171,11 +175,27 @@ class GPULayout(UILayoutStubMixin):
         """レイアウト再計算が必要かどうか"""
         return self._dirty
 
+    # ─────────────────────────────────────────────────────────────────────────
+    # 後方互換プロパティ（_items, _children）
+    # Phase 1 で _elements に統合したが、既存コードとの互換性のため提供
+    # ─────────────────────────────────────────────────────────────────────────
+
+    @property
+    def _items(self) -> list[LayoutItem]:
+        """LayoutItem のみをフィルタして返す（後方互換）"""
+        return [e for e in self._elements if isinstance(e, LayoutItem)]
+
+    @property
+    def _children(self) -> list['GPULayout']:
+        """GPULayout のみをフィルタして返す（後方互換）"""
+        return [e for e in self._elements if isinstance(e, GPULayout)]
+
     def mark_dirty(self) -> None:
         """レイアウトの再計算が必要であることをマーク"""
         self._dirty = True
-        for child in self._children:
-            child.mark_dirty()
+        for element in self._elements:
+            if isinstance(element, GPULayout):
+                element.mark_dirty()
 
     def row(self, align: bool = False) -> GPULayout:
         """
@@ -197,7 +217,7 @@ class GPULayout(UILayoutStubMixin):
         child.alert = self.alert
         child.operator_context = self.operator_context
         child._align = align  # アイテム間スペースを制御
-        self._children.append(child)
+        self._elements.append(child)  # Phase 1: _elements に統合
         return child
 
     def column(self, align: bool = False) -> GPULayout:
@@ -238,7 +258,7 @@ class GPULayout(UILayoutStubMixin):
         child.alert = self.alert
         child.operator_context = self.operator_context
         child._align = align
-        self._children.append(child)
+        self._elements.append(child)  # Phase 1: _elements に統合
 
         # split 用インデックスをインクリメント
         self._split_column_index += 1
@@ -282,7 +302,7 @@ class GPULayout(UILayoutStubMixin):
         child.enabled = self.enabled
         child.alert = self.alert
         child.operator_context = self.operator_context
-        self._children.append(child)
+        self._elements.append(child)  # Phase 1: _elements に統合
         return child
 
     # ─────────────────────────────────────────────────────────────────────────
@@ -1116,45 +1136,75 @@ class GPULayout(UILayoutStubMixin):
             self._cursor_x += item.width + self._get_spacing()
 
         self._register_interactive_item(item)
-        self._items.append(item)
+        self._elements.append(item)  # Phase 1: _elements に統合
 
     def calc_height(self) -> float:
-        """合計高さを計算"""
-        if not self._items and not self._children:
+        """
+        合計高さを計算
+
+        Note:
+            Phase 1 では estimate() で self.height が計算されるため、
+            layout() 実行後はそちらの値が使用される。
+            このメソッドは estimate() 前の互換性のために残置。
+        """
+        # estimate() 実行後なら計算済みの height を返す
+        if self.height > 0:
+            return self.height
+
+        if not self._elements:
             return self.style.scaled_padding_y() * 2
 
         spacing = self._get_spacing()
         if self.direction == Direction.VERTICAL:
             height = self.style.scaled_padding_y() * 2
-            for item in self._items:
-                _, h = item.calc_size(self.style)
-                height += h * self.scale_y + spacing
-            for child in self._children:
-                height += child.calc_height() + spacing
+            n_elements = 0
+            for element in self._elements:
+                if isinstance(element, GPULayout):
+                    height += element.calc_height()
+                else:
+                    _, h = element.calc_size(self.style)
+                    height += h * self.scale_y
+                n_elements += 1
+            # スペーシング
+            if n_elements > 1:
+                height += spacing * (n_elements - 1)
             return height
         else:
             # 水平レイアウト - 最大の高さ
             max_height = 0
-            for item in self._items:
-                _, h = item.calc_size(self.style)
-                max_height = max(max_height, h * self.scale_y)
-            for child in self._children:
-                max_height = max(max_height, child.calc_height())
-            return max_height + spacing
+            for element in self._elements:
+                if isinstance(element, GPULayout):
+                    max_height = max(max_height, element.calc_height())
+                else:
+                    _, h = element.calc_size(self.style)
+                    max_height = max(max_height, h * self.scale_y)
+            return max_height + self.style.scaled_padding_y() * 2
 
     def calc_width(self) -> float:
-        """合計幅を計算"""
-        if not self._items and not self._children:
+        """
+        合計幅を計算
+
+        Note:
+            Phase 1 では estimate() で self.width が計算される。
+            このメソッドは水平レイアウトの自然幅計算に使用。
+        """
+        if not self._elements:
             return self.width
 
         spacing = self._get_spacing()
         if self.direction == Direction.HORIZONTAL:
             width = self.style.scaled_padding_x() * 2
-            for item in self._items:
-                w, _ = item.calc_size(self.style)
-                width += w * self.scale_x + spacing
-            for child in self._children:
-                width += child.calc_width() + spacing
+            n_elements = 0
+            for element in self._elements:
+                if isinstance(element, GPULayout):
+                    width += element.calc_width()
+                else:
+                    w, _ = element.calc_size(self.style)
+                    width += w * self.scale_x
+                n_elements += 1
+            # スペーシング
+            if n_elements > 1:
+                width += spacing * (n_elements - 1)
             return width
         else:
             return self.width
@@ -1512,58 +1562,301 @@ class GPULayout(UILayoutStubMixin):
             self._resize_handle_rect.height = handle_size
 
     # ─────────────────────────────────────────────────────────────────────────
-    # レイアウト計算
+    # 2-pass レイアウトアルゴリズム（Phase 1）
     # ─────────────────────────────────────────────────────────────────────────
 
-    def layout(self, *, force: bool = False) -> None:
+    def estimate(self, constraints: BoxConstraints) -> Size:
         """
-        レイアウトを計算（子レイアウトの位置を確定）
+        Pass 1: サイズを推定（子から親へ積み上げ）
+
+        Args:
+            constraints: 親から渡されるサイズ制約
+
+        Returns:
+            このレイアウトの推定サイズ
+
+        Note:
+            この段階では位置（x, y）は確定しません。
+            サイズのみを計算し、self.width / self.height に保存します。
+        """
+        if self.direction == Direction.VERTICAL:
+            return self._estimate_vertical(constraints)
+        else:
+            return self._estimate_horizontal(constraints)
+
+    def _estimate_vertical(self, constraints: BoxConstraints) -> Size:
+        """垂直レイアウトのサイズ推定"""
+        spacing = self._get_spacing()
+        padding_x = self.style.scaled_padding_x()
+        padding_y = self.style.scaled_padding_y()
+
+        # パディングを差し引いた内部制約
+        inner_constraints = constraints.deflate(padding_x * 2, padding_y * 2)
+
+        total_height = padding_y * 2
+        max_width = 0.0
+        n_elements = 0
+
+        for element in self._elements:
+            if isinstance(element, GPULayout):
+                # 子レイアウトは再帰的に estimate
+                child_constraints = BoxConstraints(
+                    min_width=inner_constraints.min_width,
+                    max_width=inner_constraints.max_width,
+                    min_height=0,
+                    max_height=float('inf')
+                )
+                size = element.estimate(child_constraints)
+            else:
+                # LayoutItem は calc_size で自然サイズを取得
+                w, h = element.calc_size(self.style)
+                size = Size(w, h)
+
+            max_width = max(max_width, size.width)
+            total_height += size.height * self.scale_y
+            n_elements += 1
+
+        # スペーシングを加算
+        if n_elements > 1:
+            total_height += spacing * (n_elements - 1)
+
+        # 制約に従ってクランプ
+        self.width = constraints.clamp_width(max_width + padding_x * 2)
+        self.height = constraints.clamp_height(total_height)
+
+        return Size(self.width, self.height)
+
+    def _estimate_horizontal(self, constraints: BoxConstraints) -> Size:
+        """
+        水平レイアウトのサイズ推定（均等分配）
+
+        row() 内のアイテムは均等な幅で配置されます。
+        """
+        n = len(self._elements)
+        if n == 0:
+            self.width = constraints.clamp_width(self.style.scaled_padding_x() * 2)
+            self.height = constraints.clamp_height(self.style.scaled_padding_y() * 2)
+            return Size(self.width, self.height)
+
+        spacing = self._get_spacing()
+        padding_x = self.style.scaled_padding_x()
+        padding_y = self.style.scaled_padding_y()
+
+        # 利用可能な幅を計算（制約の max_width を使用）
+        available_width = constraints.max_width - padding_x * 2
+        if available_width == float('inf'):
+            # 制約がない場合は現在の width を使用
+            available_width = self.width - padding_x * 2
+
+        # 均等分配
+        total_spacing = spacing * (n - 1)
+        content_width = max(0, available_width - total_spacing)
+        child_width = content_width / n
+
+        max_height = 0.0
+        self._measured_widths = []
+
+        for element in self._elements:
+            # 子の制約: 幅は固定、高さは無制限
+            child_constraints = BoxConstraints.tight_width(child_width)
+
+            if isinstance(element, GPULayout):
+                size = element.estimate(child_constraints)
+            else:
+                _, h = element.calc_size(self.style)
+                size = Size(child_width, h)
+
+            self._measured_widths.append(child_width)
+            max_height = max(max_height, size.height * self.scale_y)
+
+        self.width = constraints.clamp_width(available_width + padding_x * 2)
+        self.height = max_height + padding_y * 2
+
+        return Size(self.width, self.height)
+
+    def resolve(self, x: float, y: float) -> None:
+        """
+        Pass 2: 位置を確定（親から子へ伝播）
+
+        Args:
+            x: このレイアウトの左上 X 座標
+            y: このレイアウトの左上 Y 座標
+
+        Note:
+            estimate() で計算されたサイズを基に、
+            各要素の最終的な位置を確定します。
+        """
+        self.x = x
+        self.y = y
+
+        if self.direction == Direction.VERTICAL:
+            self._resolve_vertical()
+        else:
+            self._resolve_horizontal()
+
+    def _resolve_vertical(self) -> None:
+        """垂直レイアウトの位置確定"""
+        spacing = self._get_spacing()
+        padding_x = self.style.scaled_padding_x()
+        padding_y = self.style.scaled_padding_y()
+        available_width = self.width - padding_x * 2
+
+        cursor_x = self.x + padding_x
+        cursor_y = self.y - padding_y
+
+        n = len(self._elements)
+
+        for i, element in enumerate(self._elements):
+            if isinstance(element, GPULayout):
+                # 子レイアウトは親の幅に合わせる
+                element.width = available_width
+                element.resolve(cursor_x, cursor_y)
+                cursor_y -= element.height + spacing
+            else:
+                # LayoutItem の配置
+                _, item_height = element.calc_size(self.style)
+
+                # alignment に応じて幅と位置を計算
+                if self.alignment == Alignment.EXPAND:
+                    element.width = available_width * self.scale_x
+                    element.x = cursor_x
+                else:
+                    # 自然サイズを維持
+                    natural_width, _ = element.calc_size(self.style)
+                    element.width = natural_width * self.scale_x
+                    if self.alignment == Alignment.CENTER:
+                        element.x = cursor_x + (available_width - element.width) / 2
+                    elif self.alignment == Alignment.RIGHT:
+                        element.x = cursor_x + available_width - element.width
+                    else:  # LEFT
+                        element.x = cursor_x
+
+                element.y = cursor_y
+                element.height = item_height * self.scale_y
+
+                # LabelItem に alignment を継承
+                if hasattr(element, 'alignment'):
+                    element.alignment = self.alignment
+
+                # Phase 2: corners 計算（縦方向）
+                if hasattr(element, 'corners'):
+                    if self._align:
+                        # align=True: 隣接ボタンの境界で角丸を無効化
+                        is_first = (i == 0)
+                        is_last = (i == n - 1)
+                        # corners: (bottomLeft, topLeft, topRight, bottomRight)
+                        # 最上: 上側のみ角丸、最下: 下側のみ角丸
+                        element.corners = (is_last, is_first, is_first, is_last)
+                    else:
+                        # align=False: デフォルト（全角丸）にリセット
+                        element.corners = (True, True, True, True)
+
+                cursor_y -= element.height + spacing
+
+    def _resolve_horizontal(self) -> None:
+        """水平レイアウトの位置確定（均等分配）"""
+        spacing = self._get_spacing()
+        padding_x = self.style.scaled_padding_x()
+        padding_y = self.style.scaled_padding_y()
+
+        n = len(self._elements)
+        cursor_y = self.y - padding_y
+
+        # Phase 2: alignment に応じて開始位置を計算
+        available_width = self.width - padding_x * 2
+        total_content_width = sum(self._measured_widths) + spacing * max(0, n - 1)
+
+        # 開始位置の下限（コンテンツがはみ出す場合でも左端を下回らない）
+        min_cursor_x = self.x + padding_x
+
+        if self.alignment == Alignment.CENTER:
+            cursor_x = self.x + padding_x + (available_width - total_content_width) / 2
+            cursor_x = max(cursor_x, min_cursor_x)  # 左外へのはみ出しを防止
+        elif self.alignment == Alignment.RIGHT:
+            cursor_x = self.x + padding_x + available_width - total_content_width
+            cursor_x = max(cursor_x, min_cursor_x)  # 左外へのはみ出しを防止
+        else:  # LEFT or EXPAND
+            cursor_x = min_cursor_x
+
+        for i, element in enumerate(self._elements):
+            # estimate() で計算された幅を使用
+            width = self._measured_widths[i] if i < len(self._measured_widths) else 0
+
+            if isinstance(element, GPULayout):
+                element.width = width
+                element.resolve(cursor_x, cursor_y)
+            else:
+                element.x = cursor_x
+                element.y = cursor_y
+                element.width = width
+                _, h = element.calc_size(self.style)
+                element.height = h * self.scale_y
+
+                # Phase 2: corners 計算（水平方向）
+                if hasattr(element, 'corners'):
+                    if self._align:
+                        # align=True: 隣接ボタンの境界で角丸を無効化
+                        is_first = (i == 0)
+                        is_last = (i == n - 1)
+                        # corners: (bottomLeft, topLeft, topRight, bottomRight)
+                        # 左端のみ左側角丸、右端のみ右側角丸
+                        element.corners = (is_first, is_first, is_last, is_last)
+                    else:
+                        # align=False: デフォルト（全角丸）にリセット
+                        element.corners = (True, True, True, True)
+
+            cursor_x += width + spacing
+
+    # ─────────────────────────────────────────────────────────────────────────
+    # レイアウト計算（レガシー互換 + 新アルゴリズム統合）
+    # ─────────────────────────────────────────────────────────────────────────
+
+    def layout(self, *, force: bool = False, constraints: Optional[BoxConstraints] = None) -> None:
+        """
+        レイアウトを計算（2-pass: estimate → resolve）
 
         Args:
             force: True の場合、Dirty Flag に関係なく再計算
+            constraints: サイズ制約（None の場合は現在の width から生成）
+
+        Note:
+            Phase 1 で導入された 2-pass アルゴリズム:
+            1. estimate(): 子から親へサイズを積み上げ
+            2. resolve(): 親から子へ位置を確定
         """
         if not self._dirty and not force:
             return  # 変更がなければスキップ
 
-        # 自身のアイテムを再配置
-        self._relayout_items()
+        # 制約が指定されていない場合は、現在の幅から制約を生成
+        if constraints is None:
+            constraints = BoxConstraints.tight_width(self.width)
 
-        spacing = self._get_spacing()
+        # Pass 1: サイズ推定
+        self.estimate(constraints)
 
-        # 子レイアウトを配置
-        cursor_y = self.y - self.style.scaled_padding_y()
-        cursor_x = self.x + self.style.scaled_padding_x()
+        # Pass 2: 位置確定
+        self.resolve(self.x, self.y)
 
-        # 既存アイテムの後からカーソル位置を取得
-        if self._items:
-            if self.direction == Direction.VERTICAL:
-                last_item = self._items[-1]
-                cursor_y = last_item.y - last_item.height - spacing
-            else:
-                last_item = self._items[-1]
-                cursor_x = last_item.x + last_item.width + spacing
-
-        for child in self._children:
-            child.x = cursor_x
-            child.y = cursor_y
-            child.layout(force=force)
-
-            if self.direction == Direction.VERTICAL:
-                cursor_y -= child.calc_height() + spacing
-            else:
-                cursor_x += child.calc_width() + spacing
-
-        # タイトルバーの HitRect を登録（handle_event で呼ばれた場合も対応）
+        # タイトルバーの HitRect を登録
         self._register_title_bar()
         self._register_resize_handle()
 
+        # HitRect の位置を更新
         if self._hit_manager:
             self._hit_manager.update_positions(self.style)
 
         self._dirty = False  # レイアウト完了
 
     def _relayout_items(self) -> None:
-        """アイテムの位置を再計算"""
+        """
+        アイテムの位置を再計算（Deprecated）
+
+        Warning:
+            Phase 1 で resolve() に機能が統合されたため、
+            このメソッドは layout() から呼び出されなくなりました。
+            外部から呼び出している箇所がある場合のために残置していますが、
+            将来のバージョンで削除される可能性があります。
+        """
         cursor_x = self.x + self.style.scaled_padding_x()
         cursor_y = self.y - self.style.scaled_padding_y()
         available_width = self._get_available_width()
@@ -1650,20 +1943,21 @@ class GPULayout(UILayoutStubMixin):
         # リサイズハンドル描画
         self._draw_resize_handle()
 
-        # アイテム描画
-        for item in self._items:
-            # インタラクティブなアイテムには状態を渡す
-            if self._hit_manager and isinstance(item, (ButtonItem, ToggleItem, SliderItem, NumberItem, CheckboxItem, ColorItem)):
-                # item_id を取得（登録時に設定される）
-                item_id = str(id(item))
-                state = self._hit_manager.get_render_state(item_id, item.enabled)
-                item.draw(self.style, state)
+        # 要素描画（追加順序を保持）
+        # Phase 1: _elements を使用して item と child を正しい順序で描画
+        for element in self._elements:
+            if isinstance(element, GPULayout):
+                # 子レイアウト
+                element.draw()
             else:
-                item.draw(self.style)
-
-        # 子レイアウト描画
-        for child in self._children:
-            child.draw()
+                # LayoutItem
+                if self._hit_manager and isinstance(element, (ButtonItem, ToggleItem, SliderItem, NumberItem, CheckboxItem, ColorItem)):
+                    # インタラクティブなアイテムには状態を渡す
+                    item_id = str(id(element))
+                    state = self._hit_manager.get_render_state(item_id, element.enabled)
+                    element.draw(self.style, state)
+                else:
+                    element.draw(self.style)
 
     def update_and_draw(self) -> None:
         """
