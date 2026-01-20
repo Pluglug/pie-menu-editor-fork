@@ -241,28 +241,16 @@ class GPULayout(UILayoutStubMixin):
             - 最初の列: factor 割合
             - 2番目以降: 残り幅を (n-1) で均等分割
             例: factor=0.25 で 3列 → 25% : 37.5% : 37.5%
+
+            幅の確定は resolve フェーズで行われる。
+            ここでは親の幅をプレースホルダとして設定。
         """
         available_width = self._get_available_width()
 
-        # split の中で呼ばれた場合、factor に基づいて幅を計算
-        if self._split_factor > 0.0 and self._split_column_index == 0:
-            # 最初の column: factor 割合
-            col_width = available_width * self._split_factor
-        elif self._split_factor > 0.0 and self._split_column_index >= 1:
-            # v3: 2番目以降は残り幅を均等分割
-            # remaining = 全体 - 最初の列 = available_width * (1 - factor)
-            # 現在のインデックスが n 番目なら、残りは n 列で分割
-            first_width = available_width * self._split_factor
-            remaining_width = available_width - first_width
-            # _split_column_index は 0-indexed なので、
-            # index=1 で 2 列目（残り列数は最低 1）
-            # 既に呼ばれた回数 = _split_column_index
-            # 今回で n 番目 → 残りを n 番目以降として計算
-            # 単純化: 残り幅を現在のインデックス数で割る
-            col_width = remaining_width / self._split_column_index
-        else:
-            # factor == 0: 自動計算（均等分割）、利用可能幅をそのまま使用
-            col_width = available_width
+        # v3: 幅は resolve フェーズで確定する
+        # ここでは親の幅をプレースホルダとして使用
+        # split レイアウトかどうかは _split_factor で判定
+        col_width = available_width
 
         child = GPULayout(
             x=self._cursor_x,
@@ -1685,10 +1673,12 @@ class GPULayout(UILayoutStubMixin):
         padding_y = self.style.scaled_padding_y()
 
         # 利用可能な幅を計算（制約の max_width を使用）
+        # 負の幅を防ぐため max(0, ...) でクランプ
         available_width = constraints.max_width - padding_x * 2
         if available_width == float('inf'):
             # 制約がない場合は現在の width を使用
             available_width = self.width - padding_x * 2
+        available_width = max(0, available_width)
 
         total_estimated_width = 0.0
         max_height = 0.0
@@ -1699,7 +1689,7 @@ class GPULayout(UILayoutStubMixin):
                 # 子レイアウトは loose constraints で estimate（自然サイズを取得）
                 child_constraints = BoxConstraints(
                     min_width=0,
-                    max_width=available_width,  # 最大幅は親から継承
+                    max_width=max(0, available_width),  # 最大幅は親から継承、負にならないようクランプ
                     min_height=0,
                     max_height=float('inf')
                 )
@@ -1757,12 +1747,15 @@ class GPULayout(UILayoutStubMixin):
             return [], gap
 
         gaps_total = gap * (n - 1)
-        available = available_width - gaps_total
+        # 負の幅を防ぐため max(0, ...) でクランプ
+        available = max(0, available_width - gaps_total)
         total_estimated = sum(e.estimated_width for e in elements)
 
         if total_estimated == 0:
-            # フォールバック: 均等分配
-            return [available / n] * n, gap
+            # フォールバック: 均等分配（available が 0 の場合も安全）
+            if available > 0 and n > 0:
+                return [available / n] * n, gap
+            return [0] * n, gap
 
         result = []
         actual_gap = gap
@@ -1812,6 +1805,57 @@ class GPULayout(UILayoutStubMixin):
 
         return result, actual_gap
 
+    def _distribute_split_widths(
+        self,
+        n: int,
+        available_width: float,
+        gap: float
+    ) -> list[float]:
+        """
+        Split レイアウト専用の幅配分（v3 アルゴリズム）
+
+        Args:
+            n: 列の総数（resolve 時点で確定）
+            available_width: 利用可能な幅
+            gap: 列間のギャップ
+
+        Returns:
+            各列に割り当てる幅のリスト
+
+        Note:
+            factor > 0 の場合:
+            - 最初の列: factor 割合
+            - 2番目以降: 残り幅を (n-1) で均等分割
+            例: factor=0.25 で 3列 → 25% : 37.5% : 37.5%
+
+            factor == 0 の場合:
+            - 全列を均等分割
+        """
+        if n == 0:
+            return []
+
+        gaps_total = gap * (n - 1)
+        content_width = max(0, available_width - gaps_total)
+
+        if self._split_factor > 0:
+            # factor が指定されている場合
+            first_width = content_width * self._split_factor
+            remaining_width = content_width - first_width
+
+            if n == 1:
+                # 1列のみ: factor 無視で全幅
+                return [content_width]
+            else:
+                # 2列以上: 最初は factor、残りを均等分割
+                other_width = remaining_width / (n - 1)
+                return [first_width] + [other_width] * (n - 1)
+        else:
+            # factor == 0: 全列均等分割
+            if n > 0:
+                equal_width = content_width / n
+                return [equal_width] * n
+            return []
+
     def resolve(self, x: float, y: float) -> None:
         """
         Pass 2: 位置を確定（親から子へ伝播）
@@ -1843,7 +1887,8 @@ class GPULayout(UILayoutStubMixin):
         spacing = self._get_spacing()
         padding_x = self.style.scaled_padding_x()
         padding_y = self.style.scaled_padding_y()
-        available_width = self.width - padding_x * 2
+        # 負の幅を防ぐため max(0, ...) でクランプ
+        available_width = max(0, self.width - padding_x * 2)
 
         cursor_x = self.x + padding_x
         cursor_y = self.y - padding_y
@@ -1911,6 +1956,7 @@ class GPULayout(UILayoutStubMixin):
             - _distribute_width() を使用して幅を配分
             - scale_x/y を estimated_* に適用してから配分
             - 重複する scale_y 適用を削除
+            - split レイアウトは専用の配分ロジックを使用
         """
         spacing = self._get_spacing()
         padding_x = self.style.scaled_padding_x()
@@ -1921,15 +1967,20 @@ class GPULayout(UILayoutStubMixin):
             return
 
         cursor_y = self.y - padding_y
-        available_width = self.width - padding_x * 2
+        available_width = max(0, self.width - padding_x * 2)
 
         # v3: scale_x/y を estimated_* に適用（幅配分前）
         for element in self._elements:
             element.estimated_width *= self.scale_x
             element.estimated_height *= self.scale_y
 
-        # v3 アルゴリズムで幅配分（EXPAND 時は間隔も調整される）
-        widths, actual_spacing = self._distribute_width(self._elements, available_width, spacing)
+        # Split レイアウトの場合は専用の配分ロジック
+        if self._split_factor > 0 and n > 0:
+            widths = self._distribute_split_widths(n, available_width, spacing)
+            actual_spacing = spacing
+        else:
+            # v3 アルゴリズムで幅配分（EXPAND 時は間隔も調整される）
+            widths, actual_spacing = self._distribute_width(self._elements, available_width, spacing)
 
         # alignment による開始位置計算
         total_content_width = sum(widths) + actual_spacing * max(0, n - 1)
