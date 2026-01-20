@@ -166,7 +166,7 @@ class GPUPanelMixin:
 
         # イベント処理
         if self._manager:
-            handled = self._manager.handle_event(event, context)
+            handled = self._manager.handle_event(event, context, region)
             if self._layout:
                 self._panel_x = self._layout.x
                 self._panel_y = self._layout.y

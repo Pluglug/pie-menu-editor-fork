@@ -309,13 +309,14 @@ class GPUPanelManager:
     # イベント処理ヘルパー
     # ─────────────────────────────────────────────────────────────────────────
 
-    def handle_event(self, event: Event, context: Context) -> bool:
+    def handle_event(self, event: Event, context: Context, region: Optional['Region'] = None) -> bool:
         """
         イベントを GPULayout に転送
 
         Args:
             event: Blender イベント
             context: Blender コンテキスト
+            region: Blender region（指定時は座標計算に使用）
 
         Returns:
             イベントが処理されたかどうか
@@ -324,11 +325,11 @@ class GPUPanelManager:
         if layout is None:
             return False
 
-        region = context.region
-        if region is None:
+        target_region = region or context.region
+        if target_region is None:
             return False
 
-        return layout.handle_event(event, region)
+        return layout.handle_event(event, target_region)
 
     def contains_point(self, x: float, y: float) -> bool:
         """

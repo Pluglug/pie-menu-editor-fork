@@ -407,7 +407,7 @@ class TEST_OT_gpu_interactive(Operator):
 
         # イベント処理は manager 経由
         if self._manager:
-            handled = self._manager.handle_event(event, context)
+            handled = self._manager.handle_event(event, context, region)
             if self._layout:
                 self._panel_x = self._layout.x
                 self._panel_y = self._layout.y
@@ -909,7 +909,7 @@ class DEMO_OT_quick_render(Operator):
             self._layout.sync_props()
 
         if self._manager:
-            handled = self._manager.handle_event(event, context)
+            handled = self._manager.handle_event(event, context, region)
             if self._layout:
                 self._panel_x = self._layout.x
                 self._panel_y = self._layout.y
@@ -1108,7 +1108,7 @@ class DEMO_OT_selection_tracker(Operator):
             self._layout.sync_props()
 
         if self._manager:
-            handled = self._manager.handle_event(event, context)
+            handled = self._manager.handle_event(event, context, region)
             if self._layout:
                 self._panel_x = self._layout.x
                 self._panel_y = self._layout.y
@@ -1498,7 +1498,7 @@ class DEMO_OT_quick_uv(Operator):
             self._layout.sync_props()
 
         if self._manager:
-            handled = self._manager.handle_event(event, context)
+            handled = self._manager.handle_event(event, context, region)
             if self._layout:
                 self._panel_x = self._layout.x
                 self._panel_y = self._layout.y
