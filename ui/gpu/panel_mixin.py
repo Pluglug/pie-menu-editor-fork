@@ -96,6 +96,15 @@ class GPUPanelMixin:
     例: {'ESC'}, {'ESC', 'RIGHTMOUSE'}, set()
     """
 
+    gpu_debug_hittest: bool = False
+    """HitTest のデバッグ表示を有効化するか。"""
+
+    gpu_debug_hittest_labels: bool = False
+    """HitRect に紐づくラベルを描画するか。"""
+
+    gpu_debug_hittest_toggle_key: str = 'D'
+    """HitTest デバッグの切替キー。"""
+
     # ═══════════════════════════════════════════════════════════════════════════
     # 内部状態（Mixin で管理）
     # ═══════════════════════════════════════════════════════════════════════════
@@ -105,6 +114,7 @@ class GPUPanelMixin:
     _should_close: bool = False
     _panel_x: Optional[float] = None
     _panel_y: Optional[float] = None
+    _debug_hittest: bool = False
 
     # パネル内で消費すべきマウスイベント
     _CONSUME_EVENTS: ClassVar[set[str]] = {
@@ -155,6 +165,12 @@ class GPUPanelMixin:
         if event.type in self.gpu_close_on and event.value == 'PRESS':
             self._cancel_impl(context)
             return {'CANCELLED'}
+
+        if (self.gpu_debug_hittest_toggle_key and
+                event.type == self.gpu_debug_hittest_toggle_key and
+                event.value == 'PRESS'):
+            self._debug_hittest = not self._debug_hittest
+            return {'RUNNING_MODAL'}
 
         # レイアウト再構築
         region = self._get_window_region(context)
@@ -207,6 +223,7 @@ class GPUPanelMixin:
         self._should_close = False
         self._layout = None
         self._manager = None
+        self._debug_hittest = self.gpu_debug_hittest
         self._restore_position()  # 永続化された位置を復元
 
         # レイアウト構築
@@ -372,11 +389,38 @@ class GPUPanelMixin:
 
             # メインレイアウト描画
             self._layout.update_and_draw()
+            if self._debug_hittest:
+                self._debug_draw_hit_test()
 
         except Exception as e:
             import traceback
             print(f"GPUPanelMixin draw error: {e}")
             traceback.print_exc()
+
+    def _debug_draw_hit_test(self) -> None:
+        layout = self._layout
+        if not layout or not layout.hit_manager:
+            return
+        hit_manager = layout.hit_manager
+        hit_manager.debug_draw()
+
+        if self.gpu_debug_hittest_labels:
+            from .drawing import BLFDrawing
+            from .style import GPULayoutStyle
+
+            debug_style = GPULayoutStyle.from_blender_theme('TOOLTIP')
+            for rect in hit_manager._rects:
+                label = rect.tag
+                if not label and rect.layout_key:
+                    label = rect.layout_key.layout_path
+                if not label and rect.item is not None:
+                    label = getattr(rect.item, 'text', '') or ""
+                if not label:
+                    continue
+                BLFDrawing.draw_text(
+                    rect.x + 2, rect.y - 2,
+                    label, debug_style.text_color, 11
+                )
 
     def _restore_position(self) -> None:
         """永続化された位置を self._panel_x/y に復元"""

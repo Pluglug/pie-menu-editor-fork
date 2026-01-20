@@ -1431,6 +1431,8 @@ class DEMO_OT_layout_structure(Operator, GPUPanelMixin):
     gpu_panel_uid = "demo_layout_structure"
     gpu_title = "Layout Structure Test"
     gpu_width = 400
+    gpu_debug_hittest = True
+    gpu_debug_hittest_labels = True
 
     def modal(self, context, event):
         return self._modal_impl(context, event)
