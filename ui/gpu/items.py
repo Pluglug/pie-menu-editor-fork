@@ -37,6 +37,15 @@ class LayoutItem:
     # True = 角丸あり、False = 直角
     corners: tuple[bool, bool, bool, bool] = (True, True, True, True)
 
+    # Phase 1 v3: 推定サイズ（estimate フェーズで自然サイズを記録）
+    # resolve フェーズで幅配分アルゴリズムの入力として使用
+    estimated_width: float = 0.0
+    estimated_height: float = 0.0
+
+    # Phase 1 v3: EXPAND 時に幅を拡張するかどうか
+    # False = 自然幅を維持（ラベル等）、True = 幅を拡張（ボタン等）
+    expand_width: bool = True
+
     def calc_size(self, style: GPULayoutStyle) -> tuple[float, float]:
         """サイズを計算して返す (width, height)"""
         return (self.width, self.height)
@@ -79,6 +88,8 @@ class LabelItem(LayoutItem):
     alignment: Alignment = Alignment.LEFT
     text_color: Optional[tuple[float, float, float, float]] = None
     alert: bool = False
+    # ラベルは EXPAND 時に自然幅を維持
+    expand_width: bool = False
 
     def calc_size(self, style: GPULayoutStyle) -> tuple[float, float]:
         text_w, text_h = BLFDrawing.get_text_dimensions(self.text, style.scaled_text_size())

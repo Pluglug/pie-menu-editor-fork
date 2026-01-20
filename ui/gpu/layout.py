@@ -95,6 +95,11 @@ class GPULayout(UILayoutStubMixin):
         self._measured_widths: list[float] = []
         self.height: float = 0.0  # estimate() で計算される
 
+        # Phase 1 v3: 推定サイズ（estimate フェーズで自然サイズを記録）
+        # resolve フェーズで幅配分アルゴリズムの入力として使用
+        self.estimated_width: float = 0.0
+        self.estimated_height: float = 0.0
+
         # カーソル位置
         self._cursor_x = x + self.style.scaled_padding_x()
         self._cursor_y = y - self.style.scaled_padding_y()
@@ -231,6 +236,11 @@ class GPULayout(UILayoutStubMixin):
             split() 内で呼ばれた場合、factor に基づいて幅が計算される。
             - factor > 0: 最初の column が factor 割合、残りは均等分割
             - factor == 0: 全ての column を均等分割
+
+            v3 アルゴリズム (3列以上対応):
+            - 最初の列: factor 割合
+            - 2番目以降: 残り幅を (n-1) で均等分割
+            例: factor=0.25 で 3列 → 25% : 37.5% : 37.5%
         """
         available_width = self._get_available_width()
 
@@ -238,11 +248,20 @@ class GPULayout(UILayoutStubMixin):
         if self._split_factor > 0.0 and self._split_column_index == 0:
             # 最初の column: factor 割合
             col_width = available_width * self._split_factor
-        elif self._split_factor > 0.0 and self._split_column_index == 1:
-            # 2番目の column: 残り全部（単純化のため 2 列のみサポート）
-            col_width = available_width * (1.0 - self._split_factor)
+        elif self._split_factor > 0.0 and self._split_column_index >= 1:
+            # v3: 2番目以降は残り幅を均等分割
+            # remaining = 全体 - 最初の列 = available_width * (1 - factor)
+            # 現在のインデックスが n 番目なら、残りは n 列で分割
+            first_width = available_width * self._split_factor
+            remaining_width = available_width - first_width
+            # _split_column_index は 0-indexed なので、
+            # index=1 で 2 列目（残り列数は最低 1）
+            # 既に呼ばれた回数 = _split_column_index
+            # 今回で n 番目 → 残りを n 番目以降として計算
+            # 単純化: 残り幅を現在のインデックス数で割る
+            col_width = remaining_width / self._split_column_index
         else:
-            # 自動計算または 3 列目以降: 利用可能幅をそのまま使用
+            # factor == 0: 自動計算（均等分割）、利用可能幅をそのまま使用
             col_width = available_width
 
         child = GPULayout(
@@ -1147,8 +1166,9 @@ class GPULayout(UILayoutStubMixin):
             layout() 実行後はそちらの値が使用される。
             このメソッドは estimate() 前の互換性のために残置。
         """
-        # estimate() 実行後なら計算済みの height を返す
-        if self.height > 0:
+        # P1-5 修正: estimate() 実行後かつ dirty でなければ計算済みの height を返す
+        # dirty=True の場合は再計算が必要（アイテム追加・変更後）
+        if self.height > 0 and not self._dirty:
             return self.height
 
         if not self._elements:
@@ -1585,7 +1605,13 @@ class GPULayout(UILayoutStubMixin):
             return self._estimate_horizontal(constraints)
 
     def _estimate_vertical(self, constraints: BoxConstraints) -> Size:
-        """垂直レイアウトのサイズ推定"""
+        """
+        垂直レイアウトのサイズ推定（v3 準拠）
+
+        Changes (P1-3):
+            - scale_y を estimate で適用しない（resolve で適用）
+            - 自然サイズを estimated_* に保存
+        """
         spacing = self._get_spacing()
         padding_x = self.style.scaled_padding_x()
         padding_y = self.style.scaled_padding_y()
@@ -1607,35 +1633,51 @@ class GPULayout(UILayoutStubMixin):
                     max_height=float('inf')
                 )
                 size = element.estimate(child_constraints)
+                element.estimated_width = size.width
+                element.estimated_height = size.height
             else:
                 # LayoutItem は calc_size で自然サイズを取得
                 w, h = element.calc_size(self.style)
-                size = Size(w, h)
+                element.estimated_width = w
+                element.estimated_height = h
 
-            max_width = max(max_width, size.width)
-            total_height += size.height * self.scale_y
+            max_width = max(max_width, element.estimated_width)
+            # P1-3: scale_y は estimate で適用しない（resolve で適用）
+            total_height += element.estimated_height
             n_elements += 1
 
         # スペーシングを加算
         if n_elements > 1:
             total_height += spacing * (n_elements - 1)
 
+        # 自身の推定サイズを記録
+        self.estimated_width = max_width + padding_x * 2
+        self.estimated_height = total_height
+
         # 制約に従ってクランプ
-        self.width = constraints.clamp_width(max_width + padding_x * 2)
-        self.height = constraints.clamp_height(total_height)
+        self.width = constraints.clamp_width(self.estimated_width)
+        self.height = constraints.clamp_height(self.estimated_height)
 
         return Size(self.width, self.height)
 
     def _estimate_horizontal(self, constraints: BoxConstraints) -> Size:
         """
-        水平レイアウトのサイズ推定（均等分配）
+        水平レイアウトのサイズ推定（v3 準拠）
 
-        row() 内のアイテムは均等な幅で配置されます。
+        各子の自然サイズを取得し、estimated_width/height に保存。
+        resolve フェーズで _distribute_width() を使って実際の幅を配分。
+
+        Changes (P1-1, P1-3, P1-4):
+            - 均等分配 → 自然幅を取得して estimated_width に保存
+            - scale_y の適用を削除（resolve で適用）
+            - constraints.clamp_height() を適用
         """
         n = len(self._elements)
         if n == 0:
             self.width = constraints.clamp_width(self.style.scaled_padding_x() * 2)
             self.height = constraints.clamp_height(self.style.scaled_padding_y() * 2)
+            self.estimated_width = self.width
+            self.estimated_height = self.height
             return Size(self.width, self.height)
 
         spacing = self._get_spacing()
@@ -1648,31 +1690,127 @@ class GPULayout(UILayoutStubMixin):
             # 制約がない場合は現在の width を使用
             available_width = self.width - padding_x * 2
 
-        # 均等分配
-        total_spacing = spacing * (n - 1)
-        content_width = max(0, available_width - total_spacing)
-        child_width = content_width / n
-
+        total_estimated_width = 0.0
         max_height = 0.0
         self._measured_widths = []
 
         for element in self._elements:
-            # 子の制約: 幅は固定、高さは無制限
-            child_constraints = BoxConstraints.tight_width(child_width)
-
             if isinstance(element, GPULayout):
+                # 子レイアウトは loose constraints で estimate（自然サイズを取得）
+                child_constraints = BoxConstraints(
+                    min_width=0,
+                    max_width=available_width,  # 最大幅は親から継承
+                    min_height=0,
+                    max_height=float('inf')
+                )
                 size = element.estimate(child_constraints)
+                element.estimated_width = size.width
+                element.estimated_height = size.height
             else:
-                _, h = element.calc_size(self.style)
-                size = Size(child_width, h)
+                # LayoutItem は calc_size で自然サイズを取得
+                w, h = element.calc_size(self.style)
+                element.estimated_width = w
+                element.estimated_height = h
 
-            self._measured_widths.append(child_width)
-            max_height = max(max_height, size.height * self.scale_y)
+            total_estimated_width += element.estimated_width
+            # P1-3: scale_y は estimate で適用しない（resolve で適用）
+            max_height = max(max_height, element.estimated_height)
 
+        # 自身の推定サイズを記録
+        total_spacing = spacing * (n - 1)
+        self.estimated_width = total_estimated_width + total_spacing + padding_x * 2
+        self.estimated_height = max_height + padding_y * 2
+
+        # 制約でクランプ（P1-4 修正: height も制約でクランプ）
         self.width = constraints.clamp_width(available_width + padding_x * 2)
-        self.height = max_height + padding_y * 2
+        self.height = constraints.clamp_height(self.estimated_height)
 
         return Size(self.width, self.height)
+
+    def _distribute_width(
+        self,
+        elements: list,
+        available_width: float,
+        gap: float,
+    ) -> tuple[list[float], float]:
+        """
+        Row の幅配分（v3 / Blender UILayout 準拠）
+
+        Args:
+            elements: 配分対象の要素リスト（LayoutItem または GPULayout）
+            available_width: 利用可能な幅（ギャップ含む）
+            gap: 要素間のギャップ
+
+        Returns:
+            (各要素に割り当てる幅のリスト, 実際のギャップ)
+
+        Note:
+            - 縮小が必要な場合: 比例縮小、ギャップは固定
+            - EXPAND:
+              - expand_width=True の要素: 比例拡大
+              - expand_width=False の要素 (ラベル等): 自然幅を維持
+              - 余白は間隔に均等分配
+            - LEFT/CENTER/RIGHT: 元サイズ維持、ギャップは固定
+        """
+        n = len(elements)
+        if n == 0:
+            return [], gap
+
+        gaps_total = gap * (n - 1)
+        available = available_width - gaps_total
+        total_estimated = sum(e.estimated_width for e in elements)
+
+        if total_estimated == 0:
+            # フォールバック: 均等分配
+            return [available / n] * n, gap
+
+        result = []
+        actual_gap = gap
+
+        if total_estimated > available:
+            # 比例縮小（コンテンツがはみ出す）
+            for element in elements:
+                width = (element.estimated_width * available) / total_estimated
+                result.append(width)
+        elif self.alignment == Alignment.EXPAND:
+            # EXPAND: 要素タイプに応じて幅を決定
+            # - expand_width=True (ボタン等): 比例拡大
+            # - expand_width=False (ラベル等): 自然幅を維持、余白は間隔に分配
+
+            # 拡張可能な要素と固定幅要素を分離
+            expandable_width = sum(
+                e.estimated_width for e in elements
+                if getattr(e, 'expand_width', True)
+            )
+            fixed_width = sum(
+                e.estimated_width for e in elements
+                if not getattr(e, 'expand_width', True)
+            )
+
+            # 拡張可能な要素に分配する幅
+            expand_available = available - fixed_width
+
+            if expandable_width > 0 and expand_available > 0:
+                # 拡張可能な要素がある場合: 比例拡大
+                for element in elements:
+                    if getattr(element, 'expand_width', True):
+                        width = (element.estimated_width * expand_available) / expandable_width
+                    else:
+                        width = element.estimated_width
+                    result.append(width)
+            else:
+                # 全て固定幅要素の場合: 間隔を均等分配
+                extra_space = available - total_estimated
+                if n > 1 and extra_space > 0:
+                    actual_gap = gap + extra_space / (n - 1)
+                for element in elements:
+                    result.append(element.estimated_width)
+        else:
+            # LEFT/CENTER/RIGHT: 元サイズ維持
+            for element in elements:
+                result.append(element.estimated_width)
+
+        return result, actual_gap
 
     def resolve(self, x: float, y: float) -> None:
         """
@@ -1695,7 +1833,13 @@ class GPULayout(UILayoutStubMixin):
             self._resolve_horizontal()
 
     def _resolve_vertical(self) -> None:
-        """垂直レイアウトの位置確定"""
+        """
+        垂直レイアウトの位置確定（v3 準拠）
+
+        Changes (P1-2, P1-3):
+            - scale_x/y を estimated_* に適用してから配置
+            - 重複する scale_y 適用を削除
+        """
         spacing = self._get_spacing()
         padding_x = self.style.scaled_padding_x()
         padding_y = self.style.scaled_padding_y()
@@ -1705,6 +1849,13 @@ class GPULayout(UILayoutStubMixin):
         cursor_y = self.y - padding_y
 
         n = len(self._elements)
+        if n == 0:
+            return
+
+        # v3: scale_x/y を estimated_* に適用（配置前）
+        for element in self._elements:
+            element.estimated_width *= self.scale_x
+            element.estimated_height *= self.scale_y
 
         for i, element in enumerate(self._elements):
             if isinstance(element, GPULayout):
@@ -1714,16 +1865,14 @@ class GPULayout(UILayoutStubMixin):
                 cursor_y -= element.height + spacing
             else:
                 # LayoutItem の配置
-                _, item_height = element.calc_size(self.style)
-
                 # alignment に応じて幅と位置を計算
                 if self.alignment == Alignment.EXPAND:
-                    element.width = available_width * self.scale_x
+                    # EXPAND: 利用可能幅全体を使用（scale_x は既に estimated_* に適用済み）
+                    element.width = available_width
                     element.x = cursor_x
                 else:
-                    # 自然サイズを維持
-                    natural_width, _ = element.calc_size(self.style)
-                    element.width = natural_width * self.scale_x
+                    # 自然サイズを維持（scale_x 適用済みの estimated_width を使用）
+                    element.width = element.estimated_width
                     if self.alignment == Alignment.CENTER:
                         element.x = cursor_x + (available_width - element.width) / 2
                     elif self.alignment == Alignment.RIGHT:
@@ -1732,7 +1881,8 @@ class GPULayout(UILayoutStubMixin):
                         element.x = cursor_x
 
                 element.y = cursor_y
-                element.height = item_height * self.scale_y
+                # P1-3: scale_y 適用済みの estimated_height を使用（二重適用を防ぐ）
+                element.height = element.estimated_height
 
                 # LabelItem に alignment を継承
                 if hasattr(element, 'alignment'):
@@ -1754,19 +1904,35 @@ class GPULayout(UILayoutStubMixin):
                 cursor_y -= element.height + spacing
 
     def _resolve_horizontal(self) -> None:
-        """水平レイアウトの位置確定（均等分配）"""
+        """
+        水平レイアウトの位置確定（v3 準拠）
+
+        Changes (P1-2, P1-3):
+            - _distribute_width() を使用して幅を配分
+            - scale_x/y を estimated_* に適用してから配分
+            - 重複する scale_y 適用を削除
+        """
         spacing = self._get_spacing()
         padding_x = self.style.scaled_padding_x()
         padding_y = self.style.scaled_padding_y()
 
         n = len(self._elements)
+        if n == 0:
+            return
+
         cursor_y = self.y - padding_y
-
-        # Phase 2: alignment に応じて開始位置を計算
         available_width = self.width - padding_x * 2
-        total_content_width = sum(self._measured_widths) + spacing * max(0, n - 1)
 
-        # 開始位置の下限（コンテンツがはみ出す場合でも左端を下回らない）
+        # v3: scale_x/y を estimated_* に適用（幅配分前）
+        for element in self._elements:
+            element.estimated_width *= self.scale_x
+            element.estimated_height *= self.scale_y
+
+        # v3 アルゴリズムで幅配分（EXPAND 時は間隔も調整される）
+        widths, actual_spacing = self._distribute_width(self._elements, available_width, spacing)
+
+        # alignment による開始位置計算
+        total_content_width = sum(widths) + actual_spacing * max(0, n - 1)
         min_cursor_x = self.x + padding_x
 
         if self.alignment == Alignment.CENTER:
@@ -1778,9 +1944,9 @@ class GPULayout(UILayoutStubMixin):
         else:  # LEFT or EXPAND
             cursor_x = min_cursor_x
 
+        # 各要素の配置
         for i, element in enumerate(self._elements):
-            # estimate() で計算された幅を使用
-            width = self._measured_widths[i] if i < len(self._measured_widths) else 0
+            width = widths[i] if i < len(widths) else 0
 
             if isinstance(element, GPULayout):
                 element.width = width
@@ -1789,8 +1955,8 @@ class GPULayout(UILayoutStubMixin):
                 element.x = cursor_x
                 element.y = cursor_y
                 element.width = width
-                _, h = element.calc_size(self.style)
-                element.height = h * self.scale_y
+                # P1-3: scale_y 適用済みの estimated_height を使用（二重適用を防ぐ）
+                element.height = element.estimated_height
 
                 # Phase 2: corners 計算（水平方向）
                 if hasattr(element, 'corners'):
@@ -1805,7 +1971,7 @@ class GPULayout(UILayoutStubMixin):
                         # align=False: デフォルト（全角丸）にリセット
                         element.corners = (True, True, True, True)
 
-            cursor_x += width + spacing
+            cursor_x += width + actual_spacing
 
     # ─────────────────────────────────────────────────────────────────────────
     # レイアウト計算（レガシー互換 + 新アルゴリズム統合）
