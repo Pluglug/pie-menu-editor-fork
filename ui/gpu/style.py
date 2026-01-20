@@ -70,6 +70,15 @@ class Size:
 
 
 @dataclass
+class SizingPolicy:
+    """Width sizing policy for measure/arrange."""
+    estimated_width: float = 0.0
+    fixed_width: Optional[float] = None
+    is_fixed: bool = False
+    min_width: float = 0.0
+    max_width: float = float("inf")
+
+@dataclass
 class BoxConstraints:
     """
     親から子へ渡されるサイズ制約

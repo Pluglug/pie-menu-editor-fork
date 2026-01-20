@@ -10,7 +10,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any, Callable, Optional
 
-from .style import GPULayoutStyle, Alignment, WidgetType, ThemeWidgetColors
+from .style import GPULayoutStyle, Alignment, WidgetType, ThemeWidgetColors, SizingPolicy
 from .drawing import GPUDrawing, BLFDrawing, IconDrawing
 
 if TYPE_CHECKING:
@@ -37,9 +37,10 @@ class LayoutItem:
     # True = 角丸あり、False = 直角
     corners: tuple[bool, bool, bool, bool] = (True, True, True, True)
 
-    # Phase 1 v3: 推定サイズ（measure フェーズで自然サイズを記録）
-    # arrange フェーズで幅配分アルゴリズムの入力として使用
-    estimated_width: float = 0.0
+    # Phase 1 v3: width sizing policy (measure results, fixed width)
+    sizing: SizingPolicy = field(default_factory=SizingPolicy)
+
+    # Phase 1 v3: estimated height (measure phase)
     estimated_height: float = 0.0
 
     # Phase 1 v3: EXPAND 時に幅を拡張するかどうか

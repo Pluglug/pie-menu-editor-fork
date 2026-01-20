@@ -2,7 +2,7 @@
 
 > Version: 1.1.1
 > Created: 2026-01-20
-> Updated: 2026-01-20 (split factor=0 の均等分割修正を反映)
+> Updated: 2026-01-20 (split factor=0 + naming + SizingPolicy を反映)
 > Status: **Active**
 > Primary Spec: `gpu_layout_architecture_v3.md`
 > Implementation Reference: `gpu_layout_architecture_v2.1.md` (構造・API 形のみ)
@@ -294,7 +294,7 @@ def resolve_split(items, total_width, gap, percentage):
 
 - [x] 用語リネーム: `estimate` → `measure`, `resolve` → `arrange`
 - [x] `BoxConstraints.deflate()` メソッド追加
-- [ ] `SizingPolicy` クラス導入
+- [x] `SizingPolicy` クラス導入
 - [ ] `_measure_horizontal()` を `distribute_width` アルゴリズムに修正
 - [ ] `scale_x` の適用タイミングを修正（子 measure 後、親 measure_impl 前）
 - [x] `split` の幅計算を v3 準拠に修正（3列目以降 + factor==0）
