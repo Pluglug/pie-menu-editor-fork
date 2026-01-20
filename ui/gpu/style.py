@@ -56,9 +56,9 @@ class Alignment(Enum):
 @dataclass
 class Size:
     """
-    サイズ（measure/estimate 結果）
+    サイズ（measure 結果）
 
-    レイアウトアルゴリズムの Pass 1 (estimate) で計算されるサイズ。
+    レイアウトアルゴリズムの Pass 1 (measure) で計算されるサイズ。
     """
     width: float = 0.0
     height: float = 0.0

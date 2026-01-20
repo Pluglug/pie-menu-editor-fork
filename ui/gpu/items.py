@@ -37,8 +37,8 @@ class LayoutItem:
     # True = 角丸あり、False = 直角
     corners: tuple[bool, bool, bool, bool] = (True, True, True, True)
 
-    # Phase 1 v3: 推定サイズ（estimate フェーズで自然サイズを記録）
-    # resolve フェーズで幅配分アルゴリズムの入力として使用
+    # Phase 1 v3: 推定サイズ（measure フェーズで自然サイズを記録）
+    # arrange フェーズで幅配分アルゴリズムの入力として使用
     estimated_width: float = 0.0
     estimated_height: float = 0.0
 

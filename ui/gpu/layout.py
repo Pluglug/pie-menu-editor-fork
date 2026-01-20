@@ -93,10 +93,10 @@ class GPULayout(UILayoutStubMixin):
 
         # 2-pass レイアウト用の測定結果
         self._measured_widths: list[float] = []
-        self.height: float = 0.0  # estimate() で計算される
+        self.height: float = 0.0  # measure() で計算される
 
-        # Phase 1 v3: 推定サイズ（estimate フェーズで自然サイズを記録）
-        # resolve フェーズで幅配分アルゴリズムの入力として使用
+        # Phase 1 v3: 推定サイズ（measure フェーズで自然サイズを記録）
+        # arrange フェーズで幅配分アルゴリズムの入力として使用
         self.estimated_width: float = 0.0
         self.estimated_height: float = 0.0
 
@@ -243,12 +243,12 @@ class GPULayout(UILayoutStubMixin):
             - 2番目以降: 残り幅を (n-1) で均等分割
             例: factor=0.25 で 3列 → 25% : 37.5% : 37.5%
 
-            幅の確定は resolve フェーズで行われる。
+            幅の確定は arrange フェーズで行われる。
             ここでは親の幅をプレースホルダとして設定。
         """
         available_width = self._get_available_width()
 
-        # v3: 幅は resolve フェーズで確定する
+        # v3: 幅は arrange フェーズで確定する
         # ここでは親の幅をプレースホルダとして使用
         # split レイアウトかどうかは _is_split で判定
         col_width = available_width
@@ -1152,11 +1152,11 @@ class GPULayout(UILayoutStubMixin):
         合計高さを計算
 
         Note:
-            Phase 1 では estimate() で self.height が計算されるため、
+            Phase 1 では measure() で self.height が計算されるため、
             layout() 実行後はそちらの値が使用される。
-            このメソッドは estimate() 前の互換性のために残置。
+            このメソッドは measure() 前の互換性のために残置。
         """
-        # P1-5 修正: estimate() 実行後かつ dirty でなければ計算済みの height を返す
+        # P1-5 修正: measure() 実行後かつ dirty でなければ計算済みの height を返す
         # dirty=True の場合は再計算が必要（アイテム追加・変更後）
         if self.height > 0 and not self._dirty:
             return self.height
@@ -1195,7 +1195,7 @@ class GPULayout(UILayoutStubMixin):
         合計幅を計算
 
         Note:
-            Phase 1 では estimate() で self.width が計算される。
+            Phase 1 では measure() で self.width が計算される。
             このメソッドは水平レイアウトの自然幅計算に使用。
         """
         if not self._elements:
@@ -1575,7 +1575,7 @@ class GPULayout(UILayoutStubMixin):
     # 2-pass レイアウトアルゴリズム（Phase 1）
     # ─────────────────────────────────────────────────────────────────────────
 
-    def estimate(self, constraints: BoxConstraints) -> Size:
+    def measure(self, constraints: BoxConstraints) -> Size:
         """
         Pass 1: サイズを推定（子から親へ積み上げ）
 
@@ -1590,16 +1590,16 @@ class GPULayout(UILayoutStubMixin):
             サイズのみを計算し、self.width / self.height に保存します。
         """
         if self.direction == Direction.VERTICAL:
-            return self._estimate_vertical(constraints)
+            return self._measure_vertical(constraints)
         else:
-            return self._estimate_horizontal(constraints)
+            return self._measure_horizontal(constraints)
 
-    def _estimate_vertical(self, constraints: BoxConstraints) -> Size:
+    def _measure_vertical(self, constraints: BoxConstraints) -> Size:
         """
         垂直レイアウトのサイズ推定（v3 準拠）
 
         Changes (P1-3):
-            - scale_y を estimate で適用しない（resolve で適用）
+            - scale_y を measure で適用しない（arrange で適用）
             - 自然サイズを estimated_* に保存
         """
         spacing = self._get_spacing()
@@ -1615,14 +1615,14 @@ class GPULayout(UILayoutStubMixin):
 
         for element in self._elements:
             if isinstance(element, GPULayout):
-                # 子レイアウトは再帰的に estimate
+                # 子レイアウトは再帰的に measure
                 child_constraints = BoxConstraints(
                     min_width=inner_constraints.min_width,
                     max_width=inner_constraints.max_width,
                     min_height=0,
                     max_height=float('inf')
                 )
-                size = element.estimate(child_constraints)
+                size = element.measure(child_constraints)
                 element.estimated_width = size.width
                 element.estimated_height = size.height
             else:
@@ -1632,7 +1632,7 @@ class GPULayout(UILayoutStubMixin):
                 element.estimated_height = h
 
             max_width = max(max_width, element.estimated_width)
-            # P1-3: scale_y は estimate で適用しない（resolve で適用）
+            # P1-3: scale_y は measure で適用しない（arrange で適用）
             total_height += element.estimated_height
             n_elements += 1
 
@@ -1650,16 +1650,16 @@ class GPULayout(UILayoutStubMixin):
 
         return Size(self.width, self.height)
 
-    def _estimate_horizontal(self, constraints: BoxConstraints) -> Size:
+    def _measure_horizontal(self, constraints: BoxConstraints) -> Size:
         """
         水平レイアウトのサイズ推定（v3 準拠）
 
         各子の自然サイズを取得し、estimated_width/height に保存。
-        resolve フェーズで _distribute_width() を使って実際の幅を配分。
+        arrange フェーズで _distribute_width() を使って実際の幅を配分。
 
         Changes (P1-1, P1-3, P1-4):
             - 均等分配 → 自然幅を取得して estimated_width に保存
-            - scale_y の適用を削除（resolve で適用）
+            - scale_y の適用を削除（arrange で適用）
             - constraints.clamp_height() を適用
         """
         n = len(self._elements)
@@ -1688,14 +1688,14 @@ class GPULayout(UILayoutStubMixin):
 
         for element in self._elements:
             if isinstance(element, GPULayout):
-                # 子レイアウトは loose constraints で estimate（自然サイズを取得）
+                # 子レイアウトは loose constraints で measure（自然サイズを取得）
                 child_constraints = BoxConstraints(
                     min_width=0,
                     max_width=max(0, available_width),  # 最大幅は親から継承、負にならないようクランプ
                     min_height=0,
                     max_height=float('inf')
                 )
-                size = element.estimate(child_constraints)
+                size = element.measure(child_constraints)
                 element.estimated_width = size.width
                 element.estimated_height = size.height
             else:
@@ -1705,7 +1705,7 @@ class GPULayout(UILayoutStubMixin):
                 element.estimated_height = h
 
             total_estimated_width += element.estimated_width
-            # P1-3: scale_y は estimate で適用しない（resolve で適用）
+            # P1-3: scale_y は measure で適用しない（arrange で適用）
             max_height = max(max_height, element.estimated_height)
 
         # 自身の推定サイズを記録
@@ -1817,7 +1817,7 @@ class GPULayout(UILayoutStubMixin):
         Split レイアウト専用の幅配分（v3 アルゴリズム）
 
         Args:
-            n: 列の総数（resolve 時点で確定）
+            n: 列の総数（arrange 時点で確定）
             available_width: 利用可能な幅
             gap: 列間のギャップ
 
@@ -1858,7 +1858,7 @@ class GPULayout(UILayoutStubMixin):
                 return [equal_width] * n
             return []
 
-    def resolve(self, x: float, y: float) -> None:
+    def arrange(self, x: float, y: float) -> None:
         """
         Pass 2: 位置を確定（親から子へ伝播）
 
@@ -1867,18 +1867,18 @@ class GPULayout(UILayoutStubMixin):
             y: このレイアウトの左上 Y 座標
 
         Note:
-            estimate() で計算されたサイズを基に、
+            measure() で計算されたサイズを基に、
             各要素の最終的な位置を確定します。
         """
         self.x = x
         self.y = y
 
         if self.direction == Direction.VERTICAL:
-            self._resolve_vertical()
+            self._arrange_vertical()
         else:
-            self._resolve_horizontal()
+            self._arrange_horizontal()
 
-    def _resolve_vertical(self) -> None:
+    def _arrange_vertical(self) -> None:
         """
         垂直レイアウトの位置確定（v3 準拠）
 
@@ -1908,7 +1908,7 @@ class GPULayout(UILayoutStubMixin):
             if isinstance(element, GPULayout):
                 # 子レイアウトは親の幅に合わせる
                 element.width = available_width
-                element.resolve(cursor_x, cursor_y)
+                element.arrange(cursor_x, cursor_y)
                 cursor_y -= element.height + spacing
             else:
                 # LayoutItem の配置
@@ -1950,7 +1950,7 @@ class GPULayout(UILayoutStubMixin):
 
                 cursor_y -= element.height + spacing
 
-    def _resolve_horizontal(self) -> None:
+    def _arrange_horizontal(self) -> None:
         """
         水平レイアウトの位置確定（v3 準拠）
 
@@ -2003,7 +2003,7 @@ class GPULayout(UILayoutStubMixin):
 
             if isinstance(element, GPULayout):
                 element.width = width
-                element.resolve(cursor_x, cursor_y)
+                element.arrange(cursor_x, cursor_y)
             else:
                 element.x = cursor_x
                 element.y = cursor_y
@@ -2032,7 +2032,7 @@ class GPULayout(UILayoutStubMixin):
 
     def layout(self, *, force: bool = False, constraints: Optional[BoxConstraints] = None) -> None:
         """
-        レイアウトを計算（2-pass: estimate → resolve）
+        レイアウトを計算（2-pass: measure → arrange）
 
         Args:
             force: True の場合、Dirty Flag に関係なく再計算
@@ -2040,8 +2040,8 @@ class GPULayout(UILayoutStubMixin):
 
         Note:
             Phase 1 で導入された 2-pass アルゴリズム:
-            1. estimate(): 子から親へサイズを積み上げ
-            2. resolve(): 親から子へ位置を確定
+            1. measure(): 子から親へサイズを積み上げ
+            2. arrange(): 親から子へ位置を確定
         """
         if not self._dirty and not force:
             return  # 変更がなければスキップ
@@ -2051,10 +2051,10 @@ class GPULayout(UILayoutStubMixin):
             constraints = BoxConstraints.tight_width(self.width)
 
         # Pass 1: サイズ推定
-        self.estimate(constraints)
+        self.measure(constraints)
 
         # Pass 2: 位置確定
-        self.resolve(self.x, self.y)
+        self.arrange(self.x, self.y)
 
         # タイトルバーの HitRect を登録
         self._register_title_bar()
@@ -2071,7 +2071,7 @@ class GPULayout(UILayoutStubMixin):
         アイテムの位置を再計算（Deprecated）
 
         Warning:
-            Phase 1 で resolve() に機能が統合されたため、
+            Phase 1 で arrange() に機能が統合されたため、
             このメソッドは layout() から呼び出されなくなりました。
             外部から呼び出している箇所がある場合のために残置していますが、
             将来のバージョンで削除される可能性があります。

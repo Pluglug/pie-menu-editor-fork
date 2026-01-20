@@ -94,7 +94,7 @@ class GPULayout:
 ### 2-pass アルゴリズム
 
 > 用語: v3 に準拠して `measure` / `arrange` を使用
-> （現在の実装は `estimate` / `resolve` だが、Phase 1 でリネーム予定）
+> （現在の実装は `measure` / `arrange` に統一済み）
 
 ```python
 def layout(self, *, force: bool = False, constraints: Optional[BoxConstraints] = None) -> None:
@@ -106,10 +106,10 @@ def layout(self, *, force: bool = False, constraints: Optional[BoxConstraints] =
         constraints = BoxConstraints.tight_width(self.width)
 
     # Pass 1: サイズ推定 (measure)
-    self.estimate(constraints)  # → measure() にリネーム予定
+    self.measure(constraints)
 
     # Pass 2: 位置確定 (arrange)
-    self.resolve(self.x, self.y)  # → arrange() にリネーム予定
+    self.arrange(self.x, self.y)
 
     self._dirty = False
 ```
@@ -152,8 +152,8 @@ layout.label(text="Section 2")  # ← row の後に表示される
 
 | 現在 | v3 準拠 |
 |------|---------|
-| `estimate()` | `measure()` |
-| `resolve()` | `arrange()` |
+| `measure()` | `measure()` |
+| `arrange()` | `arrange()` |
 | `_estimate_vertical()` | `_measure_vertical()` |
 | `_estimate_horizontal()` | `_measure_horizontal()` |
 | `_resolve_vertical()` | `_arrange_vertical()` |
@@ -292,7 +292,7 @@ def resolve_split(items, total_width, gap, percentage):
 
 ### 1.7 実装タスク
 
-- [ ] 用語リネーム: `estimate` → `measure`, `resolve` → `arrange`
+- [x] 用語リネーム: `estimate` → `measure`, `resolve` → `arrange`
 - [x] `BoxConstraints.deflate()` メソッド追加
 - [ ] `SizingPolicy` クラス導入
 - [ ] `_measure_horizontal()` を `distribute_width` アルゴリズムに修正
