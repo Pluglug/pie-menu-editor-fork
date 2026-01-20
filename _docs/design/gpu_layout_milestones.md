@@ -1,8 +1,8 @@
 # GPULayout Implementation Milestones
 
-> Version: 1.1.1
+> Version: 1.1.2
 > Created: 2026-01-20
-> Updated: 2026-01-20 (split factor=0 + naming + SizingPolicy + scale_x を反映)
+> Updated: 2026-01-20 (alignment setter + _measure_horizontal 完了を反映)
 > Status: **Active**
 > Primary Spec: `gpu_layout_architecture_v3.md`
 > Implementation Reference: `gpu_layout_architecture_v2.1.md` (構造・API 形のみ)
@@ -62,7 +62,7 @@
 | 機能 | 状態 | 備考 |
 |------|------|------|
 | `corners` 角丸制御 | [Done] 完了 | `align=True` 時の隣接ボタン角丸 |
-| `alignment` 配置 | [Partial] 部分完了 | Phase 1 で v3 準拠に修正予定 |
+| `alignment` 配置 | [Done] 完了 | v3 準拠の alignment 挙動を復元 |
 | `split(factor)` | [Done] 完了 | factor==0 の均等分割を含め v3 準拠 |
 
 ---
@@ -295,11 +295,11 @@ def resolve_split(items, total_width, gap, percentage):
 - [x] 用語リネーム: `estimate` → `measure`, `resolve` → `arrange`
 - [x] `BoxConstraints.deflate()` メソッド追加
 - [x] `SizingPolicy` クラス導入
-- [ ] `_measure_horizontal()` を `distribute_width` アルゴリズムに修正
+- [x] `_measure_horizontal()` を `distribute_width` アルゴリズムに修正
 - [x] `scale_x` の適用タイミングを修正（子 measure 後、親 measure_impl 前）
 - [x] `split` の幅計算を v3 準拠に修正（3列目以降 + factor==0）
 - [ ] Issue #116 の P1-1 〜 P1-5 を解決
-- [ ] `alignment` を v3 準拠に修正（EXPAND vs LEFT/CENTER/RIGHT）
+- [x] `alignment` を v3 準拠に修正（EXPAND vs LEFT/CENTER/RIGHT）
 
 ### 1.8 検証項目
 
@@ -493,6 +493,7 @@ class GPUPanel:
 | 1.0.0 | 2026-01-20 | 初版作成 |
 | 1.1.0 | 2026-01-20 | レビュー反映: Phase 番号を v3 に整合、v2.1 参照範囲限定、用語統一 |
 | 1.1.1 | 2026-01-20 | 再レビュー反映: `distribute_width` ガード復活、`scale_x` 適用タイミング明確化、絵文字を ASCII 化 |
+| 1.1.2 | 2026-01-20 | alignment setter 追加、`_measure_horizontal` 完了反映 |
 
 ---
 

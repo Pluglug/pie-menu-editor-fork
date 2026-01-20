@@ -113,7 +113,7 @@ class GPULayout(UILayoutStubMixin):
         self.alert: bool = False
         self.scale_x: float = 1.0
         self.scale_y: float = 1.0
-        self.alignment: Alignment = Alignment.EXPAND
+        self._alignment: Alignment = Alignment.EXPAND
         # emboss: 'NORMAL', 'NONE', 'PULLDOWN_MENU', 'PIE_MENU', 'NONE_OR_STATUS'
         self.emboss: str = "NORMAL"
         # ui_units for fixed sizing
@@ -167,6 +167,23 @@ class GPULayout(UILayoutStubMixin):
         self._bindings: list[PropertyBinding] = []
         self._static_bindings: list[PropertyBinding] = []
         self._epoch = 0
+
+    @property
+    def alignment(self) -> Alignment:
+        return self._alignment
+
+    @alignment.setter
+    def alignment(self, value: Alignment | str) -> None:
+        if isinstance(value, Alignment):
+            self._alignment = value
+            return
+        if isinstance(value, str):
+            try:
+                self._alignment = Alignment[value]
+            except KeyError as exc:
+                raise ValueError(f"Unknown alignment: {value}") from exc
+            return
+        raise TypeError(f"Alignment must be Alignment or str, got {type(value).__name__}")
 
     # ─────────────────────────────────────────────────────────────────────────
     # コンテナメソッド（UILayout 互換）
