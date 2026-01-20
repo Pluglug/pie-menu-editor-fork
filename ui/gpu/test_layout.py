@@ -1430,7 +1430,7 @@ class DEMO_OT_layout_structure(Operator, GPUPanelMixin):
     # GPUPanelMixin 設定
     gpu_panel_uid = "demo_layout_structure"
     gpu_title = "Layout Structure Test"
-    gpu_width = 350
+    gpu_width = 400
 
     def modal(self, context, event):
         return self._modal_impl(context, event)
