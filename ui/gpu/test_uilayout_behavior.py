@@ -116,12 +116,22 @@ class TEST_PT_split_behavior(bpy.types.Panel):
 
         layout.separator()
 
+        # パターン4: factor=0（均等分割）
+        layout.label(text="Pattern 4: 3 direct items (factor=0.0)")
+        split = layout.split(factor=0.0)
+        split.label(text="33.3%")
+        split.label(text="33.3%")
+        split.label(text="33.3%")
+
+        layout.separator()
+
         # 期待の説明
         box = layout.box()
         box.label(text="期待:", icon='INFO')
         box.label(text="Pattern 1: 縦に2行ずつ")
         box.label(text="Pattern 2: 横に2つ並ぶ（暗黙columnなし）")
         box.label(text="Pattern 3: 25% / 37.5% / 37.5%")
+        box.label(text="Pattern 4: 33.3% / 33.3% / 33.3%")
 
 
 class TEST_PT_alignment(bpy.types.Panel):

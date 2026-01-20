@@ -128,6 +128,7 @@ class GPULayout(UILayoutStubMixin):
 
         # split 用（0.0 = 自動計算、0.0-1.0 = 最初の column の割合）
         self._split_factor: float = 0.0
+        self._is_split: bool = False
         self._split_column_index: int = 0  # column() が呼ばれるたびにインクリメント
 
         # ボックス描画フラグ
@@ -249,7 +250,7 @@ class GPULayout(UILayoutStubMixin):
 
         # v3: 幅は resolve フェーズで確定する
         # ここでは親の幅をプレースホルダとして使用
-        # split レイアウトかどうかは _split_factor で判定
+        # split レイアウトかどうかは _is_split で判定
         col_width = available_width
 
         child = GPULayout(
@@ -304,6 +305,7 @@ class GPULayout(UILayoutStubMixin):
             parent=self
         )
         child._split_factor = factor
+        child._is_split = True
         child._align = align
         child.active = self.active
         child.enabled = self.enabled
@@ -1975,7 +1977,7 @@ class GPULayout(UILayoutStubMixin):
             element.estimated_height *= self.scale_y
 
         # Split レイアウトの場合は専用の配分ロジック
-        if self._split_factor > 0 and n > 0:
+        if self._is_split and n > 0:
             widths = self._distribute_split_widths(n, available_width, spacing)
             actual_spacing = spacing
         else:

@@ -2,7 +2,7 @@
 
 > Version: 1.1.1
 > Created: 2026-01-20
-> Updated: 2026-01-20 (再レビュー反映: 絵文字を ASCII 化、scale_x タスク文言修正)
+> Updated: 2026-01-20 (split factor=0 の均等分割修正を反映)
 > Status: **Active**
 > Primary Spec: `gpu_layout_architecture_v3.md`
 > Implementation Reference: `gpu_layout_architecture_v2.1.md` (構造・API 形のみ)
@@ -63,7 +63,7 @@
 |------|------|------|
 | `corners` 角丸制御 | [Done] 完了 | `align=True` 時の隣接ボタン角丸 |
 | `alignment` 配置 | [Partial] 部分完了 | Phase 1 で v3 準拠に修正予定 |
-| `split(factor)` | [Partial] 部分実装 | 3列目以降の幅計算が v3 と不一致 |
+| `split(factor)` | [Done] 完了 | factor==0 の均等分割を含め v3 準拠 |
 
 ---
 
@@ -182,13 +182,13 @@ class BoxConstraints:
         """最大サイズのみ指定"""
         return BoxConstraints(0, max_width, 0, max_height)
 
-    def deflate(self, padding: float) -> "BoxConstraints":
+    def deflate(self, horizontal: float, vertical: float) -> "BoxConstraints":
         """padding を除外した制約を返す"""
         return BoxConstraints(
-            max(0, self.min_width - padding * 2),
-            max(0, self.max_width - padding * 2),
-            max(0, self.min_height - padding * 2),
-            max(0, self.max_height - padding * 2)
+            max(0, self.min_width - horizontal),
+            max(0, self.max_width - horizontal),
+            max(0, self.min_height - vertical),
+            max(0, self.max_height - vertical)
         )
 ```
 
@@ -264,9 +264,9 @@ def distribute_width(children, available_width, gap, alignment):
 
 > 参照: v3 セクション 6.3
 
-**現在の問題**:
-- 3列目以降の幅計算が不正確（`available_width` をそのまま使用）
-- v3: 残りを `(n-1)` で均等分割
+**状態**:
+- [Done] 3列目以降の幅計算を v3 準拠に修正
+- [Done] factor==0 の均等分割を追加
 
 ```python
 def resolve_split(items, total_width, gap, percentage):
@@ -293,11 +293,11 @@ def resolve_split(items, total_width, gap, percentage):
 ### 1.7 実装タスク
 
 - [ ] 用語リネーム: `estimate` → `measure`, `resolve` → `arrange`
-- [ ] `BoxConstraints.deflate()` メソッド追加
+- [x] `BoxConstraints.deflate()` メソッド追加
 - [ ] `SizingPolicy` クラス導入
 - [ ] `_measure_horizontal()` を `distribute_width` アルゴリズムに修正
 - [ ] `scale_x` の適用タイミングを修正（子 measure 後、親 measure_impl 前）
-- [ ] `split` の幅計算を v3 準拠に修正（3列目以降）
+- [x] `split` の幅計算を v3 準拠に修正（3列目以降 + factor==0）
 - [ ] Issue #116 の P1-1 〜 P1-5 を解決
 - [ ] `alignment` を v3 準拠に修正（EXPAND vs LEFT/CENTER/RIGHT）
 
