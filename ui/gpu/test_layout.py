@@ -1260,6 +1260,164 @@ class DEMO_OT_selection_tracker(Operator):
             print(f"Draw error: {e}")
             traceback.print_exc()
 
+def _build_layout_structure(layout, *, use_bpy_ops: bool) -> None:
+    def add_op(container, text: str) -> None:
+        if use_bpy_ops:
+            container.operator("mesh.primitive_cube_add", text=text)
+        else:
+            container.operator(text=text)
+
+    # ═══════════════════════════════════════════════════════════════
+    # 1. 基本的な row() テスト
+    # ═══════════════════════════════════════════════════════════════
+    layout.label(text="1. row() - Horizontal Layout")
+
+    row = layout.row()
+    row.label(text="Left")
+    row.label(text="Center")
+    row.label(text="Right")
+
+    layout.separator()
+
+    # ─── row(align=True) ───
+    layout.label(text="row(align=True)")
+    row_aligned = layout.row(align=True)
+    add_op(row_aligned, "A")
+    add_op(row_aligned, "B")
+    add_op(row_aligned, "C")
+
+    layout.separator()
+
+    # ═══════════════════════════════════════════════════════════════
+    # 2. column() テスト
+    # ═══════════════════════════════════════════════════════════════
+    layout.label(text="2. column() - Vertical Layout")
+
+    # row の中に column を入れる
+    row = layout.row()
+
+    col1 = row.column()
+    col1.label(text="Column 1")
+    add_op(col1, "Btn 1-A")
+    add_op(col1, "Btn 1-B")
+
+    col2 = row.column()
+    col2.label(text="Column 2")
+    add_op(col2, "Btn 2-A")
+    add_op(col2, "Btn 2-B")
+
+    col3 = row.column()
+    col3.label(text="Column 3")
+    add_op(col3, "Btn 3-A")
+    add_op(col3, "Btn 3-B")
+
+    layout.separator()
+
+    # ═══════════════════════════════════════════════════════════════
+    # 3. box() テスト
+    # ═══════════════════════════════════════════════════════════════
+    layout.label(text="3. box() - Bordered Container")
+
+    box = layout.box()
+    box.label(text="Inside Box")
+    add_op(box, "Box Button")
+
+    box_row = box.row()
+    box_row.label(text="L")
+    box_row.label(text="R")
+
+    layout.separator()
+
+    # ═══════════════════════════════════════════════════════════════
+    # 4. split() テスト
+    # ═══════════════════════════════════════════════════════════════
+    layout.label(text="4. split() - Proportional Split")
+
+    split = layout.split(factor=0.3)
+    split.label(text="30%")
+    split.label(text="70%")
+
+    split2 = layout.split(factor=0.5)
+    add_op(split2, "Half")
+    add_op(split2, "Half")
+
+    split3 = layout.split(factor=0.25)
+    split3.label(text="25%")
+    split3.label(text="37.5%")
+    split3.label(text="37.5%")
+
+    split4 = layout.split(factor=0.0)
+    split4.label(text="33.3%")
+    split4.label(text="33.3%")
+    split4.label(text="33.3%")
+
+    layout.separator()
+
+    # ═══════════════════════════════════════════════════════════════
+    # 5. ネストテスト
+    # ═══════════════════════════════════════════════════════════════
+    layout.label(text="5. Nested Layout")
+
+    outer_box = layout.box()
+    outer_box.label(text="Outer Box")
+
+    inner_row = outer_box.row()
+
+    inner_box1 = inner_row.box()
+    inner_box1.label(text="Inner 1")
+
+    inner_box2 = inner_row.box()
+    inner_box2.label(text="Inner 2")
+
+    layout.separator()
+
+    # ═══════════════════════════════════════════════════════════════
+    # 6. scale 系テスト
+    # ═══════════════════════════════════════════════════════════════
+    layout.label(text="6. scale_x / scale_y")
+
+    row = layout.row()
+    row.alignment = 'LEFT'
+    row.scale_x = 2.0
+    add_op(row, "scale_x=2.0 (LEFT)")
+
+    row2 = layout.row()
+    row2.scale_y = 1.5
+    add_op(row2, "scale_y=1.5")
+
+    layout.separator()
+
+    # ═══════════════════════════════════════════════════════════════
+    # 7. alignment テスト
+    # ═══════════════════════════════════════════════════════════════
+    layout.label(text="7. alignment")
+
+    row = layout.row()
+    row.alignment = 'LEFT'
+    row.label(text="LEFT align")
+
+    row2 = layout.row()
+    row2.alignment = 'CENTER'
+    row2.label(text="CENTER align")
+
+    row3 = layout.row()
+    row3.alignment = 'RIGHT'
+    row3.label(text="RIGHT align")
+
+    layout.separator()
+
+    # ═══════════════════════════════════════════════════════════════
+    # 8. ui_units_x テスト
+    # ═══════════════════════════════════════════════════════════════
+    layout.label(text="8. ui_units_x")
+
+    row = layout.row()
+    sub = row.row()
+    sub.ui_units_x = 5
+    sub.label(text="Fixed")
+    row.label(text="Flex 1")
+    row.label(text="Flex 2")
+
 # Demo 5: Layout Structure Test - row, column, box のテスト
 # ═══════════════════════════════════════════════════════════════════════════════
 
@@ -1285,132 +1443,7 @@ class DEMO_OT_layout_structure(Operator, GPUPanelMixin):
 
     def draw_panel(self, layout, context):
         """レイアウト構造のテスト"""
-
-        # ═══════════════════════════════════════════════════════════════
-        # 1. 基本的な row() テスト
-        # ═══════════════════════════════════════════════════════════════
-        layout.label(text="1. row() - Horizontal Layout")
-
-        row = layout.row()
-        row.label(text="Left")
-        row.label(text="Center")
-        row.label(text="Right")
-
-        layout.separator()
-
-        # ─── row(align=True) ───
-        layout.label(text="row(align=True)")
-        row_aligned = layout.row(align=True)
-        row_aligned.operator(text="A")
-        row_aligned.operator(text="B")
-        row_aligned.operator(text="C")
-
-        layout.separator()
-
-        # ═══════════════════════════════════════════════════════════════
-        # 2. column() テスト
-        # ═══════════════════════════════════════════════════════════════
-        layout.label(text="2. column() - Vertical Layout")
-
-        # row の中に column を入れる
-        row = layout.row()
-
-        col1 = row.column()
-        col1.label(text="Column 1")
-        col1.operator(text="Btn 1-A")
-        col1.operator(text="Btn 1-B")
-
-        col2 = row.column()
-        col2.label(text="Column 2")
-        col2.operator(text="Btn 2-A")
-        col2.operator(text="Btn 2-B")
-
-        col3 = row.column()
-        col3.label(text="Column 3")
-        col3.operator(text="Btn 3-A")
-        col3.operator(text="Btn 3-B")
-
-        layout.separator()
-
-        # ═══════════════════════════════════════════════════════════════
-        # 3. box() テスト
-        # ═══════════════════════════════════════════════════════════════
-        layout.label(text="3. box() - Bordered Container")
-
-        box = layout.box()
-        box.label(text="Inside Box")
-        box.operator(text="Box Button")
-
-        box_row = box.row()
-        box_row.label(text="L")
-        box_row.label(text="R")
-
-        layout.separator()
-
-        # ═══════════════════════════════════════════════════════════════
-        # 4. split() テスト
-        # ═══════════════════════════════════════════════════════════════
-        layout.label(text="4. split() - Proportional Split")
-
-        split = layout.split(factor=0.3)
-        split.label(text="30%")
-        split.label(text="70%")
-
-        split2 = layout.split(factor=0.5)
-        split2.operator(text="Half")
-        split2.operator(text="Half")
-
-        layout.separator()
-
-        # ═══════════════════════════════════════════════════════════════
-        # 5. ネストテスト
-        # ═══════════════════════════════════════════════════════════════
-        layout.label(text="5. Nested Layout")
-
-        outer_box = layout.box()
-        outer_box.label(text="Outer Box")
-
-        inner_row = outer_box.row()
-
-        inner_box1 = inner_row.box()
-        inner_box1.label(text="Inner 1")
-
-        inner_box2 = inner_row.box()
-        inner_box2.label(text="Inner 2")
-
-        layout.separator()
-
-        # ═══════════════════════════════════════════════════════════════
-        # 6. scale 系テスト
-        # ═══════════════════════════════════════════════════════════════
-        layout.label(text="6. scale_x / scale_y")
-
-        row = layout.row()
-        row.scale_x = 2.0
-        row.operator(text="scale_x=2.0")
-
-        row2 = layout.row()
-        row2.scale_y = 1.5
-        row2.operator(text="scale_y=1.5")
-
-        layout.separator()
-
-        # ═══════════════════════════════════════════════════════════════
-        # 7. alignment テスト
-        # ═══════════════════════════════════════════════════════════════
-        layout.label(text="7. alignment (if supported)")
-
-        row = layout.row()
-        row.alignment = 'LEFT'
-        row.label(text="LEFT align")
-
-        row2 = layout.row()
-        row2.alignment = 'CENTER'
-        row2.label(text="CENTER align")
-
-        row3 = layout.row()
-        row3.alignment = 'RIGHT'
-        row3.label(text="RIGHT align")
+        _build_layout_structure(layout, use_bpy_ops=False)
 
 
 # Demo 6: UILayout Reference - Blender 標準 UILayout との比較用
@@ -1431,133 +1464,7 @@ class DEMO_OT_uilayout_reference(Operator):
 
     def draw(self, context):
         """Blender 標準 UILayout でのレイアウト（GPULayout と比較用）"""
-        layout = self.layout
-
-        # ═══════════════════════════════════════════════════════════════
-        # 1. 基本的な row() テスト
-        # ═══════════════════════════════════════════════════════════════
-        layout.label(text="1. row() - Horizontal Layout")
-
-        row = layout.row()
-        row.label(text="Left")
-        row.label(text="Center")
-        row.label(text="Right")
-
-        layout.separator()
-
-        # ─── row(align=True) ───
-        layout.label(text="row(align=True)")
-        row_aligned = layout.row(align=True)
-        row_aligned.operator("mesh.primitive_cube_add", text="A")
-        row_aligned.operator("mesh.primitive_cube_add", text="B")
-        row_aligned.operator("mesh.primitive_cube_add", text="C")
-
-        layout.separator()
-
-        # ═══════════════════════════════════════════════════════════════
-        # 2. column() テスト
-        # ═══════════════════════════════════════════════════════════════
-        layout.label(text="2. column() - Vertical Layout")
-
-        # row の中に column を入れる
-        row = layout.row()
-
-        col1 = row.column()
-        col1.label(text="Column 1")
-        col1.operator("mesh.primitive_cube_add", text="Btn 1-A")
-        col1.operator("mesh.primitive_cube_add", text="Btn 1-B")
-
-        col2 = row.column()
-        col2.label(text="Column 2")
-        col2.operator("mesh.primitive_cube_add", text="Btn 2-A")
-        col2.operator("mesh.primitive_cube_add", text="Btn 2-B")
-
-        col3 = row.column()
-        col3.label(text="Column 3")
-        col3.operator("mesh.primitive_cube_add", text="Btn 3-A")
-        col3.operator("mesh.primitive_cube_add", text="Btn 3-B")
-
-        layout.separator()
-
-        # ═══════════════════════════════════════════════════════════════
-        # 3. box() テスト
-        # ═══════════════════════════════════════════════════════════════
-        layout.label(text="3. box() - Bordered Container")
-
-        box = layout.box()
-        box.label(text="Inside Box")
-        box.operator("mesh.primitive_cube_add", text="Box Button")
-
-        box_row = box.row()
-        box_row.label(text="L")
-        box_row.label(text="R")
-
-        layout.separator()
-
-        # ═══════════════════════════════════════════════════════════════
-        # 4. split() テスト
-        # ═══════════════════════════════════════════════════════════════
-        layout.label(text="4. split() - Proportional Split")
-
-        split = layout.split(factor=0.3)
-        split.label(text="30%")
-        split.label(text="70%")
-
-        split2 = layout.split(factor=0.5)
-        split2.operator("mesh.primitive_cube_add", text="Half")
-        split2.operator("mesh.primitive_cube_add", text="Half")
-
-        layout.separator()
-
-        # ═══════════════════════════════════════════════════════════════
-        # 5. ネストテスト
-        # ═══════════════════════════════════════════════════════════════
-        layout.label(text="5. Nested Layout")
-
-        outer_box = layout.box()
-        outer_box.label(text="Outer Box")
-
-        inner_row = outer_box.row()
-
-        inner_box1 = inner_row.box()
-        inner_box1.label(text="Inner 1")
-
-        inner_box2 = inner_row.box()
-        inner_box2.label(text="Inner 2")
-
-        layout.separator()
-
-        # ═══════════════════════════════════════════════════════════════
-        # 6. scale 系テスト
-        # ═══════════════════════════════════════════════════════════════
-        layout.label(text="6. scale_x / scale_y")
-
-        row = layout.row()
-        row.scale_x = 2.0
-        row.operator("mesh.primitive_cube_add", text="scale_x=2.0")
-
-        row2 = layout.row()
-        row2.scale_y = 1.5
-        row2.operator("mesh.primitive_cube_add", text="scale_y=1.5")
-
-        layout.separator()
-
-        # ═══════════════════════════════════════════════════════════════
-        # 7. alignment テスト
-        # ═══════════════════════════════════════════════════════════════
-        layout.label(text="7. alignment")
-
-        row = layout.row()
-        row.alignment = 'LEFT'
-        row.label(text="LEFT align")
-
-        row2 = layout.row()
-        row2.alignment = 'CENTER'
-        row2.label(text="CENTER align")
-
-        row3 = layout.row()
-        row3.alignment = 'RIGHT'
-        row3.label(text="RIGHT align")
+        _build_layout_structure(self.layout, use_bpy_ops=True)
 
 
 # Demo 7: Quick UV - UVエディタ向け常時表示パネル
