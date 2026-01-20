@@ -1,8 +1,8 @@
 # GPULayout Implementation Milestones
 
-> Version: 1.1.2
+> Version: 1.1.3
 > Created: 2026-01-20
-> Updated: 2026-01-20 (alignment setter + _measure_horizontal 完了を反映)
+> Updated: 2026-01-20 (P1-2 修正 + P1-1 保留を反映)
 > Status: **Active**
 > Primary Spec: `gpu_layout_architecture_v3.md`
 > Implementation Reference: `gpu_layout_architecture_v2.1.md` (構造・API 形のみ)
@@ -129,13 +129,13 @@ layout.label(text="Section 2")  # ← row の後に表示される
 
 > これらは Phase 1 で解決予定
 
-| ID | 問題 |
-|----|------|
-| P1-1 | Width-dependent height problem |
-| P1-2 | scale_x inconsistency |
-| P1-3 | scale_y double-scaling risk |
-| P1-4 | Horizontal layout height constraint ignored |
-| P1-5 | calc_height() ignores dirty state |
+| ID | 問題 | 状態 |
+|----|------|------|
+| P1-1 | Width-dependent height problem | Deferred (Phase 2) |
+| P1-2 | scale_x inconsistency | Done |
+| P1-3 | scale_y double-scaling risk | Done |
+| P1-4 | Horizontal layout height constraint ignored | Done |
+| P1-5 | calc_height() ignores dirty state | Done |
 
 ---
 
@@ -298,7 +298,8 @@ def resolve_split(items, total_width, gap, percentage):
 - [x] `_measure_horizontal()` を `distribute_width` アルゴリズムに修正
 - [x] `scale_x` の適用タイミングを修正（子 measure 後、親 measure_impl 前）
 - [x] `split` の幅計算を v3 準拠に修正（3列目以降 + factor==0）
-- [ ] Issue #116 の P1-1 〜 P1-5 を解決
+- [ ] Issue #116 P1-1 は Phase 2 で再検討
+- [x] Issue #116 P1-2 〜 P1-5 を解決
 - [x] `alignment` を v3 準拠に修正（EXPAND vs LEFT/CENTER/RIGHT）
 
 ### 1.8 検証項目
@@ -494,6 +495,7 @@ class GPUPanel:
 | 1.1.0 | 2026-01-20 | レビュー反映: Phase 番号を v3 に整合、v2.1 参照範囲限定、用語統一 |
 | 1.1.1 | 2026-01-20 | 再レビュー反映: `distribute_width` ガード復活、`scale_x` 適用タイミング明確化、絵文字を ASCII 化 |
 | 1.1.2 | 2026-01-20 | alignment setter 追加、`_measure_horizontal` 完了反映 |
+| 1.1.3 | 2026-01-20 | P1-2 修正、P1-1 保留を明記 |
 
 ---
 

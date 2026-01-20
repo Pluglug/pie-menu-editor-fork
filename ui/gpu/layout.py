@@ -1144,7 +1144,8 @@ class GPULayout(UILayoutStubMixin):
             # alignment に応じて幅と位置を計算
             if self.alignment == Alignment.EXPAND:
                 # EXPAND: 利用可能幅いっぱいに拡張
-                item.width = available_width * self.scale_x
+                # scale_x は EXPAND では見えにくいので、幅には適用しない
+                item.width = available_width
                 item.x = self._cursor_x
             else:
                 # LEFT/CENTER/RIGHT: 自然サイズを維持
