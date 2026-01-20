@@ -31,6 +31,9 @@ class LayoutItem:
     height: float = 0
     visible: bool = True
     enabled: bool = True
+    # Phase 2: LayoutKey support
+    layout_path: str = ""
+    key: str = ""
 
     # Phase 2: 角丸制御（align=True 時に使用）
     # (bottomLeft, topLeft, topRight, bottomRight)

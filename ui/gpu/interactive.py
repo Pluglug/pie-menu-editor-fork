@@ -39,16 +39,31 @@ class UIState:
         self.dragging_id = None
 
     def is_hovered(self, item_id: str) -> bool:
-        """指定 ID がホバー中かどうか"""
+        """指定キーがホバー中かどうか"""
         return self.hovered_id == item_id
 
     def is_pressed(self, item_id: str) -> bool:
-        """指定 ID がプレス中かどうか"""
+        """指定キーがプレス中かどうか"""
         return self.pressed_id == item_id
 
     def is_focused(self, item_id: str) -> bool:
-        """指定 ID がフォーカス中かどうか"""
+        """指定キーがフォーカス中かどうか"""
         return self.focused_id == item_id
+
+
+@dataclass(frozen=True)
+class LayoutKey:
+    """
+    LayoutKey = (panel_uid, layout_path, explicit_key)
+    """
+    panel_uid: str
+    layout_path: str
+    explicit_key: Optional[str] = None
+
+    def as_id(self) -> str:
+        if self.explicit_key:
+            return f"{self.panel_uid}:{self.layout_path}:{self.explicit_key}"
+        return f"{self.panel_uid}:{self.layout_path}"
 
 
 @dataclass
@@ -91,6 +106,7 @@ class HitRect:
     item: Any = None  # 関連付けられたアイテム
     item_id: str = ""  # 状態管理用の一意識別子（UIState で使用）
     tag: str = ""     # 識別用タグ（デバッグ表示用）
+    layout_key: Optional[LayoutKey] = None
     enabled: bool = True
     visible: bool = True  # 非表示アイテムはヒットテストをスキップ
     z_index: int = 0  # 重なり順（大きいほど前面）
@@ -111,6 +127,16 @@ class HitRect:
         """点が矩形内にあるかどうか"""
         return (self.x <= px <= self.x + self.width and
                 self.y - self.height <= py <= self.y)
+
+    def state_key(self) -> str:
+        """UIState に渡すキーを取得"""
+        if self.layout_key is not None:
+            return self.layout_key.as_id()
+        if self.tag:
+            return self.tag
+        if self.item_id:
+            return self.item_id
+        return ""
 
     def intersects(self, other: HitRect) -> bool:
         """他の矩形と交差するかどうか"""
@@ -218,21 +244,21 @@ class HitTestManager:
         """集中状態管理（ID ベース）"""
         return self._ui_state
 
-    def get_render_state(self, item_id: str, enabled: bool = True) -> ItemRenderState:
+    def get_render_state(self, state_key: str, enabled: bool = True) -> ItemRenderState:
         """
         描画用のアイテム状態を取得
 
         Args:
-            item_id: アイテムの一意識別子
+            state_key: 状態管理用のキー
             enabled: アイテムが有効かどうか
 
         Returns:
             描画時に参照する状態
         """
         return ItemRenderState(
-            hovered=self._ui_state.is_hovered(item_id),
-            pressed=self._ui_state.is_pressed(item_id),
-            focused=self._ui_state.is_focused(item_id),
+            hovered=self._ui_state.is_hovered(state_key),
+            pressed=self._ui_state.is_pressed(state_key),
+            focused=self._ui_state.is_focused(state_key),
             enabled=enabled,
         )
 
@@ -246,9 +272,10 @@ class HitTestManager:
         Returns:
             描画時に参照する状態
         """
-        # item_id があればそれを使用、なければ HitRect の参照比較で判定
-        if rect.item_id:
-            return self.get_render_state(rect.item_id, rect.enabled)
+        # state_key があればそれを使用、なければ HitRect の参照比較で判定
+        state_key = rect.state_key()
+        if state_key:
+            return self.get_render_state(state_key, rect.enabled)
 
         # フォールバック: HitRect の参照比較
         return ItemRenderState(
@@ -266,13 +293,20 @@ class HitTestManager:
         """HitRect を登録"""
         self._rects.append(rect)
 
-    def register_item(self, item: Any, item_id: str = "", **callbacks) -> HitRect:
+    def register_item(
+        self,
+        item: Any,
+        item_id: str = "",
+        layout_key: Optional[LayoutKey] = None,
+        **callbacks,
+    ) -> HitRect:
         """
         LayoutItem から HitRect を作成して登録
 
         Args:
             item: LayoutItem インスタンス
             item_id: 状態管理用の一意識別子（省略時は id(item) を使用）
+            layout_key: LayoutKey（指定時は状態管理に使用）
             **callbacks: on_hover_enter, on_hover_leave, on_click, etc.
 
         Returns:
@@ -282,6 +316,8 @@ class HitTestManager:
 
         # item_id を設定（UIState で使用）
         rect.item_id = item_id or str(id(item))
+        if layout_key is not None:
+            rect.layout_key = layout_key
 
         # コールバックを設定
         for key, callback in callbacks.items():
@@ -308,13 +344,14 @@ class HitTestManager:
             if self._state.dragging_rect is rect:
                 self._state.is_dragging = False
                 self._state.dragging_rect = None
-            # UIState の ID ベース状態もクリア（item_id が一致する場合）
-            if rect.item_id:
-                if self._ui_state.hovered_id == rect.item_id:
+            # UIState の ID ベース状態もクリア（key が一致する場合）
+            state_key = rect.state_key()
+            if state_key:
+                if self._ui_state.hovered_id == state_key:
                     self._ui_state.hovered_id = None
-                if self._ui_state.pressed_id == rect.item_id:
+                if self._ui_state.pressed_id == state_key:
                     self._ui_state.pressed_id = None
-                if self._ui_state.dragging_id == rect.item_id:
+                if self._ui_state.dragging_id == state_key:
                     self._ui_state.dragging_id = None
 
     def clear(self) -> None:
@@ -434,7 +471,7 @@ class HitTestManager:
                 new_hover.on_hover_enter()
 
             self._state.hovered = new_hover
-            self._ui_state.hovered_id = new_hover.item_id if new_hover else None
+            self._ui_state.hovered_id = new_hover.state_key() if new_hover else None
 
         # ホバー中のマウス移動を通知（RadioGroupItem などで使用）
         if new_hover and new_hover.on_move:
@@ -451,13 +488,13 @@ class HitTestManager:
         self._state.pressed = hit
         self._state.drag_start_x = x
         self._state.drag_start_y = y
-        self._ui_state.pressed_id = hit.item_id if hit.item_id else None
+        self._ui_state.pressed_id = hit.state_key() if hit else None
 
         # ドラッグ可能な場合はドラッグ開始
         if hit.draggable:
             self._state.is_dragging = True
             self._state.dragging_rect = hit
-            self._ui_state.dragging_id = hit.item_id if hit.item_id else None
+            self._ui_state.dragging_id = hit.state_key() if hit else None
 
         if hit.on_press:
             hit.on_press(x, y)

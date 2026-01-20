@@ -1,8 +1,8 @@
 # GPULayout Implementation Milestones
 
-> Version: 1.1.3
+> Version: 1.2.0
 > Created: 2026-01-20
-> Updated: 2026-01-20 (P1-2 修正 + P1-1 保留を反映)
+> Updated: 2026-01-20 (Phase 2 LayoutKey/HitTest 着手を反映)
 > Status: **Active**
 > Primary Spec: `gpu_layout_architecture_v3.md`
 > Implementation Reference: `gpu_layout_architecture_v2.1.md` (構造・API 形のみ)
@@ -54,7 +54,7 @@
 |-------|-------------|------|------|
 | Phase 0 | 追加順序修正 | [Done] | `_elements` 統合 + 2-pass 導入 |
 | **Phase 1** | Constraints/Flex | [WIP] | 幅配分修正 + split v3 準拠 |
-| Phase 2 | LayoutKey/HitTest | [Todo] | 安定キーによる状態維持 |
+| Phase 2 | LayoutKey/HitTest | [WIP] | 安定キーによる状態維持 |
 | Phase 3 | 差分更新/プール | [Todo] | IMGUI 再構築コスト最適化 |
 
 ### 補足: 実装済み機能（Phase 番号外）
@@ -336,7 +336,7 @@ split.label(text="B")  # 70%
 
 ---
 
-## Phase 2: LayoutKey / HitTest [Todo]
+## Phase 2: LayoutKey / HitTest [WIP]
 
 > 参照: v3 セクション 7
 
@@ -380,10 +380,10 @@ LayoutKey = (panel_uid, layout_path, explicit_key)
 
 ### 2.4 実装タスク
 
-- [ ] `LayoutKey` クラス導入
-- [ ] Build 時に `layout_path` を自動生成
-- [ ] `HitTestManager` を `LayoutKey` ベースに移行
-- [ ] hover/active 状態を `LayoutKey` に紐づけ
+- [x] `LayoutKey` クラス導入
+- [x] Build 時に `layout_path` を自動生成
+- [x] `HitTestManager` を `LayoutKey` ベースに移行
+- [x] hover/active 状態を `LayoutKey` に紐づけ
 - [ ] 順序変更時の状態維持テスト
 
 ---
@@ -496,6 +496,7 @@ class GPUPanel:
 | 1.1.1 | 2026-01-20 | 再レビュー反映: `distribute_width` ガード復活、`scale_x` 適用タイミング明確化、絵文字を ASCII 化 |
 | 1.1.2 | 2026-01-20 | alignment setter 追加、`_measure_horizontal` 完了反映 |
 | 1.1.3 | 2026-01-20 | P1-2 修正、P1-1 保留を明記 |
+| 1.2.0 | 2026-01-20 | Phase 2: LayoutKey/HitTest を WIP に変更 |
 
 ---
 

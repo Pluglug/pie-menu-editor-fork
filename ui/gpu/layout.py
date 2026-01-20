@@ -18,7 +18,7 @@ from .items import (
     PropDisplayItem, BoxItem, SliderItem, NumberItem, CheckboxItem,
     ColorItem, RadioGroupItem, RadioOption
 )
-from .interactive import HitTestManager, HitRect
+from .interactive import HitTestManager, HitRect, LayoutKey
 from .rna_utils import (
     get_property_info, get_property_value, set_property_value,
     PropType, WidgetHint, PropertyInfo
@@ -90,6 +90,8 @@ class GPULayout(UILayoutStubMixin):
         # 統合要素リスト（追加順序を保持）
         # Phase 1: _items と _children を _elements に統合
         self._elements: list[LayoutItem | GPULayout] = []
+        self._layout_path: str = "root" if parent is None else ""
+        self._path_counters: dict[str, int] = {}
 
         # 2-pass レイアウト用の測定結果
         self._measured_widths: list[float] = []
@@ -236,6 +238,7 @@ class GPULayout(UILayoutStubMixin):
             direction=Direction.HORIZONTAL,
             parent=self
         )
+        self._assign_layout_path(child, "row")
         child.active = self.active
         child.enabled = self.enabled
         child.alert = self.alert
@@ -279,6 +282,7 @@ class GPULayout(UILayoutStubMixin):
             direction=Direction.VERTICAL,
             parent=self
         )
+        self._assign_layout_path(child, "column")
         child.active = self.active
         child.enabled = self.enabled
         child.alert = self.alert
@@ -322,6 +326,7 @@ class GPULayout(UILayoutStubMixin):
             direction=Direction.HORIZONTAL,
             parent=self
         )
+        self._assign_layout_path(child, "split")
         child._split_factor = factor
         child._is_split = True
         child._align = align
@@ -336,11 +341,12 @@ class GPULayout(UILayoutStubMixin):
     # 表示メソッド（UILayout 互換）
     # ─────────────────────────────────────────────────────────────────────────
 
-    def label(self, *, text: str = "", icon: str = "NONE") -> None:
+    def label(self, *, text: str = "", icon: str = "NONE", key: str = "") -> None:
         """ラベルを追加"""
         item = LabelItem(
             text=text,
             icon=icon,
+            key=key,
             enabled=self.enabled and self.active,
             alert=self.alert
         )
@@ -375,6 +381,7 @@ class GPULayout(UILayoutStubMixin):
         enabled: bool = True,
         active: bool = True,
         on_click: Optional[Callable[[], None]] = None,
+        key: str = "",
         **props,
     ) -> OperatorProperties:
         """
@@ -453,6 +460,7 @@ class GPULayout(UILayoutStubMixin):
             text=text or operator,
             icon=icon,
             on_click=click_handler,
+            key=key,
             enabled=self.enabled and self.active and enabled and active,
         )
         self._add_item(item)
@@ -463,7 +471,7 @@ class GPULayout(UILayoutStubMixin):
         return op_props
 
     def slider(self, *, value: float = 0.0, min_val: float = 0.0, max_val: float = 1.0,
-               precision: int = 2, text: str = "",
+               precision: int = 2, text: str = "", key: str = "",
                on_change: Optional[Callable[[float], None]] = None) -> SliderItem:
         """
         スライダーを追加
@@ -494,6 +502,7 @@ class GPULayout(UILayoutStubMixin):
             max_val=max_val,
             precision=precision,
             text=text,
+            key=key,
             on_change=on_change,
             enabled=self.enabled and self.active
         )
@@ -503,6 +512,7 @@ class GPULayout(UILayoutStubMixin):
     def number(self, *, value: float = 0.0, min_val: float = -float('inf'),
                max_val: float = float('inf'), step: float = 0.01,
                precision: int = 2, text: str = "", show_buttons: bool = False,
+               key: str = "",
                on_change: Optional[Callable[[float], None]] = None) -> NumberItem:
         """
         数値フィールドを追加
@@ -540,13 +550,14 @@ class GPULayout(UILayoutStubMixin):
             precision=precision,
             text=text,
             show_buttons=show_buttons,
+            key=key,
             on_change=on_change,
             enabled=self.enabled and self.active
         )
         self._add_item(item)
         return item
 
-    def checkbox(self, *, text: str = "", value: bool = False,
+    def checkbox(self, *, text: str = "", value: bool = False, key: str = "",
                  on_toggle: Optional[Callable[[bool], None]] = None) -> CheckboxItem:
         """
         チェックボックスを追加
@@ -571,13 +582,14 @@ class GPULayout(UILayoutStubMixin):
         item = CheckboxItem(
             text=text,
             value=value,
+            key=key,
             on_toggle=on_toggle,
             enabled=self.enabled and self.active
         )
         self._add_item(item)
         return item
 
-    def radio_group(self, *, options: list = None, value: str = "",
+    def radio_group(self, *, options: list = None, value: str = "", key: str = "",
                     on_change: Optional[Callable[[str], None]] = None) -> RadioGroupItem:
         """
         ラジオボタングループを追加
@@ -620,6 +632,7 @@ class GPULayout(UILayoutStubMixin):
         item = RadioGroupItem(
             options=options or [],
             value=value,
+            key=key,
             on_change=on_change,
             enabled=self.enabled and self.active
         )
@@ -628,7 +641,7 @@ class GPULayout(UILayoutStubMixin):
 
     def toggle(self, *, text: str = "", icon: str = "NONE",
                icon_on: str = "NONE", icon_off: str = "NONE",
-               value: bool = False,
+               value: bool = False, key: str = "",
                on_toggle: Optional[Callable[[bool], None]] = None) -> ToggleItem:
         """
         トグルボタンを追加
@@ -662,6 +675,7 @@ class GPULayout(UILayoutStubMixin):
             icon_on=icon_on,
             icon_off=icon_off,
             value=value,
+            key=key,
             on_toggle=on_toggle,
             enabled=self.enabled and self.active
         )
@@ -669,7 +683,7 @@ class GPULayout(UILayoutStubMixin):
         return item
 
     def color(self, *, color: tuple[float, float, float, float] = (1.0, 1.0, 1.0, 1.0),
-              text: str = "",
+              text: str = "", key: str = "",
               on_click: Optional[Callable[[], None]] = None) -> ColorItem:
         """
         カラースウォッチを追加
@@ -703,6 +717,7 @@ class GPULayout(UILayoutStubMixin):
         item = ColorItem(
             color=color,
             text=text,
+            key=key,
             on_click=on_click,
             enabled=self.enabled and self.active
         )
@@ -753,7 +768,7 @@ class GPULayout(UILayoutStubMixin):
 
     def prop(self, data: Any, property: str, *, text: str = "",
              icon: str = "NONE", expand: bool = False, slider: bool = False,
-             toggle: int = -1, icon_only: bool = False) -> Optional[LayoutItem]:
+             toggle: int = -1, icon_only: bool = False, key: str = "") -> Optional[LayoutItem]:
         """
         Blender プロパティを適切なウィジェットで表示・編集
 
@@ -837,7 +852,7 @@ class GPULayout(UILayoutStubMixin):
         set_value = self._make_setter(resolver, raw_data, property)
         item = self._create_prop_widget(
             raw_data, property, info, hint, display_text, icon,
-            current_value, set_value
+            current_value, set_value, key
         )
         if item:
             self._add_item(item)
@@ -871,7 +886,8 @@ class GPULayout(UILayoutStubMixin):
     def _create_prop_widget(
         self, data: Any, property: str, info: PropertyInfo,
         hint: WidgetHint, text: str, icon: str, value: Any,
-        set_value: Callable[[Any, Any], None]
+        set_value: Callable[[Any, Any], None],
+        key: str,
     ) -> Optional[LayoutItem]:
         """
         プロパティ用ウィジェットを作成
@@ -888,6 +904,7 @@ class GPULayout(UILayoutStubMixin):
             item = CheckboxItem(
                 text=text,
                 value=bool(value),
+                key=key,
                 on_toggle=on_toggle,
                 enabled=self.enabled and self.active
             )
@@ -901,6 +918,7 @@ class GPULayout(UILayoutStubMixin):
                 text=text,
                 icon=icon,
                 value=bool(value),
+                key=key,
                 on_toggle=on_toggle,
                 enabled=self.enabled and self.active
             )
@@ -924,6 +942,7 @@ class GPULayout(UILayoutStubMixin):
                 step=info.step,
                 precision=info.precision if info.prop_type == PropType.FLOAT else 0,
                 text=text,
+                key=key,
                 on_change=on_change,
                 enabled=self.enabled and self.active
             )
@@ -945,6 +964,7 @@ class GPULayout(UILayoutStubMixin):
                 max_val=max_val,
                 precision=info.precision if info.prop_type == PropType.FLOAT else 0,
                 text=text,
+                key=key,
                 on_change=on_change,
                 enabled=self.enabled and self.active
             )
@@ -966,6 +986,7 @@ class GPULayout(UILayoutStubMixin):
             item = ColorItem(
                 color=color,
                 text=text,
+                key=key,
                 enabled=self.enabled and self.active
             )
 
@@ -978,6 +999,7 @@ class GPULayout(UILayoutStubMixin):
                 display_name = info.enum_items[0][1] if info.enum_items else str(value)
                 item = LabelItem(
                     text=f"{text}: {display_name}",
+                    key=key,
                     enabled=self.enabled and self.active
                 )
             else:
@@ -992,6 +1014,7 @@ class GPULayout(UILayoutStubMixin):
                 item = RadioGroupItem(
                     options=options,
                     value=str(value) if value else "",
+                    key=key,
                     on_change=on_change,
                     enabled=self.enabled and self.active
                 )
@@ -1017,6 +1040,7 @@ class GPULayout(UILayoutStubMixin):
                 display_name = info.enum_items[0][1] if info.enum_items else str(value)
                 item = LabelItem(
                     text=f"{text}: {display_name}",
+                    key=key,
                     enabled=self.enabled and self.active
                 )
             # 通常 Enum は RadioGroup にフォールバック
@@ -1032,6 +1056,7 @@ class GPULayout(UILayoutStubMixin):
                 item = RadioGroupItem(
                     options=options,
                     value=str(value) if value else "",
+                    key=key,
                     on_change=on_change,
                     enabled=self.enabled and self.active
                 )
@@ -1134,9 +1159,58 @@ class GPULayout(UILayoutStubMixin):
             self.sizing.fixed_width = None
             self.sizing.is_fixed = False
 
+    def _next_layout_index(self, kind: str) -> int:
+        index = self._path_counters.get(kind, 0)
+        self._path_counters[kind] = index + 1
+        return index
+
+    def _assign_layout_path(self, element: LayoutItem | GPULayout, kind: str) -> None:
+        base = self._layout_path or "root"
+        index = self._next_layout_index(kind)
+        path = f"{base}.{kind}[{index}]"
+        if isinstance(element, GPULayout):
+            element._layout_path = path
+            element._panel_uid = self._panel_uid
+        else:
+            element.layout_path = path
+
+    def _make_layout_key(self, layout_path: str, explicit_key: str = "") -> LayoutKey:
+        panel_uid = self._panel_uid or "panel"
+        return LayoutKey(panel_uid=panel_uid, layout_path=layout_path, explicit_key=explicit_key or None)
+
+    def _get_layout_key_for_item(self, item: LayoutItem) -> LayoutKey:
+        layout_path = item.layout_path or f"{self._layout_path}.item[{id(item)}]"
+        return self._make_layout_key(layout_path, item.key)
+
+    def _get_item_kind(self, item: LayoutItem) -> str:
+        if isinstance(item, LabelItem):
+            return "label"
+        if isinstance(item, SeparatorItem):
+            return "separator"
+        if isinstance(item, ButtonItem):
+            return "button"
+        if isinstance(item, ToggleItem):
+            return "toggle"
+        if isinstance(item, SliderItem):
+            return "slider"
+        if isinstance(item, NumberItem):
+            return "number"
+        if isinstance(item, CheckboxItem):
+            return "checkbox"
+        if isinstance(item, ColorItem):
+            return "color"
+        if isinstance(item, RadioGroupItem):
+            return "radio"
+        if isinstance(item, BoxItem):
+            return "box"
+        if isinstance(item, PropDisplayItem):
+            return "prop_display"
+        return "item"
+
     def _add_item(self, item: LayoutItem) -> None:
         """アイテムを追加"""
         self._dirty = True  # アイテム追加でレイアウト再計算が必要
+        self._assign_layout_path(item, self._get_item_kind(item))
         item_width, item_height = item.calc_size(self.style)
         available_width = self._get_available_width()
 
@@ -1456,6 +1530,9 @@ class GPULayout(UILayoutStubMixin):
         manager = self._ensure_hit_manager()
         title_bar_y = self._get_title_bar_y()
         title_bar_height = self._get_title_bar_height()
+        base_path = self._layout_path or "root"
+        title_bar_key = self._make_layout_key(f"{base_path}.title_bar")
+        close_button_key = self._make_layout_key(f"{base_path}.close_button")
 
         # クローズボタン領域を除いたタイトルバー
         close_btn_size = self._get_close_button_size()
@@ -1497,6 +1574,7 @@ class GPULayout(UILayoutStubMixin):
                 on_release=on_drag_end,
                 z_index=100  # 他の要素より優先
             )
+            self._title_bar_rect.layout_key = title_bar_key
             manager.register(self._title_bar_rect)
         else:
             # 位置とサイズを更新
@@ -1504,6 +1582,7 @@ class GPULayout(UILayoutStubMixin):
             self._title_bar_rect.y = title_bar_y
             self._title_bar_rect.width = drag_width
             self._title_bar_rect.height = title_bar_height
+            self._title_bar_rect.layout_key = title_bar_key
 
         # クローズボタン
         if self._show_close_button and self._close_button_rect is None:
@@ -1535,6 +1614,7 @@ class GPULayout(UILayoutStubMixin):
                 on_click=on_close_click,
                 z_index=101  # タイトルバーより優先
             )
+            self._close_button_rect.layout_key = close_button_key
             manager.register(self._close_button_rect)
         elif self._close_button_rect is not None:
             # 位置とサイズを更新
@@ -1545,6 +1625,7 @@ class GPULayout(UILayoutStubMixin):
             self._close_button_rect.y = title_bar_y - (title_bar_height - close_btn_size) / 2
             self._close_button_rect.width = close_btn_size
             self._close_button_rect.height = close_btn_size
+            self._close_button_rect.layout_key = close_button_key
 
     def _register_resize_handle(self) -> None:
         """リサイズハンドルの HitRect を右下コーナーに登録"""
@@ -1593,6 +1674,8 @@ class GPULayout(UILayoutStubMixin):
                 on_hover_leave=on_hover_leave,
                 z_index=102  # タイトルバー(100)、クローズボタン(101)より上
             )
+            base_path = self._layout_path or "root"
+            self._resize_handle_rect.layout_key = self._make_layout_key(f"{base_path}.resize_handle")
             manager.register(self._resize_handle_rect)
         else:
             # 位置更新
@@ -1600,6 +1683,8 @@ class GPULayout(UILayoutStubMixin):
             self._resize_handle_rect.y = handle_y
             self._resize_handle_rect.width = handle_size
             self._resize_handle_rect.height = handle_size
+            base_path = self._layout_path or "root"
+            self._resize_handle_rect.layout_key = self._make_layout_key(f"{base_path}.resize_handle")
 
     # ─────────────────────────────────────────────────────────────────────────
     # 2-pass レイアウトアルゴリズム（Phase 1）
@@ -2201,10 +2286,10 @@ class GPULayout(UILayoutStubMixin):
                 element.draw()
             else:
                 # LayoutItem
-                if self._hit_manager and isinstance(element, (ButtonItem, ToggleItem, SliderItem, NumberItem, CheckboxItem, ColorItem)):
+                if self._hit_manager and isinstance(element, (ButtonItem, ToggleItem, SliderItem, NumberItem, CheckboxItem, ColorItem, RadioGroupItem)):
                     # インタラクティブなアイテムには状態を渡す
-                    item_id = str(id(element))
-                    state = self._hit_manager.get_render_state(item_id, element.enabled)
+                    layout_key = self._get_layout_key_for_item(element)
+                    state = self._hit_manager.get_render_state(layout_key.as_id(), element.enabled)
                     element.draw(self.style, state)
                 else:
                     element.draw(self.style)
@@ -2393,6 +2478,7 @@ class GPULayout(UILayoutStubMixin):
             return
 
         manager = self._ensure_hit_manager()
+        layout_key = self._get_layout_key_for_item(item)
 
         if isinstance(item, ColorItem):
             # カラースウォッチ: カラーバー部分のみをヒット領域に設定
@@ -2418,6 +2504,7 @@ class GPULayout(UILayoutStubMixin):
                 on_hover_leave=on_hover_leave,
                 on_click=on_click,
             )
+            rect.layout_key = layout_key
             manager.register(rect)
             rect.item_id = str(id(item))
             # ColorItem用のフラグを設定（update_positions()で使用）
@@ -2455,6 +2542,7 @@ class GPULayout(UILayoutStubMixin):
                 on_move=on_move,
                 on_click=on_click,
             )
+            rect.layout_key = layout_key
             manager.register(rect)
             rect.item_id = str(id(item))
         elif isinstance(item, CheckboxItem):
@@ -2479,6 +2567,7 @@ class GPULayout(UILayoutStubMixin):
                 on_hover_leave=on_hover_leave,
                 on_click=on_click,
             )
+            rect.layout_key = layout_key
             manager.register(rect)
             rect.item_id = str(id(item))
         elif isinstance(item, ToggleItem):
@@ -2503,6 +2592,7 @@ class GPULayout(UILayoutStubMixin):
                 on_hover_leave=on_hover_leave,
                 on_click=on_click,
             )
+            rect.layout_key = layout_key
             manager.register(rect)
             rect.item_id = str(id(item))
         elif isinstance(item, SliderItem):
@@ -2539,6 +2629,7 @@ class GPULayout(UILayoutStubMixin):
                 on_drag=on_drag,
                 on_release=on_drag_end,
             )
+            rect.layout_key = layout_key
             manager.register(rect)
             # item_id を保存（状態取得用）
             rect.item_id = str(id(item))
@@ -2574,10 +2665,11 @@ class GPULayout(UILayoutStubMixin):
                 on_drag=on_drag,
                 on_release=on_drag_end,
             )
+            rect.layout_key = layout_key
             manager.register(rect)
             rect.item_id = str(id(item))
         else:
-            rect = manager.register_item(item)
+            rect = manager.register_item(item, layout_key=layout_key)
 
         if hasattr(item, 'text') and item.text:
             rect.tag = item.text

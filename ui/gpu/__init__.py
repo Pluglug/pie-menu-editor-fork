@@ -77,6 +77,7 @@ from .interactive import (
     InteractionState,
     UIState,
     ItemRenderState,
+    LayoutKey,
 )
 
 # Panel Manager
@@ -128,6 +129,7 @@ __all__ = [
     'InteractionState',
     'UIState',
     'ItemRenderState',
+    'LayoutKey',
     # Panel Manager
     'GPUPanelManager',
     'PanelState',
