@@ -62,7 +62,8 @@ class LayoutKey:
 
     def as_id(self) -> str:
         if self.explicit_key:
-            return f"{self.panel_uid}:{self.layout_path}:{self.explicit_key}"
+            # explicit_key は順序変更でも安定する ID として扱う
+            return f"{self.panel_uid}:{self.explicit_key}"
         return f"{self.panel_uid}:{self.layout_path}"
 
 

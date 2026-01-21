@@ -293,6 +293,9 @@ LayoutKey = (panel_uid, layout_path, explicit_key)
   explicit_key = None  # または "my_button_id"
 
 最終キー = "demo_quick_viewport:root.row[0].button[1]"
+
+# explicit_key を指定した場合は安定 ID を優先
+# 最終キー = "demo_quick_viewport:my_button_id"
 ```
 
 **LayoutKey の生成ルール**:
@@ -304,6 +307,8 @@ LayoutKey = (panel_uid, layout_path, explicit_key)
 # 明示的キーの指定（リストなど順序が変わる場合に有効）
 for i, item in enumerate(items):
     layout.button(text=item.name, key=f"item_{item.id}")
+
+# explicit_key は panel 内で一意であることが望ましい
 ```
 
 **キー安定性の重要性**:
@@ -403,7 +408,7 @@ row.label(text="Flex 2")
 items = [A, B, C]  # B を hover 中
 items = [A, C, B]  # 順序変更
 
-# 期待: B の hover が維持される（key で識別）
+# 期待: B の hover が維持される（explicit_key で識別）
 # NG: hover が解除される or C に移る
 ```
 
@@ -449,4 +454,4 @@ v2.1 の改善点を保持しつつ、**キー安定性・推定サイズベー�
 
 ---
 
-*Last Updated: 2026-01-19*
+*Last Updated: 2026-01-22*

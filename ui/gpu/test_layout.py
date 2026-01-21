@@ -1444,6 +1444,69 @@ class DEMO_OT_layout_structure(Operator, GPUPanelMixin):
         _build_layout_structure(layout, use_bpy_ops=False)
 
 
+# Demo 5.5: LayoutKey Stability - 順序変更時の hover 維持テスト
+# ═══════════════════════════════════════════════════════════════════════════════
+
+class DEMO_OT_layout_key_stability(Operator, GPUPanelMixin):
+    """LayoutKey Stability Test - 順序変更時の状態維持"""
+    bl_idname = "demo.layout_key_stability"
+    bl_label = "Demo: LayoutKey Stability"
+    bl_options = {'REGISTER'}
+
+    # GPUPanelMixin 設定
+    gpu_panel_uid = "demo_layout_key_stability"
+    gpu_title = "LayoutKey Stability"
+    gpu_width = 360
+    gpu_debug_hittest = True
+    gpu_debug_hittest_labels = True
+
+    _order_flipped = False
+
+    def modal(self, context, event):
+        return self._modal_impl(context, event)
+
+    def invoke(self, context, event):
+        return self._invoke_impl(context, event)
+
+    def cancel(self, context):
+        return self._cancel_impl(context)
+
+    def _set_order(self, value: bool) -> None:
+        self._order_flipped = value
+
+    def _get_order(self) -> list[str]:
+        if self._order_flipped:
+            return ["A", "C", "B"]
+        return ["A", "B", "C"]
+
+    def draw_panel(self, layout, context):
+        layout.label(text="Hover item B, then toggle order.")
+        layout.label(text="Keyed row should keep hover on B.")
+        layout.separator()
+
+        layout.toggle(
+            text="Swap order (B <-> C)",
+            value=self._order_flipped,
+            key="swap_order",
+            on_toggle=self._set_order
+        )
+        order = ", ".join(self._get_order())
+        layout.label(text=f"Order: {order}")
+        layout.separator()
+
+        layout.label(text="No keys")
+        row = layout.row(align=True)
+        for name in self._get_order():
+            row.operator(text=name)
+
+        layout.separator()
+
+        layout.label(text="With keys")
+        row = layout.row(align=True)
+        for name in self._get_order():
+            row.operator(text=name, key=f"item_{name}")
+
+
 # Demo 6: UILayout Reference - Blender 標準 UILayout との比較用
 # ═══════════════════════════════════════════════════════════════════════════════
 

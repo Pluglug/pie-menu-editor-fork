@@ -415,7 +415,10 @@ class GPUPanelMixin:
                 for rect in hit_manager._rects:
                     label = rect.tag
                     if not label and rect.layout_key:
-                        label = rect.layout_key.layout_path
+                        if rect.layout_key.explicit_key:
+                            label = f"{rect.layout_key.layout_path}:{rect.layout_key.explicit_key}"
+                        else:
+                            label = rect.layout_key.layout_path
                     if not label and rect.item is not None:
                         label = getattr(rect.item, 'text', '') or ""
                     if not label:

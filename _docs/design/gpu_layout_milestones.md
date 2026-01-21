@@ -1,8 +1,8 @@
 # GPULayout Implementation Milestones
 
-> Version: 1.2.1
+> Version: 1.2.2
 > Created: 2026-01-20
-> Updated: 2026-01-22 (内部ループ統一とテスト参照更新を反映)
+> Updated: 2026-01-22 (LayoutKey 安定性の整備を反映)
 > Status: **Active**
 > Primary Spec: `gpu_layout_architecture_v3.md`
 > Implementation Reference: `gpu_layout_architecture_v2.1.md` (構造・API 形のみ)
@@ -394,7 +394,8 @@ LayoutKey = (panel_uid, layout_path, explicit_key)
 - [x] hover/active 状態を `LayoutKey` に紐づけ
 - [x] HitRect デバッグオーバーレイ（ラベル + 再帰）
 - [x] 内部ループを `_elements` に統一（`_items/_children` 参照を排除）
-- [ ] 順序変更時の状態維持テスト
+- [x] explicit_key で順序変更時の状態維持を可能に
+- [x] 順序変更時の状態維持テスト追加
 
 ---
 
@@ -508,6 +509,7 @@ class GPUPanel:
 | 1.1.3 | 2026-01-20 | P1-2 修正、P1-1 保留を明記 |
 | 1.2.0 | 2026-01-20 | Phase 2: LayoutKey/HitTest を WIP に変更 |
 | 1.2.1 | 2026-01-22 | 内部ループ統一、`label()` 戻り値対応、デバッグ補強 |
+| 1.2.2 | 2026-01-22 | LayoutKey 安定性（explicit_key 優先）とテスト追加 |
 
 ---
 

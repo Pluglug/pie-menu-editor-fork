@@ -20,6 +20,7 @@ from ...infra.debug import DBG_GPU, logi
 
 if TYPE_CHECKING:
     from .layout import GPULayout
+    from .items import LabelItem
 
 
 # -----------------------------------------------------------------------------
@@ -121,7 +122,7 @@ class UILayoutStubMixin:
 
     # These will be available from the inheriting GPULayout class
     if TYPE_CHECKING:
-        def label(self, *, text: str = "", icon: str = "NONE") -> None: ...
+        def label(self, *, text: str = "", icon: str = "NONE") -> "LabelItem": ...
         def row(self, align: bool = False) -> "GPULayout": ...
         def column(self, align: bool = False) -> "GPULayout": ...
         def prop(self, data: Any, property: str, **kwargs) -> Any: ...
