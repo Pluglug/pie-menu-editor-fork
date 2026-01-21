@@ -2480,6 +2480,10 @@ class GPULayout(UILayoutStubMixin):
         return self._handle_event(event, region)
 
     def _handle_event(self, event: Event, region=None) -> bool:
+        # このレイアウトでドラッグ中なら最優先で処理（リサイズ/タイトルバーの捕捉）
+        if self._hit_manager and self._hit_manager.state.is_dragging:
+            return self._hit_manager.handle_event(event, region)
+
         # 子レイアウトを先に処理
         for element in self._elements:
             if isinstance(element, GPULayout) and element._handle_event(event, region):
