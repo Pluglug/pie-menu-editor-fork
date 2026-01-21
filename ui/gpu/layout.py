@@ -2176,9 +2176,8 @@ class GPULayout(UILayoutStubMixin):
         self._register_title_bar()
         self._register_resize_handle()
 
-        # HitRect の位置を更新
-        if self._hit_manager:
-            self._hit_manager.update_positions(self.style)
+        # HitRect の位置を更新（子レイアウトも含めて再帰的に同期）
+        self._update_hit_positions_recursive()
 
         self._dirty = False  # レイアウト完了
 
@@ -2224,6 +2223,13 @@ class GPULayout(UILayoutStubMixin):
                 item.width = item_width * self.scale_x
                 item.height = item_height * self.scale_y
                 cursor_x += item.width + spacing
+
+    def _update_hit_positions_recursive(self) -> None:
+        if self._hit_manager:
+            self._hit_manager.update_positions(self.style)
+        for element in self._elements:
+            if isinstance(element, GPULayout):
+                element._update_hit_positions_recursive()
 
     # ─────────────────────────────────────────────────────────────────────────
     # 描画
