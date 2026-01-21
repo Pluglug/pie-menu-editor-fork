@@ -335,6 +335,13 @@ split.label(text="B")  # 70%
 # 期待: 2つの label が横に並ぶ（縦に積まれない）
 ```
 
+### 1.9 P1-1 Follow-up（Width-dependent height）
+
+**次に着手すべき具体項目**:
+- [ ] 仕様化: width 制約で高さが変わる要素の measure ルールを確定
+- [ ] テスト: 幅で改行が変化する label を追加し、UILayout 比較
+- [ ] 実装: 水平レイアウトで幅確定後に高さ再計測パスを追加
+
 ---
 
 ## Phase 2: LayoutKey / HitTest [WIP]
