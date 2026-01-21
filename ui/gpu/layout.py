@@ -341,7 +341,7 @@ class GPULayout(UILayoutStubMixin):
     # 表示メソッド（UILayout 互換）
     # ─────────────────────────────────────────────────────────────────────────
 
-    def label(self, *, text: str = "", icon: str = "NONE", key: str = "") -> None:
+    def label(self, *, text: str = "", icon: str = "NONE", key: str = "") -> LabelItem:
         """ラベルを追加"""
         item = LabelItem(
             text=text,
@@ -351,6 +351,7 @@ class GPULayout(UILayoutStubMixin):
             alert=self.alert
         )
         self._add_item(item)
+        return item
 
     def separator(self, *, factor: float = 1.0, type: str = "AUTO") -> None:
         """
@@ -1092,10 +1093,12 @@ class GPULayout(UILayoutStubMixin):
             any_changed |= changed
             needs_relayout = needs_relayout or relayout
 
-        for child in self._children:
-            if child.sync_reactive(context, epoch):
+        for element in self._elements:
+            if not isinstance(element, GPULayout):
+                continue
+            if element.sync_reactive(context, epoch):
                 any_changed = True
-            if child.dirty:
+            if element.dirty:
                 needs_relayout = True
 
         if needs_relayout:
@@ -2196,7 +2199,10 @@ class GPULayout(UILayoutStubMixin):
         available_width = self._get_available_width()
         spacing = self._get_spacing()
 
-        for item in self._items:
+        for element in self._elements:
+            if not isinstance(element, LayoutItem):
+                continue
+            item = element
             item_width, item_height = item.calc_size(self.style)
 
             if self.direction == Direction.VERTICAL:
@@ -2449,8 +2455,8 @@ class GPULayout(UILayoutStubMixin):
 
     def _handle_event(self, event: Event, region=None) -> bool:
         # 子レイアウトを先に処理
-        for child in self._children:
-            if child._handle_event(event, region):
+        for element in self._elements:
+            if isinstance(element, GPULayout) and element._handle_event(event, region):
                 return True
 
         if self._hit_manager:
@@ -2462,8 +2468,8 @@ class GPULayout(UILayoutStubMixin):
         mouse_y = event.mouse_region_y
 
         # アイテムを処理
-        for item in self._items:
-            if item.handle_event(event, mouse_x, mouse_y):
+        for element in self._elements:
+            if isinstance(element, LayoutItem) and element.handle_event(event, mouse_x, mouse_y):
                 return True
 
         return False

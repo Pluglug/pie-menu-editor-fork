@@ -425,8 +425,10 @@ class GPUPanelMixin:
                         label, debug_style.text_color, 11
                     )
 
-        for child in layout._children:
-            self._debug_draw_layout_hits(child)
+        from .layout import GPULayout
+        for element in layout._elements:
+            if isinstance(element, GPULayout):
+                self._debug_draw_layout_hits(element)
 
     def _restore_position(self) -> None:
         """永続化された位置を self._panel_x/y に復元"""

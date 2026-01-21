@@ -1,8 +1,8 @@
 # GPULayout Implementation Milestones
 
-> Version: 1.2.0
+> Version: 1.2.1
 > Created: 2026-01-20
-> Updated: 2026-01-20 (Phase 2 LayoutKey/HitTest 着手を反映)
+> Updated: 2026-01-22 (内部ループ統一とテスト参照更新を反映)
 > Status: **Active**
 > Primary Spec: `gpu_layout_architecture_v3.md`
 > Implementation Reference: `gpu_layout_architecture_v2.1.md` (構造・API 形のみ)
@@ -64,6 +64,7 @@
 | `corners` 角丸制御 | [Done] 完了 | `align=True` 時の隣接ボタン角丸 |
 | `alignment` 配置 | [Done] 完了 | v3 準拠の alignment 挙動を復元 |
 | `split(factor)` | [Done] 完了 | factor==0 の均等分割を含め v3 準拠 |
+| 内部ループ統一 | [Done] 完了 | `_elements` に統一、テストは `label()` 戻り値で参照 |
 
 ---
 
@@ -384,6 +385,8 @@ LayoutKey = (panel_uid, layout_path, explicit_key)
 - [x] Build 時に `layout_path` を自動生成
 - [x] `HitTestManager` を `LayoutKey` ベースに移行
 - [x] hover/active 状態を `LayoutKey` に紐づけ
+- [x] HitRect デバッグオーバーレイ（ラベル + 再帰）
+- [x] 内部ループを `_elements` に統一（`_items/_children` 参照を排除）
 - [ ] 順序変更時の状態維持テスト
 
 ---
@@ -497,7 +500,8 @@ class GPUPanel:
 | 1.1.2 | 2026-01-20 | alignment setter 追加、`_measure_horizontal` 完了反映 |
 | 1.1.3 | 2026-01-20 | P1-2 修正、P1-1 保留を明記 |
 | 1.2.0 | 2026-01-20 | Phase 2: LayoutKey/HitTest を WIP に変更 |
+| 1.2.1 | 2026-01-22 | 内部ループ統一、`label()` 戻り値対応、デバッグ補強 |
 
 ---
 
-*Last Updated: 2026-01-20*
+*Last Updated: 2026-01-22*

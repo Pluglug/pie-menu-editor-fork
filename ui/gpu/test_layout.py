@@ -539,10 +539,8 @@ class TEST_OT_gpu_interactive(Operator):
             layout.separator()
 
             # クリックカウンター
-            layout.label(text=f"Click Count: {self._click_count}")
-            self._click_label = layout._items[-1]
-            layout.label(text=f"Last Action: {self._last_action}")
-            self._action_label = layout._items[-1]
+            self._click_label = layout.label(text=f"Click Count: {self._click_count}")
+            self._action_label = layout.label(text=f"Last Action: {self._last_action}")
             layout.separator()
 
             # ボタン 1
@@ -569,8 +567,7 @@ class TEST_OT_gpu_interactive(Operator):
             layout.label(text="Slider Demo (wcol_numslider)")
 
             # スライダー値の表示
-            layout.label(text=f"Value: {self._slider_value:.2f}")
-            self._slider_label = layout._items[-1]
+            self._slider_label = layout.label(text=f"Value: {self._slider_value:.2f}")
 
             # スライダーコールバック
             def on_slider_change(value: float):
@@ -602,8 +599,7 @@ class TEST_OT_gpu_interactive(Operator):
             layout.label(text="Number Fields:")
 
             # 数値フィールド値の表示
-            layout.label(text=f"Number: {self._number_value:.1f}")
-            self._number_label = layout._items[-1]
+            self._number_label = layout.label(text=f"Number: {self._number_value:.1f}")
 
             # 数値フィールドコールバック
             def on_number_change(value: float):
