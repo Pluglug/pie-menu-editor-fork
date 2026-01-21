@@ -399,28 +399,34 @@ class GPUPanelMixin:
 
     def _debug_draw_hit_test(self) -> None:
         layout = self._layout
-        if not layout or not layout.hit_manager:
+        if not layout:
             return
+        self._debug_draw_layout_hits(layout)
+
+    def _debug_draw_layout_hits(self, layout: 'GPULayout') -> None:
         hit_manager = layout.hit_manager
-        hit_manager.debug_draw()
+        if hit_manager:
+            hit_manager.debug_draw()
+            if self.gpu_debug_hittest_labels:
+                from .drawing import BLFDrawing
+                from .style import GPULayoutStyle
 
-        if self.gpu_debug_hittest_labels:
-            from .drawing import BLFDrawing
-            from .style import GPULayoutStyle
+                debug_style = GPULayoutStyle.from_blender_theme('TOOLTIP')
+                for rect in hit_manager._rects:
+                    label = rect.tag
+                    if not label and rect.layout_key:
+                        label = rect.layout_key.layout_path
+                    if not label and rect.item is not None:
+                        label = getattr(rect.item, 'text', '') or ""
+                    if not label:
+                        continue
+                    BLFDrawing.draw_text(
+                        rect.x + 2, rect.y - 2,
+                        label, debug_style.text_color, 11
+                    )
 
-            debug_style = GPULayoutStyle.from_blender_theme('TOOLTIP')
-            for rect in hit_manager._rects:
-                label = rect.tag
-                if not label and rect.layout_key:
-                    label = rect.layout_key.layout_path
-                if not label and rect.item is not None:
-                    label = getattr(rect.item, 'text', '') or ""
-                if not label:
-                    continue
-                BLFDrawing.draw_text(
-                    rect.x + 2, rect.y - 2,
-                    label, debug_style.text_color, 11
-                )
+        for child in layout._children:
+            self._debug_draw_layout_hits(child)
 
     def _restore_position(self) -> None:
         """永続化された位置を self._panel_x/y に復元"""
