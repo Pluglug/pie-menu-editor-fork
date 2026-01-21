@@ -238,6 +238,12 @@ class GPULayout(UILayoutStubMixin):
         self._context_tracker = None
         if self._hit_manager:
             self._hit_manager.reset_rects(preserve_hovered=preserve_hovered)
+        # 既存の HitRect は再登録させる（titlebar/close/resize など）
+        self._title_bar_rect = None
+        self._close_button_rect = None
+        self._resize_handle_rect = None
+        self._close_button_hovered = False
+        self._resize_handle_hovered = False
         self._dirty = True
         for element in self._elements:
             if isinstance(element, GPULayout):
