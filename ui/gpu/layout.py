@@ -219,6 +219,26 @@ class GPULayout(UILayoutStubMixin):
     def mark_dirty(self) -> None:
         """レイアウトの再計算が必要であることをマーク"""
         self._dirty = True
+
+    def reset_for_rebuild(self, *, preserve_hovered: bool = False) -> None:
+        """
+        既存レイアウトを再構築できる状態に戻す
+
+        Note:
+            同一インスタンス上で draw_panel() を再実行する用途向け。
+        """
+        self._elements.clear()
+        self._path_counters.clear()
+        self._measured_widths = []
+        self._cursor_x = self.x + self.style.scaled_padding_x()
+        self._cursor_y = self.y - self.style.scaled_padding_y()
+        self._split_column_index = 0
+        self._bindings.clear()
+        self._static_bindings.clear()
+        self._context_tracker = None
+        if self._hit_manager:
+            self._hit_manager.reset_rects(preserve_hovered=preserve_hovered)
+        self._dirty = True
         for element in self._elements:
             if isinstance(element, GPULayout):
                 element.mark_dirty()

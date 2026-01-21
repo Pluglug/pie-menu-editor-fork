@@ -374,6 +374,27 @@ class HitTestManager:
         # UIState もリセット
         self._ui_state.clear()
 
+    def reset_rects(self, *, preserve_hovered: bool = False) -> None:
+        """
+        HitRect のみをリセット（UIState を必要に応じて維持）
+
+        Args:
+            preserve_hovered: True の場合、hovered_id を保持する
+        """
+        hovered_id = self._ui_state.hovered_id if preserve_hovered else None
+
+        self._rects.clear()
+        self._state.hovered = None
+        self._state.pressed = None
+        self._state.is_dragging = False
+        self._state.dragging_rect = None
+        self._state.drag_start_x = 0
+        self._state.drag_start_y = 0
+
+        self._ui_state.clear()
+        if preserve_hovered:
+            self._ui_state.hovered_id = hovered_id
+
     # ─────────────────────────────────────────────────────────────────────────
     # ヒットテスト
     # ─────────────────────────────────────────────────────────────────────────

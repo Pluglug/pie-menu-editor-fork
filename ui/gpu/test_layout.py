@@ -1461,6 +1461,7 @@ class DEMO_OT_layout_key_stability(Operator, GPUPanelMixin):
     gpu_debug_hittest_labels = True
 
     _order_flipped = False
+    _needs_rebuild = False
 
     def modal(self, context, event):
         return self._modal_impl(context, event)
@@ -1472,7 +1473,17 @@ class DEMO_OT_layout_key_stability(Operator, GPUPanelMixin):
         return self._cancel_impl(context)
 
     def _set_order(self, value: bool) -> None:
+        if self._order_flipped == value:
+            return
         self._order_flipped = value
+        self._needs_rebuild = True
+
+    def _rebuild_layout(self, context, region=None):
+        super()._rebuild_layout(context, region)
+        if self._layout and self._needs_rebuild:
+            self._layout.reset_for_rebuild(preserve_hovered=True)
+            self.draw_panel(self._layout, context)
+            self._needs_rebuild = False
 
     def _get_order(self) -> list[str]:
         if self._order_flipped:
