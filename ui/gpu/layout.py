@@ -1770,7 +1770,6 @@ class GPULayout(UILayoutStubMixin):
         unit_x = float(self.style.scaled_item_height())
         expand_default_width = unit_x * 10.0
         use_fixed_expand_width = (self.alignment == Alignment.EXPAND)
-
         # パディングを差し引いた内部制約
         inner_constraints = constraints.deflate(padding_x * 2, padding_y * 2)
         available_width = inner_constraints.max_width
@@ -1881,6 +1880,8 @@ class GPULayout(UILayoutStubMixin):
             else:
                 # LayoutItem は calc_size で自然サイズを取得
                 w, h = element.calc_size(self.style)
+                if use_fixed_expand_width and not element.sizing.is_fixed:
+                    w = expand_default_width
                 element.sizing.estimated_width = w
                 element.estimated_height = h
 
