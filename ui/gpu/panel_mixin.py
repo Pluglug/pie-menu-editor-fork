@@ -169,7 +169,8 @@ class GPUPanelMixin:
         if (self.gpu_debug_hittest_toggle_key and
                 event.type == self.gpu_debug_hittest_toggle_key and
                 event.value == 'PRESS'):
-            self._debug_hittest = not self._debug_hittest
+            from .panel_manager import GPUPanelManager
+            GPUPanelManager.toggle_debug_hittest()
             return {'RUNNING_MODAL'}
 
         # レイアウト再構築
@@ -389,7 +390,9 @@ class GPUPanelMixin:
 
             # メインレイアウト描画
             self._layout.update_and_draw()
-            if self._debug_hittest:
+            from .panel_manager import GPUPanelManager
+            debug_enabled = self._debug_hittest or GPUPanelManager.debug_hittest_enabled()
+            if debug_enabled:
                 self._debug_draw_hit_test()
 
         except Exception as e:

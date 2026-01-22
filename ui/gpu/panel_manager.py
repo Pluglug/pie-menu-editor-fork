@@ -67,6 +67,7 @@ class GPUPanelManager:
     # === クラス変数 ===
     _active: dict[str, GPUPanelManager] = {}
     _handlers_registered: bool = False
+    _debug_hittest_global: bool = False
 
     # === インスタンス変数 ===
     def __init__(self, uid: str, layout: GPULayout):
@@ -189,6 +190,15 @@ class GPUPanelManager:
 
         cls._handlers_registered = False
         cls._active.clear()
+
+    @classmethod
+    def debug_hittest_enabled(cls) -> bool:
+        return cls._debug_hittest_global
+
+    @classmethod
+    def toggle_debug_hittest(cls) -> bool:
+        cls._debug_hittest_global = not cls._debug_hittest_global
+        return cls._debug_hittest_global
 
     # ─────────────────────────────────────────────────────────────────────────
     # ライフサイクル管理
