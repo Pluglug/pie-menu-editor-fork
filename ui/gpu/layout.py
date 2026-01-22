@@ -1851,6 +1851,9 @@ class GPULayout(UILayoutStubMixin):
 
         spacing = self._get_spacing()
         padding_x, padding_y = self._get_padding()
+        unit_x = float(self.style.scaled_item_height())
+        expand_default_width = unit_x * 10.0
+        use_fixed_expand_width = (self.alignment == Alignment.EXPAND)
 
         # 利用可能な幅を計算（制約の max_width を使用）
         # 負の幅を防ぐため max(0, ...) でクランプ
