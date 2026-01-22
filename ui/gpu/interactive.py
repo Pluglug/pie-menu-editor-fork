@@ -221,9 +221,21 @@ class HitTestManager:
     """
 
     def __init__(self):
+        self._panel_uid: Optional[str] = None
         self._rects: list[HitRect] = []
         self._state = InteractionState()
         self._ui_state = UIState()  # 集中状態管理
+
+    # パネル間ドラッグのグローバルロック
+    _drag_owner_uid: Optional[str] = None
+
+    @classmethod
+    def get_drag_owner_uid(cls) -> Optional[str]:
+        return cls._drag_owner_uid
+
+    @classmethod
+    def _set_drag_owner_uid(cls, uid: Optional[str]) -> None:
+        cls._drag_owner_uid = uid
 
     @property
     def state(self) -> InteractionState:
@@ -292,6 +304,8 @@ class HitTestManager:
 
     def register(self, rect: HitRect) -> None:
         """HitRect を登録"""
+        if rect.layout_key and self._panel_uid is None:
+            self._panel_uid = rect.layout_key.panel_uid
         self._rects.append(rect)
 
     def register_item(
@@ -319,6 +333,8 @@ class HitTestManager:
         rect.item_id = item_id or str(id(item))
         if layout_key is not None:
             rect.layout_key = layout_key
+            if self._panel_uid is None:
+                self._panel_uid = layout_key.panel_uid
 
         # コールバックを設定
         for key, callback in callbacks.items():
@@ -373,6 +389,8 @@ class HitTestManager:
 
         # UIState もリセット
         self._ui_state.clear()
+        if self._panel_uid and self._drag_owner_uid == self._panel_uid:
+            self._set_drag_owner_uid(None)
 
     def reset_rects(self, *, preserve_hovered: bool = False) -> None:
         """
@@ -394,6 +412,13 @@ class HitTestManager:
         self._ui_state.clear()
         if preserve_hovered:
             self._ui_state.hovered_id = hovered_id
+        if self._panel_uid and self._drag_owner_uid == self._panel_uid:
+            self._set_drag_owner_uid(None)
+
+    def _locked_by_other_panel(self) -> bool:
+        if not self._drag_owner_uid:
+            return False
+        return self._panel_uid != self._drag_owner_uid
 
     # ─────────────────────────────────────────────────────────────────────────
     # ヒットテスト
@@ -440,6 +465,8 @@ class HitTestManager:
         Returns:
             イベントを消費したかどうか
         """
+        if self._locked_by_other_panel():
+            return False
         # Note: event.mouse_region_x/y は特定の状況で正しく動作しないことがある
         # bl_ui_widgets の実装を参考に、mouse_x - region.x を使用
         if region is not None:
@@ -517,6 +544,8 @@ class HitTestManager:
             self._state.is_dragging = True
             self._state.dragging_rect = hit
             self._ui_state.dragging_id = hit.state_key() if hit else None
+            if self._panel_uid:
+                self._set_drag_owner_uid(self._panel_uid)
 
         if hit.on_press:
             hit.on_press(x, y)
@@ -528,6 +557,7 @@ class HitTestManager:
         pressed = self._state.pressed
         if pressed is None:
             return False
+        was_dragging = self._state.is_dragging
 
         inside = pressed.contains(x, y)
 
@@ -543,6 +573,8 @@ class HitTestManager:
         self._state.dragging_rect = None
         self._ui_state.pressed_id = None
         self._ui_state.dragging_id = None
+        if was_dragging and self._panel_uid and self._drag_owner_uid == self._panel_uid:
+            self._set_drag_owner_uid(None)
 
         return True
 
