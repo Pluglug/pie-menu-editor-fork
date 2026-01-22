@@ -1767,9 +1767,7 @@ class GPULayout(UILayoutStubMixin):
         """
         spacing = self._get_spacing()
         padding_x, padding_y = self._get_padding()
-        unit_x = float(self.style.scaled_item_height())
-        expand_default_width = unit_x * 10.0
-        use_fixed_expand_width = (self.alignment == Alignment.EXPAND)
+        # NOTE: Blender UILayout alignment is horizontal-only; vertical layouts keep natural widths.
         # パディングを差し引いた内部制約
         inner_constraints = constraints.deflate(padding_x * 2, padding_y * 2)
         available_width = inner_constraints.max_width
@@ -1796,8 +1794,6 @@ class GPULayout(UILayoutStubMixin):
             else:
                 # LayoutItem は calc_size で自然サイズを取得
                 w, h = element.calc_size(self.style)
-                if use_fixed_expand_width and not element.sizing.is_fixed:
-                    w = expand_default_width
                 element.sizing.estimated_width = w
                 element.estimated_height = h
                 if type(element).calc_size_for_width is not LayoutItem.calc_size_for_width:
@@ -1879,6 +1875,8 @@ class GPULayout(UILayoutStubMixin):
                 )
                 size = element.measure(child_constraints)
                 element.sizing.estimated_width = size.width
+                if use_fixed_expand_width and not element.sizing.is_fixed:
+                    element.sizing.estimated_width = expand_default_width
                 element.estimated_height = size.height
             else:
                 # LayoutItem は calc_size で自然サイズを取得

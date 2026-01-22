@@ -138,6 +138,10 @@ layout.label(text="Section 2")  # ← row の後に表示される
 | P1-4 | Horizontal layout height constraint ignored | Done |
 | P1-5 | calc_height() ignores dirty state | Done |
 
+### Notes
+
+- NOTE: Widget shadow currently matches panel shadow (left/right/bottom). Blender widgets/box use bottom-only shadow; treat widget shadow as a separate theme setting. (Deferred)
+
 ---
 
 ## Phase 1: Constraints / Flex 実装 [WIP]

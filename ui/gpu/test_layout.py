@@ -1297,8 +1297,8 @@ def _build_layout_structure(layout, *, use_bpy_ops: bool) -> None:
     add_op(col1, "Btn 1-A")
     add_op(col1, "Btn 1-B")
 
-    col2 = row.column()
-    col2.label(text="Column 2")
+    col2 = row.column(align=True)
+    col2.label(text="Column 2 (align=True)")
     add_op(col2, "Btn 2-A")
     add_op(col2, "Btn 2-B")
 
