@@ -306,7 +306,7 @@ class GPULayoutStyle:
 
     # スペーシング: 要素間の間隔（ピクセル、UI スケール前）
     spacing: int = 2     # 縦方向スペース [推奨: 1-4, Blender標準≈2]
-    spacing_x: Optional[int] = None  # 横方向スペース（None の場合は spacing を使用）
+    spacing_x: Optional[int] = 8  # 横方向スペース [Blender標準≈8]
 
     # アイテムサイズ
     item_height: int = 20  # 各アイテムの高さ [推奨: 18-24, Blender標準≈20]

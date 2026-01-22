@@ -1989,9 +1989,8 @@ class GPULayout(UILayoutStubMixin):
 
         if total_estimated > available:
             # 比例縮小（コンテンツがはみ出す）
-            for element in elements:
-                width = (element.sizing.estimated_width * available) / total_estimated
-                result.append(width)
+            sizes = [element.sizing.estimated_width for element in elements]
+            result = self._fit_widths(sizes, available, self.alignment)
         elif self.alignment == Alignment.EXPAND:
             # EXPAND: 要素タイプに応じて幅を決定
             # - expand_width=True (ボタン等): 比例拡大
@@ -2012,9 +2011,17 @@ class GPULayout(UILayoutStubMixin):
 
             if expandable_width > 0 and expand_available > 0:
                 # 拡張可能な要素がある場合: 比例拡大
-                for element in elements:
-                    if getattr(element, 'expand_width', True) and not element.sizing.is_fixed:
-                        width = (element.sizing.estimated_width * expand_available) / expandable_width
+                expandable_indices = [
+                    i for i, element in enumerate(elements)
+                    if getattr(element, 'expand_width', True) and not element.sizing.is_fixed
+                ]
+                expandable_set = set(expandable_indices)
+                expandable_sizes = [elements[i].sizing.estimated_width for i in expandable_indices]
+                fitted = self._fit_widths(expandable_sizes, expand_available, Alignment.EXPAND)
+                fitted_iter = iter(fitted)
+                for i, element in enumerate(elements):
+                    if i in expandable_set:
+                        width = next(fitted_iter)
                     else:
                         width = element.sizing.estimated_width
                     result.append(width)
@@ -2031,6 +2038,37 @@ class GPULayout(UILayoutStubMixin):
                 result.append(element.sizing.estimated_width)
 
         return result, actual_gap
+
+    def _fit_widths(self, sizes: list[float], available: float,
+                    alignment: Alignment) -> list[float]:
+        """
+        Fit widths to available space with Blender-like rounding.
+
+        Mirrors ui_item_fit() behavior: distribute rounding remainder across items,
+        give the last item the leftover pixels.
+        """
+        if not sizes:
+            return []
+        total = sum(sizes)
+        if total <= 0 or available <= 0:
+            return [0.0] * len(sizes)
+        if total <= available and alignment != Alignment.EXPAND:
+            return list(sizes)
+
+        result = []
+        pos = 0.0
+        extra_pixel = 0.0
+        for idx, item in enumerate(sizes):
+            is_last = idx == len(sizes) - 1
+            if is_last:
+                width = max(0.0, available - pos)
+            else:
+                width = extra_pixel + (item * available) / total
+                extra_pixel = width - int(width)
+                width = float(int(width))
+            result.append(width)
+            pos += width
+        return result
 
     def _distribute_split_widths(
         self,
