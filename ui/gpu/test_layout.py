@@ -1444,6 +1444,48 @@ class DEMO_OT_layout_structure(Operator, GPUPanelMixin):
         _build_layout_structure(layout, use_bpy_ops=False)
 
 
+# Demo 5.25: Width-dependent height - wrapped labels in horizontal layouts
+# ═══════════════════════════════════════════════════════════════════════════════
+
+class DEMO_OT_layout_wrap_height(Operator, GPUPanelMixin):
+    """Width-dependent height test - wrap labels in rows/splits"""
+    bl_idname = "demo.layout_wrap_height"
+    bl_label = "Demo: Layout Wrap Height"
+    bl_options = {'REGISTER'}
+
+    gpu_panel_uid = "demo_layout_wrap_height"
+    gpu_title = "Width-Dependent Height"
+    gpu_width = 280
+
+    def modal(self, context, event):
+        return self._modal_impl(context, event)
+
+    def invoke(self, context, event):
+        return self._invoke_impl(context, event)
+
+    def cancel(self, context):
+        return self._cancel_impl(context)
+
+    def draw_panel(self, layout, context):
+        layout.label(text="Wrapped labels should expand row height.")
+        layout.separator()
+
+        layout.label(text="Row (EXPAND):")
+        row = layout.row()
+        row.label(text="This label should wrap when the row is narrow.", wrap=True)
+        row.label(text="Another long label to force wrapping.", wrap=True)
+
+        layout.separator()
+        layout.label(text="Split columns:")
+        split = layout.split(factor=0.5)
+        col1 = split.column()
+        col1.label(text="Column A has a long label that wraps.", wrap=True)
+        col1.label(text="Below")
+        col2 = split.column()
+        col2.label(text="Column B also wraps based on width.", wrap=True)
+        col2.label(text="Below")
+
+
 # Demo 5.5: LayoutKey Stability - 順序変更時の hover 維持テスト
 # ═══════════════════════════════════════════════════════════════════════════════
 

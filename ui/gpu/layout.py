@@ -95,6 +95,7 @@ class GPULayout(UILayoutStubMixin):
 
         # 2-pass レイアウト用の測定結果
         self._measured_widths: list[float] = []
+        self._measured_gap: float = 0.0
         self.height: float = 0.0  # measure() で計算される
 
         # Phase 1 v3: width sizing policy (measure results, fixed width)
@@ -230,8 +231,10 @@ class GPULayout(UILayoutStubMixin):
         self._elements.clear()
         self._path_counters.clear()
         self._measured_widths = []
-        self._cursor_x = self.x + self.style.scaled_padding_x()
-        self._cursor_y = self.y - self.style.scaled_padding_y()
+        self._measured_gap = 0.0
+        padding_x, padding_y = self._get_padding()
+        self._cursor_x = self.x + padding_x
+        self._cursor_y = self.y - padding_y
         self._split_column_index = 0
         self._bindings.clear()
         self._static_bindings.clear()
@@ -367,11 +370,12 @@ class GPULayout(UILayoutStubMixin):
     # 表示メソッド（UILayout 互換）
     # ─────────────────────────────────────────────────────────────────────────
 
-    def label(self, *, text: str = "", icon: str = "NONE", key: str = "") -> LabelItem:
+    def label(self, *, text: str = "", icon: str = "NONE", key: str = "", wrap: bool = False) -> LabelItem:
         """ラベルを追加"""
         item = LabelItem(
             text=text,
             icon=icon,
+            wrap=wrap,
             key=key,
             enabled=self.enabled and self.active,
             alert=self.alert
@@ -1169,13 +1173,24 @@ class GPULayout(UILayoutStubMixin):
     # ユーティリティメソッド
     # ─────────────────────────────────────────────────────────────────────────
 
+    def _get_padding(self) -> tuple[int, int]:
+        """Return (padding_x, padding_y) for this layout."""
+        if self.parent is None or self._draw_background or self._draw_outline:
+            return (self.style.scaled_padding_x(), self.style.scaled_padding_y())
+        return (0, 0)
+
     def _get_available_width(self) -> float:
         """利用可能な幅を取得"""
-        return self.width - self.style.scaled_padding_x() * 2
+        padding_x, _ = self._get_padding()
+        return self.width - padding_x * 2
 
     def _get_spacing(self) -> int:
         """アイテム間のスペースを取得（align=True で 0）"""
-        return 0 if self._align else self.style.scaled_spacing()
+        if self._align:
+            return 0
+        if self.direction == Direction.HORIZONTAL:
+            return self.style.scaled_spacing_x()
+        return self.style.scaled_spacing()
 
     def _apply_ui_units_x(self) -> None:
         """Apply ui_units_x to width sizing."""
@@ -1295,11 +1310,13 @@ class GPULayout(UILayoutStubMixin):
             return self.height
 
         if not self._elements:
-            return self.style.scaled_padding_y() * 2
+            _, padding_y = self._get_padding()
+            return padding_y * 2
 
         spacing = self._get_spacing()
         if self.direction == Direction.VERTICAL:
-            height = self.style.scaled_padding_y() * 2
+            _, padding_y = self._get_padding()
+            height = padding_y * 2
             n_elements = 0
             for element in self._elements:
                 if isinstance(element, GPULayout):
@@ -1321,7 +1338,8 @@ class GPULayout(UILayoutStubMixin):
                 else:
                     _, h = element.calc_size(self.style)
                     max_height = max(max_height, h * self.scale_y)
-            return max_height + self.style.scaled_padding_y() * 2
+            _, padding_y = self._get_padding()
+            return max_height + padding_y * 2
 
     def calc_width(self) -> float:
         """
@@ -1336,7 +1354,8 @@ class GPULayout(UILayoutStubMixin):
 
         spacing = self._get_spacing()
         if self.direction == Direction.HORIZONTAL:
-            width = self.style.scaled_padding_x() * 2
+            padding_x, _ = self._get_padding()
+            width = padding_x * 2
             n_elements = 0
             for element in self._elements:
                 if isinstance(element, GPULayout):
@@ -1747,11 +1766,17 @@ class GPULayout(UILayoutStubMixin):
             - 自然サイズを estimated_* に保存
         """
         spacing = self._get_spacing()
-        padding_x = self.style.scaled_padding_x()
-        padding_y = self.style.scaled_padding_y()
+        padding_x, padding_y = self._get_padding()
+        unit_x = float(self.style.scaled_item_height())
+        expand_default_width = unit_x * 10.0
+        use_fixed_expand_width = (self.alignment == Alignment.EXPAND)
 
         # パディングを差し引いた内部制約
         inner_constraints = constraints.deflate(padding_x * 2, padding_y * 2)
+        available_width = inner_constraints.max_width
+        if available_width == float('inf'):
+            available_width = self.width - padding_x * 2
+        available_width = max(0, available_width)
 
         total_height = padding_y * 2
         max_width = 0.0
@@ -1772,8 +1797,13 @@ class GPULayout(UILayoutStubMixin):
             else:
                 # LayoutItem は calc_size で自然サイズを取得
                 w, h = element.calc_size(self.style)
+                if use_fixed_expand_width and not element.sizing.is_fixed:
+                    w = expand_default_width
                 element.sizing.estimated_width = w
                 element.estimated_height = h
+                if type(element).calc_size_for_width is not LayoutItem.calc_size_for_width:
+                    _, height = element.calc_size_for_width(self.style, available_width)
+                    element.estimated_height = height
 
             element.sizing.estimated_width *= self.scale_x
             element.estimated_height *= self.scale_y
@@ -1812,16 +1842,16 @@ class GPULayout(UILayoutStubMixin):
         """
         n = len(self._elements)
         if n == 0:
-            self.sizing.estimated_width = self.style.scaled_padding_x() * 2
-            self.estimated_height = self.style.scaled_padding_y() * 2
+            padding_x, padding_y = self._get_padding()
+            self.sizing.estimated_width = padding_x * 2
+            self.estimated_height = padding_y * 2
             self._apply_ui_units_x()
             self.width = constraints.clamp_width(self.sizing.estimated_width)
             self.height = constraints.clamp_height(self.estimated_height)
             return Size(self.width, self.height)
 
         spacing = self._get_spacing()
-        padding_x = self.style.scaled_padding_x()
-        padding_y = self.style.scaled_padding_y()
+        padding_x, padding_y = self._get_padding()
 
         # 利用可能な幅を計算（制約の max_width を使用）
         # 負の幅を防ぐため max(0, ...) でクランプ
@@ -1834,6 +1864,7 @@ class GPULayout(UILayoutStubMixin):
         total_estimated_width = 0.0
         max_height = 0.0
         self._measured_widths = []
+        self._measured_gap = spacing
 
         for element in self._elements:
             if isinstance(element, GPULayout):
@@ -1871,6 +1902,44 @@ class GPULayout(UILayoutStubMixin):
             self.width = constraints.clamp_width(self.sizing.estimated_width)
         else:
             self.width = constraints.clamp_width(available_width + padding_x * 2)
+
+        # P1-1: 幅確定後に高さを再計測（幅依存の高さを反映）
+        fit_width = max(0, self.width - padding_x * 2)
+        if self._is_split and n > 0:
+            widths = self._distribute_split_widths(n, fit_width, spacing)
+            actual_gap = spacing
+        else:
+            widths, actual_gap = self._distribute_width(self._elements, fit_width, spacing)
+        self._measured_widths = widths
+        self._measured_gap = actual_gap
+
+        needs_height_pass = any(
+            isinstance(element, GPULayout) or
+            type(element).calc_size_for_width is not LayoutItem.calc_size_for_width
+            for element in self._elements
+        )
+        if needs_height_pass and widths:
+            max_height = 0.0
+            for element, width in zip(self._elements, widths):
+                if isinstance(element, GPULayout):
+                    child_constraints = BoxConstraints(
+                        min_width=width,
+                        max_width=width,
+                        min_height=0,
+                        max_height=float('inf')
+                    )
+                    size = element.measure(child_constraints)
+                    element.sizing.estimated_width = size.width
+                    element.estimated_height = size.height
+                else:
+                    _, height = element.calc_size_for_width(self.style, width)
+                    element.estimated_height = height
+
+                element.estimated_height *= self.scale_y
+                max_height = max(max_height, element.estimated_height)
+
+            self.estimated_height = max_height + padding_y * 2
+
         self.height = constraints.clamp_height(self.estimated_height)
 
         return Size(self.width, self.height)
@@ -1896,7 +1965,7 @@ class GPULayout(UILayoutStubMixin):
             - 縮小が必要な場合: 比例縮小、ギャップは固定
             - EXPAND:
               - expand_width=True の要素: 比例拡大
-              - expand_width=False の要素 (ラベル等): 自然幅を維持
+              - expand_width=False の要素: 自然幅を維持
               - 余白は間隔に均等分配
             - LEFT/CENTER/RIGHT: 元サイズ維持、ギャップは固定
         """
@@ -2043,8 +2112,7 @@ class GPULayout(UILayoutStubMixin):
             - arrange での scale 適用は行わない
         """
         spacing = self._get_spacing()
-        padding_x = self.style.scaled_padding_x()
-        padding_y = self.style.scaled_padding_y()
+        padding_x, padding_y = self._get_padding()
         # 負の幅を防ぐため max(0, ...) でクランプ
         available_width = max(0, self.width - padding_x * 2)
 
@@ -2111,8 +2179,7 @@ class GPULayout(UILayoutStubMixin):
             - split レイアウトは専用の配分ロジックを使用
         """
         spacing = self._get_spacing()
-        padding_x = self.style.scaled_padding_x()
-        padding_y = self.style.scaled_padding_y()
+        padding_x, padding_y = self._get_padding()
 
         n = len(self._elements)
         if n == 0:
@@ -2121,8 +2188,11 @@ class GPULayout(UILayoutStubMixin):
         cursor_y = self.y - padding_y
         available_width = max(0, self.width - padding_x * 2)
 
-        # Split レイアウトの場合は専用の配分ロジック
-        if self._is_split and n > 0:
+        if self._measured_widths and len(self._measured_widths) == n:
+            widths = self._measured_widths
+            actual_spacing = self._measured_gap
+        elif self._is_split and n > 0:
+            # Split レイアウトの場合は専用の配分ロジック
             widths = self._distribute_split_widths(n, available_width, spacing)
             actual_spacing = spacing
         else:
@@ -2220,8 +2290,9 @@ class GPULayout(UILayoutStubMixin):
             外部から呼び出している箇所がある場合のために残置していますが、
             将来のバージョンで削除される可能性があります。
         """
-        cursor_x = self.x + self.style.scaled_padding_x()
-        cursor_y = self.y - self.style.scaled_padding_y()
+        padding_x, padding_y = self._get_padding()
+        cursor_x = self.x + padding_x
+        cursor_y = self.y - padding_y
         available_width = self._get_available_width()
         spacing = self._get_spacing()
 

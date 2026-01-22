@@ -305,7 +305,8 @@ class GPULayoutStyle:
     padding_y: int = 5   # 上下パディング [推奨: 3-8]
 
     # スペーシング: 要素間の間隔（ピクセル、UI スケール前）
-    spacing: int = 2     # アイテム間の垂直スペース [推奨: 1-4, Blender標準≈2]
+    spacing: int = 2     # 縦方向スペース [推奨: 1-4, Blender標準≈2]
+    spacing_x: Optional[int] = None  # 横方向スペース（None の場合は spacing を使用）
 
     # アイテムサイズ
     item_height: int = 20  # 各アイテムの高さ [推奨: 18-24, Blender標準≈20]
@@ -394,6 +395,7 @@ class GPULayoutStyle:
             theme = prefs.themes[0]
             ui = theme.user_interface
             ui_styles = prefs.ui_styles[0]
+            default_style = cls()
 
             # ヘルパー関数: 色を RGBA に変換
             def to_rgba(color, alpha: float = 1.0) -> tuple[float, float, float, float]:
@@ -410,6 +412,9 @@ class GPULayoutStyle:
             font_style = ui_styles.widget
             shadow_type = font_style.shadow  # 0=none, 3=shadow, 5=blur, 6=outline
             shadow_enabled = shadow_type > 0
+
+            spacing_x = getattr(ui_styles, "buttonspacex", default_style.spacing_x)
+            spacing_y = getattr(ui_styles, "buttonspacey", default_style.spacing)
 
             # ウィジェットテーマを読み込み（layout.prop() 用）
             # 各 wcol_* から ThemeWidgetColors を作成
@@ -487,6 +492,8 @@ class GPULayoutStyle:
                     # レイアウト
                     border_radius=base_radius,
                     roundness=roundness_val,
+                    spacing=spacing_y,
+                    spacing_x=spacing_x,
 
                     # ドロップシャドウ
                     # 【調整可能】影の濃さ: ui.menu_shadow_fac * 係数 (例: * 1.2 で濃く, * 0.8 で薄く)
@@ -583,6 +590,8 @@ class GPULayoutStyle:
                 # レイアウト
                 border_radius=base_radius,  # roundness を忠実に反映
                 roundness=roundness_val,
+                spacing=spacing_y,
+                spacing_x=spacing_x,
 
                 # ドロップシャドウ（Blender テーマから取得）
                 # 【調整可能】影の濃さ: ui.menu_shadow_fac * 係数 (例: * 1.2 で濃く, * 0.8 で薄く)
@@ -646,7 +655,13 @@ class GPULayoutStyle:
         return self.scaled_padding_x()
 
     def scaled_spacing(self) -> int:
+        """後方互換用（縦方向スペーシング）"""
         return int(self.ui_scale(self.spacing))
+
+    def scaled_spacing_x(self) -> int:
+        """スケーリングされた横方向スペーシング"""
+        spacing_x = self.spacing_x if self.spacing_x is not None else self.spacing
+        return int(self.ui_scale(spacing_x))
 
     def scaled_item_height(self) -> int:
         return int(self.ui_scale(self.item_height))

@@ -67,7 +67,7 @@ Stub methods are provided via `UILayoutStubMixin` in `ui/gpu/uilayout_stubs.py`.
 
 | Method | Signature | GPULayout | Notes |
 |--------|-----------|-----------|-------|
-| `label()` | `label(*, text='', icon='NONE', ...)` | ⚠️ | `text`, `icon` supported |
+| `label()` | `label(*, text='', icon='NONE', ...)` | ⚠️ | `text`, `icon` supported (`wrap` is GPU-only) |
 | `separator()` | `separator(*, factor=1.0, type='AUTO')` | ⚠️ | `factor` supported, `type` ignored |
 | `separator_spacer()` | `separator_spacer()` | ✅ | Flexible spacer |
 | `progress()` | `progress(*, text='', factor=0.0, type='BAR')` | 🔲 | → label with percentage |

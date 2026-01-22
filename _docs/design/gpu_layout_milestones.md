@@ -1,8 +1,8 @@
 # GPULayout Implementation Milestones
 
-> Version: 1.2.2
+> Version: 1.2.3
 > Created: 2026-01-20
-> Updated: 2026-01-22 (LayoutKey 安定性の整備を反映)
+> Updated: 2026-01-23 (P1-1 width-dependent height の実装を反映)
 > Status: **Active**
 > Primary Spec: `gpu_layout_architecture_v3.md`
 > Implementation Reference: `gpu_layout_architecture_v2.1.md` (構造・API 形のみ)
@@ -132,7 +132,7 @@ layout.label(text="Section 2")  # ← row の後に表示される
 
 | ID | 問題 | 状態 |
 |----|------|------|
-| P1-1 | Width-dependent height problem | Deferred (Phase 2) |
+| P1-1 | Width-dependent height problem | Done |
 | P1-2 | scale_x inconsistency | Done |
 | P1-3 | scale_y double-scaling risk | Done |
 | P1-4 | Horizontal layout height constraint ignored | Done |
@@ -299,7 +299,7 @@ def resolve_split(items, total_width, gap, percentage):
 - [x] `_measure_horizontal()` を `distribute_width` アルゴリズムに修正
 - [x] `scale_x` の適用タイミングを修正（子 measure 後、親 measure_impl 前）
 - [x] `split` の幅計算を v3 準拠に修正（3列目以降 + factor==0）
-- [ ] Issue #116 P1-1 は Phase 2 で再検討
+- [x] Issue #116 P1-1 を実装（幅確定後の高さ再計測）
 - [x] Issue #116 P1-2 〜 P1-5 を解決
 - [x] `alignment` を v3 準拠に修正（EXPAND vs LEFT/CENTER/RIGHT）
 
@@ -338,9 +338,9 @@ split.label(text="B")  # 70%
 ### 1.9 P1-1 Follow-up（Width-dependent height）
 
 **次に着手すべき具体項目**:
-- [ ] 仕様化: width 制約で高さが変わる要素の measure ルールを確定
-- [ ] テスト: 幅で改行が変化する label を追加し、UILayout 比較
-- [ ] 実装: 水平レイアウトで幅確定後に高さ再計測パスを追加
+- [x] 仕様化: width 制約で高さが変わる要素の measure ルールを確定
+- [x] テスト: `demo.layout_wrap_height` を追加（GPU 側で wrap を検証）
+- [x] 実装: 水平レイアウトで幅確定後に高さ再計測パスを追加
 
 ---
 
@@ -510,6 +510,7 @@ class GPUPanel:
 | 1.2.0 | 2026-01-20 | Phase 2: LayoutKey/HitTest を WIP に変更 |
 | 1.2.1 | 2026-01-22 | 内部ループ統一、`label()` 戻り値対応、デバッグ補強 |
 | 1.2.2 | 2026-01-22 | LayoutKey 安定性（explicit_key 優先）とテスト追加 |
+| 1.2.3 | 2026-01-23 | P1-1: width-dependent height の再計測パスを追加 |
 
 ---
 

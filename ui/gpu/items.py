@@ -54,6 +54,10 @@ class LayoutItem:
         """サイズを計算して返す (width, height)"""
         return (self.width, self.height)
 
+    def calc_size_for_width(self, style: GPULayoutStyle, width: float) -> tuple[float, float]:
+        """幅制約に基づくサイズを計算して返す (width, height)"""
+        return self.calc_size(style)
+
     def draw(self, style: GPULayoutStyle) -> None:
         """描画"""
         pass
@@ -92,14 +96,65 @@ class LabelItem(LayoutItem):
     alignment: Alignment = Alignment.LEFT
     text_color: Optional[tuple[float, float, float, float]] = None
     alert: bool = False
-    # ラベルは EXPAND 時に自然幅を維持
-    expand_width: bool = False
+    wrap: bool = False
+
+    def _label_unit_x(self, style: GPULayoutStyle) -> float:
+        return float(style.scaled_item_height())
+
+    def _label_text_padding(self, style: GPULayoutStyle) -> float:
+        return self._label_unit_x(style) * 0.4
+
+    def _label_width_margin(self, style: GPULayoutStyle) -> float:
+        return self._label_unit_x(style) * 0.25
+
+    def _label_alignment_padding(self, style: GPULayoutStyle) -> float:
+        if self.alignment in (Alignment.LEFT, Alignment.RIGHT, Alignment.EXPAND):
+            return self._label_text_padding(style)
+        return 0.0
+
+    def _get_wrapped_lines(self, style: GPULayoutStyle, width: float) -> list[str]:
+        if not self.wrap:
+            return [self.text]
+
+        icon_size = style.scaled_icon_size() if self.icon != "NONE" else 0
+        icon_spacing = style.scaled_spacing() if self.icon != "NONE" else 0
+        padding = self._label_alignment_padding(style)
+        text_area_width = max(0.0, width - icon_size - icon_spacing - padding)
+        if text_area_width <= 0:
+            return [""]
+
+        text_size = style.scaled_text_size()
+        return BLFDrawing.wrap_text(self.text, text_area_width, text_size)
 
     def calc_size(self, style: GPULayoutStyle) -> tuple[float, float]:
         text_w, text_h = BLFDrawing.get_text_dimensions(self.text, style.scaled_text_size())
         icon_size = style.scaled_icon_size()
         icon_w = icon_size + style.scaled_spacing() if self.icon != "NONE" else 0
-        return (text_w + icon_w, max(text_h, style.scaled_item_height()))
+        padding = self._label_alignment_padding(style)
+        width_margin = self._label_width_margin(style)
+        return (text_w + icon_w + padding + width_margin, max(text_h, style.scaled_item_height()))
+
+    def calc_size_for_width(self, style: GPULayoutStyle, width: float) -> tuple[float, float]:
+        if not self.wrap:
+            return self.calc_size(style)
+
+        lines = self._get_wrapped_lines(style, width)
+        text_size = style.scaled_text_size()
+        text_h = BLFDrawing.get_text_dimensions("Wg", text_size)[1]
+        line_height = max(text_h, style.scaled_item_height())
+        height = line_height * max(1, len(lines))
+
+        max_line_width = 0.0
+        for line in lines:
+            line_w, _ = BLFDrawing.get_text_dimensions(line, text_size)
+            max_line_width = max(max_line_width, line_w)
+
+        icon_size = style.scaled_icon_size() if self.icon != "NONE" else 0
+        icon_spacing = style.scaled_spacing() if self.icon != "NONE" else 0
+        padding = self._label_alignment_padding(style)
+        width_margin = self._label_width_margin(style)
+        measured_width = max_line_width + icon_size + icon_spacing + padding + width_margin
+        return (min(width, measured_width) if width > 0 else measured_width, height)
 
     def draw(self, style: GPULayoutStyle) -> None:
         if not self.visible:
@@ -119,9 +174,52 @@ class LabelItem(LayoutItem):
         # コンテンツサイズを計算
         icon_size = style.scaled_icon_size() if self.icon != "NONE" else 0
         icon_spacing = style.scaled_spacing() if self.icon != "NONE" else 0
+        padding = self._label_alignment_padding(style)
+
+        clip_rect = self.get_clip_rect()
+
+        if self.wrap:
+            lines = self._get_wrapped_lines(style, self.width)
+            text_h = BLFDrawing.get_text_dimensions("Wg", text_size)[1]
+            line_height = max(text_h, style.scaled_item_height())
+
+            for index, line in enumerate(lines):
+                # アイコンは最初の行のみ描画
+                line_icon_size = icon_size if index == 0 else 0
+                line_icon_spacing = icon_spacing if index == 0 else 0
+
+                line_w, _ = BLFDrawing.get_text_dimensions(line, text_size)
+                content_w = line_icon_size + line_icon_spacing + line_w
+
+                if self.alignment == Alignment.CENTER:
+                    content_x = self.x + (self.width - content_w) / 2
+                elif self.alignment == Alignment.RIGHT:
+                    content_x = self.x + self.width - content_w - padding
+                else:  # LEFT or EXPAND
+                    content_x = self.x + padding
+
+                line_top = self.y - line_height * index
+                text_y = line_top - (line_height + text_h) / 2
+
+                text_x = content_x
+                if index == 0 and self.icon != "NONE":
+                    icon_y = line_top - (line_height - icon_size) / 2
+                    alpha = 1.0 if self.enabled else 0.5
+                    IconDrawing.draw_icon(content_x, icon_y, self.icon, alpha=alpha)
+                    text_x += icon_size + icon_spacing
+
+                if style.text_shadow_enabled:
+                    BLFDrawing.draw_text_clipped_with_shadow(
+                        text_x, text_y, line, color, text_size, clip_rect,
+                        style.text_shadow_color, style.text_shadow_alpha,
+                        style.scaled_text_shadow_offset()
+                    )
+                else:
+                    BLFDrawing.draw_text_clipped(text_x, text_y, line, color, text_size, clip_rect)
+            return
 
         # テキストの利用可能幅を計算（アイコンとスペーシングを除く）
-        text_area_width = self.width - icon_size - icon_spacing
+        text_area_width = self.width - icon_size - icon_spacing - padding
 
         # テキストが利用可能幅を超える場合は省略記号を追加
         display_text = BLFDrawing.get_text_with_ellipsis(self.text, text_area_width, text_size)
@@ -132,9 +230,9 @@ class LabelItem(LayoutItem):
         if self.alignment == Alignment.CENTER:
             content_x = self.x + (self.width - content_w) / 2
         elif self.alignment == Alignment.RIGHT:
-            content_x = self.x + self.width - content_w
+            content_x = self.x + self.width - content_w - padding
         else:  # LEFT or EXPAND
-            content_x = self.x
+            content_x = self.x + padding
 
         # テキスト位置（Y は baseline）
         text_y = self.y - (self.height + text_h) / 2
@@ -147,9 +245,6 @@ class LabelItem(LayoutItem):
             alpha = 1.0 if self.enabled else 0.5
             IconDrawing.draw_icon(content_x, icon_y, self.icon, alpha=alpha)
             text_x += icon_size + icon_spacing
-
-        # クリップ矩形を取得（テキスト領域用）
-        clip_rect = self.get_clip_rect()
 
         # テキスト（クリッピング付き）
         if style.text_shadow_enabled:
