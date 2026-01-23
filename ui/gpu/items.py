@@ -62,6 +62,10 @@ class LayoutItem:
         """描画"""
         pass
 
+    def can_align(self) -> bool:
+        """Whether this item participates in align-group corner stitching."""
+        return True
+
     def is_inside(self, x: float, y: float) -> bool:
         """座標がアイテム内かどうか"""
         return (self.x <= x <= self.x + self.width and
@@ -97,6 +101,9 @@ class LabelItem(LayoutItem):
     text_color: Optional[tuple[float, float, float, float]] = None
     alert: bool = False
     wrap: bool = False
+
+    def can_align(self) -> bool:
+        return False
 
     def _label_unit_x(self, style: GPULayoutStyle) -> float:
         return float(style.scaled_item_height())
@@ -262,6 +269,9 @@ class SeparatorItem(LayoutItem):
     """区切り線"""
     factor: float = 1.0
 
+    def can_align(self) -> bool:
+        return False
+
     def calc_size(self, style: GPULayoutStyle) -> tuple[float, float]:
         return (self.width, int(style.scaled_spacing() * self.factor * 2))
 
@@ -284,6 +294,9 @@ class PropDisplayItem(LayoutItem):
     property: str = ""
     text: str = ""
     icon: str = "NONE"
+
+    def can_align(self) -> bool:
+        return False
 
     def _get_value(self) -> str:
         """プロパティ値を文字列で取得"""
@@ -631,6 +644,9 @@ class CheckboxItem(LayoutItem):
 
     # 状態（layout 側から設定される）
     _hovered: bool = field(default=False, repr=False)
+
+    def can_align(self) -> bool:
+        return False
 
     def calc_size(self, style: GPULayoutStyle) -> tuple[float, float]:
         """チェックボックスのサイズを計算"""

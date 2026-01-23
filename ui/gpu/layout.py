@@ -1192,6 +1192,10 @@ class GPULayout(UILayoutStubMixin):
             return self.style.scaled_spacing_x()
         return self.style.scaled_spacing()
 
+    def _element_can_align(self, element: Any) -> bool:
+        """Return True if element participates in align-group corner stitching."""
+        return isinstance(element, LayoutItem) and element.can_align()
+
     def _apply_ui_units_x(self) -> None:
         """Apply ui_units_x to width sizing."""
         if self.ui_units_x > 0:
@@ -2163,6 +2167,10 @@ class GPULayout(UILayoutStubMixin):
         if n == 0:
             return
 
+        align_flags = None
+        if self._align:
+            align_flags = [self._element_can_align(element) for element in self._elements]
+
         for i, element in enumerate(self._elements):
             if isinstance(element, GPULayout):
                 # 子レイアウトは親の幅に合わせる
@@ -2197,12 +2205,13 @@ class GPULayout(UILayoutStubMixin):
                 # Phase 2: corners 計算（縦方向）
                 if hasattr(element, 'corners'):
                     if self._align:
-                        # align=True: 隣接ボタンの境界で角丸を無効化
-                        is_first = (i == 0)
-                        is_last = (i == n - 1)
-                        # corners: (bottomLeft, topLeft, topRight, bottomRight)
-                        # 最上: 上側のみ角丸、最下: 下側のみ角丸
-                        element.corners = (is_last, is_first, is_first, is_last)
+                        if not align_flags or not align_flags[i]:
+                            element.corners = (True, True, True, True)
+                        else:
+                            top = align_flags[i - 1] if i > 0 else False
+                            bottom = align_flags[i + 1] if i < n - 1 else False
+                            # corners: (bottomLeft, topLeft, topRight, bottomRight)
+                            element.corners = (not bottom, not top, not top, not bottom)
                     else:
                         # align=False: デフォルト（全角丸）にリセット
                         element.corners = (True, True, True, True)
@@ -2224,6 +2233,10 @@ class GPULayout(UILayoutStubMixin):
         n = len(self._elements)
         if n == 0:
             return
+
+        align_flags = None
+        if self._align:
+            align_flags = [self._element_can_align(element) for element in self._elements]
 
         cursor_y = self.y - padding_y
         available_width = max(0, self.width - padding_x * 2)
@@ -2269,12 +2282,13 @@ class GPULayout(UILayoutStubMixin):
                 # Phase 2: corners 計算（水平方向）
                 if hasattr(element, 'corners'):
                     if self._align:
-                        # align=True: 隣接ボタンの境界で角丸を無効化
-                        is_first = (i == 0)
-                        is_last = (i == n - 1)
-                        # corners: (bottomLeft, topLeft, topRight, bottomRight)
-                        # 左端のみ左側角丸、右端のみ右側角丸
-                        element.corners = (is_first, is_first, is_last, is_last)
+                        if not align_flags or not align_flags[i]:
+                            element.corners = (True, True, True, True)
+                        else:
+                            left = align_flags[i - 1] if i > 0 else False
+                            right = align_flags[i + 1] if i < n - 1 else False
+                            # corners: (bottomLeft, topLeft, topRight, bottomRight)
+                            element.corners = (not left, not left, not right, not right)
                     else:
                         # align=False: デフォルト（全角丸）にリセット
                         element.corners = (True, True, True, True)
