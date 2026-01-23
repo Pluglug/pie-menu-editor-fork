@@ -104,3 +104,18 @@ Remaining gaps to align with Blender:
 - Pointer Search widget.
 - Vector/Array widgets (including axis labels).
 - Special subtypes (Matrix, Direction, Layer, Axis-Angle).
+
+## 7) Gap Analysis vs GPULayout (Current)
+
+| Area | Blender behavior | GPULayout status | Notes |
+| --- | --- | --- | --- |
+| Boolean + icon | IconToggle when icon is set | Checkbox/Toggle only via `toggle` param | Icon presence does not affect widget choice yet |
+| Enum (default) | Menu or SearchMenu | RadioGroup fallback | Dropdown not implemented |
+| Enum flags | Auto expand (multi-select) | No automatic expand | Needs `PROP_ENUM_FLAG` awareness |
+| String | Text or SearchMenu | `prop_display()` fallback | Text input/Search not implemented |
+| Pointer | SearchMenu with type icon | `prop_display()` fallback | Pointer widget not implemented |
+| Collection | Disabled Label `"N items"` | `prop_display()` fallback | Should show item count |
+| Numeric array (vector) | Per-axis inputs, labels | `prop_display()` fallback | `WidgetHint.VECTOR` is not implemented |
+| Matrix / Direction / Layers | Specialized array widgets | Not implemented | `ui_item_array()` cases missing |
+| Property split/decorate | Split label/field + decorators | Not implemented | `use_property_split/use_property_decorate` unused |
+| Flags: icon_only/compact/no_bg | Affects layout/emboss | Not implemented | Parameters exist but not used |
