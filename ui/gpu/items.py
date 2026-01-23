@@ -654,8 +654,9 @@ class CheckboxItem(LayoutItem):
         text_w, _ = BLFDrawing.get_text_dimensions(self.text, text_size)
         box_size = self._get_box_size(style)
         spacing = style.scaled_spacing()
-        # ボックス + スペース + テキスト
-        return (box_size + spacing + text_w, style.scaled_item_height())
+        padding = style.scaled_padding()
+        # ボックス + スペース + テキスト + 左右パディング
+        return (box_size + spacing + text_w + padding * 2, style.scaled_item_height())
 
     def _get_box_size(self, style: GPULayoutStyle) -> float:
         """チェックボックスの四角形サイズを取得"""
@@ -688,8 +689,10 @@ class CheckboxItem(LayoutItem):
         spacing = style.scaled_spacing()
         text_size = style.scaled_text_size()
 
-        # ボックスの位置（垂直中央揃え）
-        box_x = self.x
+        padding = style.scaled_padding()
+
+        # ボックスの位置（垂直中央揃え、左右パディング）
+        box_x = self.x + padding
         box_y = self.y - (self.height - box_size) / 2
 
         # 角丸半径（ボックスサイズに対して roundness を適用）
@@ -732,7 +735,7 @@ class CheckboxItem(LayoutItem):
         text_y = self.y - (self.height + text_h) / 2
 
         # 利用可能幅でテキストを省略
-        available_width = self.width - box_size - spacing
+        available_width = self.width - box_size - spacing - padding * 2
         display_text = BLFDrawing.get_text_with_ellipsis(self.text, available_width, text_size)
 
         clip_rect = self.get_clip_rect()
