@@ -921,14 +921,6 @@ class PMEPreferences(AddonPreferences):
             icon = 'ERROR' if data.has_errors(CC.W_PMI_SYNTAX) else 'NONE'
             lh.prop(data, "cmd", "", icon)
 
-            # Phase 9-X (#102): Description field for COMMAND mode fallback tooltip
-            # Only shown for Pie Menu, Regular Menu, and Popup Dialog
-            if pm.mode in ('PMENU', 'RMENU', 'DIALOG'):
-                row = lh.row(subcol, align=True)
-                desc_icon = 'ERROR' if data.has_errors(CC.W_PMI_DESC_SYNTAX) else ic('INFO')
-                lh.prop(data, "description", "", desc_icon)
-                lh.prop(data, "description_is_expr", "", ic('SCRIPTPLUGINS'))
-
             if (
                 pm.mode == 'STICKY'
                 and PME_OT_sticky_key_edit.pmi_prop
@@ -1035,6 +1027,36 @@ class PMEPreferences(AddonPreferences):
             lh.row(align=False)
             lh.operator(PME_OT_pmi_cmd_generate.bl_idname, "Clear", clear=True)
             lh.operator(PME_OT_pmi_cmd_generate.bl_idname, "Apply", 'FILE_TICK')
+
+        # Phase 9-X (#102): Description field for COMMAND mode fallback tooltip
+        # Shown after operator args UI (or instead of it for non-operators)
+        if data_mode == 'COMMAND' and pm.mode in ('PMENU', 'RMENU', 'DIALOG'):
+            is_operator = bool(data.kmi.idname)
+            # For operators: hide if description is empty, show disabled with note if filled
+            # For non-operators: always show as editable field (no box, continuous with cmd field)
+            if not is_operator or data.description:
+                if is_operator:
+                    # Operator with existing description: show in separate box with note
+                    desc_col = mode_col.box().column(align=True)
+                    lh.row(desc_col, align=True)
+                else:
+                    # Non-operator: continue in subcol with small gap
+                    lh.lt(subcol)
+                    lh.sep()
+                    lh.row(align=True)
+                if data.has_errors(CC.W_PMI_DESC_SYNTAX):
+                    desc_icon = 'ERROR'
+                else:
+                    desc_icon = ic('CURRENT_FILE')
+                if data.description_is_expr:
+                    desc_placeholder = 'return "Description"'
+                else:
+                    desc_placeholder = "Description"
+                lh.prop(data, "description", "", desc_icon, placeholder=desc_placeholder, enabled=not is_operator)
+                lh.prop(data, "description_is_expr", "", ic('SCRIPTPLUGINS'), enabled=not is_operator)
+                if is_operator:
+                    lh.row(desc_col, enabled=False)
+                    lh.label("Unused: operator provides its own tooltip")
 
         if pm.mode == 'MODAL':
             if data.mode == 'COMMAND':

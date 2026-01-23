@@ -442,7 +442,8 @@ class EditorBase:
                 sub.alert = False
             except:
                 sub.alert = True
-        sub.prop(pm, "description", text="", icon=ic('INFO'))
+        desc_placeholder = 'return "Description"' if pm.description_is_expr else "Description"
+        sub.prop(pm, "description", text="", icon=ic('CURRENT_FILE'), placeholder=desc_placeholder)
         row.prop(pm, "description_is_expr", text="", icon=ic('SCRIPTPLUGINS'))
 
         # Poll condition
