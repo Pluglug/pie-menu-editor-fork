@@ -1444,6 +1444,55 @@ class DEMO_OT_layout_structure(Operator, GPUPanelMixin):
         _build_layout_structure(layout, use_bpy_ops=False)
 
 
+# Demo 5.2: Align Types Test - align=True での角丸挙動確認
+# ═══════════════════════════════════════════════════════════════════════════════
+
+class DEMO_OT_layout_align_types(Operator, GPUPanelMixin):
+    """Align Types Test - non-alignable items break corners"""
+    bl_idname = "demo.layout_align_types"
+    bl_label = "Demo: Layout Align Types"
+    bl_options = {'REGISTER'}
+
+    gpu_panel_uid = "demo_layout_align_types"
+    gpu_title = "Layout Align Types"
+    gpu_width = 360
+
+    def modal(self, context, event):
+        return self._modal_impl(context, event)
+
+    def invoke(self, context, event):
+        return self._invoke_impl(context, event)
+
+    def cancel(self, context):
+        return self._cancel_impl(context)
+
+    def draw_panel(self, layout, context):
+        layout.label(text="Row align=True (label breaks group)")
+        row = layout.row(align=True)
+        row.operator(text="A")
+        row.operator(text="B")
+        row.label(text="Label")
+        row.operator(text="C")
+        row.operator(text="D")
+
+        layout.separator()
+
+        layout.label(text="Row align=True (checkbox breaks group)")
+        row = layout.row(align=True)
+        row.operator(text="A")
+        row.checkbox(text="Check", value=True)
+        row.operator(text="B")
+
+        layout.separator()
+
+        layout.label(text="Column align=True (label breaks group)")
+        col = layout.column(align=True)
+        col.operator(text="Top")
+        col.operator(text="Mid")
+        col.label(text="Label")
+        col.operator(text="Bottom")
+
+
 # Demo 5.25: Width-dependent height - wrapped labels in horizontal layouts
 # ═══════════════════════════════════════════════════════════════════════════════
 
