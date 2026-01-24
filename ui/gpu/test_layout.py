@@ -1986,6 +1986,7 @@ class DEMO_OT_blender_compat_gpulayout(Operator, GPUPanelMixin):
     gpu_panel_uid = "demo_blender_compat_gpulayout"
     gpu_title = "GPULayout - Compat Test"
     gpu_width = 360
+    gpu_debug_hittest = True  # ヒット領域デバッグ表示（D キーでトグル）
 
     def modal(self, context, event):
         return self._modal_impl(context, event)
