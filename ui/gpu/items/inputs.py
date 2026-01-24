@@ -66,6 +66,14 @@ class SliderItem(LayoutItem):
         normalized = (self.value - self.min_val) / (self.max_val - self.min_val)
         return max(0.0, min(1.0, normalized))  # 範囲外の値をクランプ
 
+    def get_value(self) -> float:
+        """ValueWidget Protocol 準拠"""
+        return self.value
+
+    def set_value(self, value: float) -> None:
+        """ValueWidget Protocol 準拠"""
+        self.value = max(self.min_val, min(self.max_val, value))
+
     def set_value_from_position(self, x: float) -> None:
         """X 座標から値を設定（ドラッグ時に使用）"""
         # 幅が 0 以下の場合は安全にスキップ
@@ -267,6 +275,14 @@ class NumberItem(LayoutItem):
     def _get_button_width(self, style: GPULayoutStyle) -> float:
         """増減ボタンの幅を取得"""
         return style.ui_scale(16)
+
+    def get_value(self) -> float:
+        """ValueWidget Protocol 準拠"""
+        return self.value
+
+    def set_value(self, value: float) -> None:
+        """ValueWidget Protocol 準拠"""
+        self.value = max(self.min_val, min(self.max_val, value))
 
     def set_value_from_delta(self, dx: float) -> None:
         """ドラッグ移動量から値を設定"""
@@ -494,6 +510,41 @@ class ColorItem(LayoutItem):
         # デフォルトは最小幅として適当な値を返す
         min_width = style.scaled_item_height() * 4  # 最小幅
         return (self.width if self.width > 0 else min_width, height)
+
+    @property
+    def value(self) -> tuple[float, float, float, float]:
+        """ValueWidget Protocol 準拠"""
+        return self.color
+
+    @value.setter
+    def value(self, value: tuple[float, float, float, float]) -> None:
+        self.set_value(value)
+
+    def get_value(self) -> tuple[float, float, float, float]:
+        """ValueWidget Protocol 準拠"""
+        return self.color
+
+    def set_value(self, value: tuple[float, float, float, float]) -> None:
+        """ValueWidget Protocol 準拠"""
+        if isinstance(value, (list, tuple)):
+            if len(value) == 3:
+                color = (*value, 1.0)
+            elif len(value) >= 4:
+                color = tuple(value[:4])
+            else:
+                color = (1.0, 1.0, 1.0, 1.0)
+        else:
+            color = (1.0, 1.0, 1.0, 1.0)
+
+        def _clamp(channel: float) -> float:
+            return max(0.0, min(1.0, float(channel)))
+
+        self.color = (
+            _clamp(color[0]),
+            _clamp(color[1]),
+            _clamp(color[2]),
+            _clamp(color[3]),
+        )
 
     def draw(self, style: GPULayoutStyle, state: Optional[ItemRenderState] = None) -> None:
         """描画

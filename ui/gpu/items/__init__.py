@@ -10,6 +10,7 @@ from .text import LabelItem, SeparatorItem, PropDisplayItem
 from .buttons import ButtonItem, ToggleItem, CheckboxItem, RadioOption, RadioGroupItem
 from .containers import BoxItem
 from .inputs import SliderItem, NumberItem, ColorItem
+from .protocols import ValueWidget, EditableWidget, InteractiveWidget, DrawableItem
 
 __all__ = [
     "LayoutItem",
@@ -25,4 +26,8 @@ __all__ = [
     "SliderItem",
     "NumberItem",
     "ColorItem",
+    "ValueWidget",
+    "EditableWidget",
+    "InteractiveWidget",
+    "DrawableItem",
 ]

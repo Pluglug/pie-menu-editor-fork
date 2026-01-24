@@ -70,6 +70,9 @@ from .layout import GPULayout
 # Tooltip
 from .tooltip import GPUTooltip
 
+# Widget Factory
+from .widget_factory import WidgetFactory, WidgetContext
+
 # Interactive
 from .interactive import (
     HitRect,
@@ -123,6 +126,9 @@ __all__ = [
     'GPULayout',
     # Tooltip
     'GPUTooltip',
+    # Widget Factory
+    'WidgetFactory',
+    'WidgetContext',
     # Interactive
     'HitRect',
     'HitTestManager',

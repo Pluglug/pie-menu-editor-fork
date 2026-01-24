@@ -12,21 +12,12 @@ from ..binding import PropertyBinding
 from ..context import TrackedAccess
 from ..items import (
     LayoutItem,
-    LabelItem,
     PropDisplayItem,
-    ToggleItem,
-    CheckboxItem,
-    SliderItem,
-    NumberItem,
-    ColorItem,
-    RadioGroupItem,
-    RadioOption,
 )
 from ..rna_utils import (
     get_property_info,
     get_property_value,
     set_property_value,
-    PropType,
     WidgetHint,
     PropertyInfo,
 )
@@ -205,180 +196,23 @@ class LayoutPropMixin:
         """
         プロパティ用ウィジェットを作成
 
-        内部メソッド。hint に応じて適切なウィジェットを生成。
+        WidgetFactory に委譲し、未対応の場合は prop_display() にフォールバック。
         """
-        item: Optional[LayoutItem] = None
+        from ..widget_factory import WidgetFactory, WidgetContext
 
-        # Boolean → Checkbox
-        if hint == WidgetHint.CHECKBOX:
-            def on_toggle(new_value: bool):
-                set_value(bpy.context, new_value)
+        ctx = WidgetContext(
+            text=text,
+            icon=icon,
+            key=key,
+            enabled=self.enabled,
+            active=self.active,
+            set_value=set_value,
+        )
 
-            item = CheckboxItem(
-                text=text,
-                value=bool(value),
-                key=key,
-                on_toggle=on_toggle,
-                enabled=self.enabled and self.active
-            )
+        item = WidgetFactory.create(hint, info, value, ctx)
 
-        # Boolean → Toggle
-        elif hint == WidgetHint.TOGGLE:
-            def on_toggle(new_value: bool):
-                set_value(bpy.context, new_value)
-
-            item = ToggleItem(
-                text=text,
-                icon=icon,
-                value=bool(value),
-                key=key,
-                on_toggle=on_toggle,
-                enabled=self.enabled and self.active
-            )
-
-        # Number (Int/Float)
-        elif hint == WidgetHint.NUMBER:
-            def on_change(new_value: float):
-                # Int の場合は整数に変換
-                if info.prop_type == PropType.INT:
-                    new_value = int(new_value)
-                set_value(bpy.context, new_value)
-
-            # soft_min/soft_max を使用（より自然な範囲）
-            min_val = info.soft_min if info.soft_min is not None else (info.min_value or -1e9)
-            max_val = info.soft_max if info.soft_max is not None else (info.max_value or 1e9)
-
-            item = NumberItem(
-                value=float(value) if value is not None else 0.0,
-                min_val=min_val,
-                max_val=max_val,
-                step=info.step,
-                precision=info.precision if info.prop_type == PropType.FLOAT else 0,
-                text=text,
-                key=key,
-                on_change=on_change,
-                enabled=self.enabled and self.active
-            )
-
-        # Slider (Int/Float with PERCENTAGE/FACTOR)
-        elif hint == WidgetHint.SLIDER:
-            def on_change(new_value: float):
-                if info.prop_type == PropType.INT:
-                    new_value = int(new_value)
-                set_value(bpy.context, new_value)
-
-            min_val = info.soft_min if info.soft_min is not None else (info.min_value or 0.0)
-            max_val = info.soft_max if info.soft_max is not None else (info.max_value or 1.0)
-
-            # SliderItem には step パラメータがない（位置ベースで値を決定）
-            item = SliderItem(
-                value=float(value) if value is not None else 0.0,
-                min_val=min_val,
-                max_val=max_val,
-                precision=info.precision if info.prop_type == PropType.FLOAT else 0,
-                text=text,
-                key=key,
-                on_change=on_change,
-                enabled=self.enabled and self.active
-            )
-
-        # Color (Float array with COLOR subtype)
-        elif hint == WidgetHint.COLOR:
-            # 4要素に正規化
-            if isinstance(value, (list, tuple)):
-                if len(value) == 3:
-                    color = (*value, 1.0)
-                elif len(value) >= 4:
-                    color = tuple(value[:4])
-                else:
-                    color = (1.0, 1.0, 1.0, 1.0)
-            else:
-                color = (1.0, 1.0, 1.0, 1.0)
-
-            # TODO: on_click でカラーピッカーを開く
-            item = ColorItem(
-                color=color,
-                text=text,
-                key=key,
-                enabled=self.enabled and self.active
-            )
-
-        # Radio (Enum expanded)
-        elif hint == WidgetHint.RADIO:
-            # 動的 Enum の場合は全アイテムを取得できないため、
-            # 現在値のみをラベルとして表示
-            if info.is_dynamic_enum:
-                # 動的 Enum: 現在値の表示名を取得してラベル表示
-                display_name = info.enum_items[0][1] if info.enum_items else str(value)
-                item = LabelItem(
-                    text=f"{text}: {display_name}",
-                    key=key,
-                    enabled=self.enabled and self.active
-                )
-            else:
-                def on_change(new_value: str):
-                    set_value(bpy.context, new_value)
-
-                options = [
-                    RadioOption(value=ident, label=name)
-                    for ident, name, _ in info.enum_items
-                ]
-
-                item = RadioGroupItem(
-                    options=options,
-                    value=str(value) if value else "",
-                    key=key,
-                    on_change=on_change,
-                    enabled=self.enabled and self.active
-                )
-
-        # Vector (Numeric array like XYZ)
-        elif hint == WidgetHint.VECTOR:
-            # TODO: 各要素を NumberItem で表示
-            # 現在は読み取り専用表示にフォールバック
-            self.prop_display(data, property, text=text, icon=icon)
-            return None
-
-        # Text (String) - 未実装
-        elif hint == WidgetHint.TEXT:
-            # TODO: TextInputItem 実装後に対応
-            self.prop_display(data, property, text=text, icon=icon)
-            return None
-
-        # Menu (Enum dropdown) - 未実装
-        elif hint == WidgetHint.MENU:
-            # TODO: MenuButtonItem 実装後に対応
-            # 動的 Enum の場合はラベル表示
-            if info.is_dynamic_enum:
-                display_name = info.enum_items[0][1] if info.enum_items else str(value)
-                item = LabelItem(
-                    text=f"{text}: {display_name}",
-                    key=key,
-                    enabled=self.enabled and self.active
-                )
-            # 通常 Enum は RadioGroup にフォールバック
-            elif info.enum_items:
-                def on_change(new_value: str):
-                    set_value(bpy.context, new_value)
-
-                options = [
-                    RadioOption(value=ident, label=name)
-                    for ident, name, _ in info.enum_items
-                ]
-
-                item = RadioGroupItem(
-                    options=options,
-                    value=str(value) if value else "",
-                    key=key,
-                    on_change=on_change,
-                    enabled=self.enabled and self.active
-                )
-            else:
-                self.prop_display(data, property, text=text, icon=icon)
-                return None
-
-        # Unsupported
-        else:
+        if item is None:
+            # 未対応のウィジェットは表示のみ
             self.prop_display(data, property, text=text, icon=icon)
             return None
 

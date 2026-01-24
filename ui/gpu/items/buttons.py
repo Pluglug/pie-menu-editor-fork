@@ -145,6 +145,14 @@ class ToggleItem(LayoutItem):
         if self.on_toggle:
             self.on_toggle(self.value)
 
+    def get_value(self) -> bool:
+        """ValueWidget Protocol 準拠"""
+        return self.value
+
+    def set_value(self, value: bool) -> None:
+        """ValueWidget Protocol 準拠"""
+        self.value = bool(value)
+
     def draw(self, style: GPULayoutStyle, state: Optional[ItemRenderState] = None) -> None:
         """トグルボタンを描画（wcol_toggle テーマ使用）"""
         if not self.visible:
@@ -330,6 +338,14 @@ class CheckboxItem(LayoutItem):
         self.value = not self.value
         if self.on_toggle:
             self.on_toggle(self.value)
+
+    def get_value(self) -> bool:
+        """ValueWidget Protocol 準拠"""
+        return self.value
+
+    def set_value(self, value: bool) -> None:
+        """ValueWidget Protocol 準拠"""
+        self.value = bool(value)
 
     def draw(self, style: GPULayoutStyle, state: Optional[ItemRenderState] = None) -> None:
         """チェックボックスを描画（wcol_option テーマ使用）"""
@@ -609,6 +625,14 @@ class RadioGroupItem(LayoutItem):
             self.value = value
             if self.on_change:
                 self.on_change(value)
+
+    def get_value(self) -> str:
+        """ValueWidget Protocol 準拠"""
+        return self.value
+
+    def set_value(self, value: str) -> None:
+        """ValueWidget Protocol 準拠"""
+        self.value = str(value) if value is not None else ""
 
     def select_by_index(self, index: int) -> None:
         """インデックスで選択"""
