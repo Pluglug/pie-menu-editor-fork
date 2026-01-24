@@ -1811,3 +1811,209 @@ class DEMO_OT_quick_uv(Operator):
             import traceback
             print(f"Draw error: {e}")
             traceback.print_exc()
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# Demo 8: Blender Compat Test - blender_compat_todo.md の完了済み機能テスト
+# ═══════════════════════════════════════════════════════════════════════════════
+
+def _build_blender_compat_content(layout, context, *, use_bpy_ops: bool) -> None:
+    """完了済み機能のテストコンテンツを構築する共通関数
+
+    Args:
+        layout: GPULayout または bpy.types.UILayout
+        context: Blender context
+        use_bpy_ops: True なら Blender UILayout 用、False なら GPULayout 用
+    """
+    # アイコン切り替え: Blender UILayout は標準アイコン、GPULayout はカスタム PNG
+    def icon(blender_icon: str) -> str:
+        return blender_icon if use_bpy_ops else 'roaoao'
+
+    # ═══════════════════════════════════════════════════════════════
+    # 1. VectorItem (A-2) - 配列プロパティ
+    # ═══════════════════════════════════════════════════════════════
+    layout.label(text="1. VectorItem (A-2)", icon=icon('ORIENTATION_GLOBAL'))
+
+    if context.object:
+        # location (Vector3)
+        layout.prop(context.object, "location")
+
+        # scale (Vector3)
+        layout.prop(context.object, "scale", text="Scale")
+
+        # rotation_euler (Vector3) - 違う subtype
+        layout.prop(context.object, "rotation_euler", text="Rotation")
+
+    else:
+        layout.label(text="(Select an object)")
+
+    layout.separator()
+
+    # ═══════════════════════════════════════════════════════════════
+    # 2. index パラメータ (B-1) - 配列の個別要素
+    # ═══════════════════════════════════════════════════════════════
+    layout.label(text="2. index parameter (B-1)", icon=icon('LINENUMBERS_ON'))
+
+    if context.object:
+        # index=0 で X のみ
+        layout.prop(context.object, "location", index=0, text="X Only")
+        # index=1 で Y のみ
+        layout.prop(context.object, "location", index=1, text="Y Only")
+        # index=2 で Z のみ
+        layout.prop(context.object, "location", index=2, text="Z Only")
+    else:
+        layout.label(text="(Select an object)")
+
+    layout.separator()
+
+    # ═══════════════════════════════════════════════════════════════
+    # 3. icon_only (B-2) - アイコンのみ表示
+    # ═══════════════════════════════════════════════════════════════
+    layout.label(text="3. icon_only (B-2)", icon=icon('IMAGE_DATA'))
+
+    if context.object:
+        row = layout.row()
+        # 通常表示
+        row.prop(context.object, "hide_viewport", text="Normal")
+        # icon_only=True
+        row.prop(context.object, "hide_viewport", icon_only=True)
+        row.prop(context.object, "hide_render", icon_only=True)
+        row.prop(context.object, "hide_select", icon_only=True)
+    else:
+        layout.label(text="(Select an object)")
+
+    layout.separator()
+
+    # ═══════════════════════════════════════════════════════════════
+    # 4. heading パラメータ (C-1) - row/column のヘッディング
+    # ═══════════════════════════════════════════════════════════════
+    layout.label(text="4. heading parameter (C-1)", icon=icon('ALIGN_JUSTIFY'))
+
+    # row with heading
+    row = layout.row(heading="Row Heading")
+    row.label(text="Item 1")
+    row.label(text="Item 2")
+
+    # column with heading
+    col = layout.column(heading="Column Heading")
+    col.label(text="Vertical Item 1")
+    col.label(text="Vertical Item 2")
+
+    layout.separator()
+
+    # ═══════════════════════════════════════════════════════════════
+    # 5. column_flow (C-2) - 複数列フローレイアウト
+    # ═══════════════════════════════════════════════════════════════
+    layout.label(text="5. column_flow (C-2)", icon=icon('OUTLINER'))
+
+    # 2列フロー
+    flow = layout.column_flow(columns=2)
+    flow.label(text="A")
+    flow.label(text="B")
+    flow.label(text="C")
+    flow.label(text="D")
+    flow.label(text="E")
+    flow.label(text="F")
+
+    layout.separator()
+
+    # 3列フロー with align
+    layout.label(text="column_flow(columns=3, align=True)")
+    flow3 = layout.column_flow(columns=3, align=True)
+    for i in range(9):
+        if use_bpy_ops:
+            flow3.operator("mesh.primitive_cube_add", text=f"Btn {i+1}")
+        else:
+            flow3.operator(text=f"Btn {i+1}")
+
+    layout.separator()
+
+    # ═══════════════════════════════════════════════════════════════
+    # 6. use_property_split (C-3) - プロパティ分割表示
+    # ═══════════════════════════════════════════════════════════════
+    layout.label(text="6. use_property_split (C-3)", icon=icon('SNAP_INCREMENT'))
+
+    # use_property_split を有効化
+    layout.use_property_split = True
+
+    if context.object:
+        layout.prop(context.object, "location")
+        layout.prop(context.object, "scale")
+
+        # heading と組み合わせ
+        col = layout.column(heading="Visibility")
+        col.prop(context.object, "hide_viewport")
+        col.prop(context.object, "hide_render")
+
+    else:
+        layout.label(text="(Select an object)")
+
+    # use_property_split を無効化して戻す
+    layout.use_property_split = False
+
+    layout.separator()
+
+    # ═══════════════════════════════════════════════════════════════
+    # 7. 組み合わせテスト - 複数機能の組み合わせ
+    # ═══════════════════════════════════════════════════════════════
+    layout.label(text="7. Combined Test", icon=icon('PREFERENCES'))
+
+    layout.use_property_split = True
+
+    if context.object:
+        # VectorItem + use_property_split
+        layout.prop(context.object, "location", text="Position")
+
+        # index + use_property_split
+        row = layout.row(heading="Individual Axes")
+        row.prop(context.object, "location", index=0, text="X")
+        row.prop(context.object, "location", index=1, text="Y")
+        row.prop(context.object, "location", index=2, text="Z")
+
+    else:
+        layout.label(text="(Select an object)")
+
+    layout.use_property_split = False
+
+
+class DEMO_OT_blender_compat_gpulayout(Operator, GPUPanelMixin):
+    """GPULayout - Blender Compat Test (blender_compat_todo.md の完了済み機能)"""
+    bl_idname = "demo.blender_compat_gpulayout"
+    bl_label = "Demo: Blender Compat (GPULayout)"
+    bl_options = {'REGISTER'}
+
+    # GPUPanelMixin 設定
+    gpu_panel_uid = "demo_blender_compat_gpulayout"
+    gpu_title = "GPULayout - Compat Test"
+    gpu_width = 360
+
+    def modal(self, context, event):
+        return self._modal_impl(context, event)
+
+    def invoke(self, context, event):
+        return self._invoke_impl(context, event)
+
+    def cancel(self, context):
+        return self._cancel_impl(context)
+
+    def draw_panel(self, layout, context):
+        """完了済み機能のテスト（GPULayout版）"""
+        _build_blender_compat_content(layout, context, use_bpy_ops=False)
+
+
+class DEMO_OT_blender_compat_uilayout(Operator):
+    """UILayout Reference - Blender Compat Test (blender_compat_todo.md の完了済み機能)"""
+    bl_idname = "demo.blender_compat_uilayout"
+    bl_label = "Demo: Blender Compat (UILayout)"
+    bl_options = {'REGISTER'}
+
+    def execute(self, context):
+        return {'FINISHED'}
+
+    def invoke(self, context, event):
+        # popup dialog として表示
+        return context.window_manager.invoke_popup(self, width=360)
+
+    def draw(self, context):
+        """完了済み機能のテスト（Blender UILayout版 - 比較用）"""
+        _build_blender_compat_content(self.layout, context, use_bpy_ops=True)
