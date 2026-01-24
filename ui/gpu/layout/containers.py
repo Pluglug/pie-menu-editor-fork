@@ -29,12 +29,13 @@ class LayoutContainerMixin:
     """Mixin methods."""
 
 
-    def row(self, align: bool = False) -> GPULayout:
+    def row(self, align: bool = False, heading: str = "") -> GPULayout:
         """
         水平レイアウトを作成
 
         Args:
             align: True の場合、アイテム間のスペースをなくす
+            heading: 見出しテキスト（最初のアイテム追加時にラベルとして表示）
         """
         child = GPULayout(
             x=self._cursor_x,
@@ -51,16 +52,18 @@ class LayoutContainerMixin:
         child.operator_context = self.operator_context
         child.use_property_split = self.use_property_split
         child._align = align  # アイテム間スペースを制御
+        child._heading = heading  # 見出しテキスト
         self._elements.append(child)  # Phase 1: _elements に統合
         return child
 
 
-    def column(self, align: bool = False) -> GPULayout:
+    def column(self, align: bool = False, heading: str = "") -> GPULayout:
         """
         垂直レイアウトを作成
 
         Args:
             align: True の場合、アイテム間のスペースをなくす
+            heading: 見出しテキスト（最初のアイテム追加時にラベルとして表示）
 
         Note:
             split() 内で呼ばれた場合、factor に基づいて幅が計算される。
@@ -97,6 +100,7 @@ class LayoutContainerMixin:
         child.operator_context = self.operator_context
         child.use_property_split = self.use_property_split
         child._align = align
+        child._heading = heading  # 見出しテキスト
         self._elements.append(child)  # Phase 1: _elements に統合
 
         # split 用インデックスをインクリメント

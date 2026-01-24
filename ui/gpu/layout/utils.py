@@ -121,8 +121,84 @@ class LayoutUtilityMixin:
         return "item"
 
 
+    def _insert_heading_label(self) -> None:
+        """
+        heading ラベルを挿入
+
+        use_property_split の状態に応じて:
+        - True: split を作成し、左カラムにラベル（右寄せ）
+        - False: 先頭にラベルを追加
+
+        Note:
+            この処理後 self._heading はクリアされ、
+            以降のアイテム追加では heading は処理されない。
+        """
+        heading_text = self._heading
+        self._heading = ""  # 重複防止（一度だけ処理）
+
+        if not heading_text:
+            return
+
+        if self.use_property_split:
+            # use_property_split=True: split で左カラムにラベル
+            split = self.split(factor=self.style.split_factor, align=True)
+
+            # 左カラム: ラベル（右寄せ）
+            col1 = split.column()
+            col1.alignment = Alignment.RIGHT
+            col1.use_property_split = False  # 再帰防止
+            col1.label(text=heading_text)
+
+            # 右カラム: 空（以降の prop() は別の行として処理される）
+            # Note: Blender では以降のアイテムが右カラムに入るが、
+            # GPULayout では別の行として処理される。
+            # 完全互換より実用性を優先。
+        else:
+            # use_property_split=False: 先頭にラベルを追加
+            label = LabelItem(
+                text=heading_text,
+                icon="NONE",
+                enabled=self.enabled and self.active,
+                alert=self.alert
+            )
+            # 直接 _elements に追加（_add_item を再帰呼び出ししない）
+            self._assign_layout_path(label, "label")
+            label_width, label_height = label.calc_size(self.style)
+            available_width = self._get_available_width()
+
+            if self.direction == Direction.VERTICAL:
+                if self.alignment == Alignment.EXPAND:
+                    label.width = available_width
+                    label.x = self._cursor_x
+                else:
+                    label.width = label_width * self.scale_x
+                    if self.alignment == Alignment.CENTER:
+                        label.x = self._cursor_x + (available_width - label.width) / 2
+                    elif self.alignment == Alignment.RIGHT:
+                        label.x = self._cursor_x + available_width - label.width
+                    else:
+                        label.x = self._cursor_x
+                label.y = self._cursor_y
+                label.height = label_height * self.scale_y
+                label.alignment = self.alignment
+                self._cursor_y -= label.height + self._get_spacing()
+            else:
+                label.x = self._cursor_x
+                label.y = self._cursor_y
+                label.width = label_width * self.scale_x
+                label.height = label_height * self.scale_y
+                self._cursor_x += label.width + self._get_spacing()
+
+            self._register_interactive_item(label)
+            self._elements.append(label)
+
+
     def _add_item(self, item: LayoutItem) -> None:
         """アイテムを追加"""
+        # heading があれば先にラベルを追加
+        if self._heading:
+            self._insert_heading_label()
+
         self._dirty = True  # アイテム追加でレイアウト再計算が必要
         self._assign_layout_path(item, self._get_item_kind(item))
         item_width, item_height = item.calc_size(self.style)

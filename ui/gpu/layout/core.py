@@ -125,6 +125,9 @@ class GPULayout(
         self._is_split: bool = False
         self._split_column_index: int = 0  # column() が呼ばれるたびにインクリメント
 
+        # heading (row/column の見出し)
+        self._heading: str = ""
+
         # ボックス描画フラグ
         self._draw_background: bool = False
         self._draw_outline: bool = False

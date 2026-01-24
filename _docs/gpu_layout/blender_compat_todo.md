@@ -401,11 +401,12 @@ display_value = not self.value if invert else self.value
 
 ## WT-C: コンテナ/レイアウト拡張
 
-### C-1: row/column の heading パラメータ
+### C-1: row/column の heading パラメータ ✅ 完了
 
 **優先度**: 🟡 中
 **難易度**: 🟡 中
 **依存**: C-3 (use_property_split) と連携
+**完了日**: 2026-01-25
 
 #### Blender API
 
@@ -415,31 +416,54 @@ row = layout.row(heading="Options")
 col = layout.column(heading="Settings")
 ```
 
-#### 実装仕様
+#### 実装済み機能
 
-**変更ファイル**: `layout/containers.py`
+- **遅延挿入**: heading は最初のアイテム追加時に自動挿入される
+- **一度だけ処理**: 挿入後 `_heading` はクリアされ、以降のアイテムでは処理されない
+- **use_property_split 対応**: True の場合、split を作成し左カラムに右寄せでラベル配置
+- **空コンテナ対応**: アイテムが追加されない場合、heading は表示されない（Blender と同じ）
 
-```python
-def row(self, align: bool = False, heading: str = "") -> GPULayout:
-    child = GPULayout(...)
-    if heading:
-        # heading ラベルを追加
-        child._heading = heading
-        # use_property_split 時は左カラムに表示
-    return child
-```
-
-**描画時の処理**:
+**描画結果**:
 ```
 use_property_split=False:
 ┌─────────────────────────────────────┐
-│ Options:  [Widget] [Widget]         │
+│ Options  [Widget] [Widget]          │
 └─────────────────────────────────────┘
 
 use_property_split=True:
 ┌──────────────┬──────────────────────┐
-│ Options      │ [Widget] [Widget]    │
+│      Options │                      │
+├──────────────┼──────────────────────┤
+│        Prop1 │ [Widget]             │
+│        Prop2 │ [Widget]             │
 └──────────────┴──────────────────────┘
+```
+
+#### 変更ファイル
+
+| ファイル | 変更内容 |
+|---------|---------|
+| `layout/core.py` | `_heading: str = ""` 属性を追加 |
+| `layout/containers.py` | `row()`, `column()` に `heading` パラメータ追加 |
+| `layout/utils.py` | `_insert_heading_label()` 追加、`_add_item()` を更新 |
+
+#### 使用例
+
+```python
+from pie_menu_editor.ui.gpu import GPULayout
+
+layout = GPULayout(x=100, y=500, width=300)
+
+# 基本的な使い方
+row = layout.row(heading="Options")
+row.label(text="Item 1")
+row.label(text="Item 2")
+
+# use_property_split と組み合わせ
+layout.use_property_split = True
+col = layout.column(heading="Transform")
+col.prop(C.object, "location")
+col.prop(C.object, "rotation_euler")
 ```
 
 ---
@@ -597,7 +621,7 @@ grid = layout.grid_flow(
 
 | ID | タスク | 状態 | 担当 |
 |----|-------|------|------|
-| C-1 | heading パラメータ | ⬜ TODO | |
+| C-1 | heading パラメータ | ✅ 完了 | 2026-01-25 |
 | C-2 | column_flow() | ⬜ TODO | |
 | C-3 | use_property_split | ✅ 完了 | 2026-01-25 |
 | C-4 | grid_flow() | ⬜ TODO | |
@@ -613,11 +637,11 @@ grid = layout.grid_flow(
 
 ### Phase 2: 連携機能
 4. ~~**A-2: VectorItem** - B-1 と連携~~ ✅ 完了
-5. **C-1: heading** - C-3 の前準備
+5. ~~**C-1: heading** - C-3 と連携~~ ✅ 完了
 6. **C-2: column_flow** - 独立
 
 ### Phase 3: 複雑な機能
-7. ~~**C-3: use_property_split** - C-1 と連携推奨~~ ✅ 完了
+7. ~~**C-3: use_property_split** - C-1 と連携~~ ✅ 完了
 8. **A-3: TextInputItem** - 最も複雑
 9. **B-3, B-4, B-5** - 優先度低め
 
