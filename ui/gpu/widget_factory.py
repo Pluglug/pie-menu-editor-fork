@@ -23,7 +23,58 @@ from .items import (
     ColorItem,
     RadioGroupItem,
     RadioOption,
+    MenuButtonItem,
 )
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# Widget Registry - popup_menu コールバック用
+# ═══════════════════════════════════════════════════════════════════════════════
+#
+# Blender の popup_menu() は描画関数をコールバックとして受け取るが、
+# コールバック内でウィジェットへの参照を保持するためにグローバルレジストリを使用。
+# オペレーターの execute() 後に自動的にクリーンアップされる。
+#
+
+_gpu_widget_registry: dict[int, Any] = {}
+
+
+def register_widget(widget: Any) -> int:
+    """
+    ウィジェットをグローバルレジストリに登録
+
+    Args:
+        widget: 登録するウィジェット
+
+    Returns:
+        widget_id: 登録されたウィジェットの ID（オペレーターに渡す）
+    """
+    widget_id = id(widget)
+    _gpu_widget_registry[widget_id] = widget
+    return widget_id
+
+
+def unregister_widget(widget_id: int) -> None:
+    """
+    ウィジェットをレジストリから削除
+
+    Args:
+        widget_id: 削除するウィジェットの ID
+    """
+    _gpu_widget_registry.pop(widget_id, None)
+
+
+def get_widget(widget_id: int) -> Optional[Any]:
+    """
+    レジストリからウィジェットを取得
+
+    Args:
+        widget_id: 取得するウィジェットの ID
+
+    Returns:
+        登録されたウィジェット、または None
+    """
+    return _gpu_widget_registry.get(widget_id)
 
 
 @dataclass
@@ -216,6 +267,37 @@ class WidgetFactory:
             enabled=ctx.enabled and ctx.active,
         )
 
+    @staticmethod
+    def _create_menu(info: PropertyInfo, value: Any, ctx: WidgetContext) -> Optional[LayoutItem]:
+        """
+        Enum ドロップダウンメニューを生成
+
+        動的 Enum も含め、全ての Enum プロパティに対応。
+        クリックで popup_menu を開き、選択肢を表示する。
+        """
+        # 現在値の表示名を取得
+        display_name = str(value) if value else ""
+        for ident, name, _ in info.enum_items:
+            if ident == value:
+                display_name = name
+                break
+
+        def on_change(new_value: str):
+            if ctx.set_value:
+                ctx.set_value(bpy.context, new_value)
+
+        return MenuButtonItem(
+            text=ctx.text,
+            icon=ctx.icon,
+            value=str(value) if value else "",
+            display_name=display_name,
+            options=list(info.enum_items),
+            on_change=on_change,
+            is_dynamic_enum=info.is_dynamic_enum,
+            key=ctx.key,
+            enabled=ctx.enabled and ctx.active,
+        )
+
     # ─────────────────────────────────────────────────────────────────────────
     # Creator Registry
     # ─────────────────────────────────────────────────────────────────────────
@@ -231,5 +313,6 @@ WidgetFactory._creators = {
     WidgetHint.SLIDER: WidgetFactory._create_slider,
     WidgetHint.COLOR: WidgetFactory._create_color,
     WidgetHint.RADIO: WidgetFactory._create_radio,
-    # MENU, VECTOR, TEXT は後で追加
+    WidgetHint.MENU: WidgetFactory._create_menu,
+    # VECTOR, TEXT は後で追加
 }

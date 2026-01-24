@@ -403,6 +403,55 @@ def is_color_subtype(subtype: str) -> bool:
     return subtype in ('COLOR', 'COLOR_GAMMA')
 
 
+# サブタイプに基づくインデックスラベルのマッピング
+_SUBTYPE_INDEX_LABELS: dict[str, tuple[str, ...]] = {
+    'TRANSLATION': ('X', 'Y', 'Z'),
+    'XYZ': ('X', 'Y', 'Z'),
+    'XYZ_LENGTH': ('X', 'Y', 'Z'),
+    'DIRECTION': ('X', 'Y', 'Z'),
+    'VELOCITY': ('X', 'Y', 'Z'),
+    'ACCELERATION': ('X', 'Y', 'Z'),
+    'COLOR': ('R', 'G', 'B', 'A'),
+    'COLOR_GAMMA': ('R', 'G', 'B', 'A'),
+    'QUATERNION': ('W', 'X', 'Y', 'Z'),
+    'EULER': ('X', 'Y', 'Z'),
+    'AXISANGLE': ('W', 'X', 'Y', 'Z'),
+    'LAYER': tuple(str(i) for i in range(32)),  # Layer は 0-31
+    'LAYER_MEMBER': tuple(str(i) for i in range(32)),
+}
+
+
+def get_index_labels(subtype: str, array_length: int) -> tuple[str, ...]:
+    """
+    サブタイプに基づいてインデックスラベルを取得
+
+    Args:
+        subtype: プロパティのサブタイプ ('TRANSLATION', 'COLOR' など)
+        array_length: 配列の長さ
+
+    Returns:
+        インデックスラベルのタプル
+        例: ('X', 'Y', 'Z') for TRANSLATION
+            ('R', 'G', 'B', 'A') for COLOR
+            ('0', '1', '2', ...) for others
+
+    Example:
+        >>> get_index_labels('TRANSLATION', 3)
+        ('X', 'Y', 'Z')
+        >>> get_index_labels('COLOR', 4)
+        ('R', 'G', 'B', 'A')
+        >>> get_index_labels('NONE', 5)
+        ('0', '1', '2', '3', '4')
+    """
+    labels = _SUBTYPE_INDEX_LABELS.get(subtype)
+    if labels:
+        # 配列長さに合わせてトリム（COLOR は RGB/RGBA 両方ある）
+        return labels[:array_length] if len(labels) >= array_length else labels
+
+    # デフォルト: 数字インデックス
+    return tuple(str(i) for i in range(array_length))
+
+
 def format_value(value: Any, precision: int = 2) -> str:
     """値を表示用にフォーマット"""
     if isinstance(value, float):

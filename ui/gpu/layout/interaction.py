@@ -17,6 +17,7 @@ from ..items import (
     CheckboxItem,
     ColorItem,
     RadioGroupItem,
+    MenuButtonItem,
 )
 
 if TYPE_CHECKING:
@@ -82,7 +83,7 @@ class LayoutInteractionMixin:
 
 
     def _register_interactive_item(self, item: LayoutItem) -> None:
-        if not isinstance(item, (ButtonItem, ToggleItem, SliderItem, NumberItem, CheckboxItem, ColorItem, RadioGroupItem)):
+        if not isinstance(item, (ButtonItem, ToggleItem, SliderItem, NumberItem, CheckboxItem, ColorItem, RadioGroupItem, MenuButtonItem)):
             return
 
         manager = self._ensure_hit_manager()
@@ -272,6 +273,31 @@ class LayoutInteractionMixin:
                 on_press=on_drag_start,
                 on_drag=on_drag,
                 on_release=on_drag_end,
+            )
+            rect.layout_key = layout_key
+            manager.register(rect)
+            rect.item_id = str(id(item))
+        elif isinstance(item, MenuButtonItem):
+            # メニューボタン: クリックでドロップダウンを開く
+            def on_hover_enter():
+                item._hovered = True
+
+            def on_hover_leave():
+                item._hovered = False
+
+            def on_click():
+                item.open_menu()
+
+            rect = HitRect(
+                x=item.x,
+                y=item.y,
+                width=item.width,
+                height=item.height,
+                item=item,  # update_positions() で位置同期するため必須
+                tag=item.text or "menu",
+                on_hover_enter=on_hover_enter,
+                on_hover_leave=on_hover_leave,
+                on_click=on_click,
             )
             rect.layout_key = layout_key
             manager.register(rect)

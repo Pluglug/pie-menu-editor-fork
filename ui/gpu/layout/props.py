@@ -18,6 +18,7 @@ from ..rna_utils import (
     get_property_info,
     get_property_value,
     set_property_value,
+    get_index_labels,
     WidgetHint,
     PropertyInfo,
 )
@@ -69,9 +70,46 @@ class LayoutPropMixin:
         return setter
 
 
+    def _make_indexed_setter(
+        self,
+        resolver: Optional[Callable[[Any], Any]],
+        data: Any,
+        prop_name: str,
+        index: int,
+    ) -> Callable[[Any, Any], None]:
+        """
+        配列プロパティの特定要素を設定する setter を作成
+
+        Args:
+            resolver: コンテキストからデータを解決する関数
+            data: 静的データ（resolver が None の場合に使用）
+            prop_name: プロパティ名
+            index: 設定する配列インデックス
+
+        Returns:
+            setter 関数
+        """
+        def setter(context: Any, value: Any) -> None:
+            target = resolver(context) if resolver else data
+            if target is None:
+                return
+            # 現在の配列を取得してリストに変換
+            current = get_property_value(target, prop_name)
+            if current is None:
+                return
+            current_list = list(current)
+            # 特定要素を更新
+            if 0 <= index < len(current_list):
+                current_list[index] = value
+                set_property_value(target, prop_name, current_list)
+
+        return setter
+
+
     def prop(self, data: Any, property: str, *, text: str = "",
              icon: str = "NONE", expand: bool = False, slider: bool = False,
-             toggle: int = -1, icon_only: bool = False, key: str = "") -> Optional[LayoutItem]:
+             toggle: int = -1, icon_only: bool = False, index: int = -1,
+             key: str = "") -> Optional[LayoutItem]:
         """
         Blender プロパティを適切なウィジェットで表示・編集
 
@@ -87,6 +125,7 @@ class LayoutPropMixin:
             slider: 数値をスライダー表示するか
             toggle: -1=自動, 0=チェックボックス, 1=トグルボタン
             icon_only: アイコンのみ表示
+            index: 配列プロパティの特定要素のみ表示 (-1=全要素, 0+=特定要素)
 
         Returns:
             作成された LayoutItem（外部から値を取得/設定可能）
@@ -110,6 +149,11 @@ class LayoutPropMixin:
 
             # カラープロパティ
             layout.prop(C.object.active_material, "diffuse_color")
+
+            # 配列プロパティの特定要素
+            layout.prop(C.object, "location", index=0)  # X のみ
+            layout.prop(C.object, "location", index=1)  # Y のみ
+            layout.prop(C.object, "location", index=2)  # Z のみ
         """
         # プロパティ情報を取得
         resolver = self._infer_resolver(data)
@@ -124,6 +168,20 @@ class LayoutPropMixin:
         # 表示テキストの決定
         display_text = text if text else info.name
 
+        # index が指定された場合、配列要素用のラベルを追加
+        is_indexed = index >= 0 and info.is_array
+        if is_indexed:
+            index_labels = get_index_labels(info.subtype, info.array_length)
+            if index < len(index_labels):
+                index_label = index_labels[index]
+            else:
+                index_label = str(index)
+
+            if text:
+                display_text = f"{text} {index_label}"
+            else:
+                display_text = f"{info.name} {index_label}"
+
         # 読み取り専用の場合は表示のみ
         if info.is_readonly:
             self.prop_display(raw_data, property, text=display_text, icon=icon)
@@ -132,8 +190,23 @@ class LayoutPropMixin:
         # 現在値を取得
         current_value = get_property_value(raw_data, property)
 
+        # index が指定された場合は配列の特定要素のみ取得
+        if is_indexed:
+            if isinstance(current_value, (list, tuple)) and index < len(current_value):
+                current_value = current_value[index]
+            else:
+                current_value = 0  # フォールバック
+
         # ウィジェットヒントに応じてアイテムを作成
         hint = info.widget_hint
+
+        # index 指定時は配列ウィジェットを単一値ウィジェットに変更
+        if is_indexed:
+            if hint == WidgetHint.VECTOR:
+                hint = WidgetHint.SLIDER if slider else WidgetHint.NUMBER
+            elif hint == WidgetHint.COLOR:
+                # COLOR の特定チャンネルは NUMBER/SLIDER で編集
+                hint = WidgetHint.SLIDER if slider else WidgetHint.NUMBER
 
         # スライダー/数値の強制切り替え
         if slider and hint == WidgetHint.NUMBER:
@@ -152,7 +225,11 @@ class LayoutPropMixin:
         elif toggle == 0 and hint == WidgetHint.TOGGLE:
             hint = WidgetHint.CHECKBOX
 
-        set_value = self._make_setter(resolver, raw_data, property)
+        # setter の作成（index 指定時は indexed setter を使用）
+        if is_indexed:
+            set_value = self._make_indexed_setter(resolver, raw_data, property, index)
+        else:
+            set_value = self._make_setter(resolver, raw_data, property)
         item = self._create_prop_widget(
             raw_data, property, info, hint, display_text, icon,
             current_value, set_value, key
@@ -162,6 +239,7 @@ class LayoutPropMixin:
             meta = {
                 "is_dynamic_enum": info.is_dynamic_enum,
                 "label_prefix": display_text,
+                "index": index,  # 配列要素のインデックス (-1 は全要素)
             }
             if resolver:
                 binding = PropertyBinding(

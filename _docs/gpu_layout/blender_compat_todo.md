@@ -568,7 +568,7 @@ grid = layout.grid_flow(
 
 | ID | タスク | 状態 | 担当 |
 |----|-------|------|------|
-| A-1 | MenuButtonItem | ⬜ TODO | |
+| A-1 | MenuButtonItem | ✅ 完了 | 2026-01-24 |
 | A-2 | VectorItem | ⬜ TODO | |
 | A-3 | TextInputItem | ⬜ TODO | |
 
@@ -576,7 +576,7 @@ grid = layout.grid_flow(
 
 | ID | タスク | 状態 | 担当 |
 |----|-------|------|------|
-| B-1 | index パラメータ | ⬜ TODO | |
+| B-1 | index パラメータ | ✅ 完了 | 2026-01-24 |
 | B-2 | icon_only 実装 | ⬜ TODO | |
 | B-3 | emboss パラメータ | ⬜ TODO | |
 | B-4 | invert_checkbox | ⬜ TODO | |
@@ -596,8 +596,8 @@ grid = layout.grid_flow(
 ## 実装順序の推奨
 
 ### Phase 1: 基本機能（独立して実装可能）
-1. **A-1: MenuButtonItem** - 最も使用頻度が高い
-2. **B-1: index** - VectorItem 実装の前準備
+1. ~~**A-1: MenuButtonItem** - 最も使用頻度が高い~~ ✅ 完了
+2. ~~**B-1: index** - VectorItem 実装の前準備~~ ✅ 完了
 3. **B-2: icon_only** - 簡単、すぐ終わる
 
 ### Phase 2: 連携機能

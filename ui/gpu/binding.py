@@ -76,6 +76,15 @@ class PropertyBinding:
             self.widget.enabled = True
 
         value = get_property_value(data, self.prop_name)
+
+        # index が指定されている場合は配列の特定要素のみ取得
+        index = self.meta.get("index", -1)
+        if index >= 0 and isinstance(value, (list, tuple)):
+            if index < len(value):
+                value = value[index]
+            else:
+                value = 0  # フォールバック
+
         value_changed = self._update_widget(value, data)
 
         needs_relayout = False
