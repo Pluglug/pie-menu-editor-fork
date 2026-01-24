@@ -489,11 +489,12 @@ def column_flow(self, columns: int = 0, align: bool = False) -> GPULayout:
 
 ---
 
-### C-3: use_property_split 実装
+### C-3: use_property_split 実装 ✅ 完了
 
 **優先度**: 🔴 高
 **難易度**: 🔴 高
 **依存**: C-1 (heading) と連携
+**完了日**: 2026-01-25
 
 #### Blender の動作
 - `use_property_split=True`: ラベルとウィジェットを分離
@@ -513,25 +514,37 @@ use_property_split=True:
 └──────────────┴──────────────────────┘
 ```
 
-#### 実装仕様
+#### 実装済み機能
 
-**変更ファイル**: `layout/props.py`, `layout/flow.py`
+- **split(factor=0.4)** で 40/60 のカラム分割
+- **左カラム**: ラベル（右寄せ `alignment=RIGHT`）
+- **右カラム**: ウィジェット（ラベルなし）
+- **子レイアウト継承**: `row()`, `column()`, `split()` で `use_property_split` を自動継承
+- **再帰防止**: split 内の column では `use_property_split=False` に設定
+- **例外処理**: `icon_only=True` や `is_readonly` の場合は通常描画にフォールスルー
+
+#### 変更ファイル
+
+| ファイル | 変更内容 |
+|---------|---------|
+| `widget_factory.py` | `WidgetContext.use_property_split` 追加 |
+| `layout/containers.py` | `row()`, `column()`, `split()` に継承追加 |
+| `layout/props.py` | `_prop_with_split()` 追加、`prop()` に分岐追加 |
+
+#### 使用例
 
 ```python
-def prop(self, data, property, ...):
-    if self.use_property_split:
-        # 2カラムレイアウトで描画
-        split = self.split(factor=0.4)
-        col1 = split.column()
-        col1.label(text=display_text)
-        col2 = split.column()
-        # ウィジェットは col2 に追加（ラベルなし）
-        item = self._create_prop_widget(..., text="")
-        col2._add_item(item)
-    else:
-        # 通常描画
-        item = self._create_prop_widget(..., text=display_text)
-        self._add_item(item)
+from pie_menu_editor.ui.gpu import GPULayout
+
+layout = GPULayout(x=100, y=500, width=300)
+layout.use_property_split = True
+
+layout.prop(C.scene.render, "resolution_x")
+layout.prop(C.scene.render, "resolution_y")
+layout.prop(C.object, "location")
+
+layout.layout()
+layout.draw()
 ```
 
 ---
@@ -586,7 +599,7 @@ grid = layout.grid_flow(
 |----|-------|------|------|
 | C-1 | heading パラメータ | ⬜ TODO | |
 | C-2 | column_flow() | ⬜ TODO | |
-| C-3 | use_property_split | ⬜ TODO | |
+| C-3 | use_property_split | ✅ 完了 | 2026-01-25 |
 | C-4 | grid_flow() | ⬜ TODO | |
 
 ---
@@ -604,7 +617,7 @@ grid = layout.grid_flow(
 6. **C-2: column_flow** - 独立
 
 ### Phase 3: 複雑な機能
-7. **C-3: use_property_split** - C-1 必須
+7. ~~**C-3: use_property_split** - C-1 と連携推奨~~ ✅ 完了
 8. **A-3: TextInputItem** - 最も複雑
 9. **B-3, B-4, B-5** - 優先度低め
 

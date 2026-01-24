@@ -169,6 +169,14 @@ class LayoutPropMixin:
         # 表示テキストの決定
         display_text = text if text else info.name
 
+        # use_property_split 処理
+        # icon_only や readonly の場合は通常処理にフォールスルー
+        if self.use_property_split and not icon_only and not info.is_readonly:
+            return self._prop_with_split(
+                raw_data, property, info, display_text, icon,
+                expand, slider, toggle, index, key, resolver
+            )
+
         # index が指定された場合、配列要素用のラベルを追加
         is_indexed = index >= 0 and info.is_array
         if is_indexed:
@@ -301,6 +309,140 @@ class LayoutPropMixin:
             # 未対応のウィジェットは表示のみ
             self.prop_display(data, property, text=text, icon=icon)
             return None
+
+        return item
+
+
+    def _prop_with_split(
+        self, data: Any, property: str, info: PropertyInfo,
+        text: str, icon: str,
+        expand: bool, slider: bool, toggle: int,
+        index: int, key: str,
+        resolver: Optional[Callable[[Any], Any]],
+    ) -> Optional[LayoutItem]:
+        """
+        use_property_split=True 時のプロパティ描画
+
+        左カラム (40%): ラベル（右寄せ）
+        右カラム (60%): ウィジェット（ラベルなし）
+
+        ┌──────────────┬──────────────────────┐
+        │ Location     │ [X][Y][Z]            │
+        │ (40%, 右寄せ) │ (60%, ウィジェット)    │
+        └──────────────┴──────────────────────┘
+        """
+        from ..widget_factory import WidgetFactory, WidgetContext
+        from ..style import Alignment
+
+        # index 処理（配列要素用ラベル）
+        is_indexed = index >= 0 and info.is_array
+        if is_indexed:
+            index_labels = get_index_labels(info.subtype, info.array_length)
+            if index < len(index_labels):
+                index_label = index_labels[index]
+            else:
+                index_label = str(index)
+            display_text = f"{text} {index_label}" if text else f"{info.name} {index_label}"
+        else:
+            display_text = text
+
+        # 現在値を取得
+        current_value = get_property_value(data, property)
+        if is_indexed:
+            if isinstance(current_value, (list, tuple)) and index < len(current_value):
+                current_value = current_value[index]
+            else:
+                current_value = 0
+
+        # ウィジェットヒントを決定
+        hint = info.widget_hint
+
+        # index 指定時は配列ウィジェットを単一値ウィジェットに変更
+        if is_indexed:
+            if hint == WidgetHint.VECTOR:
+                hint = WidgetHint.SLIDER if slider else WidgetHint.NUMBER
+            elif hint == WidgetHint.COLOR:
+                hint = WidgetHint.SLIDER if slider else WidgetHint.NUMBER
+
+        # スライダー/数値の強制切り替え
+        if slider and hint == WidgetHint.NUMBER:
+            hint = WidgetHint.SLIDER
+
+        # Enum の expand 切り替え
+        if expand and hint == WidgetHint.MENU:
+            hint = WidgetHint.RADIO
+
+        # トグル/チェックボックスの明示的切り替え
+        if toggle == 1 and hint == WidgetHint.CHECKBOX:
+            hint = WidgetHint.TOGGLE
+        elif toggle == 0 and hint == WidgetHint.TOGGLE:
+            hint = WidgetHint.CHECKBOX
+
+        # Split レイアウト作成
+        split = self.split(factor=self._style.split_factor, align=True)
+
+        # 左カラム: ラベル（右寄せ）
+        col1 = split.column()
+        col1.alignment = Alignment.RIGHT
+        col1.use_property_split = False  # 再帰防止
+        col1.label(text=display_text, icon=icon)
+
+        # 右カラム: ウィジェット（ラベルなし）
+        col2 = split.column()
+        col2.use_property_split = False  # 再帰防止
+
+        # setter の作成
+        if is_indexed:
+            set_value = self._make_indexed_setter(resolver, data, property, index)
+        else:
+            set_value = self._make_setter(resolver, data, property)
+
+        ctx = WidgetContext(
+            text="",  # ラベルなし（左カラムに表示済み）
+            icon="NONE",
+            icon_only=False,
+            key=key,
+            enabled=self.enabled,
+            active=self.active,
+            vertical=False,
+            set_value=set_value,
+            use_property_split=True,
+        )
+
+        item = WidgetFactory.create(hint, info, current_value, ctx)
+
+        if item is None:
+            col2.prop_display(data, property, text="")
+            return None
+
+        col2._add_item(item)
+
+        # バインディング登録
+        meta = {
+            "is_dynamic_enum": info.is_dynamic_enum,
+            "label_prefix": display_text,
+            "index": index,
+        }
+        if resolver:
+            binding = PropertyBinding(
+                resolve_data=resolver,
+                set_value=set_value,
+                prop_name=property,
+                widget=item,
+                meta=meta,
+            )
+            self._bindings.append(binding)
+        else:
+            def resolve_static(_ctx, data=data):
+                return data
+            binding = PropertyBinding(
+                resolve_data=resolve_static,
+                set_value=set_value,
+                prop_name=property,
+                widget=item,
+                meta=meta,
+            )
+            self._static_bindings.append(binding)
 
         return item
 

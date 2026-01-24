@@ -49,6 +49,7 @@ class LayoutContainerMixin:
         child.enabled = self.enabled
         child.alert = self.alert
         child.operator_context = self.operator_context
+        child.use_property_split = self.use_property_split
         child._align = align  # アイテム間スペースを制御
         self._elements.append(child)  # Phase 1: _elements に統合
         return child
@@ -94,6 +95,7 @@ class LayoutContainerMixin:
         child.enabled = self.enabled
         child.alert = self.alert
         child.operator_context = self.operator_context
+        child.use_property_split = self.use_property_split
         child._align = align
         self._elements.append(child)  # Phase 1: _elements に統合
 
@@ -143,6 +145,7 @@ class LayoutContainerMixin:
         child.enabled = self.enabled
         child.alert = self.alert
         child.operator_context = self.operator_context
+        child.use_property_split = self.use_property_split
         self._elements.append(child)  # Phase 1: _elements に統合
         return child
 

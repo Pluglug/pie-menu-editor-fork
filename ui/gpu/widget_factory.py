@@ -92,6 +92,7 @@ class WidgetContext:
         active: アクティブ状態
         vertical: 垂直レイアウト（column 内）かどうか
         set_value: 値変更時のコールバック（bpy.context を受け取る）
+        use_property_split: use_property_split モードで描画中かどうか
     """
     text: str = ""
     icon: str = "NONE"
@@ -101,6 +102,7 @@ class WidgetContext:
     active: bool = True
     vertical: bool = False
     set_value: Optional[Callable[[Any, Any], None]] = None
+    use_property_split: bool = False
 
 
 class WidgetFactory:
