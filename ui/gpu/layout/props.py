@@ -10,6 +10,7 @@ from typing import Any, Callable, Optional
 
 from ..binding import PropertyBinding
 from ..context import TrackedAccess
+from ..style import Direction
 from ..items import (
     LayoutItem,
     PropDisplayItem,
@@ -279,6 +280,10 @@ class LayoutPropMixin:
         """
         from ..widget_factory import WidgetFactory, WidgetContext
 
+        # ベクトルは基本的に水平表示（Blender デフォルト）
+        # 将来的に expand=True で垂直表示をサポート予定
+        is_vertical = False
+
         ctx = WidgetContext(
             text=text,
             icon=icon,
@@ -286,6 +291,7 @@ class LayoutPropMixin:
             key=key,
             enabled=self.enabled,
             active=self.active,
+            vertical=is_vertical,
             set_value=set_value,
         )
 

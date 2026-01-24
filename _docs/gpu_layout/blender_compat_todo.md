@@ -113,59 +113,57 @@ print(type(widget).__name__)  # MenuButtonItem
 
 ---
 
-### A-2: VectorItem (VECTOR)
+### A-2: VectorItem (VECTOR) ✅ 完了
 
 **優先度**: 🔴 高
 **難易度**: 🟡 中
 **依存**: WT-B の `prop(index=)` と連携推奨
+**完了日**: 2026-01-25
 
 #### 概要
-XYZ などの数値配列を水平に並べた NumberItem で表示・編集。
+XYZ などの数値配列を水平/垂直に並べた NumberItem で表示・編集。
 
-#### Blender の動作
-- 各要素が独立した数値フィールド
-- ラベル（X, Y, Z）が表示される
-- `expand=True` で個別表示
+#### 実装済み機能
 
-#### 実装仕様
+- **水平レイアウト** (デフォルト): `[X: 1.00] [Y: 2.00] [Z: 3.00]`
+- **垂直レイアウト** (`vertical=True`): 各要素が縦に並ぶ
+- **自動ラベル**: サブタイプに応じて X/Y/Z, R/G/B/A, W/X/Y/Z を自動取得
+- **角丸連結**: `align=True` スタイルで端のみ角丸
+- **値同期**: 各要素の変更が全体コールバックに連携
+- **子ウィジェット**: `get_child_items()` でイベント処理用の NumberItem を返す
 
-**新規ファイル**: `ui/gpu/items/vector.py`
+#### 今後の拡張予定
+
+| 機能 | 説明 | 優先度 |
+|------|------|--------|
+| `expand=True` 連携 | prop() の expand パラメータで垂直表示に切り替え | 🟡 中 |
+| `slider=True` 連携 | 各要素を SliderItem で表示 | 🟡 中 |
+| ロックアイコン | 個別要素を固定するボタン | 🟢 低 |
+| 連動編集 | Shift+ドラッグで全要素を同時変更 | 🟢 低 |
+
+#### 使用例
 
 ```python
-@dataclass
-class VectorItem(LayoutItem):
-    """ベクトル入力 (XYZ 等)"""
-    value: tuple[float, ...] = (0.0, 0.0, 0.0)
-    labels: tuple[str, ...] = ("X", "Y", "Z")
-    min_val: float = -1e9
-    max_val: float = 1e9
-    step: float = 0.01
-    precision: int = 3
-    text: str = ""
-    on_change: Optional[Callable[[tuple[float, ...]], None]] = None
+from pie_menu_editor.ui.gpu import GPULayout
 
-    # 内部: 各要素の NumberItem
-    _items: list[NumberItem] = field(default_factory=list)
+layout = GPULayout(x=100, y=500, width=400)
 
-    def get_value(self) -> tuple[float, ...]: ...
-    def set_value(self, value: tuple[float, ...]) -> None: ...
-    def set_element(self, index: int, value: float) -> None: ...
-```
+# 水平表示（デフォルト）
+layout.prop(C.object, "location")
+layout.prop(C.object, "scale", text="Scale")
 
-**レイアウト**:
-```
-┌─────────────────────────────────────────────┐
-│ Location   [X: 1.00] [Y: 2.00] [Z: 3.00]   │
-└─────────────────────────────────────────────┘
+# index 指定で個別要素（NumberItem として表示）
+layout.prop(C.object, "location", index=0, text="X Only")
 ```
 
 #### 変更ファイル
 
 | ファイル | 変更内容 |
 |---------|---------|
-| `items/vector.py` | 新規作成 |
+| `items/vector.py` | 新規作成 (253行) |
 | `items/__init__.py` | `VectorItem` を re-export |
-| `widget_factory.py` | `WidgetHint.VECTOR` に登録 |
+| `widget_factory.py` | `WidgetContext.vertical` 追加、`_create_vector` 追加 |
+| `layout/props.py` | `Direction` import、vertical フラグ対応 |
 
 ---
 
@@ -569,7 +567,7 @@ grid = layout.grid_flow(
 | ID | タスク | 状態 | 担当 |
 |----|-------|------|------|
 | A-1 | MenuButtonItem | ✅ 完了 | 2026-01-24 |
-| A-2 | VectorItem | ⬜ TODO | |
+| A-2 | VectorItem | ✅ 完了 | 2026-01-25 |
 | A-3 | TextInputItem | ⬜ TODO | |
 
 ### WT-B: prop() API
@@ -601,7 +599,7 @@ grid = layout.grid_flow(
 3. ~~**B-2: icon_only** - 簡単、すぐ終わる~~ ✅ 完了
 
 ### Phase 2: 連携機能
-4. **A-2: VectorItem** - B-1 と連携
+4. ~~**A-2: VectorItem** - B-1 と連携~~ ✅ 完了
 5. **C-1: heading** - C-3 の前準備
 6. **C-2: column_flow** - 独立
 

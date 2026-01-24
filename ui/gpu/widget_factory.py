@@ -21,6 +21,7 @@ from .items import (
     NumberItem,
     SliderItem,
     ColorItem,
+    VectorItem,
     RadioGroupItem,
     RadioOption,
     MenuButtonItem,
@@ -89,6 +90,7 @@ class WidgetContext:
         key: LayoutKey 用のキー
         enabled: 有効/無効
         active: アクティブ状態
+        vertical: 垂直レイアウト（column 内）かどうか
         set_value: 値変更時のコールバック（bpy.context を受け取る）
     """
     text: str = ""
@@ -97,6 +99,7 @@ class WidgetContext:
     key: str = ""
     enabled: bool = True
     active: bool = True
+    vertical: bool = False
     set_value: Optional[Callable[[Any, Any], None]] = None
 
 
@@ -300,6 +303,49 @@ class WidgetFactory:
             enabled=ctx.enabled and ctx.active,
         )
 
+    @staticmethod
+    def _create_vector(info: PropertyInfo, value: Any, ctx: WidgetContext) -> VectorItem:
+        """
+        ベクトルウィジェットを生成
+
+        配列プロパティ (location, rotation, scale など) を
+        複数の NumberItem として水平表示する。
+        """
+        from .rna_utils import get_index_labels
+
+        # 値をタプルに変換
+        if isinstance(value, (list, tuple)):
+            vec_value = tuple(float(v) for v in value)
+        else:
+            # 配列長さに基づいてデフォルト値を生成
+            array_len = info.array_length if info.array_length > 0 else 3
+            vec_value = (0.0,) * array_len
+
+        # ラベルを取得（XYZ, RGB など）
+        labels = get_index_labels(info.subtype, len(vec_value))
+
+        def on_change(new_value: tuple[float, ...]):
+            if ctx.set_value:
+                # リストに変換して設定（Blender プロパティはリストで受け取る）
+                ctx.set_value(bpy.context, list(new_value))
+
+        min_val = info.soft_min if info.soft_min is not None else (info.min_value or -1e9)
+        max_val = info.soft_max if info.soft_max is not None else (info.max_value or 1e9)
+
+        return VectorItem(
+            value=vec_value,
+            labels=labels,
+            min_val=min_val,
+            max_val=max_val,
+            step=info.step,
+            precision=info.precision if info.prop_type == PropType.FLOAT else 0,
+            text="" if ctx.icon_only else ctx.text,
+            vertical=ctx.vertical,
+            key=ctx.key,
+            on_change=on_change,
+            enabled=ctx.enabled and ctx.active,
+        )
+
     # ─────────────────────────────────────────────────────────────────────────
     # Creator Registry
     # ─────────────────────────────────────────────────────────────────────────
@@ -314,7 +360,8 @@ WidgetFactory._creators = {
     WidgetHint.NUMBER: WidgetFactory._create_number,
     WidgetHint.SLIDER: WidgetFactory._create_slider,
     WidgetHint.COLOR: WidgetFactory._create_color,
+    WidgetHint.VECTOR: WidgetFactory._create_vector,
     WidgetHint.RADIO: WidgetFactory._create_radio,
     WidgetHint.MENU: WidgetFactory._create_menu,
-    # VECTOR, TEXT は後で追加
+    # TEXT は後で追加
 }
