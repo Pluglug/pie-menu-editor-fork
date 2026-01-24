@@ -232,7 +232,7 @@ class LayoutPropMixin:
             set_value = self._make_setter(resolver, raw_data, property)
         item = self._create_prop_widget(
             raw_data, property, info, hint, display_text, icon,
-            current_value, set_value, key
+            current_value, set_value, key, icon_only=icon_only
         )
         if item:
             self._add_item(item)
@@ -270,6 +270,7 @@ class LayoutPropMixin:
         hint: WidgetHint, text: str, icon: str, value: Any,
         set_value: Callable[[Any, Any], None],
         key: str,
+        icon_only: bool = False,
     ) -> Optional[LayoutItem]:
         """
         プロパティ用ウィジェットを作成
@@ -281,6 +282,7 @@ class LayoutPropMixin:
         ctx = WidgetContext(
             text=text,
             icon=icon,
+            icon_only=icon_only,
             key=key,
             enabled=self.enabled,
             active=self.active,

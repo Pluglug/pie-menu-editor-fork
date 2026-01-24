@@ -85,6 +85,7 @@ class WidgetContext:
     Attributes:
         text: 表示テキスト
         icon: アイコン名
+        icon_only: アイコンのみ表示（テキスト非表示）
         key: LayoutKey 用のキー
         enabled: 有効/無効
         active: アクティブ状態
@@ -92,6 +93,7 @@ class WidgetContext:
     """
     text: str = ""
     icon: str = "NONE"
+    icon_only: bool = False
     key: str = ""
     enabled: bool = True
     active: bool = True
@@ -153,7 +155,7 @@ class WidgetFactory:
                 ctx.set_value(bpy.context, new_value)
 
         return CheckboxItem(
-            text=ctx.text,
+            text="" if ctx.icon_only else ctx.text,
             value=bool(value),
             key=ctx.key,
             on_toggle=on_toggle,
@@ -167,7 +169,7 @@ class WidgetFactory:
                 ctx.set_value(bpy.context, new_value)
 
         return ToggleItem(
-            text=ctx.text,
+            text="" if ctx.icon_only else ctx.text,
             icon=ctx.icon,
             value=bool(value),
             key=ctx.key,
@@ -192,7 +194,7 @@ class WidgetFactory:
             max_val=max_val,
             step=info.step,
             precision=info.precision if info.prop_type == PropType.FLOAT else 0,
-            text=ctx.text,
+            text="" if ctx.icon_only else ctx.text,
             key=ctx.key,
             on_change=on_change,
             enabled=ctx.enabled and ctx.active,
@@ -214,7 +216,7 @@ class WidgetFactory:
             min_val=min_val,
             max_val=max_val,
             precision=info.precision if info.prop_type == PropType.FLOAT else 0,
-            text=ctx.text,
+            text="" if ctx.icon_only else ctx.text,
             key=ctx.key,
             on_change=on_change,
             enabled=ctx.enabled and ctx.active,
@@ -234,7 +236,7 @@ class WidgetFactory:
 
         return ColorItem(
             color=color,
-            text=ctx.text,
+            text="" if ctx.icon_only else ctx.text,
             key=ctx.key,
             enabled=ctx.enabled and ctx.active,
         )
@@ -287,7 +289,7 @@ class WidgetFactory:
                 ctx.set_value(bpy.context, new_value)
 
         return MenuButtonItem(
-            text=ctx.text,
+            text="" if ctx.icon_only else ctx.text,
             icon=ctx.icon,
             value=str(value) if value else "",
             display_name=display_name,
