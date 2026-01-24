@@ -111,7 +111,9 @@ class LayoutFlowMixin:
             この段階では位置（x, y）は確定しません。
             サイズのみを計算し、self.width / self.height に保存します。
         """
-        if self.direction == Direction.VERTICAL:
+        if self._is_column_flow:
+            return self._measure_column_flow(constraints)
+        elif self.direction == Direction.VERTICAL:
             return self._measure_vertical(constraints)
         else:
             return self._measure_horizontal(constraints)
@@ -503,7 +505,9 @@ class LayoutFlowMixin:
         self.x = x
         self.y = y
 
-        if self.direction == Direction.VERTICAL:
+        if self._is_column_flow:
+            self._arrange_column_flow()
+        elif self.direction == Direction.VERTICAL:
             self._arrange_vertical()
         else:
             self._arrange_horizontal()
@@ -657,6 +661,177 @@ class LayoutFlowMixin:
                         element.corners = (True, True, True, True)
 
             cursor_x += width + actual_spacing
+
+
+    def _measure_column_flow(self, constraints: BoxConstraints) -> Size:
+        """
+        column_flow レイアウトのサイズ推定
+
+        Blender LayoutItemFlow::estimate_impl() に準拠:
+        - 全アイテムの最大幅と合計高さを計算
+        - 列数を決定（指定 or 自動）
+        - 列の高さ閾値 (toth / totcol) で列分配をシミュレート
+        """
+        spacing = self._get_spacing()
+        padding_x, padding_y = self._get_padding()
+        available_width = constraints.max_width - padding_x * 2
+        if available_width == float('inf'):
+            available_width = self.width - padding_x * 2
+        available_width = max(0, available_width)
+
+        # Step 1: 全アイテムのサイズを計算
+        max_item_width = 0.0
+        total_height = 0.0
+        item_count = 0
+
+        for element in self._elements:
+            if isinstance(element, GPULayout):
+                child_constraints = BoxConstraints(
+                    min_width=0, max_width=available_width,
+                    min_height=0, max_height=float('inf')
+                )
+                size = element.measure(child_constraints)
+                element.sizing.estimated_width = size.width
+                element.estimated_height = size.height
+            else:
+                w, h = element.calc_size(self.style)
+                element.sizing.estimated_width = w * self.scale_x
+                element.estimated_height = h * self.scale_y
+
+            max_item_width = max(max_item_width, element.sizing.estimated_width)
+            total_height += element.estimated_height
+            item_count += 1
+
+        if item_count == 0:
+            self.sizing.estimated_width = padding_x * 2
+            self.estimated_height = padding_y * 2
+            self._apply_ui_units_x()
+            self.width = constraints.clamp_width(self.sizing.estimated_width)
+            self.height = constraints.clamp_height(self.estimated_height)
+            return Size(self.width, self.height)
+
+        # Step 2: 列数を決定
+        if self._flow_columns > 0:
+            self._flow_totcol = self._flow_columns
+        else:
+            # 自動計算: 利用可能幅 / 最大アイテム幅
+            if max_item_width > 0:
+                self._flow_totcol = max(1, int(available_width / max_item_width))
+                self._flow_totcol = min(self._flow_totcol, item_count)
+            else:
+                self._flow_totcol = 1
+
+        # Step 3: 列ごとの高さをシミュレート
+        col_spacing = self.style.scaled_spacing_x() if not self._align else 0
+        item_spacing = spacing
+
+        # 各列の幅と高さを計算
+        total_item_height = total_height + item_spacing * (item_count - 1)
+        column_height_threshold = total_item_height / self._flow_totcol
+
+        col_heights = [0.0]
+        col_widths = [0.0]
+        current_col = 0
+        emy = 0.0
+
+        for element in self._elements:
+            h = element.estimated_height + item_spacing
+            w = element.sizing.estimated_width
+
+            emy -= h
+            col_heights[current_col] += h
+            col_widths[current_col] = max(col_widths[current_col], w)
+
+            # 次の列に移動するかどうか
+            if current_col < self._flow_totcol - 1 and emy <= -column_height_threshold:
+                current_col += 1
+                col_heights.append(0.0)
+                col_widths.append(0.0)
+                emy = 0.0
+
+        # 最終スペーシングを調整
+        for i in range(len(col_heights)):
+            if col_heights[i] > item_spacing:
+                col_heights[i] -= item_spacing
+
+        # Step 4: 全体サイズを計算
+        total_width = sum(col_widths) + col_spacing * (len(col_widths) - 1) + padding_x * 2
+        max_height = max(col_heights) if col_heights else 0.0
+        total_layout_height = max_height + padding_y * 2
+
+        self.sizing.estimated_width = total_width
+        self.estimated_height = total_layout_height
+
+        self._apply_ui_units_x()
+        self.width = constraints.clamp_width(available_width + padding_x * 2)
+        self.height = constraints.clamp_height(self.estimated_height)
+
+        return Size(self.width, self.height)
+
+
+    def _arrange_column_flow(self) -> None:
+        """
+        column_flow レイアウトの位置確定
+
+        Blender LayoutItemFlow::resolve_impl() に準拠:
+        - 列幅を均等に計算
+        - アイテムを上から下に配置
+        - 累積高さが閾値を超えたら次の列へ
+        """
+        n = len(self._elements)
+        if n == 0:
+            return
+
+        spacing = self._get_spacing()
+        padding_x, padding_y = self._get_padding()
+        col_spacing = self.style.scaled_spacing_x() if not self._align else 0
+        item_spacing = spacing
+
+        available_width = max(0, self.width - padding_x * 2)
+
+        # 列幅を計算
+        col_width = (available_width - col_spacing * (self._flow_totcol - 1)) / self._flow_totcol
+
+        # 合計高さと閾値
+        total_height = sum(e.estimated_height + item_spacing for e in self._elements) - item_spacing
+        emh = total_height / self._flow_totcol
+
+        # 配置
+        cursor_x = self.x + padding_x
+        cursor_y = self.y - padding_y
+        start_y = cursor_y
+        emy = 0.0
+        current_col = 0
+
+        for element in self._elements:
+            h = element.estimated_height
+
+            # 位置を設定
+            element.y = cursor_y
+            element.x = cursor_x
+
+            # 幅を設定（EXPAND か自然幅）
+            if self.alignment == Alignment.EXPAND:
+                element.width = col_width
+            else:
+                element.width = min(col_width, element.sizing.estimated_width)
+
+            element.height = h
+
+            # 子レイアウトの場合は再帰的に arrange
+            if isinstance(element, GPULayout):
+                element.arrange(element.x, element.y)
+
+            # カーソル移動
+            cursor_y -= h + item_spacing
+            emy -= h + item_spacing
+
+            # 次の列に移動するかどうか
+            if current_col < self._flow_totcol - 1 and emy <= -emh:
+                cursor_x += col_width + col_spacing
+                cursor_y = start_y
+                emy = 0.0
+                current_col += 1
 
     # ─────────────────────────────────────────────────────────────────────────
     # レイアウト計算（レガシー互換 + 新アルゴリズム統合）

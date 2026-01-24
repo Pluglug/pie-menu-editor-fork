@@ -468,11 +468,12 @@ col.prop(C.object, "rotation_euler")
 
 ---
 
-### C-2: column_flow()
+### C-2: column_flow() ✅ 完了
 
 **優先度**: 🟡 中
 **難易度**: 🟡 中
 **依存**: なし
+**完了日**: 2026-01-25
 
 #### Blender API
 
@@ -484,32 +485,59 @@ flow.label(text="B")
 flow.label(text="C")
 flow.label(text="D")
 # 結果:
-# A  B
-# C  D
+# A  C
+# B  D
 ```
 
-#### 実装仕様
+#### 実装済み機能
 
-**変更ファイル**: `layout/containers.py`
+- **累積高さベースの分配**: Blender `LayoutItemFlow::estimate_impl()` に準拠
+- **自動列数計算**: `columns=0` で利用可能幅 / 最大アイテム幅から自動決定
+- **高さ閾値による列切り替え**: 固定行数ではなく、合計高さ / 列数で閾値を計算
+- **align 対応**: `align=True` でアイテム間・列間のスペースを削除
+- **子レイアウト対応**: row/column を含む場合も正常動作
+
+**動作の詳細**:
+```
+columns=2:
+┌─────────┬─────────┐
+│ Item A  │ Item C  │
+│ Item B  │ Item D  │
+│         │ Item E  │
+└─────────┴─────────┘
+
+columns=0 (自動):
+列数は利用可能幅とアイテム幅から自動計算
+```
+
+#### 変更ファイル
+
+| ファイル | 変更内容 |
+|---------|---------|
+| `layout/core.py` | `_is_column_flow`, `_flow_columns`, `_flow_totcol` 属性を追加 |
+| `layout/containers.py` | `column_flow()` メソッドを追加 |
+| `layout/flow.py` | `_measure_column_flow()`, `_arrange_column_flow()` を追加 |
+
+#### 使用例
 
 ```python
-def column_flow(self, columns: int = 0, align: bool = False) -> GPULayout:
-    """
-    複数列フローレイアウト
+from pie_menu_editor.ui.gpu import GPULayout
 
-    Args:
-        columns: 列数（0 = 自動）
-        align: アイテム間のスペースをなくす
-    """
-    child = GPULayout(...)
-    child._is_column_flow = True
-    child._flow_columns = columns
-    return child
+layout = GPULayout(x=100, y=500, width=300)
+
+# 2列フローレイアウト
+flow = layout.column_flow(columns=2)
+for i in range(6):
+    flow.label(text=f"Item {chr(65+i)}")
+
+# 自動列数
+flow2 = layout.column_flow(columns=0)
+for i in range(8):
+    flow2.label(text=f"Long Item {i}")
+
+layout.layout()
+layout.draw()
 ```
-
-**flow.py の変更**:
-- `_arrange_column_flow()` メソッドを追加
-- アイテムを列数で折り返し
 
 ---
 
@@ -622,7 +650,7 @@ grid = layout.grid_flow(
 | ID | タスク | 状態 | 担当 |
 |----|-------|------|------|
 | C-1 | heading パラメータ | ✅ 完了 | 2026-01-25 |
-| C-2 | column_flow() | ⬜ TODO | |
+| C-2 | column_flow() | ✅ 完了 | 2026-01-25 |
 | C-3 | use_property_split | ✅ 完了 | 2026-01-25 |
 | C-4 | grid_flow() | ⬜ TODO | |
 
@@ -638,7 +666,7 @@ grid = layout.grid_flow(
 ### Phase 2: 連携機能
 4. ~~**A-2: VectorItem** - B-1 と連携~~ ✅ 完了
 5. ~~**C-1: heading** - C-3 と連携~~ ✅ 完了
-6. **C-2: column_flow** - 独立
+6. ~~**C-2: column_flow** - 独立~~ ✅ 完了
 
 ### Phase 3: 複雑な機能
 7. ~~**C-3: use_property_split** - C-1 と連携~~ ✅ 完了

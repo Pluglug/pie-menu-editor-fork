@@ -125,6 +125,11 @@ class GPULayout(
         self._is_split: bool = False
         self._split_column_index: int = 0  # column() が呼ばれるたびにインクリメント
 
+        # column_flow 用
+        self._is_column_flow: bool = False
+        self._flow_columns: int = 0  # 指定列数（0 = 自動）
+        self._flow_totcol: int = 1  # 実際の列数（measure で計算）
+
         # heading (row/column の見出し)
         self._heading: str = ""
 

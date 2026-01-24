@@ -153,6 +153,48 @@ class LayoutContainerMixin:
         self._elements.append(child)  # Phase 1: _elements に統合
         return child
 
+
+    def column_flow(self, columns: int = 0, align: bool = False) -> GPULayout:
+        """
+        複数列フローレイアウトを作成
+
+        アイテムは上から下に配置され、累積高さが閾値を超えると
+        自動的に次の列へ移動します。
+
+        Args:
+            columns: 列数（0 = 自動計算）
+            align: True の場合、アイテム間のスペースをなくす
+
+        使用例:
+            flow = layout.column_flow(columns=2)
+            flow.label(text="A")
+            flow.label(text="B")
+            flow.label(text="C")
+            flow.label(text="D")
+            # 結果:
+            # A  C
+            # B  D
+        """
+        child = GPULayout(
+            x=self._cursor_x,
+            y=self._cursor_y,
+            width=self._get_available_width(),
+            style=self.style,
+            direction=Direction.VERTICAL,  # 縦方向に積む（Blender と同じ）
+            parent=self
+        )
+        self._assign_layout_path(child, "column_flow")
+        child._is_column_flow = True
+        child._flow_columns = columns
+        child._align = align
+        child.active = self.active
+        child.enabled = self.enabled
+        child.alert = self.alert
+        child.operator_context = self.operator_context
+        child.use_property_split = self.use_property_split
+        self._elements.append(child)
+        return child
+
     # ─────────────────────────────────────────────────────────────────────────
     # 表示メソッド（UILayout 互換）
     # ─────────────────────────────────────────────────────────────────────────
