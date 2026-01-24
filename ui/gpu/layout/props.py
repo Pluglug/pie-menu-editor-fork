@@ -379,7 +379,7 @@ class LayoutPropMixin:
             hint = WidgetHint.CHECKBOX
 
         # Split レイアウト作成
-        split = self.split(factor=self._style.split_factor, align=True)
+        split = self.split(factor=self.style.split_factor, align=True)
 
         # 左カラム: ラベル（右寄せ）
         col1 = split.column()

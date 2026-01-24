@@ -53,19 +53,3 @@ class PME_OT_gpu_enum_select(Operator):
         unregister_widget(self.widget_id)
 
         return {'FINISHED'}
-
-
-# オペレーター一覧（register/unregister 用）
-classes = (
-    PME_OT_gpu_enum_select,
-)
-
-
-def register():
-    for cls in classes:
-        bpy.utils.register_class(cls)
-
-
-def unregister():
-    for cls in reversed(classes):
-        bpy.utils.unregister_class(cls)

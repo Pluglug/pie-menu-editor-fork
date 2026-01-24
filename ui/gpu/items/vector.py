@@ -54,7 +54,6 @@ class VectorItem(LayoutItem):
     _items_initialized: bool = field(default=False, repr=False)
 
     def __post_init__(self):
-        super().__post_init__()
         # ラベル数と値の長さを一致させる
         if len(self.labels) < len(self.value):
             self.labels = self.labels + tuple(
