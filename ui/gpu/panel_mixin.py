@@ -33,6 +33,21 @@ if TYPE_CHECKING:
     from bpy.types import Context, Event, Region
     from .layout import GPULayout
     from .panel_manager import GPUPanelManager
+else:
+    # Blender's typing.get_type_hints evaluates forward refs at runtime.
+    # Provide fallbacks to avoid NameError during operator registration.
+    try:
+        from bpy.types import Context, Event, Region  # type: ignore
+    except Exception:
+        Context = Event = Region = object  # type: ignore
+    try:
+        from .layout import GPULayout  # type: ignore
+    except Exception:
+        GPULayout = object  # type: ignore
+    try:
+        from .panel_manager import GPUPanelManager  # type: ignore
+    except Exception:
+        GPUPanelManager = object  # type: ignore
 
 
 class GPUPanelMixin:
