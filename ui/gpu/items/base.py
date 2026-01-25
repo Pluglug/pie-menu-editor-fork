@@ -33,6 +33,9 @@ class LayoutItem:
     # True = 角丸あり、False = 直角
     corners: tuple[bool, bool, bool, bool] = (True, True, True, True)
 
+    # corners が明示的に設定され、レイアウト計算で上書きしない
+    corners_locked: bool = False
+
     # Phase 1 v3: width sizing policy (measure results, fixed width)
     sizing: SizingPolicy = field(default_factory=SizingPolicy)
 

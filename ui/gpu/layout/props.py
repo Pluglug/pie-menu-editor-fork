@@ -340,6 +340,13 @@ class LayoutPropMixin:
         │ Location     │ [X][Y][Z]            │
         │ (40%, 右寄せ) │ (60%, ウィジェット)    │
         └──────────────┴──────────────────────┘
+
+        VECTOR プロパティの場合は各要素を個別の split 行として表示:
+        ┌────────────────┬────────────────────────┐
+        │ Location X     │ [────────────]         │
+        │          Y     │ [────────────]         │
+        │          Z     │ [────────────]         │
+        └────────────────┴────────────────────────┘
         """
         from ..widget_factory import WidgetFactory, WidgetContext
         from ..style import Alignment
@@ -366,6 +373,13 @@ class LayoutPropMixin:
 
         # ウィジェットヒントを決定
         hint = info.widget_hint
+
+        # VECTOR ヒントかつ index 未指定の場合は特別処理（各要素を個別 split 行として表示）
+        if hint == WidgetHint.VECTOR and not is_indexed:
+            return self._prop_split_vector(
+                data, property, info, display_text, icon,
+                slider, key, resolver
+            )
 
         # index 指定時は配列ウィジェットを単一値ウィジェットに変更
         if is_indexed:
@@ -463,6 +477,148 @@ class LayoutPropMixin:
             self._static_bindings.append(binding)
 
         return item
+
+
+    def _prop_split_vector(
+        self, data: Any, property: str, info: PropertyInfo,
+        text: str, icon: str,
+        slider: bool, key: str,
+        resolver: Optional[Callable[[Any], Any]],
+    ) -> Optional[LayoutItem]:
+        """
+        use_property_split=True 時の Vector プロパティ描画
+
+        各要素を個別の split 行として配置:
+        ┌────────────────┬────────────────────────┐
+        │ Location X     │ [────────────]         │
+        │          Y     │ [────────────]         │
+        │          Z     │ [────────────]         │
+        └────────────────┴────────────────────────┘
+
+        Blender の処理と同様に、最初の行のみフルラベルを表示し、
+        以降の行はインデックスラベル（Y, Z）のみを表示する。
+        """
+        from ..widget_factory import WidgetFactory, WidgetContext
+        from ..style import Alignment
+
+        if DBG_GPU:
+            logi(f"[_prop_split_vector] property={property}, text={text}")
+
+        try:
+            # 現在値を取得
+            current_value = get_property_value(data, property)
+            if current_value is None:
+                if DBG_GPU:
+                    logi(f"[_prop_split_vector] current_value is None")
+                return None
+
+            # シーケンスに変換（Vector, list, tuple など）
+            # mathutils.Vector は list/tuple ではないが、イテラブルなので tuple() で変換
+            try:
+                current_value = tuple(current_value)
+            except TypeError:
+                if DBG_GPU:
+                    logi(f"[_prop_split_vector] not iterable: {type(current_value)}")
+                return None
+
+            if len(current_value) == 0:
+                return None
+
+            # インデックスラベル取得 ("X", "Y", "Z" など)
+            index_labels = get_index_labels(info.subtype, len(current_value))
+
+            # 数値ウィジェットのヒント（slider オプションに基づく）
+            number_hint = WidgetHint.SLIDER if slider else WidgetHint.NUMBER
+
+            # 全行を column(align=True) で囲んでグループ化
+            # Blender と同様に X, Y, Z が視覚的にまとまる
+            outer_col = self.column(align=True)
+
+            items = []
+            num_elements = len(current_value)
+            for i in range(num_elements):
+                # ラベル決定: 最初の行のみフルラベル
+                if i == 0:
+                    label = f"{text} {index_labels[i]}" if text else f"{info.name} {index_labels[i]}"
+                else:
+                    label = index_labels[i]
+
+                # Split 作成（outer_col 内に配置）
+                split = outer_col.split(factor=self.style.split_factor, align=True)
+
+                # 左カラム: ラベル（右寄せ）
+                col1 = split.column()
+                col1.alignment = Alignment.RIGHT
+                col1.use_property_split = False  # 再帰防止
+                col1.label(text=label)
+
+                # 右カラム: NumberItem / SliderItem
+                col2 = split.column()
+                col2.use_property_split = False  # 再帰防止
+
+                # setter 作成（配列要素用）
+                set_value = self._make_indexed_setter(resolver, data, property, i)
+
+                # ウィジェット作成
+                ctx = WidgetContext(
+                    text="",  # ラベルなし（左カラムに表示済み）
+                    icon="NONE",
+                    enabled=self.enabled,
+                    active=self.active,
+                    set_value=set_value,
+                    use_property_split=True,
+                )
+
+                item = WidgetFactory.create(number_hint, info, current_value[i], ctx)
+                if item:
+                    # corners を手動設定（align グループ内での位置に基づく）
+                    # corners: (bottomLeft, topLeft, topRight, bottomRight)
+                    is_first = (i == 0)
+                    is_last = (i == num_elements - 1)
+                    # Blender と同様に、上端だけ上角丸・下端だけ下角丸
+                    item.corners = (is_last, is_first, is_first, is_last)
+                    item.corners_locked = True  # レイアウト計算で上書きしない
+                    col2._add_item(item)
+                    items.append(item)
+
+                    # バインディング登録
+                    meta = {
+                        "is_dynamic_enum": False,
+                        "label_prefix": label,
+                        "index": i,
+                    }
+                    if resolver:
+                        binding = PropertyBinding(
+                            resolve_data=resolver,
+                            set_value=set_value,
+                            prop_name=property,
+                            widget=item,
+                            meta=meta,
+                        )
+                        self._bindings.append(binding)
+                    else:
+                        def resolve_static(_ctx, data=data):
+                            return data
+                        binding = PropertyBinding(
+                            resolve_data=resolve_static,
+                            set_value=set_value,
+                            prop_name=property,
+                            widget=item,
+                            meta=meta,
+                        )
+                        self._static_bindings.append(binding)
+
+                    if DBG_GPU:
+                        logi(f"[_prop_split_vector] created item {i}: {item}")
+
+            # 最初のアイテムを返す（互換性のため）
+            return items[0] if items else None
+
+        except Exception as e:
+            import traceback
+            logi(f"[_prop_split_vector] ERROR: {e}")
+            logi(traceback.format_exc())
+            return None
 
 
     def sync_reactive(self, context, epoch: int) -> bool:

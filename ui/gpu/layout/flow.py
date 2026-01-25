@@ -569,7 +569,8 @@ class LayoutFlowMixin:
                     element.alignment = self.alignment
 
                 # Phase 2: corners 計算（縦方向）
-                if hasattr(element, 'corners'):
+                # corners_locked が True の場合は上書きしない
+                if hasattr(element, 'corners') and not getattr(element, 'corners_locked', False):
                     if self._align:
                         if not align_flags or not align_flags[i]:
                             element.corners = (True, True, True, True)
@@ -647,7 +648,8 @@ class LayoutFlowMixin:
                 element.height = element.estimated_height
 
                 # Phase 2: corners 計算（水平方向）
-                if hasattr(element, 'corners'):
+                # corners_locked が True の場合は上書きしない
+                if hasattr(element, 'corners') and not getattr(element, 'corners_locked', False):
                     if self._align:
                         if not align_flags or not align_flags[i]:
                             element.corners = (True, True, True, True)
