@@ -1492,6 +1492,16 @@ class DEMO_OT_layout_align_types(Operator, GPUPanelMixin):
         col.label(text="Label")
         col.operator(text="Bottom")
 
+        layout.separator()
+
+        layout.label(text="column_flow align=True (label breaks group)")
+        flow = layout.column_flow(columns=3, align=True)
+        for i in range(9):
+            if i == 4:
+                flow.label(text="Label")
+            else:
+                flow.operator(text=f"Btn {i+1}")
+
 
 # Demo 5.25: Width-dependent height - wrapped labels in horizontal layouts
 # ═══════════════════════════════════════════════════════════════════════════════

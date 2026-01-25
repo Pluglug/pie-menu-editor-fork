@@ -556,7 +556,8 @@ class LayoutPropMixin:
                 col1.label(text=label)
 
                 # 右カラム: NumberItem / SliderItem
-                col2 = split.column()
+                # align=True で縦方向の連結（Blender互換）
+                col2 = split.column(align=True)
                 col2.use_property_split = False  # 再帰防止
 
                 # setter 作成（配列要素用）
@@ -574,13 +575,6 @@ class LayoutPropMixin:
 
                 item = WidgetFactory.create(number_hint, info, current_value[i], ctx)
                 if item:
-                    # corners を手動設定（align グループ内での位置に基づく）
-                    # corners: (bottomLeft, topLeft, topRight, bottomRight)
-                    is_first = (i == 0)
-                    is_last = (i == num_elements - 1)
-                    # Blender と同様に、上端だけ上角丸・下端だけ下角丸
-                    item.corners = (is_last, is_first, is_first, is_last)
-                    item.corners_locked = True  # レイアウト計算で上書きしない
                     col2._add_item(item)
                     items.append(item)
 

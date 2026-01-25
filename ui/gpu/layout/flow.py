@@ -33,7 +33,8 @@ class LayoutFlowMixin:
             _, padding_y = self._get_padding()
             return padding_y * 2
 
-        spacing = self._get_spacing()
+        # column_flow は align=True でも spacing を保持（Blender準拠）
+        spacing = self.style.scaled_spacing()
         if self.direction == Direction.VERTICAL:
             _, padding_y = self._get_padding()
             height = padding_y * 2
@@ -724,7 +725,7 @@ class LayoutFlowMixin:
                 self._flow_totcol = 1
 
         # Step 3: 列ごとの高さをシミュレート
-        col_spacing = self.style.scaled_spacing_x() if not self._align else 0
+        col_spacing = self.style.scaled_spacing_x()
         item_spacing = spacing
 
         # 各列の幅と高さを計算
@@ -784,9 +785,10 @@ class LayoutFlowMixin:
         if n == 0:
             return
 
-        spacing = self._get_spacing()
+        # column_flow は align=True でも spacing を保持（Blender準拠）
+        spacing = self.style.scaled_spacing()
         padding_x, padding_y = self._get_padding()
-        col_spacing = self.style.scaled_spacing_x() if not self._align else 0
+        col_spacing = self.style.scaled_spacing_x()
         item_spacing = spacing
 
         available_width = max(0, self.width - padding_x * 2)
@@ -866,6 +868,9 @@ class LayoutFlowMixin:
         # Pass 2: 位置確定
         self.arrange(self.x, self.y)
 
+        # Pass 3: Blender-style align pass (2D proximity based)
+        self._run_align_pass()
+
         # タイトルバーの HitRect を登録
         self._register_title_bar()
         self._register_resize_handle()
@@ -874,6 +879,13 @@ class LayoutFlowMixin:
         self._update_hit_positions_recursive()
 
         self._dirty = False  # レイアウト完了
+
+
+    def _run_align_pass(self) -> None:
+        """Blender-style 2D align pass (proximity-based corner stitching)."""
+        from .align import run_align_pass
+
+        run_align_pass(self)
 
 
     def _relayout_items(self) -> None:

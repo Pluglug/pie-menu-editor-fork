@@ -28,6 +28,9 @@ class LayoutItem:
     layout_path: str = ""
     key: str = ""
 
+    # Phase 3: align group id (Blender-style alignnr)
+    align_group: int | None = None
+
     # Phase 2: 角丸制御（align=True 時に使用）
     # (bottomLeft, topLeft, topRight, bottomRight)
     # True = 角丸あり、False = 直角
