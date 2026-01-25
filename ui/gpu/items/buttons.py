@@ -78,25 +78,34 @@ class ButtonItem(LayoutItem):
         available_width = self.width - padding * 2 - icon_size - icon_spacing
         display_text = BLFDrawing.get_text_with_ellipsis(self.text, available_width, text_size)
         text_w, text_h = BLFDrawing.get_text_dimensions(display_text, text_size)
-
-        # コンテンツ全体の幅（アイコン + スペース + テキスト）
-        content_w = icon_size + icon_spacing + text_w
-
-        # 中央揃えでコンテンツを配置
-        content_x = self.x + (self.width - content_w) / 2
         text_y = self.y - (self.height + text_h) / 2
 
-        # アイコン描画
-        text_x = content_x
-        if self.icon != "NONE":
-            icon_y = self.y - (self.height - icon_size) / 2
+        # Blender 準拠のアイコン/テキスト配置:
+        # - テキストなし + アイコンあり: アイコンを中央揃え（パディングを考慮）
+        # - テキストあり: アイコンは左端、テキストは残り領域内で中央揃え
+        if not self.text and self.icon != "NONE":
+            # アイコンのみ: アイコンを中央揃え
+            # ボタンサイズに対して少しパディングを取るため、スケールを調整
+            icon_scale = 0.85  # アイコンをボタンの 85% サイズに
+            actual_icon_size = icon_size * icon_scale
+            icon_x = self.x + (self.width - actual_icon_size) / 2
+            icon_y = self.y - (self.height - actual_icon_size) / 2
             alpha = 1.0 if enabled else 0.5
-            IconDrawing.draw_icon(content_x, icon_y, self.icon, alpha=alpha)
-            text_x += icon_size + icon_spacing
+            IconDrawing.draw_icon(icon_x, icon_y, self.icon, alpha=alpha, scale=icon_scale)
+        else:
+            # アイコン描画（左端）
+            content_x = self.x + padding
+            if self.icon != "NONE":
+                icon_y = self.y - (self.height - icon_size) / 2
+                alpha = 1.0 if enabled else 0.5
+                IconDrawing.draw_icon(content_x, icon_y, self.icon, alpha=alpha)
 
-        # クリップ矩形（ボタン全体、角丸背景がテキストを制約）
-        clip_rect = self.get_clip_rect()
-        BLFDrawing.draw_text_clipped(text_x, text_y, display_text, text_color, text_size, clip_rect)
+            # テキスト描画（アイコンの右側の残り領域内で中央揃え）
+            # Blender: テキストはデフォルトで UI_STYLE_TEXT_CENTER
+            text_area_start = self.x + padding + icon_size + icon_spacing
+            text_x = text_area_start + (available_width - text_w) / 2
+            clip_rect = self.get_clip_rect()
+            BLFDrawing.draw_text_clipped(text_x, text_y, display_text, text_color, text_size, clip_rect)
 
 
 @dataclass
@@ -112,6 +121,7 @@ class ToggleItem(LayoutItem):
         icon_on: ON 状態のアイコン（指定時のみ）
         icon_off: OFF 状態のアイコン（指定時のみ）
         value: 現在値
+        icon_only: アイコンのみ表示（正方形ボタン）
         on_toggle: 値変更時のコールバック
     """
     text: str = ""
@@ -119,12 +129,23 @@ class ToggleItem(LayoutItem):
     icon_on: str = "NONE"
     icon_off: str = "NONE"
     value: bool = False
+    icon_only: bool = False
     on_toggle: Optional[Callable[[bool], None]] = None
 
     # 状態（layout 側から設定される）
     _hovered: bool = field(default=False, repr=False)
 
+    def __post_init__(self):
+        """icon_only の場合は固定幅（row で拡張されない）"""
+        if self.icon_only:
+            self.sizing.is_fixed = True
+
     def calc_size(self, style: GPULayoutStyle) -> tuple[float, float]:
+        # icon_only の場合は正方形（Blender の IconToggle に相当）
+        if self.icon_only:
+            size = style.scaled_item_height()
+            return (size, size)
+
         text_w, text_h = BLFDrawing.get_text_dimensions(self.text, style.scaled_text_size())
         icon_size = style.scaled_icon_size()
         icon_w = icon_size + style.scaled_spacing() if self.icon != "NONE" else 0
@@ -217,25 +238,35 @@ class ToggleItem(LayoutItem):
         available_width = self.width - padding * 2 - icon_size - icon_spacing
         display_text = BLFDrawing.get_text_with_ellipsis(self.text, available_width, text_size)
         text_w, text_h = BLFDrawing.get_text_dimensions(display_text, text_size)
-
-        # コンテンツ全体の幅（アイコン + スペース + テキスト）
-        content_w = icon_size + icon_spacing + text_w
-
-        # 中央揃えでコンテンツを配置
-        content_x = self.x + (self.width - content_w) / 2
         text_y = self.y - (self.height + text_h) / 2
 
-        # アイコン描画
-        text_x = content_x
-        if display_icon != "NONE":
-            icon_y = self.y - (self.height - icon_size) / 2
+        # Blender 準拠のアイコン/テキスト配置:
+        # - icon_only または テキストなし: アイコンを中央揃え（パディングを考慮してスケールダウン）
+        # - テキストあり: アイコンは左端、テキストは残り領域内で中央揃え
+        is_icon_only = (self.icon_only or not self.text) and display_icon != "NONE"
+        if is_icon_only:
+            # アイコンのみ: アイコンを中央揃え
+            # ボタンサイズに対して少しパディングを取るため、スケールを調整
+            icon_scale = 0.85  # アイコンをボタンの 85% サイズに
+            actual_icon_size = icon_size * icon_scale
+            icon_x = self.x + (self.width - actual_icon_size) / 2
+            icon_y = self.y - (self.height - actual_icon_size) / 2
             alpha = 1.0 if enabled else 0.5
-            IconDrawing.draw_icon(content_x, icon_y, display_icon, alpha=alpha)
-            text_x += icon_size + icon_spacing
+            IconDrawing.draw_icon(icon_x, icon_y, display_icon, alpha=alpha, scale=icon_scale)
+        else:
+            # アイコン描画（左端）
+            content_x = self.x + padding
+            if display_icon != "NONE":
+                icon_y = self.y - (self.height - icon_size) / 2
+                alpha = 1.0 if enabled else 0.5
+                IconDrawing.draw_icon(content_x, icon_y, display_icon, alpha=alpha)
 
-        # テキスト描画
-        clip_rect = self.get_clip_rect()
-        BLFDrawing.draw_text_clipped(text_x, text_y, display_text, text_color, text_size, clip_rect)
+            # テキスト描画（アイコンの右側の残り領域内で中央揃え）
+            # Blender: テキストはデフォルトで UI_STYLE_TEXT_CENTER
+            text_area_start = self.x + padding + icon_size + icon_spacing
+            text_x = text_area_start + (available_width - text_w) / 2
+            clip_rect = self.get_clip_rect()
+            BLFDrawing.draw_text_clipped(text_x, text_y, display_text, text_color, text_size, clip_rect)
 
     def _draw_fallback(self, style: GPULayoutStyle, state: Optional[ItemRenderState] = None) -> None:
         """テーマがない場合のフォールバック描画"""
@@ -275,25 +306,35 @@ class ToggleItem(LayoutItem):
         available_width = self.width - padding * 2 - icon_size - icon_spacing
         display_text = BLFDrawing.get_text_with_ellipsis(self.text, available_width, text_size)
         text_w, text_h = BLFDrawing.get_text_dimensions(display_text, text_size)
-
-        # コンテンツ全体の幅（アイコン + スペース + テキスト）
-        content_w = icon_size + icon_spacing + text_w
-
-        # 中央揃えでコンテンツを配置
-        content_x = self.x + (self.width - content_w) / 2
         text_y = self.y - (self.height + text_h) / 2
 
-        # アイコン描画
-        text_x = content_x
-        if display_icon != "NONE":
-            icon_y = self.y - (self.height - icon_size) / 2
+        # Blender 準拠のアイコン/テキスト配置:
+        # - icon_only または テキストなし: アイコンを中央揃え（パディングを考慮してスケールダウン）
+        # - テキストあり: アイコンは左端、テキストは残り領域内で中央揃え
+        is_icon_only = (self.icon_only or not self.text) and display_icon != "NONE"
+        if is_icon_only:
+            # アイコンのみ: アイコンを中央揃え
+            # ボタンサイズに対して少しパディングを取るため、スケールを調整
+            icon_scale = 0.85  # アイコンをボタンの 85% サイズに
+            actual_icon_size = icon_size * icon_scale
+            icon_x = self.x + (self.width - actual_icon_size) / 2
+            icon_y = self.y - (self.height - actual_icon_size) / 2
             alpha = 1.0 if enabled else 0.5
-            IconDrawing.draw_icon(content_x, icon_y, display_icon, alpha=alpha)
-            text_x += icon_size + icon_spacing
+            IconDrawing.draw_icon(icon_x, icon_y, display_icon, alpha=alpha, scale=icon_scale)
+        else:
+            # アイコン描画（左端）
+            content_x = self.x + padding
+            if display_icon != "NONE":
+                icon_y = self.y - (self.height - icon_size) / 2
+                alpha = 1.0 if enabled else 0.5
+                IconDrawing.draw_icon(content_x, icon_y, display_icon, alpha=alpha)
 
-        # クリップ矩形（ボタン全体、角丸背景がテキストを制約）
-        clip_rect = self.get_clip_rect()
-        BLFDrawing.draw_text_clipped(text_x, text_y, display_text, text_color, text_size, clip_rect)
+            # テキスト描画（アイコンの右側の残り領域内で中央揃え）
+            # Blender: テキストはデフォルトで UI_STYLE_TEXT_CENTER
+            text_area_start = self.x + padding + icon_size + icon_spacing
+            text_x = text_area_start + (available_width - text_w) / 2
+            clip_rect = self.get_clip_rect()
+            BLFDrawing.draw_text_clipped(text_x, text_y, display_text, text_color, text_size, clip_rect)
 
 
 @dataclass

@@ -1873,9 +1873,10 @@ def _build_blender_compat_content(layout, context, *, use_bpy_ops: bool) -> None
 
     if context.object:
         row = layout.row()
-        # 通常表示
+        # 通常表示（テキスト + アイコントグル）- RNA プロパティからアイコン自動取得
         row.prop(context.object, "hide_viewport", text="Normal")
-        # icon_only=True
+        # icon_only=True → 正方形アイコントグル（Blender の IconToggle 相当）
+        # アイコンは RNA プロパティから自動取得（RESTRICT_VIEW_OFF など）
         row.prop(context.object, "hide_viewport", icon_only=True)
         row.prop(context.object, "hide_render", icon_only=True)
         row.prop(context.object, "hide_select", icon_only=True)
@@ -1940,7 +1941,7 @@ def _build_blender_compat_content(layout, context, *, use_bpy_ops: bool) -> None
         layout.prop(context.object, "location")
         layout.prop(context.object, "scale")
 
-        # heading と組み合わせ
+        # heading と組み合わせ（RNA プロパティからアイコン自動取得）
         col = layout.column(heading="Visibility")
         col.prop(context.object, "hide_viewport")
         col.prop(context.object, "hide_render")

@@ -679,12 +679,13 @@ grid = layout.grid_flow(
 
 > テスト方法: `DEMO_OT_blender_compat_gpulayout`（GPULayout）と `DEMO_PT_blender_compat_reference`（N-Panel）を並べて比較
 
-### D-1: CheckboxItem / ToggleItem の icon_only 対応不備
+### D-1: CheckboxItem / ToggleItem の icon_only 対応 ✅ 完了
 
 **優先度**: 🔴 高
 **関連**: B-2 (icon_only 実装)
+**完了日**: 2026-01-25
 
-#### 現象
+#### 現象（修正前）
 - `icon_only=True` でもテキストが表示される
 - Blender ではアイコンボタンとして描画されるが、GPULayout では単純なチェックボックスのまま
 
@@ -709,14 +710,69 @@ grid = layout.grid_flow(
 ```
 
 #### 調査項目
-- [ ] `uiItemFullR()` での `icon_only` フラグの処理確認（`UI_ITEM_R_ICON_ONLY`）
-- [ ] Boolean プロパティの描画先ウィジェット決定ロジック（`ui_item_rna_size()`, `ui_item_add_but()`）
-- [ ] `icon_only=True` 時のウィジェットサイズ計算（`UI_UNIT_X` ベースの正方形）
-- [ ] CheckboxItem と ToggleItem の描画区別（Blender の `UI_BUT_CHECKBOX` vs `UI_BUT_TOGGLE`）
+- [x] `uiItemFullR()` での `icon_only` フラグの処理確認（`UI_ITEM_R_ICON_ONLY`）
+- [x] Boolean プロパティの描画先ウィジェット決定ロジック（`ui_item_rna_size()`, `ui_item_add_but()`）
+- [x] `icon_only=True` 時のウィジェットサイズ計算（`UI_UNIT_X` ベースの正方形）
+- [x] CheckboxItem と ToggleItem の描画区別（Blender の `UI_BUT_CHECKBOX` vs `UI_BUT_TOGGLE`）
+
+#### 調査結果（2026-01-25）
+
+**Blender ソース分析** (`interface_utils.cc:55-105`):
+
+```cpp
+// uiDefAutoButR() での Boolean 処理
+case PROP_BOOLEAN: {
+  if (icon && name && name->is_empty()) {
+    // icon あり + name 空 → IconToggle（正方形ボタン）
+    but = uiDefIconButR_prop(block, ButtonType::IconToggle, icon, ...);
+  }
+  else if (icon) {
+    // icon あり + name あり → IconToggle（アイコン+テキスト）
+    but = uiDefIconTextButR_prop(block, ButtonType::IconToggle, ...);
+  }
+  // icon なし → Checkbox
+}
+```
+
+**ポイント**:
+1. `icon_only=True` の場合、`name` は空文字列になる（`interface_layout.cc:1223`）
+2. `icon` + `name.is_empty()` → `ButtonType::IconToggle`（正方形アイコンボタン）
+3. サイズは `UI_UNIT_X` ベース（`ui_item_rna_size` で `icon_only` 時は `ICON_BLANK1` 幅）
+
+#### 実装結果 ✅
+
+**1. ToggleItem に icon_only フィールドを追加**:
+- `icon_only: bool = False` フィールド追加
+- `__post_init__()` で `icon_only=True` のとき `sizing.is_fixed = True` を設定
+- `calc_size()` で `icon_only=True` のとき正方形 `(item_height, item_height)` を返す
+
+**2. WidgetFactory での分岐**:
+- `_create_checkbox()`: `icon_only=True` かつ `icon != "NONE"` の場合は ToggleItem を返す
+- `_create_toggle()`: `icon_only` フラグを ToggleItem に渡す
+
+**3. アイコン/テキスト配置の Blender 準拠化**:
+- **icon_only または text=""**: アイコンを中央揃え（スケール 85% でパディング確保）
+- **テキストあり**: アイコンは左端、テキストは残り領域で中央揃え
+
+**4. split レイアウト対応**:
+- `text=""` でアイコンがある場合も `icon_only` と同様にアイコン中央揃えを適用
+- 判定条件: `(self.icon_only or not self.text) and display_icon != "NONE"`
+
+**Blender ソース参照**:
+- `widget_draw_text()` のデフォルト配置は `UI_STYLE_TEXT_CENTER`
+- `BUT_TEXT_LEFT` フラグがない限りテキストは中央揃え
+
+#### 変更ファイル
+
+| ファイル | 変更内容 |
+|---------|---------|
+| `widget_factory.py` | `_create_checkbox()` で icon_only 分岐、`_create_toggle()` で icon_only 渡し |
+| `items/buttons.py` | ToggleItem に `icon_only` フィールド追加、`__post_init__()`、`calc_size()` 修正、`draw()` でアイコン/テキスト配置を Blender 準拠に変更 |
 
 #### 関連ソース
 - `source/blender/editors/interface/interface_layout.cc` - `uiItemFullR()`, `ui_item_rna_size()`
-- `source/blender/editors/interface/interface_widgets.cc` - チェックボックス/トグル描画
+- `source/blender/editors/interface/interface_utils.cc` - `uiDefAutoButR()`
+- `source/blender/editors/interface/interface_widgets.cc` - `widget_draw_text()`, `widget_draw_text_icon()`
 
 ---
 
@@ -928,7 +984,7 @@ use_property_split=True:
 ### 高優先度（機能的な差異）
 1. **D-6**: use_property_split での VectorItem 縦表示
 2. **D-3**: サブタイプに応じた単位・精度・ラベル表示
-3. **D-1**: CheckboxItem / ToggleItem の icon_only 対応
+3. ~~**D-1**: CheckboxItem / ToggleItem の icon_only 対応~~ ✅ 完了
 
 ### 中優先度（見た目の差異）
 4. **D-5**: heading パラメータの表示条件

@@ -73,6 +73,7 @@ class PropertyInfo:
         widget_hint: 推奨ウィジェットタイプ
         is_readonly: 読み取り専用かどうか
         is_dynamic_enum: 動的 Enum かどうか（render.engine など）
+        icon: RNA プロパティに紐づくアイコン名（'NONE' = なし）
     """
     name: str
     description: str
@@ -91,6 +92,7 @@ class PropertyInfo:
     widget_hint: WidgetHint
     is_readonly: bool
     is_dynamic_enum: bool = False
+    icon: str = "NONE"
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -125,6 +127,9 @@ def get_property_info(data: bpy_struct, prop_name: str) -> Optional[PropertyInfo
         name = rna_prop.name or prop_name
         description = rna_prop.description or ""
         is_readonly = rna_prop.is_readonly
+
+        # プロパティに紐づくアイコン（RNA_def_property_ui_icon で定義されたもの）
+        prop_icon = getattr(rna_prop, 'icon', 'NONE') or 'NONE'
 
         # プロパティタイプの判定
         prop_type = _get_prop_type(rna_prop)
@@ -206,6 +211,7 @@ def get_property_info(data: bpy_struct, prop_name: str) -> Optional[PropertyInfo
             widget_hint=widget_hint,
             is_readonly=is_readonly,
             is_dynamic_enum=is_dynamic_enum,
+            icon=prop_icon,
         )
 
     except Exception:

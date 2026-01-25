@@ -154,11 +154,24 @@ class WidgetFactory:
     # ─────────────────────────────────────────────────────────────────────────
 
     @staticmethod
-    def _create_checkbox(info: PropertyInfo, value: Any, ctx: WidgetContext) -> CheckboxItem:
+    def _create_checkbox(info: PropertyInfo, value: Any, ctx: WidgetContext) -> LayoutItem:
         def on_toggle(new_value: bool):
             if ctx.set_value:
                 ctx.set_value(bpy.context, new_value)
 
+        # icon_only かつ icon がある場合は ToggleItem を使用（Blender の IconToggle 相当）
+        if ctx.icon_only and ctx.icon != "NONE":
+            return ToggleItem(
+                text="",
+                icon=ctx.icon,
+                value=bool(value),
+                icon_only=True,
+                key=ctx.key,
+                on_toggle=on_toggle,
+                enabled=ctx.enabled and ctx.active,
+            )
+
+        # 通常の CheckboxItem
         return CheckboxItem(
             text="" if ctx.icon_only else ctx.text,
             value=bool(value),
@@ -177,6 +190,7 @@ class WidgetFactory:
             text="" if ctx.icon_only else ctx.text,
             icon=ctx.icon,
             value=bool(value),
+            icon_only=ctx.icon_only,
             key=ctx.key,
             on_toggle=on_toggle,
             enabled=ctx.enabled and ctx.active,

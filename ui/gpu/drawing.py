@@ -1177,6 +1177,7 @@ class IconDrawing:
     - PNG ファイルからテクスチャをロードして GPU 描画
     - PME カスタムアイコン（ユーザー PNG）のサポート
     - Blender 内蔵アイコンは UILayout 経由でのみ使用可能
+    - フォールバックアイコン対応（PNG がない場合に代替表示）
 
     使用例:
         # PNG ファイルから直接描画
@@ -1184,10 +1185,23 @@ class IconDrawing:
 
         # PME カスタムアイコン名で描画（PreviewsHelper 経由）
         IconDrawing.draw_custom_icon("my_icon", x, y)
+
+        # Blender アイコン名で描画（PNG があれば使用、なければフォールバック）
+        IconDrawing.draw_icon(x, y, "RESTRICT_VIEW_OFF")
     """
 
     # アイコンサイズ（Blender 標準、基準値）
     ICON_SIZE = 20
+
+    # フォールバックアイコン（PNG が見つからない場合に使用）
+    FALLBACK_ICON = "roaoao"
+
+    # Blender アイコン名 → PNG ファイル名のマッピング
+    # 将来的にここに頻出アイコンを追加していく
+    _icon_name_map: dict[str, str] = {
+        # 例: "RESTRICT_VIEW_OFF": "hide_viewport",
+        # 例: "RESTRICT_RENDER_OFF": "hide_render",
+    }
 
     @classmethod
     def get_scaled_icon_size(cls) -> int:
@@ -1407,30 +1421,43 @@ class IconDrawing:
 
     @classmethod
     def draw_icon(cls, x: float, y: float, icon: str,
-                  alpha: float = 1.0, scale: float = 1.0) -> bool:
+                  alpha: float = 1.0, scale: float = 1.0,
+                  use_fallback: bool = True) -> bool:
         """
-        アイコンを描画
+        アイコンを描画（フォールバック対応）
 
-        まず PME カスタムアイコンを試み、なければ何もしない。
-        Blender 内蔵アイコンは GPU では描画できないため、
-        UILayout を使用するか、カスタムアイコンで代替する必要がある。
+        以下の順序でアイコンを探し、最初に見つかったものを描画:
+        1. 指定されたアイコン名でカスタム PNG を探す
+        2. マッピングされた名前でカスタム PNG を探す
+        3. フォールバックアイコン（roaoao.png）を表示
 
         Args:
-            icon: アイコン名（PME カスタムアイコン名 or Blender アイコン名）
             x, y: 左上座標
+            icon: アイコン名（PME カスタムアイコン名 or Blender アイコン名）
             alpha: 透明度
             scale: サイズスケール（UI スケールに加えて追加で適用）
+            use_fallback: PNG が見つからない場合にフォールバックを使用するか
 
         Returns:
-            描画成功したかどうか
+            描画成功したかどうか（フォールバック使用時も True）
         """
+        if not icon or icon == "NONE":
+            return False
+
         # UI スケールを適用した基準サイズに、追加スケールを乗算
         size = cls.get_scaled_icon_size() * scale
 
-        # PME カスタムアイコンを試す
+        # 1. 指定されたアイコン名でカスタム PNG を試す
         if cls.draw_custom_icon(icon, x, y, size, alpha):
             return True
 
-        # Blender 内蔵アイコンは GPU で描画できない
-        # フォールバック: 何もしない（呼び出し側でテキストを表示するなど）
+        # 2. マッピングされた名前で試す（Blender アイコン名 → PNG 名）
+        mapped_name = cls._icon_name_map.get(icon)
+        if mapped_name and cls.draw_custom_icon(mapped_name, x, y, size, alpha):
+            return True
+
+        # 3. フォールバックアイコンを表示
+        if use_fallback:
+            return cls.draw_custom_icon(cls.FALLBACK_ICON, x, y, size, alpha)
+
         return False

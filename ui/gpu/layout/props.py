@@ -169,11 +169,15 @@ class LayoutPropMixin:
         # 表示テキストの決定
         display_text = text if text else info.name
 
+        # アイコンの決定: 明示的に指定されていなければ PropertyInfo から取得
+        # (Blender の RNA_def_property_ui_icon で定義されたアイコン)
+        effective_icon = icon if icon != "NONE" else info.icon
+
         # use_property_split 処理
         # icon_only や readonly の場合は通常処理にフォールスルー
         if self.use_property_split and not icon_only and not info.is_readonly:
             return self._prop_with_split(
-                raw_data, property, info, display_text, icon,
+                raw_data, property, info, display_text, effective_icon,
                 expand, slider, toggle, index, key, resolver
             )
 
@@ -228,11 +232,17 @@ class LayoutPropMixin:
         if expand and hint == WidgetHint.MENU:
             hint = WidgetHint.RADIO
 
-        # トグル/チェックボックスの明示的切り替え
+        # トグル/チェックボックスの切り替え
+        # toggle=-1 (自動): icon があれば TOGGLE、なければ CHECKBOX (Blender の動作)
+        # toggle=0: 常に CHECKBOX
+        # toggle=1: 常に TOGGLE
         if toggle == 1 and hint == WidgetHint.CHECKBOX:
             hint = WidgetHint.TOGGLE
         elif toggle == 0 and hint == WidgetHint.TOGGLE:
             hint = WidgetHint.CHECKBOX
+        elif toggle == -1 and hint == WidgetHint.CHECKBOX and effective_icon != "NONE":
+            # Blender の動作: icon があれば IconToggle を使用
+            hint = WidgetHint.TOGGLE
 
         # setter の作成（index 指定時は indexed setter を使用）
         if is_indexed:
@@ -240,7 +250,7 @@ class LayoutPropMixin:
         else:
             set_value = self._make_setter(resolver, raw_data, property)
         item = self._create_prop_widget(
-            raw_data, property, info, hint, display_text, icon,
+            raw_data, property, info, hint, display_text, effective_icon,
             current_value, set_value, key, icon_only=icon_only
         )
         if item:
@@ -372,20 +382,27 @@ class LayoutPropMixin:
         if expand and hint == WidgetHint.MENU:
             hint = WidgetHint.RADIO
 
-        # トグル/チェックボックスの明示的切り替え
+        # トグル/チェックボックスの切り替え
+        # toggle=-1 (自動): icon があれば TOGGLE、なければ CHECKBOX (Blender の動作)
+        # toggle=0: 常に CHECKBOX
+        # toggle=1: 常に TOGGLE
         if toggle == 1 and hint == WidgetHint.CHECKBOX:
             hint = WidgetHint.TOGGLE
         elif toggle == 0 and hint == WidgetHint.TOGGLE:
             hint = WidgetHint.CHECKBOX
+        elif toggle == -1 and hint == WidgetHint.CHECKBOX and icon != "NONE":
+            # Blender の動作: icon があれば IconToggle を使用
+            hint = WidgetHint.TOGGLE
 
         # Split レイアウト作成
         split = self.split(factor=self.style.split_factor, align=True)
 
         # 左カラム: ラベル（右寄せ）
+        # Blender 準拠: ラベル側にはアイコンを描画しない（ICON_NONE）
         col1 = split.column()
         col1.alignment = Alignment.RIGHT
         col1.use_property_split = False  # 再帰防止
-        col1.label(text=display_text, icon=icon)
+        col1.label(text=display_text)
 
         # 右カラム: ウィジェット（ラベルなし）
         col2 = split.column()
@@ -397,9 +414,10 @@ class LayoutPropMixin:
         else:
             set_value = self._make_setter(resolver, data, property)
 
+        # Blender 準拠: アイコンはウィジェット側（ボタン内）に描画
         ctx = WidgetContext(
             text="",  # ラベルなし（左カラムに表示済み）
-            icon="NONE",
+            icon=icon,
             icon_only=False,
             key=key,
             enabled=self.enabled,
