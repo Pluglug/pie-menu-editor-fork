@@ -2018,3 +2018,23 @@ class DEMO_OT_blender_compat_uilayout(Operator):
     def draw(self, context):
         """完了済み機能のテスト（Blender UILayout版 - 比較用）"""
         _build_blender_compat_content(self.layout, context, use_bpy_ops=True)
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# Reference Panel - Blender 標準 UILayout を N-Panel として表示（比較用）
+# ═══════════════════════════════════════════════════════════════════════════════
+
+from bpy.types import Panel
+
+
+class DEMO_PT_blender_compat_reference(Panel):
+    """Blender UILayout リファレンスパネル - GPULayout との比較用"""
+    bl_idname = "DEMO_PT_blender_compat_reference"
+    bl_label = "Blender Compat Test"
+    bl_space_type = 'VIEW_3D'
+    bl_region_type = 'UI'
+    bl_category = "Reference"
+
+    def draw(self, context):
+        """完了済み機能のテスト（Blender UILayout版 - N-Panel）"""
+        _build_blender_compat_content(self.layout, context, use_bpy_ops=True)
