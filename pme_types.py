@@ -31,6 +31,7 @@ from . import keymap_helper as KH
 from . import pme
 from .core.schema import schema
 from .ui import tag_redraw
+from .ui.descriptions import SLOT_POLL, SLOT_DESCRIPTION, SLOT_DESCRIPTION_IS_EXPR
 # NOTE: schema is now in core/schema.py (Phase 8-C rename from core/schema.py)
 # Import directly from core.schema for early loading and proper initialization
 from .operators import WM_OT_pme_user_pie_menu_call
@@ -159,7 +160,7 @@ class PMIItem(PropertyGroup):
     # When Blender operator is directly callable, Blender's description is used instead
     description: StringProperty(
         name="Description",
-        description="Tooltip text for this item (COMMAND mode only)",
+        description=SLOT_DESCRIPTION,
         default="",
         maxlen=CC.MAX_STR_LEN,
     )
@@ -194,7 +195,7 @@ class PMIItem(PropertyGroup):
 
     description_is_expr: BoolProperty(
         name="Expr",
-        description="Evaluate description as Python expression (return string)",
+        description=SLOT_DESCRIPTION_IS_EXPR,
         default=False,
         update=_update_description_is_expr,
     )
@@ -417,7 +418,7 @@ class PMItem(PropertyGroup):
     # Used by WM_OT_pme_user_pie_menu_call.description() classmethod
     description: StringProperty(
         name="Description",
-        description="Tooltip text displayed when hovering over this menu",
+        description=SLOT_DESCRIPTION,
         default="",
         maxlen=CC.MAX_STR_LEN,
     )
@@ -452,7 +453,7 @@ class PMItem(PropertyGroup):
 
     description_is_expr: BoolProperty(
         name="Expr",
-        description="Evaluate description as Python expression (return string)",
+        description=SLOT_DESCRIPTION_IS_EXPR,
         default=False,
         update=_update_description_is_expr,
     )
@@ -598,7 +599,7 @@ class PMItem(PropertyGroup):
                 self.poll_methods[self.name] = None
 
     poll_cmd: StringProperty(
-        description=("Poll method\nTest if the item can be called/displayed or not"),
+        description=SLOT_POLL,
         default=CC.DEFAULT_POLL,
         maxlen=CC.MAX_STR_LEN,
         update=update_poll_cmd,

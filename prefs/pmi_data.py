@@ -38,6 +38,13 @@ from ..core import constants as CC
 from ..operators import extras as EOPS
 from ..pme_types import PMIItem
 from .. import keymap_helper
+from ..ui.descriptions import (
+    SLOT_CMD,
+    SLOT_CUSTOM,
+    SLOT_PROP,
+    SLOT_DESCRIPTION,
+    SLOT_DESCRIPTION_IS_EXPR,
+)
 from .temp_data import update_data
 
 
@@ -91,7 +98,7 @@ class PMIData(PropertyGroup):
         items=CC.EMODE_ITEMS, description="Type of the item", update=mode_update
     )
     cmd: StringProperty(
-        description="Python code", maxlen=CC.MAX_STR_LEN, update=update_data
+        description=SLOT_CMD, maxlen=CC.MAX_STR_LEN, update=update_data
     )
     cmd_ctx: EnumProperty(
         items=CC.OP_CTX_ITEMS, name="Execution Context", description="Execution context"
@@ -100,9 +107,9 @@ class PMIData(PropertyGroup):
         name="Undo Flag", description="'Undo' positional argument"
     )
     custom: StringProperty(
-        description="Python code", maxlen=CC.MAX_STR_LEN, update=update_data
+        description=SLOT_CUSTOM, maxlen=CC.MAX_STR_LEN, update=update_data
     )
-    prop: StringProperty(description="Property", update=update_data)
+    prop: StringProperty(description=SLOT_PROP, update=update_data)
     menu: StringProperty(description="Menu's name", update=update_data)
     expand_menu: BoolProperty(description="Expand Menu")
     use_cb: BoolProperty(
@@ -122,7 +129,7 @@ class PMIData(PropertyGroup):
     # Phase 9-X (#102): description field for COMMAND mode fallback tooltip
     description: StringProperty(
         name="Description",
-        description="Tooltip text for this item (COMMAND mode only)",
+        description=SLOT_DESCRIPTION,
         maxlen=CC.MAX_STR_LEN,
         update=update_data,
     )
@@ -157,7 +164,7 @@ class PMIData(PropertyGroup):
 
     description_is_expr: BoolProperty(
         name="Expr",
-        description="Evaluate description as Python expression (return string)",
+        description=SLOT_DESCRIPTION_IS_EXPR,
         default=False,
         update=_update_description_is_expr,
     )

@@ -918,7 +918,7 @@ class PMEPreferences(AddonPreferences):
             if pm.mode == 'MODAL' and data.mode == 'COMMAND':
                 lh.prop(tpr, "modal_item_show", "", ic_eye(tpr.modal_item_show))
 
-            icon = 'ERROR' if data.has_errors(CC.W_PMI_SYNTAX) else 'NONE'
+            icon = 'ERROR' if data.has_errors(CC.W_PMI_SYNTAX) else ic('CONSOLE')
             lh.prop(data, "cmd", "", icon)
 
             if (
@@ -935,7 +935,7 @@ class PMEPreferences(AddonPreferences):
             if pm.mode == 'MODAL':
                 lh.prop(tpr, "modal_item_show", "", ic_eye(tpr.modal_item_show))
 
-            icon = 'ERROR' if data.has_errors(CC.W_PMI_SYNTAX) else 'NONE'
+            icon = 'ERROR' if data.has_errors(CC.W_PMI_SYNTAX) else ic('RNA')
             lh.prop(data, "prop", "", icon)
 
             lh.lt(subcol)
@@ -1001,7 +1001,7 @@ class PMEPreferences(AddonPreferences):
 
         elif data_mode == 'CUSTOM':
             lh.row(subcol)
-            icon = 'ERROR' if data.has_errors(CC.W_PMI_SYNTAX) else 'NONE'
+            icon = 'ERROR' if data.has_errors(CC.W_PMI_SYNTAX) else ic('SYSTEM')
             lh.prop(data, "custom", "", icon)
 
         if (
