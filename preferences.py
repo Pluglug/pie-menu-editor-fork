@@ -1049,7 +1049,7 @@ class PMEPreferences(AddonPreferences):
                 else:
                     desc_icon = ic('CURRENT_FILE')
                 if data.description_is_expr:
-                    desc_placeholder = 'return "Description"'
+                    desc_placeholder = "return 'Description'"
                 else:
                     desc_placeholder = "Description"
                 lh.prop(data, "description", "", desc_icon, placeholder=desc_placeholder, enabled=not is_operator)

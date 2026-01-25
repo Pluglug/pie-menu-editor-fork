@@ -223,6 +223,8 @@ class EditorBase:
             pmi.icon = from_pmi.icon
             pmi.mode = from_pmi.mode
             pmi.text = from_pmi.text
+            pmi.description = from_pmi.description
+            pmi.description_is_expr = from_pmi.description_is_expr
 
     def on_pm_enabled(self, pm, value):
         if self.has_hotkey:
@@ -442,7 +444,7 @@ class EditorBase:
                 sub.alert = False
             except:
                 sub.alert = True
-        desc_placeholder = 'return "Description"' if pm.description_is_expr else "Description"
+        desc_placeholder = "return 'Description'" if pm.description_is_expr else "Description"
         sub.prop(pm, "description", text="", icon=ic('CURRENT_FILE'), placeholder=desc_placeholder)
         row.prop(pm, "description_is_expr", text="", icon=ic('SCRIPTPLUGINS'))
 
