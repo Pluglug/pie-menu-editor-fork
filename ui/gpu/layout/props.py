@@ -107,7 +107,7 @@ class LayoutPropMixin:
         return setter
 
 
-    def prop(self, data: Any, property: str, *, text: str = "",
+    def prop(self, data: Any, property: str, *, text: Optional[str] = None,
              icon: str = "NONE", expand: bool = False, slider: bool = False,
              toggle: int = -1, icon_only: bool = False, index: int = -1,
              key: str = "") -> Optional[LayoutItem]:
@@ -120,7 +120,7 @@ class LayoutPropMixin:
         Args:
             data: プロパティを持つオブジェクト（例: bpy.context.object）
             property: プロパティ名（例: "location"）
-            text: 表示テキスト（空の場合はプロパティ名を使用）
+            text: 表示テキスト（None=プロパティ名を使用、""=ラベルなし）
             icon: アイコン名
             expand: Enum を展開表示（RadioGroup）するか
             slider: 数値をスライダー表示するか
@@ -167,7 +167,10 @@ class LayoutPropMixin:
             return None
 
         # 表示テキストの決定
-        display_text = text if text else info.name
+        # text=None → プロパティ名を使用（Blender デフォルト）
+        # text="" → ラベルなし（明示的に空を指定）
+        # text="Custom" → その文字列を使用
+        display_text = info.name if text is None else text
 
         # アイコンの決定: 明示的に指定されていなければ PropertyInfo から取得
         # (Blender の RNA_def_property_ui_icon で定義されたアイコン)
@@ -662,12 +665,19 @@ class LayoutPropMixin:
 
 
     def prop_display(self, data: Any, property: str, *,
-                     text: str = "", icon: str = "NONE") -> None:
-        """プロパティ値を表示（明示的に読み取り専用）"""
+                     text: Optional[str] = None, icon: str = "NONE") -> None:
+        """プロパティ値を表示（明示的に読み取り専用）
+
+        Args:
+            data: プロパティを持つオブジェクト
+            property: プロパティ名
+            text: 表示ラベル（None=プロパティ名を使用、""=ラベルなし）
+            icon: アイコン名
+        """
         item = PropDisplayItem(
             data=data,
             property=property,
-            text=text,
+            text=text,  # None はそのまま渡す（PropDisplayItem 側で処理）
             icon=icon,
             enabled=self.enabled and self.active
         )
@@ -675,15 +685,23 @@ class LayoutPropMixin:
 
 
     def prop_enum(self, data: Any, property: str, value: str, *,
-                  text: str = "", icon: str = "NONE") -> None:
-        """Enum プロパティの特定値を表示"""
+                  text: Optional[str] = None, icon: str = "NONE") -> None:
+        """Enum プロパティの特定値を表示
+
+        Args:
+            data: プロパティを持つオブジェクト
+            property: プロパティ名
+            value: 表示する Enum 値
+            text: 表示ラベル（None=value を使用、""=ラベルなし）
+            icon: アイコン名
+        """
         try:
             current = getattr(data, property)
             is_active = current == value
         except AttributeError:
             is_active = False
 
-        display_text = text or value
+        display_text = value if text is None else text
         if is_active:
             display_text = f"● {display_text}"
         else:

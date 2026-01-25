@@ -1841,8 +1841,8 @@ def _build_blender_compat_content(layout, context, *, use_bpy_ops: bool) -> None
         # scale (Vector3)
         layout.prop(context.object, "scale", text="Scale")
 
-        # rotation_euler (Vector3) - 違う subtype
-        layout.prop(context.object, "rotation_euler", text="Rotation")
+        # rotation_euler (Vector3) - 違う subtype ラベル無し
+        layout.prop(context.object, "rotation_euler", text="")
 
     else:
         layout.label(text="(Select an object)")

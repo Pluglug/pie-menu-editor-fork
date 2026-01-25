@@ -237,7 +237,7 @@ class LayoutContainerMixin:
         self,
         operator: str = "",
         *,
-        text: str = "",
+        text: Optional[str] = None,
         icon: str = "NONE",
         icon_value: int = 0,
         emboss: bool = True,
@@ -253,7 +253,7 @@ class LayoutContainerMixin:
 
         Args:
             operator: オペレーター bl_idname（例: "mesh.primitive_cube_add"）
-            text: ボタンラベル（空の場合は operator 名を使用）
+            text: ボタンラベル（None=operator名を使用、""=ラベルなし）
             icon: アイコン名
             icon_value: カスタムアイコン ID（GPU 描画では未対応）
             emboss: Blender 互換のフラグ（GPU 描画では未対応）
@@ -321,7 +321,7 @@ class LayoutContainerMixin:
         click_handler = invoke_operator if (on_click is not None or operator) else None
 
         item = ButtonItem(
-            text=text or operator,
+            text=operator if text is None else text,
             icon=icon,
             on_click=click_handler,
             key=key,

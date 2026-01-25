@@ -41,7 +41,7 @@ class MenuButtonItem(LayoutItem):
         - クリックで Blender の popup_menu を開く
         - 選択時に PME_OT_gpu_enum_select オペレーターを呼び出す
     """
-    text: str = ""
+    text: Optional[str] = None  # ポップアップタイトル（None="Select"）
     icon: str = "NONE"
     value: str = ""
     display_name: str = ""
@@ -123,7 +123,8 @@ class MenuButtonItem(LayoutItem):
                 op.widget_id = widget_id
 
         # popup_menu を表示
-        bpy.context.window_manager.popup_menu(draw_menu, title=text or "Select")
+        popup_title = "Select" if text is None else (text or "Select")
+        bpy.context.window_manager.popup_menu(draw_menu, title=popup_title)
 
     def draw(self, style: GPULayoutStyle, state: Optional[ItemRenderState] = None) -> None:
         """メニューボタンを描画（wcol_menu テーマ使用）"""

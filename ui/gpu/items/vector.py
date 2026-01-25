@@ -152,30 +152,48 @@ class VectorItem(LayoutItem):
         else:
             self._draw_horizontal(style, state, enabled)
 
+    # VectorItem 用のラベル領域比率（use_property_split の 0.4 より小さく）
+    LABEL_FACTOR: float = 0.22
+
     def _draw_horizontal(
         self, style: GPULayoutStyle, state: Optional[ItemRenderState], enabled: bool
     ) -> None:
-        """水平レイアウトで描画"""
-        # 全体のラベルを描画
-        current_x = self.x
-        item_height = style.scaled_item_height()
+        """水平レイアウトで描画
 
+        Blender UILayout 準拠:
+        - ラベルは固定比率領域内で左寄せ
+        - ウィジェットは残りの領域に配置（整列される）
+        """
+        item_height = style.scaled_item_height()
+        spacing = style.scaled_spacing()
+
+        # 固定比率でラベル領域を確保（VectorItem 用: 約22%）
         if self.text:
             text_size = style.scaled_text_size()
             label_text = self.text + ":"
+
+            # ラベル領域の幅を固定比率で確保
+            label_region_width = self.width * self.LABEL_FACTOR
+
+            # テキストを描画（ラベル領域内で左寄せ）
             text_w, text_h = BLFDrawing.get_text_dimensions(label_text, text_size)
             text_color = style.text_color if enabled else style.text_color_disabled
             text_y = self.y - (item_height + text_h) / 2
-            BLFDrawing.draw_text(current_x, text_y, label_text, text_color, text_size)
-            current_x += text_w + style.scaled_padding() * 2
+            text_x = self.x  # 左寄せ
+            BLFDrawing.draw_text(text_x, text_y, label_text, text_color, text_size)
 
-        # 残り幅を NumberItem で分割
-        remaining_width = self.width - (current_x - self.x)
-        spacing = style.scaled_spacing()
+            widget_start_x = self.x + label_region_width
+            remaining_width = self.width - label_region_width
+        else:
+            widget_start_x = self.x
+            remaining_width = self.width
+
+        # 残り幅を NumberItem で均等分割
         item_count = len(self._items)
 
         if item_count > 0:
             item_width = (remaining_width - spacing * (item_count - 1)) / item_count
+            current_x = widget_start_x
 
             for i, item in enumerate(self._items):
                 # 位置とサイズを設定

@@ -210,10 +210,17 @@ class SeparatorItem(LayoutItem):
 
 @dataclass
 class PropDisplayItem(LayoutItem):
-    """プロパティ値の表示（読み取り専用）"""
+    """プロパティ値の表示（読み取り専用）
+
+    Attributes:
+        data: プロパティを持つオブジェクト
+        property: プロパティ名
+        text: 表示ラベル（None=プロパティ名を使用、""=ラベルなし）
+        icon: アイコン名
+    """
     data: Any = None
     property: str = ""
-    text: str = ""
+    text: Optional[str] = None  # None=プロパティ名、""=ラベルなし
     icon: str = "NONE"
 
     def can_align(self) -> bool:
@@ -234,9 +241,10 @@ class PropDisplayItem(LayoutItem):
             return "N/A"
 
     def calc_size(self, style: GPULayoutStyle) -> tuple[float, float]:
-        label = self.text or self.property
+        # text=None → プロパティ名、text="" → ラベルなし
+        label = self.property if self.text is None else self.text
         value = self._get_value()
-        display_text = f"{label}: {value}"
+        display_text = f"{label}: {value}" if label else value
         text_w, text_h = BLFDrawing.get_text_dimensions(display_text, style.scaled_text_size())
         return (text_w, style.scaled_item_height())
 
@@ -244,7 +252,8 @@ class PropDisplayItem(LayoutItem):
         if not self.visible:
             return
 
-        label = self.text or self.property
+        # text=None → プロパティ名、text="" → ラベルなし
+        label = self.property if self.text is None else self.text
         value = self._get_value()
 
         text_size = style.scaled_text_size()
@@ -258,17 +267,22 @@ class PropDisplayItem(LayoutItem):
         # クリップ矩形を取得
         clip_rect = self.get_clip_rect()
 
-        # ラベル（最大でも幅の50%に制限）
-        label_text = f"{label}: "
-        max_label_width = self.width * 0.5
-        display_label = BLFDrawing.get_text_with_ellipsis(label_text, max_label_width, text_size)
-        label_w, _ = BLFDrawing.get_text_dimensions(display_label, text_size)
-        BLFDrawing.draw_text_clipped(self.x, text_y, display_label, label_color, text_size, clip_rect)
+        if label:
+            # ラベルあり: 「ラベル: 値」形式
+            label_text = f"{label}: "
+            max_label_width = self.width * 0.5
+            display_label = BLFDrawing.get_text_with_ellipsis(label_text, max_label_width, text_size)
+            label_w, _ = BLFDrawing.get_text_dimensions(display_label, text_size)
+            BLFDrawing.draw_text_clipped(self.x, text_y, display_label, label_color, text_size, clip_rect)
 
-        # 値（残り幅で省略記号を追加）
-        available_width = self.width - label_w
-        display_value = BLFDrawing.get_text_with_ellipsis(value, available_width, text_size)
-        BLFDrawing.draw_text_clipped(self.x + label_w, text_y, display_value, value_color, text_size, clip_rect)
+            # 値（残り幅で省略記号を追加）
+            available_width = self.width - label_w
+            display_value = BLFDrawing.get_text_with_ellipsis(value, available_width, text_size)
+            BLFDrawing.draw_text_clipped(self.x + label_w, text_y, display_value, value_color, text_size, clip_rect)
+        else:
+            # ラベルなし: 値のみ表示
+            display_value = BLFDrawing.get_text_with_ellipsis(value, self.width, text_size)
+            BLFDrawing.draw_text_clipped(self.x, text_y, display_value, value_color, text_size, clip_rect)
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
