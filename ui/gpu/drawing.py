@@ -14,7 +14,7 @@ from gpu_extras.batch import batch_for_shader
 from math import pi, cos, sin
 from typing import Optional
 
-from .style import SHADER_NAME, FONT_ID
+from .style import SHADER_NAME, FONT_ID, ICON_SIZE
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -1190,9 +1190,6 @@ class IconDrawing:
         IconDrawing.draw_icon(x, y, "RESTRICT_VIEW_OFF")
     """
 
-    # アイコンサイズ（Blender 標準、基準値）
-    ICON_SIZE = 20
-
     # フォールバックアイコン（PNG が見つからない場合に使用）
     FALLBACK_ICON = "roaoao"
 
@@ -1203,16 +1200,45 @@ class IconDrawing:
         # 例: "RESTRICT_RENDER_OFF": "hide_render",
     }
 
+    # GPU アイコンディレクトリのパス（テーマ色適用対象）
+    # このディレクトリ内のアイコンはモノクロとして扱い、テーマ色を乗算する
+    _gpu_icons_dir: Optional[str] = None
+
+    @classmethod
+    def _get_gpu_icons_dir(cls) -> str:
+        """GPU アイコンディレクトリのパスを取得（キャッシュ）"""
+        if cls._gpu_icons_dir is None:
+            import os
+            addon_root = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
+            cls._gpu_icons_dir = os.path.join(addon_root, "ui", "gpu", "icons")
+        return cls._gpu_icons_dir
+
+    @classmethod
+    def _is_mono_icon_path(cls, filepath: str) -> bool:
+        """
+        パスがモノクロアイコン（テーマ色適用）かどうかを判定
+
+        ui/gpu/icons/ 内のアイコンはモノクロ（Blender SVG 由来）として扱う。
+        それ以外（assets/icons, ユーザーアイコン）はカラーとして扱う。
+        """
+        if not filepath:
+            return False
+        # 正規化して比較
+        import os
+        normalized = os.path.normpath(filepath).lower()
+        gpu_dir = os.path.normpath(cls._get_gpu_icons_dir()).lower()
+        return normalized.startswith(gpu_dir)
+
     @classmethod
     def get_scaled_icon_size(cls) -> int:
         """UI スケールを適用したアイコンサイズを取得"""
-        return int(cls.ICON_SIZE * bpy.context.preferences.system.ui_scale)
+        return int(ICON_SIZE * bpy.context.preferences.system.ui_scale)
 
     # シェーダーキャッシュ
     _image_shader: gpu.types.GPUShader = None
 
-    # テクスチャキャッシュ: filepath -> (GPUTexture, width, height)
-    _texture_cache: dict[str, tuple[gpu.types.GPUTexture, int, int]] = {}
+    # テクスチャキャッシュ: filepath -> (GPUTexture, width, height, aspect_x, aspect_y)
+    _texture_cache: dict[str, tuple[gpu.types.GPUTexture, int, int, float, float]] = {}
 
     # PME カスタムアイコンのパスキャッシュ: icon_name -> filepath
     _icon_path_cache: dict[str, str] = {}
@@ -1234,7 +1260,7 @@ class IconDrawing:
             return 0
 
     @classmethod
-    def load_texture(cls, filepath: str) -> Optional[tuple[gpu.types.GPUTexture, int, int]]:
+    def load_texture(cls, filepath: str) -> Optional[tuple[gpu.types.GPUTexture, int, int, float, float]]:
         """
         PNG ファイルからテクスチャをロード
 
@@ -1265,10 +1291,20 @@ class IconDrawing:
             else:
                 img = bpy.data.images.load(filepath)
                 img.name = img_name
+                # カラースペースを Non-Color に設定
+                # GPU テクスチャは Linear 変換なしで使用するため
+                # UI アイコンは sRGB だが、シェーダーがそのまま出力する
+                img.colorspace_settings.name = 'Non-Color'
+                # アルファモードを Straight に設定（プリマルチプライ防止）
+                img.alpha_mode = 'STRAIGHT'
 
             # GPU テクスチャを作成
             texture = gpu.texture.from_image(img)
-            result = (texture, img.size[0], img.size[1])
+            aspect_x, aspect_y = img.display_aspect
+            if aspect_x == 0 or aspect_y == 0:
+                aspect_x, aspect_y = 1.0, 1.0
+
+            result = (texture, img.size[0], img.size[1], float(aspect_x), float(aspect_y))
 
             # キャッシュに保存
             cls._texture_cache[filepath] = result
@@ -1281,7 +1317,8 @@ class IconDrawing:
     @classmethod
     def draw_texture(cls, texture: gpu.types.GPUTexture,
                      x: float, y: float, width: float, height: float,
-                     alpha: float = 1.0) -> None:
+                     alpha: float = 1.0,
+                     color: Optional[tuple[float, float, float, float]] = None) -> None:
         """
         テクスチャを描画
 
@@ -1290,8 +1327,13 @@ class IconDrawing:
             x, y: 左上座標（Y は上から下へ減少）
             width, height: 描画サイズ
             alpha: 透明度 (0.0-1.0)
+            color: 乗算色 (r, g, b, a)。None の場合は白 (1,1,1,alpha)
         """
         shader = cls.get_image_shader()
+
+        # DEBUG: 縦長問題の調査
+        if abs(width - height) > 0.01:
+            print(f"[IconDrawing] NON-SQUARE: w={width:.2f}, h={height:.2f}, diff={height-width:.2f}")
 
         # 頂点座標（左上から時計回り）
         # Blender の座標系: 左下原点、Y は上が正
@@ -1321,7 +1363,10 @@ class IconDrawing:
         )
 
         shader.bind()
-        shader.uniform_float("color", (1.0, 1.0, 1.0, alpha))
+        if color is not None:
+            shader.uniform_float("color", color)
+        else:
+            shader.uniform_float("color", (1.0, 1.0, 1.0, alpha))
         shader.uniform_sampler("image", texture)
 
         gpu.state.blend_set('ALPHA')
@@ -1333,35 +1378,69 @@ class IconDrawing:
                           x: float, y: float,
                           width: Optional[float] = None,
                           height: Optional[float] = None,
-                          alpha: float = 1.0) -> bool:
+                          alpha: float = 1.0,
+                          color: Optional[tuple[float, float, float, float]] = None,
+                          preserve_aspect: bool = True) -> bool:
         """
         PNG ファイルからテクスチャを描画
 
+        Blender の icon_draw_rect() に準拠したアスペクト比保持と中央揃えを実装。
+
         Args:
             filepath: PNG ファイルのパス
-            x, y: 左上座標
-            width, height: 描画サイズ（None の場合は元画像サイズ）
+            x, y: 左上座標（描画領域の左上）
+            width, height: 描画領域サイズ（None の場合は元画像サイズ）
             alpha: 透明度
+            color: 乗算色 (r, g, b, a)。None の場合は白
+            preserve_aspect: アスペクト比を保持して中央揃えするか
 
         Returns:
             描画成功したかどうか
+
+        Reference:
+            blender/source/blender/editors/interface/interface_icons.cc:icon_draw_rect()
         """
         result = cls.load_texture(filepath)
         if result is None:
             return False
 
-        texture, img_w, img_h = result
-        draw_w = width if width is not None else img_w
-        draw_h = height if height is not None else img_h
+        texture, img_w, img_h, aspect_x, aspect_y = result
 
-        cls.draw_texture(texture, x, y, draw_w, draw_h, alpha)
+        # 描画領域サイズ（指定がない場合は元画像サイズ）
+        area_w = width if width is not None else img_w
+        area_h = height if height is not None else img_h
+
+        # 描画位置と実際の描画サイズを計算
+        draw_x = x
+        draw_y = y
+        draw_w = area_w
+        draw_h = area_h
+
+        # アスペクト比を保持して中央揃え（Blender 準拠）
+        disp_w = img_w * aspect_x
+        disp_h = img_h * aspect_y
+        if preserve_aspect and (disp_w != area_w or disp_h != area_h):
+            if disp_w > disp_h:
+                # 横長の画像: 幅を領域に合わせ、高さをスケール
+                draw_w = area_w
+                draw_h = (disp_h / disp_w) * area_w
+                draw_y -= (area_h - draw_h) / 2  # Y方向で中央配置（座標系が下向きなので減算）
+            elif disp_w < disp_h:
+                # 縦長の画像: 高さを領域に合わせ、幅をスケール
+                draw_w = (disp_w / disp_h) * area_h
+                draw_h = area_h
+                draw_x += (area_w - draw_w) / 2  # X方向で中央配置
+            # 正方形の場合は draw_w/draw_h の初期値がそのまま使われる
+
+        cls.draw_texture(texture, draw_x, draw_y, draw_w, draw_h, alpha, color)
         return True
 
     @classmethod
     def draw_custom_icon(cls, icon_name: str,
                          x: float, y: float,
                          size: Optional[float] = None,
-                         alpha: float = 1.0) -> bool:
+                         alpha: float = 1.0,
+                         color: Optional[tuple[float, float, float, float]] = None) -> bool:
         """
         PME カスタムアイコンを描画
 
@@ -1370,6 +1449,7 @@ class IconDrawing:
             x, y: 左上座標
             size: 描画サイズ（正方形、None の場合は UI スケールを適用）
             alpha: 透明度
+            color: 乗算色 (r, g, b, a)。None の場合は白
 
         Returns:
             描画成功したかどうか
@@ -1379,7 +1459,7 @@ class IconDrawing:
         filepath = cls.find_custom_icon_path(icon_name)
         if not filepath:
             return False
-        return cls.draw_texture_file(filepath, x, y, size, size, alpha)
+        return cls.draw_texture_file(filepath, x, y, size, size, alpha, color)
 
     @classmethod
     def find_custom_icon_path(cls, icon_name: str) -> Optional[str]:
@@ -1393,20 +1473,37 @@ class IconDrawing:
             from ...infra.io import get_user_icons_dir, get_system_icons_dir
             import os
 
+            # GPU 専用アイコン（ui/gpu/icons）を最優先で探す
+            addon_root = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
+            gpu_icons_dir = os.path.join(addon_root, "ui", "gpu", "icons")
+            candidates = (icon_name, icon_name.lower())
+            for name in candidates:
+                if not name:
+                    continue
+                gpu_path = os.path.join(gpu_icons_dir, f"{name}.png")
+                if os.path.exists(gpu_path):
+                    cls._icon_path_cache[icon_name] = gpu_path
+                    return gpu_path
+
             # ユーザーアイコンを優先
             user_dir = get_user_icons_dir()
-            user_path = os.path.join(user_dir, f"{icon_name}.png")
-            if os.path.exists(user_path):
-                cls._icon_path_cache[icon_name] = user_path
-                return user_path
+            for name in candidates:
+                if not name:
+                    continue
+                user_path = os.path.join(user_dir, f"{name}.png")
+                if os.path.exists(user_path):
+                    cls._icon_path_cache[icon_name] = user_path
+                    return user_path
 
             # システムアイコンをチェック
-            addon_root = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
             system_dir = get_system_icons_dir(addon_root)
-            system_path = os.path.join(system_dir, f"{icon_name}.png")
-            if os.path.exists(system_path):
-                cls._icon_path_cache[icon_name] = system_path
-                return system_path
+            for name in candidates:
+                if not name:
+                    continue
+                system_path = os.path.join(system_dir, f"{name}.png")
+                if os.path.exists(system_path):
+                    cls._icon_path_cache[icon_name] = system_path
+                    return system_path
 
         except Exception as e:
             print(f"IconDrawing: Failed to find custom icon '{icon_name}': {e}")
@@ -1422,14 +1519,21 @@ class IconDrawing:
     @classmethod
     def draw_icon(cls, x: float, y: float, icon: str,
                   alpha: float = 1.0, scale: float = 1.0,
-                  use_fallback: bool = True) -> bool:
+                  use_fallback: bool = False,
+                  color: Optional[tuple[float, float, float, float]] = None) -> bool:
         """
-        アイコンを描画（フォールバック対応）
+        アイコンを描画（テーマ色対応、フォールバック対応）
 
         以下の順序でアイコンを探し、最初に見つかったものを描画:
         1. 指定されたアイコン名でカスタム PNG を探す
         2. マッピングされた名前でカスタム PNG を探す
         3. フォールバックアイコン（roaoao.png）を表示
+
+        色の処理（パスベース）:
+        - ui/gpu/icons/ 内のアイコン: テーマに応じた色を乗算
+          - ダークテーマ: 白 (1,1,1) → 白いアイコン
+          - ライトテーマ: 暗い色 → 黒いアイコン
+        - その他（assets/icons, ユーザーアイコン）: 白を乗算して元の色を維持
 
         Args:
             x, y: 左上座標
@@ -1437,6 +1541,7 @@ class IconDrawing:
             alpha: 透明度
             scale: サイズスケール（UI スケールに加えて追加で適用）
             use_fallback: PNG が見つからない場合にフォールバックを使用するか
+            color: 乗算色を直接指定（None の場合はパスに応じて自動決定）
 
         Returns:
             描画成功したかどうか（フォールバック使用時も True）
@@ -1447,17 +1552,66 @@ class IconDrawing:
         # UI スケールを適用した基準サイズに、追加スケールを乗算
         size = cls.get_scaled_icon_size() * scale
 
-        # 1. 指定されたアイコン名でカスタム PNG を試す
-        if cls.draw_custom_icon(icon, x, y, size, alpha):
-            return True
+        # 1. 指定されたアイコン名でパスを検索
+        filepath = cls.find_custom_icon_path(icon)
+        if filepath:
+            icon_color = color if color is not None else cls._get_icon_color_for_path(filepath, alpha)
+            if cls.draw_texture_file(filepath, x, y, size, size, alpha, icon_color):
+                return True
 
         # 2. マッピングされた名前で試す（Blender アイコン名 → PNG 名）
         mapped_name = cls._icon_name_map.get(icon)
-        if mapped_name and cls.draw_custom_icon(mapped_name, x, y, size, alpha):
-            return True
+        if mapped_name:
+            mapped_path = cls.find_custom_icon_path(mapped_name)
+            if mapped_path:
+                mapped_color = color if color is not None else cls._get_icon_color_for_path(mapped_path, alpha)
+                if cls.draw_texture_file(mapped_path, x, y, size, size, alpha, mapped_color):
+                    return True
 
         # 3. フォールバックアイコンを表示
         if use_fallback:
-            return cls.draw_custom_icon(cls.FALLBACK_ICON, x, y, size, alpha)
+            fallback_path = cls.find_custom_icon_path(cls.FALLBACK_ICON)
+            if fallback_path:
+                # フォールバックの色もパスベースで決定
+                fallback_color = color if color is not None else cls._get_icon_color_for_path(fallback_path, alpha)
+                return cls.draw_texture_file(fallback_path, x, y, size, size, alpha, fallback_color)
 
         return False
+
+    @classmethod
+    def _get_icon_color_for_path(cls, filepath: str, alpha: float) -> tuple[float, float, float, float]:
+        """
+        パスに基づいてアイコンの描画色を取得
+
+        - ui/gpu/icons/ 内: モノクロ（テーマに応じた色を乗算）
+        - その他: カラー（白を乗算して元の色を維持）
+
+        Args:
+            filepath: アイコンファイルのパス
+            alpha: 透明度
+
+        Returns:
+            (r, g, b, a) の色タプル
+        """
+        # カラーアイコン（ui/gpu/icons 以外）は白を乗算
+        if not cls._is_mono_icon_path(filepath):
+            return (1.0, 1.0, 1.0, alpha)
+
+        # モノクロアイコン: テーマに応じた色
+        try:
+            theme = bpy.context.preferences.themes[0].user_interface
+            inner = theme.wcol_toolbar_item.inner
+            # RGB の平均明度で判定
+            brightness = (inner[0] + inner[1] + inner[2]) / 3
+
+            if brightness > 0.5:
+                # ライトテーマ: 暗い色（テキスト色に近い）
+                # Blender の TH_TEXT に相当
+                text = theme.wcol_text.text
+                return (text[0], text[1], text[2], alpha)
+            else:
+                # ダークテーマ: 白
+                return (1.0, 1.0, 1.0, alpha)
+        except Exception:
+            # フォールバック: 白
+            return (1.0, 1.0, 1.0, alpha)

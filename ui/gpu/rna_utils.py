@@ -16,6 +16,33 @@ if TYPE_CHECKING:
     from bpy.types import bpy_struct
 
 
+_ICON_ID_TO_NAME: Optional[dict[int, str]] = None
+
+
+def _get_icon_id_map() -> dict[int, str]:
+    """UILayout の icon enum から ID→名前のマップを構築（キャッシュ）"""
+    global _ICON_ID_TO_NAME
+    if _ICON_ID_TO_NAME is None:
+        try:
+            enum_items = bpy.types.UILayout.bl_rna.functions["prop"].parameters["icon"].enum_items
+            _ICON_ID_TO_NAME = {item.value: item.identifier for item in enum_items}
+        except Exception:
+            _ICON_ID_TO_NAME = {}
+    return _ICON_ID_TO_NAME
+
+
+def _normalize_icon_name(icon_value: Any) -> str:
+    """RNA の icon 値を icon 名に正規化（未対応は NONE）"""
+    if not icon_value or icon_value == "NONE":
+        return "NONE"
+    if isinstance(icon_value, str):
+        return icon_value
+    # bool は int の派生なので除外
+    if isinstance(icon_value, int) and not isinstance(icon_value, bool):
+        return _get_icon_id_map().get(icon_value, "NONE")
+    return "NONE"
+
+
 # ═══════════════════════════════════════════════════════════════════════════════
 # Property Type Enums
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -129,7 +156,7 @@ def get_property_info(data: bpy_struct, prop_name: str) -> Optional[PropertyInfo
         is_readonly = rna_prop.is_readonly
 
         # プロパティに紐づくアイコン（RNA_def_property_ui_icon で定義されたもの）
-        prop_icon = getattr(rna_prop, 'icon', 'NONE') or 'NONE'
+        prop_icon = _normalize_icon_name(getattr(rna_prop, 'icon', 'NONE'))
 
         # プロパティタイプの判定
         prop_type = _get_prop_type(rna_prop)

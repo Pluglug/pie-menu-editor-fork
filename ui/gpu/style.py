@@ -23,6 +23,10 @@ SHADER_NAME = 'UNIFORM_COLOR' if bpy.app.version >= (4, 0, 0) else '2D_UNIFORM_C
 # デフォルトフォント ID
 FONT_ID = 0
 
+# アイコンサイズ（基準値、ピクセル）
+# すべてのアイコン描画でこの値を基準にスケーリング
+ICON_SIZE = 16
+
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # Enums
@@ -689,7 +693,53 @@ class GPULayoutStyle:
 
     def scaled_icon_size(self) -> int:
         """スケーリングされたアイコンサイズ"""
-        return int(self.ui_scale(20))  # base: 20px (Blender standard)
+        return int(self.ui_scale(ICON_SIZE))
+
+    # ═══════════════════════════════════════════════════════════════════════════
+    # テーマ判定・アイコン色
+    # ═══════════════════════════════════════════════════════════════════════════
+
+    def is_light_theme(self) -> bool:
+        """
+        現在のテーマがライトテーマかどうかを判定
+
+        Blender の判定基準に準拠:
+        - wcol_toolbar_item.inner の明度が 0.5 (128/255) を超えるとライト
+
+        Returns:
+            True: ライトテーマ、False: ダークテーマ
+        """
+        try:
+            theme = bpy.context.preferences.themes[0].user_interface
+            inner = theme.wcol_toolbar_item.inner
+            # RGB の平均明度で判定（Blender は grayscale で判定）
+            brightness = (inner[0] + inner[1] + inner[2]) / 3
+            return brightness > 0.5
+        except Exception:
+            return False  # デフォルトはダークテーマ
+
+    def get_icon_color(self, alpha: float = 1.0) -> tuple[float, float, float, float]:
+        """
+        テーマに応じたアイコン描画色を取得
+
+        Blender の SVG アイコンは白で描かれており、シェーダーで色を乗算する。
+        - ダークテーマ: 白 (1,1,1) を乗算 → 白いアイコン
+        - ライトテーマ: 黒に近い色を乗算 → 暗いアイコン
+
+        Args:
+            alpha: 透明度 (0.0-1.0)
+
+        Returns:
+            (r, g, b, a) の色タプル
+        """
+        if self.is_light_theme():
+            # ライトテーマ: テキスト色（通常は黒に近い）を使用
+            # Blender は TH_TEXT を使用するが、ここでは text_color を参照
+            r, g, b, _ = self.text_color
+            return (r, g, b, alpha)
+        else:
+            # ダークテーマ: 白を乗算（元のアイコン色を維持）
+            return (1.0, 1.0, 1.0, alpha)
 
     # ═══════════════════════════════════════════════════════════════════════════
     # ウィジェットテーマ取得

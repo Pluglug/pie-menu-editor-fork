@@ -1825,9 +1825,9 @@ def _build_blender_compat_content(layout, context, *, use_bpy_ops: bool) -> None
         context: Blender context
         use_bpy_ops: True なら Blender UILayout 用、False なら GPULayout 用
     """
-    # アイコン切り替え: Blender UILayout は標準アイコン、GPULayout はカスタム PNG
+    # アイコン: GPULayout も標準アイコン名を使用（PNG にマッピング）
     def icon(blender_icon: str) -> str:
-        return blender_icon if use_bpy_ops else 'roaoao'
+        return blender_icon
 
     # ═══════════════════════════════════════════════════════════════
     # 1. VectorItem (A-2) - 配列プロパティ

@@ -45,11 +45,12 @@ WT-C (コンテナ)
 
 ## WT-A: 新規ウィジェット実装
 
-### A-1: MenuButtonItem (MENU)
+### A-1: MenuButtonItem (MENU) ✅ 完了
 
 **優先度**: 🔴 高
 **難易度**: 🟡 中
 **依存**: なし
+**完了日**: 2026-01-24
 
 #### 概要
 Enum プロパティをドロップダウンメニューで表示・編集するウィジェット。
@@ -237,11 +238,12 @@ class TextInputItem(LayoutItem):
 
 ## WT-B: prop() API 拡張
 
-### B-1: index パラメータ
+### B-1: index パラメータ ✅ 完了
 
 **優先度**: 🔴 高
 **難易度**: 🟢 低
 **依存**: WT-A の VectorItem と連携推奨
+**完了日**: 2026-01-24
 
 #### Blender API
 
@@ -251,13 +253,18 @@ layout.prop(obj, "location", index=0)  # X のみ
 layout.prop(obj, "location", index=1)  # Y のみ
 ```
 
-#### 現在の GPULayout
+#### 現状（修正前）
 
 ```python
 # index パラメータなし
 def prop(self, data, property, *, text="", icon="NONE",
          expand=False, slider=False, toggle=-1, icon_only=False, key="")
 ```
+
+#### 実装結果 ✅
+- `prop(..., index=)` を追加（`index=-1` は従来通り全要素）
+- `index>=0` かつ配列の場合は NumberItem/SliderItem を生成
+- `set_value` も index 位置を更新するように対応
 
 #### 実装仕様
 
@@ -295,13 +302,14 @@ if index >= 0 and info.is_array:
 
 ---
 
-### B-2: icon_only 実装
+### B-2: icon_only 実装 ✅ 完了
 
 **優先度**: 🟡 中
 **難易度**: 🟢 低
 **依存**: なし
+**完了日**: 2026-01-25
 
-#### 現状
+#### 現状（修正前）
 パラメータは受け取るが、ウィジェット生成時に使われていない。
 
 #### 実装仕様
@@ -330,6 +338,10 @@ def _create_toggle(info, value, ctx):
         # ...
     )
 ```
+
+#### 実装結果 ✅
+- `WidgetContext.icon_only` を追加し、各 creator でテキスト非表示に対応
+- Boolean + icon_only + icon では ToggleItem を使用（D-1 の対応を参照）
 
 ---
 
@@ -629,7 +641,7 @@ grid = layout.grid_flow(
 
 ### WT-A: ウィジェット
 
-| ID | タスク | 状態 | 担当 |
+| ID | タスク | 状態 | 完了日 |
 |----|-------|------|------|
 | A-1 | MenuButtonItem | ✅ 完了 | 2026-01-24 |
 | A-2 | VectorItem | ✅ 完了 | 2026-01-25 |
@@ -637,7 +649,7 @@ grid = layout.grid_flow(
 
 ### WT-B: prop() API
 
-| ID | タスク | 状態 | 担当 |
+| ID | タスク | 状態 | 完了日 |
 |----|-------|------|------|
 | B-1 | index パラメータ | ✅ 完了 | 2026-01-24 |
 | B-2 | icon_only 実装 | ✅ 完了 | 2026-01-25 |
@@ -647,7 +659,7 @@ grid = layout.grid_flow(
 
 ### WT-C: コンテナ
 
-| ID | タスク | 状態 | 担当 |
+| ID | タスク | 状態 | 完了日 |
 |----|-------|------|------|
 | C-1 | heading パラメータ | ✅ 完了 | 2026-01-25 |
 | C-2 | column_flow() | ✅ 完了 | 2026-01-25 |
@@ -700,7 +712,7 @@ grid = layout.grid_flow(
 ※ icon_only=True のボタンはアイコンのみの正方形ボタンになる
 ```
 
-#### GPULayout の現状
+#### GPULayout の現状（修正前）
 ```
 ┌──────────────────────────────────────────────────────────┐
 │ 3. icon_only (B-2)                                        │
@@ -708,6 +720,10 @@ grid = layout.grid_flow(
 └──────────────────────────────────────────────────────────┘
 ※ チェックボックス形式のまま、icon_only が効いていない
 ```
+
+#### GPULayout の現状（修正後）
+- `icon_only=True` のボタンはアイコンのみの正方形ボタンで描画
+- テキストありの場合は「アイコン左・テキスト中央」に配置
 
 #### 調査項目
 - [x] `uiItemFullR()` での `icon_only` フラグの処理確認（`UI_ITEM_R_ICON_ONLY`）
@@ -990,6 +1006,60 @@ use_property_split=True:
 4. **D-5**: heading パラメータの表示条件
 5. **D-4**: column_flow(align=True) の角丸処理
 6. **D-2**: VectorItem のサイズがテキスト依存
+
+---
+
+## アイコンシステム（2026-01-25 完了）
+
+### I-1: Blender 公式アイコンの PNG 変換 ✅
+
+**完了日**: 2026-01-25
+
+#### 概要
+Blender の SVG アイコンを PNG に変換し、GPULayout で描画するシステム。
+
+#### 実装済み機能
+
+- **SVG → PNG 変換**: `tools/blender_icon_fetch.py` で Inkscape を使用
+- **アスペクト比保持**: `--export-width` のみ指定（高さは自動）
+- **テーマカラー対応**: パス名に基づく色検出（`icon_`, `text_` など）
+- **中央揃え**: Blender の `icon_draw_rect()` スタイルのセンタリング
+
+#### 主なファイル
+
+| ファイル | 役割 |
+|---------|------|
+| `tools/blender_icon_fetch.py` | SVG → PNG 変換スクリプト |
+| `ui/gpu/drawing.py` | `IconDrawing.draw_texture_file()` でアスペクト比保持描画 |
+| `ui/gpu/style.py` | `ICON_SIZE = 16` 定数（単一ソース） |
+| `ui/gpu/icons/` | 生成された PNG ファイル（gitignore 対象） |
+
+#### 技術的ポイント
+
+1. **非正方形 SVG の処理**:
+   - Blender の SVG は viewBox が非正方形のものがある（例: 1500×1400）
+   - `--export-width` のみで変換することでアスペクト比を保持
+   - 描画時に `preserve_aspect=True` でセンタリング
+
+2. **サイズ一元管理**:
+   - `style.py` の `ICON_SIZE = 16` が唯一の定義
+   - `drawing.py` と `buttons.py` はこの値を参照
+
+3. **テーマカラー検出**:
+   ```python
+   # パス名による色判定
+   if path.stem.startswith("icon_"):
+       color = theme.icon_color
+   elif path.stem.startswith("text_"):
+       color = theme.text_color
+   ```
+
+#### アイコン再生成
+
+```bash
+# Inkscape が必要
+python tools/blender_icon_fetch.py --local-svg-dir path/to/icons_svg --size 16
+```
 
 ---
 

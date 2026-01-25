@@ -85,20 +85,17 @@ class ButtonItem(LayoutItem):
         # - テキストあり: アイコンは左端、テキストは残り領域内で中央揃え
         if not self.text and self.icon != "NONE":
             # アイコンのみ: アイコンを中央揃え
-            # ボタンサイズに対して少しパディングを取るため、スケールを調整
-            icon_scale = 0.85  # アイコンをボタンの 85% サイズに
-            actual_icon_size = icon_size * icon_scale
-            icon_x = self.x + (self.width - actual_icon_size) / 2
-            icon_y = self.y - (self.height - actual_icon_size) / 2
+            icon_x = self.x + (self.width - icon_size) / 2
+            icon_y = self.y - (self.height - icon_size) / 2
             alpha = 1.0 if enabled else 0.5
-            IconDrawing.draw_icon(icon_x, icon_y, self.icon, alpha=alpha, scale=icon_scale)
+            IconDrawing.draw_icon(icon_x, icon_y, self.icon, alpha=alpha, use_fallback=True)
         else:
             # アイコン描画（左端）
             content_x = self.x + padding
             if self.icon != "NONE":
                 icon_y = self.y - (self.height - icon_size) / 2
                 alpha = 1.0 if enabled else 0.5
-                IconDrawing.draw_icon(content_x, icon_y, self.icon, alpha=alpha)
+                IconDrawing.draw_icon(content_x, icon_y, self.icon, alpha=alpha, use_fallback=True)
 
             # テキスト描画（アイコンの右側の残り領域内で中央揃え）
             # Blender: テキストはデフォルトで UI_STYLE_TEXT_CENTER
@@ -246,20 +243,17 @@ class ToggleItem(LayoutItem):
         is_icon_only = (self.icon_only or not self.text) and display_icon != "NONE"
         if is_icon_only:
             # アイコンのみ: アイコンを中央揃え
-            # ボタンサイズに対して少しパディングを取るため、スケールを調整
-            icon_scale = 0.85  # アイコンをボタンの 85% サイズに
-            actual_icon_size = icon_size * icon_scale
-            icon_x = self.x + (self.width - actual_icon_size) / 2
-            icon_y = self.y - (self.height - actual_icon_size) / 2
+            icon_x = self.x + (self.width - icon_size) / 2
+            icon_y = self.y - (self.height - icon_size) / 2
             alpha = 1.0 if enabled else 0.5
-            IconDrawing.draw_icon(icon_x, icon_y, display_icon, alpha=alpha, scale=icon_scale)
+            IconDrawing.draw_icon(icon_x, icon_y, display_icon, alpha=alpha, use_fallback=True)
         else:
             # アイコン描画（左端）
             content_x = self.x + padding
             if display_icon != "NONE":
                 icon_y = self.y - (self.height - icon_size) / 2
                 alpha = 1.0 if enabled else 0.5
-                IconDrawing.draw_icon(content_x, icon_y, display_icon, alpha=alpha)
+                IconDrawing.draw_icon(content_x, icon_y, display_icon, alpha=alpha, use_fallback=True)
 
             # テキスト描画（アイコンの右側の残り領域内で中央揃え）
             # Blender: テキストはデフォルトで UI_STYLE_TEXT_CENTER
@@ -314,20 +308,17 @@ class ToggleItem(LayoutItem):
         is_icon_only = (self.icon_only or not self.text) and display_icon != "NONE"
         if is_icon_only:
             # アイコンのみ: アイコンを中央揃え
-            # ボタンサイズに対して少しパディングを取るため、スケールを調整
-            icon_scale = 0.85  # アイコンをボタンの 85% サイズに
-            actual_icon_size = icon_size * icon_scale
-            icon_x = self.x + (self.width - actual_icon_size) / 2
-            icon_y = self.y - (self.height - actual_icon_size) / 2
+            icon_x = self.x + (self.width - icon_size) / 2
+            icon_y = self.y - (self.height - icon_size) / 2
             alpha = 1.0 if enabled else 0.5
-            IconDrawing.draw_icon(icon_x, icon_y, display_icon, alpha=alpha, scale=icon_scale)
+            IconDrawing.draw_icon(icon_x, icon_y, display_icon, alpha=alpha, use_fallback=True)
         else:
             # アイコン描画（左端）
             content_x = self.x + padding
             if display_icon != "NONE":
                 icon_y = self.y - (self.height - icon_size) / 2
                 alpha = 1.0 if enabled else 0.5
-                IconDrawing.draw_icon(content_x, icon_y, display_icon, alpha=alpha)
+                IconDrawing.draw_icon(content_x, icon_y, display_icon, alpha=alpha, use_fallback=True)
 
             # テキスト描画（アイコンの右側の残り領域内で中央揃え）
             # Blender: テキストはデフォルトで UI_STYLE_TEXT_CENTER
