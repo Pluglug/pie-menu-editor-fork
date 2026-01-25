@@ -38,8 +38,17 @@ class LayoutInteractionMixin:
 
         Returns:
             イベントを消費したかどうか
+
+        Note:
+            layout() がスキップされた場合（_dirty=False）でも
+            パネル位置/サイズが変わっている可能性があるため、
+            パネルクロムの HitRect を同期します。
         """
         self.layout()
+
+        # パネルクロム（タイトルバー、リサイズハンドル）の HitRect 位置を同期
+        self._sync_chrome_hit_rects()
+
         return self._handle_event(event, region)
 
 

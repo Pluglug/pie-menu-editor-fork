@@ -252,7 +252,13 @@ class LayoutPanelMixin:
             drag_width = self.width
 
         # タイトルバーのドラッグ領域
-        if self._title_bar_rect is None:
+        # HitRect がマネージャーに登録されているか確認
+        title_bar_registered = (
+            self._title_bar_rect is not None and
+            self._title_bar_rect in manager._rects
+        )
+
+        if self._title_bar_rect is None or not title_bar_registered:
             def on_drag(dx: float, dy: float, abs_x: float, abs_y: float):
                 self.x += dx
                 self.y += dy
@@ -285,7 +291,13 @@ class LayoutPanelMixin:
             self._title_bar_rect.layout_key = title_bar_key
 
         # クローズボタン
-        if self._show_close_button and self._close_button_rect is None:
+        # HitRect がマネージャーに登録されているか確認
+        close_btn_registered = (
+            self._close_button_rect is not None and
+            self._close_button_rect in manager._rects
+        )
+
+        if self._show_close_button and (self._close_button_rect is None or not close_btn_registered):
             if IS_MAC:
                 close_x = self.x + close_btn_margin
             else:
@@ -350,7 +362,15 @@ class LayoutPanelMixin:
         handle_x = self.x + self.width - handle_size - margin
         handle_y = base_y - total_height + handle_size + margin
 
-        if self._resize_handle_rect is None:
+
+        # HitRect がマネージャーに登録されているか確認
+        # reset_rects() で削除された可能性がある
+        is_registered = (
+            self._resize_handle_rect is not None and
+            self._resize_handle_rect in manager._rects
+        )
+
+        if self._resize_handle_rect is None or not is_registered:
             def on_resize_drag(dx: float, dy: float, abs_x: float, abs_y: float):
                 new_width = self.width + dx
                 self.width = max(new_width, self._min_width)
@@ -386,6 +406,28 @@ class LayoutPanelMixin:
             self._resize_handle_rect.height = handle_size
             base_path = self._layout_path or "root"
             self._resize_handle_rect.layout_key = self._make_layout_key(f"{base_path}.resize_handle")
+
+
+    def _sync_chrome_hit_rects(self) -> None:
+        """
+        パネルクロム（タイトルバー、リサイズハンドル）の HitRect 位置を同期
+
+        パネル位置が変更された場合、HitRect の位置も更新する必要があります。
+        このメソッドは handle_event() と update_and_draw() の両方から呼ばれ、
+        イベント処理と描画のどちらでも正しい HitRect 位置を保証します。
+
+        Note:
+            現在の設計では HitRect は絶対座標を保持しているため、
+            パネル移動時に明示的な同期が必要です。
+
+            将来の改善案:
+            - HitRect に相対座標モードを導入（parent からのオフセット）
+            - パネル位置変更を setter 経由にして自動同期
+            - パネルクロムを別のライフサイクルで管理
+        """
+        self._register_title_bar()
+        self._register_resize_handle()
+
 
     # ─────────────────────────────────────────────────────────────────────────
     # 2-pass レイアウトアルゴリズム（Phase 1）

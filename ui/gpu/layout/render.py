@@ -93,8 +93,16 @@ class LayoutRenderMixin:
         レイアウト計算と描画を一度に実行
 
         便利メソッド。layout() + draw() と同等。
+
+        Note:
+            パネル位置が変わった場合でも HitRect が正しく更新されるよう、
+            layout() がスキップされても HitRect 更新を行います。
         """
         self.layout()
+
+        # パネルクロム（タイトルバー、リサイズハンドル）の HitRect 位置を同期
+        self._sync_chrome_hit_rects()
+
         self.draw()
 
 
@@ -199,6 +207,7 @@ class LayoutRenderMixin:
         margin = 4
         handle_x = self.x + self.width - handle_size - margin
         handle_y = base_y - total_height + handle_size + margin
+
 
         # テーマカラーから派生（通常: 暗め、ホバー: 明るめ）
         if self._resize_handle_hovered:
