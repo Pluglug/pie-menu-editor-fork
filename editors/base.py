@@ -217,6 +217,11 @@ class EditorBase:
         pass
 
     def on_pm_duplicate(self, from_pm, pm):
+        # Copy PM-level description
+        pm.description = from_pm.description
+        pm.description_is_expr = from_pm.description_is_expr
+
+        # Copy PMI-level properties
         for from_pmi in from_pm.pmis:
             pmi = pm.pmis.add()
             pmi.name = from_pmi.name
