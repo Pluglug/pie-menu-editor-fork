@@ -27,7 +27,7 @@
 | **名前付きキー** | 位置ベースのタプルではなくオブジェクトを使用 |
 | **ID と Name の分離** | 参照用 uid と表示用 name を分ける |
 | **暗黙のデフォルトゼロ** | 全フィールドに明示的なデフォルト値を定義 |
-| **静的/動的の分離** | description (静的) と description_expr (Python式) を分ける |
+| **静的/動的フラグ** | description_is_expr で静的テキストか Python 式かを切り替え |
 | **Style オブジェクト化** | 色・装飾は style にまとめ、継承モデルを適用 |
 | **vendor/feature 拡張** | extensions は 2 階層構造で管理 |
 | **後方互換** | PME1 形式からのインポート変換をサポート |
@@ -89,7 +89,7 @@
   },
 
   "description": "モデリング作業用のメインメニュー",
-  "description_expr": null,
+  "description_is_expr": false,
 
   "poll": null,
   "tags": ["modeling"],
@@ -110,8 +110,8 @@
 | `enabled` | boolean | ✓ | true | 有効/無効 |
 | `hotkey` | Hotkey \| null | - | null | ホットキー設定 |
 | `settings` | object | ✓ | {} | モード別設定（フラット） |
-| `description` | string \| null | - | null | 静的な説明文（`\n` で改行） |
-| `description_expr` | string \| null | - | null | Python 式による動的説明文 |
+| `description` | string | - | "" | 説明文（静的テキストまたはPython式） |
+| `description_is_expr` | boolean | - | false | true の場合、description を Python 式として評価 |
 | `poll` | string | - | "return True" | ポーリング条件（Python式） |
 | `tags` | string[] | - | [] | タグの配列 |
 | `items` | MenuItem[] | ✓ | [] | メニューアイテムの配列 |
@@ -500,7 +500,7 @@ settings はフラット構造で、mode に応じて異なるプロパティが
   "enabled": true,
 
   "description": "シーンに立方体プリミティブを追加",
-  "description_expr": null,
+  "description_is_expr": false,
 
   "extensions": {
     "pme": {
@@ -521,36 +521,29 @@ settings はフラット構造で、mode に応じて異なるプロパティが
 | `icon_only` | boolean | - | false | アイコンのみ表示 |
 | `hidden` | boolean | - | false | 非表示 |
 | `enabled` | boolean | - | true | 有効/無効 |
-| `description` | string \| null | - | null | 静的な説明文 |
-| `description_expr` | string \| null | - | null | Python 式による動的説明文 |
+| `description` | string | - | "" | 説明文（静的テキストまたはPython式） |
+| `description_is_expr` | boolean | - | false | true の場合、description を Python 式として評価 |
 | `extensions` | object | - | {} | 拡張フィールド（`pme.style` など） |
 
 **Note**: `action.type` が `row` または `spacer` の場合、`name` は通常空文字となり省略可能。
 
-### description と description_expr の使い分け
+### description と description_is_expr の使い分け
 
 ```json
-// 静的テキストのみ
+// 静的テキスト
 {
   "description": "シーンに立方体を追加します",
-  "description_expr": null
+  "description_is_expr": false
 }
 
-// 動的テキストのみ
+// Python 式（動的テキスト）
 {
-  "description": null,
-  "description_expr": "'Selected: ' + str(len(C.selected_objects)) + ' objects'"
+  "description": "return 'Selected: ' + str(len(C.selected_objects)) + ' objects'",
+  "description_is_expr": true
 }
-
-// 両方（description_expr の結果を description の後に追加）
-{
-  "description": "立方体を追加",
-  "description_expr": "'（カーソル位置: ' + str(C.scene.cursor.location) + '）'"
-}
-// → "立方体を追加（カーソル位置: <0, 0, 0>）"
 ```
 
-**i18n への配慮**: `description` は翻訳可能な静的テキスト。`description_expr` は翻訳対象外。
+**Note**: `description_is_expr: true` の場合、`description` は `return` 文を含む Python 式として評価される。
 
 ---
 
@@ -1009,7 +1002,7 @@ PME2 では MenuItem オブジェクトとして変換：
 
 | schema_version | 変更点 |
 |---------------|--------|
-| 2.0 | 初版（uid, description/description_expr, extend_target + extend_side + extend_order, style in extensions, row/spacer action types） |
+| 2.0 | 初版（uid, description/description_is_expr, extend_target + extend_side + extend_order, style in extensions, row/spacer action types） |
 | 2.1 | conditions, style 昇格予定 |
 
 ---
