@@ -583,6 +583,8 @@ class PME_OT_pmi_clear(ConfirmBoxHandler, Operator):
         pmi.name = ""
         pmi.icon = ""
         pmi.mode = 'EMPTY'
+        pmi.description = ""
+        pmi.description_is_expr = False
 
         ed = pm.ed
         if ed:
