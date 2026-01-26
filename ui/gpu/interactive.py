@@ -175,6 +175,9 @@ class InteractionState:
     """
     mouse_x: float = 0
     mouse_y: float = 0
+    mod_shift: bool = False
+    mod_ctrl: bool = False
+    mod_alt: bool = False
 
     # 現在の状態
     hovered: Optional[HitRect] = None
@@ -480,6 +483,9 @@ class HitTestManager:
             mouse_x = event.mouse_region_x
             mouse_y = event.mouse_region_y
         self._state.update_mouse(mouse_x, mouse_y)
+        self._state.mod_shift = bool(getattr(event, "shift", False))
+        self._state.mod_ctrl = bool(getattr(event, "ctrl", False))
+        self._state.mod_alt = bool(getattr(event, "alt", False))
 
         if event.type == 'MOUSEMOVE':
             return self._handle_mouse_move(mouse_x, mouse_y)

@@ -6,11 +6,62 @@ PME GPU Layout - Input Widgets
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from math import isfinite, radians
 from typing import TYPE_CHECKING, Callable, Optional
 
 from ..style import GPULayoutStyle, WidgetType
 from ..drawing import GPUDrawing, BLFDrawing
 from .base import LayoutItem
+
+
+def _scale_drag_step_for_units(step: float, subtype: str) -> float:
+    from ..rna_utils import _SUBTYPE_UNIT_CATEGORY, _unit_settings_from_context
+
+    unit_category = _SUBTYPE_UNIT_CATEGORY.get((subtype or "NONE").upper())
+    unit_settings = _unit_settings_from_context()
+    if unit_settings is None:
+        return step
+
+    if unit_category in {"LENGTH", "VELOCITY", "ACCELERATION"} and unit_settings.system != "NONE":
+        scale = float(getattr(unit_settings, "scale_length", 1.0)) or 1.0
+        step = step / scale
+    elif unit_category in {"AREA", "POWER"} and unit_settings.system != "NONE":
+        scale = float(getattr(unit_settings, "scale_length", 1.0)) or 1.0
+        step = step / (scale ** 2)
+    elif unit_category in {"VOLUME", "MASS"} and unit_settings.system != "NONE":
+        scale = float(getattr(unit_settings, "scale_length", 1.0)) or 1.0
+        step = step / (scale ** 3)
+
+    if unit_category == "ROTATION" and unit_settings.system_rotation != "RADIANS":
+        step = radians(step)
+
+    return step
+
+
+def _snap_value(value: float,
+                *,
+                min_val: float,
+                max_val: float,
+                is_int: bool,
+                small: bool) -> float:
+    if not isfinite(min_val) or not isfinite(max_val):
+        return value
+    softrange = max_val - min_val
+    if softrange <= 0:
+        return value
+
+    if is_int:
+        snap = 100 if small else 10
+        return round(value / snap) * snap
+
+    if softrange < 2.10:
+        snap = 0.01 if small else 0.1
+    elif softrange < 21.0:
+        snap = 0.1 if small else 1.0
+    else:
+        snap = 1.0 if small else 10.0
+
+    return round(value / snap) * snap
 
 if TYPE_CHECKING:
     from ..interactive import ItemRenderState
@@ -39,6 +90,7 @@ class SliderItem(LayoutItem):
     precision: int = 2
     subtype: str = "NONE"
     text: str = ""
+    is_int: bool = False
     on_change: Optional[Callable[[float], None]] = None
 
     # 状態（layout 側から設定される）
@@ -85,7 +137,12 @@ class SliderItem(LayoutItem):
         """ValueWidget Protocol 準拠"""
         self.value = max(self.min_val, min(self.max_val, value))
 
-    def set_value_from_position(self, x: float) -> None:
+    def set_value_from_position(self,
+                                x: float,
+                                *,
+                                shift: bool = False,
+                                ctrl: bool = False,
+                                alt: bool = False) -> None:
         """X 座標から値を設定（ドラッグ時に使用）"""
         # 幅が 0 以下の場合は安全にスキップ
         if self.width <= 0:
@@ -94,7 +151,22 @@ class SliderItem(LayoutItem):
         rel_x = (x - self.x) / self.width
         rel_x = max(0.0, min(1.0, rel_x))
         # 値に変換
-        new_value = self.min_val + rel_x * (self.max_val - self.min_val)
+        target_value = self.min_val + rel_x * (self.max_val - self.min_val)
+        speed = 0.1 if shift else 1.0
+        if alt:
+            speed *= 10.0
+        new_value = self.value + (target_value - self.value) * speed
+        if ctrl:
+            new_value = _snap_value(
+                new_value,
+                min_val=self.min_val,
+                max_val=self.max_val,
+                is_int=self.is_int,
+                small=shift,
+            )
+        if self.is_int:
+            new_value = round(new_value)
+        new_value = max(self.min_val, min(self.max_val, new_value))
         if new_value != self.value:
             self.value = new_value
             if self.on_change:
@@ -263,6 +335,7 @@ class NumberItem(LayoutItem):
     precision: int = 2
     subtype: str = "NONE"
     text: str = ""
+    is_int: bool = False
     show_buttons: bool = False
     on_change: Optional[Callable[[float], None]] = None
 
@@ -308,9 +381,38 @@ class NumberItem(LayoutItem):
         """ValueWidget Protocol 準拠"""
         self.value = max(self.min_val, min(self.max_val, value))
 
-    def set_value_from_delta(self, dx: float) -> None:
+    def _calc_drag_step(self, *, shift: bool, alt: bool) -> float:
+        from ..rna_utils import UI_PRECISION_FLOAT_SCALE
+
+        step = float(self.step)
+        if not self.is_int:
+            step *= UI_PRECISION_FLOAT_SCALE
+        step = _scale_drag_step_for_units(step, self.subtype)
+        if shift:
+            step *= 0.1
+        if alt:
+            step *= 10.0
+        return step
+
+    def set_value_from_delta(self,
+                             dx: float,
+                             *,
+                             shift: bool = False,
+                             ctrl: bool = False,
+                             alt: bool = False) -> None:
         """ドラッグ移動量から値を設定"""
-        new_value = self.value + dx * self.step
+        step = self._calc_drag_step(shift=shift, alt=alt)
+        new_value = self.value + dx * step
+        if ctrl:
+            new_value = _snap_value(
+                new_value,
+                min_val=self.min_val,
+                max_val=self.max_val,
+                is_int=self.is_int,
+                small=shift,
+            )
+        if self.is_int:
+            new_value = round(new_value)
         # 範囲内にクランプ
         new_value = max(self.min_val, min(self.max_val, new_value))
         if new_value != self.value:
@@ -321,7 +423,8 @@ class NumberItem(LayoutItem):
     def increment(self) -> None:
         """値を1ステップ増加"""
         # step の 10 倍を増分として使用（ボタン用）
-        new_value = self.value + self.step * 10
+        step = self._calc_drag_step(shift=False, alt=False)
+        new_value = self.value + step * 10
         new_value = min(self.max_val, new_value)
         if new_value != self.value:
             self.value = new_value
@@ -330,7 +433,8 @@ class NumberItem(LayoutItem):
 
     def decrement(self) -> None:
         """値を1ステップ減少"""
-        new_value = self.value - self.step * 10
+        step = self._calc_drag_step(shift=False, alt=False)
+        new_value = self.value - step * 10
         new_value = max(self.min_val, new_value)
         if new_value != self.value:
             self.value = new_value

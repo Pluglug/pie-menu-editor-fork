@@ -43,7 +43,13 @@ class LayoutInteractionMixin:
 
         def on_drag(dx: float, dy: float, mouse_x: float, mouse_y: float):
             # ドラッグ移動量から値を更新
-            item.set_value_from_delta(dx)
+            state = manager.state
+            item.set_value_from_delta(
+                dx,
+                shift=state.mod_shift,
+                ctrl=state.mod_ctrl,
+                alt=state.mod_alt,
+            )
 
         def on_drag_end(inside: bool):
             item._dragging = False
@@ -275,11 +281,23 @@ class LayoutInteractionMixin:
             def on_drag_start(mouse_x: float, mouse_y: float):
                 item._dragging = True
                 # ドラッグ開始時にクリック位置から値を設定
-                item.set_value_from_position(mouse_x)
+                state = manager.state
+                item.set_value_from_position(
+                    mouse_x,
+                    shift=state.mod_shift,
+                    ctrl=state.mod_ctrl,
+                    alt=state.mod_alt,
+                )
 
             def on_drag(dx: float, dy: float, mouse_x: float, mouse_y: float):
                 # ドラッグ中は絶対位置から値を更新
-                item.set_value_from_position(mouse_x)
+                state = manager.state
+                item.set_value_from_position(
+                    mouse_x,
+                    shift=state.mod_shift,
+                    ctrl=state.mod_ctrl,
+                    alt=state.mod_alt,
+                )
 
             def on_drag_end(inside: bool):
                 item._dragging = False

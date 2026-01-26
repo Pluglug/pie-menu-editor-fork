@@ -367,6 +367,7 @@ class LayoutContainerMixin:
             max_val=max_val,
             precision=precision,
             text=text,
+            is_int=isinstance(value, int) and not isinstance(value, bool),
             key=key,
             on_change=on_change,
             enabled=self.enabled and self.active
@@ -416,6 +417,7 @@ class LayoutContainerMixin:
             precision=precision,
             text=text,
             show_buttons=show_buttons,
+            is_int=isinstance(value, int) and not isinstance(value, bool),
             key=key,
             on_change=on_change,
             enabled=self.enabled and self.active

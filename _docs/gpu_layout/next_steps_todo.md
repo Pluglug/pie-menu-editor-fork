@@ -24,11 +24,13 @@
 
 ---
 
-## 2. マウスドラッグ精度 (step/shift/ctrl) の Blender 互換
+## 2. マウスドラッグ精度 (step/shift/ctrl) の Blender 互換 ✅ 実装
 
-- [ ] step の基準を Blender に合わせて再計算
-- [ ] Shift/Ctrl/Alt など修飾キー時の倍率調整
-- [ ] unit のスケール差（length, angle など）を反映
+- [x] step の基準を Blender に合わせて再計算
+- [x] Shift/Ctrl/Alt など修飾キー時の倍率調整
+- [x] unit のスケール差（length, angle など）を反映
+
+> 実装日: 2026-01-26（実機比較はこれから）
 
 ### 参考
 - Blender: `ui_get_but_step_unit()`

@@ -48,6 +48,7 @@ class VectorItem(LayoutItem):
     subtype: str = "NONE"
     text: str = ""
     vertical: bool = False
+    is_int: bool = False
     on_change: Optional[Callable[[tuple[float, ...]], None]] = None
 
     # 内部: 各要素の NumberItem（描画時に生成）
@@ -81,6 +82,7 @@ class VectorItem(LayoutItem):
                 precision=self.precision,
                 subtype=self.subtype,
                 text=label,
+                is_int=self.is_int,
                 on_change=make_on_change(i),
                 enabled=self.enabled,
             )
