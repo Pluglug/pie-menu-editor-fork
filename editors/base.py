@@ -392,8 +392,10 @@ class EditorBase:
         data.mode = pmi.mode if pmi.mode != 'EMPTY' else 'COMMAND'
         data.name = pmi.name
         data.icon = pmi.icon
-        data.description = pmi.description  # Phase 9-X (#102)
-        data.description_is_expr = pmi.description_is_expr  # Phase 9-X (#102)
+        # Phase 9-X (#102): Set description_is_expr FIRST to avoid update callback
+        # triggering conversion on the already-set description
+        data.description_is_expr = pmi.description_is_expr
+        data.description = pmi.description
 
         data_mode = 'COMMAND' if data.mode in MODAL_CMD_MODES else data.mode
 

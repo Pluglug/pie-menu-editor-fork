@@ -198,11 +198,13 @@ def _evaluate_description_expr(expr_text: str) -> str | None:
     """
     exec_globals = pme.context.gen_globals()
     try:
-        code = compile("def _get_desc():" + expr_text, "<description>", "exec")
+        func_code = "def _get_desc():" + expr_text
+        code = compile(func_code, "<description>", "exec")
         exec(code, exec_globals)
         result = exec_globals["_get_desc"]()
         return str(result) if result is not None else None
     except Exception:
+        print_exc(f"[PME] description_is_expr evaluation error: {expr_text[:50]}")
         return None
 
 
@@ -1584,7 +1586,7 @@ class WM_OT_pme_user_pie_menu_call(Operator):
             ret = {'PASS_THROUGH'}
         else:
             ret = {'RUNNING_MODAL'}
-        
+
         DBG_PM and event.type == 'TIMER' and logi("MODAL TIMER, id:", id(self), "cancelled:", self.cancelled)
 
         if event.type != 'TIMER' and (
@@ -1601,7 +1603,7 @@ class WM_OT_pme_user_pie_menu_call(Operator):
                         DBG_PM and logi("Stopping modal for:", self.pie_menu_name)
                         DBG_PM and logi("Calling menu:", v.name)
                         DBG_PM and logi("Active ops before:", list(self.__class__.active_ops.keys()))
-                        
+
                         self.modal_stop()
                         if pr.use_chord_hint:
                             area_header_text_set()
@@ -1697,7 +1699,7 @@ class WM_OT_pme_user_pie_menu_call(Operator):
                     DBG_PM and logi("CHORDS - TIMEOUT, calling PRESS menu:", self.pm_press.name)
                     self.modal_stop()
                     self.executed = True
-                    
+
                     if self.pm_press.mode == 'SCRIPT':
                         StackKey.next(self.pm_press)
                     elif self.pm_press.mode == 'STICKY':
@@ -2125,7 +2127,7 @@ class WM_OT_pme_user_pie_menu_call(Operator):
                         )
                     )
                 return self.modal_start()
-        
+
         DBG_PM and logi("Mode:", self.invoke_mode, "- Calling execute_menu directly")
         return self.execute_menu(context, event)
 

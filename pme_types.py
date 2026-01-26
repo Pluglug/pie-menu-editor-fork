@@ -176,7 +176,8 @@ class PMIItem(PropertyGroup):
         if self.description_is_expr:
             # Static → Expression: wrap with return 'xxx'
             text = self.description.strip()
-            if not text.startswith("return "):
+            # Skip if text already contains 'return ' anywhere (user wrote expression)
+            if "return " not in text:
                 # Preserve \n by using placeholder
                 temp = text.replace("\\n", self._NEWLINE_PLACEHOLDER)
                 temp = temp.replace("\\", "\\\\").replace("'", "\\'")
@@ -434,7 +435,8 @@ class PMItem(PropertyGroup):
         if self.description_is_expr:
             # Static → Expression: wrap with return 'xxx'
             text = self.description.strip()
-            if not text.startswith("return "):
+            # Skip if text already contains 'return ' anywhere (user wrote expression)
+            if "return " not in text:
                 # Preserve \n by using placeholder
                 temp = text.replace("\\n", self._NEWLINE_PLACEHOLDER)
                 temp = temp.replace("\\", "\\\\").replace("'", "\\'")
