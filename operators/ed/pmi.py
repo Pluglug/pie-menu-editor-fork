@@ -583,6 +583,8 @@ class PME_OT_pmi_clear(ConfirmBoxHandler, Operator):
         pmi.name = ""
         pmi.icon = ""
         pmi.mode = 'EMPTY'
+        pmi.description = ""
+        pmi.description_is_expr = False
 
         ed = pm.ed
         if ed:
@@ -722,6 +724,8 @@ class WM_OT_pmi_data_edit(Operator):
 
             pmi.name = data.name
             pmi.icon = data.icon
+            pmi.description = data.description  # Phase 9-X (#102)
+            pmi.description_is_expr = data.description_is_expr  # Phase 9-X (#102)
 
             ed = pm.ed
             if ed:

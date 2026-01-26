@@ -38,6 +38,13 @@ from ..core import constants as CC
 from ..operators import extras as EOPS
 from ..pme_types import PMIItem
 from .. import keymap_helper
+from ..ui.descriptions import (
+    SLOT_CMD,
+    SLOT_CUSTOM,
+    SLOT_PROP,
+    SLOT_DESCRIPTION,
+    SLOT_DESCRIPTION_IS_EXPR,
+)
 from .temp_data import update_data
 
 
@@ -91,7 +98,7 @@ class PMIData(PropertyGroup):
         items=CC.EMODE_ITEMS, description="Type of the item", update=mode_update
     )
     cmd: StringProperty(
-        description="Python code", maxlen=CC.MAX_STR_LEN, update=update_data
+        description=SLOT_CMD, maxlen=CC.MAX_STR_LEN, update=update_data
     )
     cmd_ctx: EnumProperty(
         items=CC.OP_CTX_ITEMS, name="Execution Context", description="Execution context"
@@ -100,9 +107,9 @@ class PMIData(PropertyGroup):
         name="Undo Flag", description="'Undo' positional argument"
     )
     custom: StringProperty(
-        description="Python code", maxlen=CC.MAX_STR_LEN, update=update_data
+        description=SLOT_CUSTOM, maxlen=CC.MAX_STR_LEN, update=update_data
     )
-    prop: StringProperty(description="Property", update=update_data)
+    prop: StringProperty(description=SLOT_PROP, update=update_data)
     menu: StringProperty(description="Menu's name", update=update_data)
     expand_menu: BoolProperty(description="Expand Menu")
     use_cb: BoolProperty(
@@ -118,6 +125,50 @@ class PMIData(PropertyGroup):
             self.name = self.sname
 
     sname: StringProperty(description="Suggested name", update=sname_update)
+
+    # Phase 9-X (#102): description field for COMMAND mode fallback tooltip
+    description: StringProperty(
+        name="Description",
+        description=SLOT_DESCRIPTION,
+        maxlen=CC.MAX_STR_LEN,
+        update=update_data,
+    )
+
+    # Placeholder for preserving \n during escape
+    _NEWLINE_PLACEHOLDER = "\x00NL\x00"
+
+    def _update_description_is_expr(self, context):
+        """Auto-convert between static text and expression format."""
+        if self.description:
+            if self.description_is_expr:
+                # Static → Expression: wrap with return 'xxx'
+                text = self.description.strip()
+                if not text.startswith("return "):
+                    # Preserve \n by using placeholder
+                    temp = text.replace("\\n", self._NEWLINE_PLACEHOLDER)
+                    temp = temp.replace("\\", "\\\\").replace("'", "\\'")
+                    escaped = temp.replace(self._NEWLINE_PLACEHOLDER, "\\n")
+                    self.description = f"return '{escaped}'"
+            else:
+                # Expression → Static: try to extract simple string
+                text = self.description.strip()
+                if text.startswith("return '") and text.endswith("'"):
+                    inner = text[8:-1]
+                    # Preserve \n by using placeholder
+                    temp = inner.replace("\\n", self._NEWLINE_PLACEHOLDER)
+                    temp = temp.replace("\\'", "'").replace("\\\\", "\\")
+                    inner = temp.replace(self._NEWLINE_PLACEHOLDER, "\\n")
+                    self.description = inner
+        # Run error check after conversion
+        update_data(self, context)
+
+    description_is_expr: BoolProperty(
+        name="Expr",
+        description=SLOT_DESCRIPTION_IS_EXPR,
+        default=False,
+        update=_update_description_is_expr,
+    )
+
     key: EnumProperty(
         items=keymap_helper.key_items, description="Key pressed", update=update_data
     )

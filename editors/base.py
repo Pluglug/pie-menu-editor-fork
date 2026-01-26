@@ -18,6 +18,7 @@ from ..core.constants import (
     F_RIGHT,
     KEYMAP_SPLITTER,
     MODAL_CMD_MODES,
+    W_PMI_DESC_SYNTAX,
     W_PMI_HOTKEY,
     W_PMI_MENU,
     W_PMI_SYNTAX,
@@ -216,12 +217,19 @@ class EditorBase:
         pass
 
     def on_pm_duplicate(self, from_pm, pm):
+        # Copy PM-level description
+        pm.description = from_pm.description
+        pm.description_is_expr = from_pm.description_is_expr
+
+        # Copy PMI-level properties
         for from_pmi in from_pm.pmis:
             pmi = pm.pmis.add()
             pmi.name = from_pmi.name
             pmi.icon = from_pmi.icon
             pmi.mode = from_pmi.mode
             pmi.text = from_pmi.text
+            pmi.description = from_pmi.description
+            pmi.description_is_expr = from_pmi.description_is_expr
 
     def on_pm_enabled(self, pm, value):
         if self.has_hotkey:
@@ -306,6 +314,17 @@ class EditorBase:
                 except:
                     data.info(W_PMI_SYNTAX)
 
+            # Phase 9-X (#102): Check description expression syntax
+            if data.description and data.description_is_expr:
+                try:
+                    compile(
+                        "def _get_desc():" + data.description,
+                        '<description>',
+                        'exec'
+                    )
+                except:
+                    data.info(W_PMI_DESC_SYNTAX)
+
             data.sname = ""
             if not data.has_errors():
                 mo = re_operator.search(data.cmd)
@@ -373,6 +392,8 @@ class EditorBase:
         data.mode = pmi.mode if pmi.mode != 'EMPTY' else 'COMMAND'
         data.name = pmi.name
         data.icon = pmi.icon
+        data.description = pmi.description  # Phase 9-X (#102)
+        data.description_is_expr = pmi.description_is_expr  # Phase 9-X (#102)
 
         data_mode = 'COMMAND' if data.mode in MODAL_CMD_MODES else data.mode
 
@@ -418,6 +439,21 @@ class EditorBase:
         pass
 
     def draw_extra_settings(self, layout, pm):
+        # Description field for dynamic tooltip (#102)
+        row = layout.row(align=True)
+        sub = row.row(align=True)
+        # Check expression syntax if is_expr is enabled
+        if pm.description and pm.description_is_expr:
+            try:
+                compile("def _get_desc():" + pm.description, '<description>', 'exec')
+                sub.alert = False
+            except:
+                sub.alert = True
+        desc_placeholder = "return 'Description'" if pm.description_is_expr else "Description"
+        sub.prop(pm, "description", text="", icon=ic('CURRENT_FILE'), placeholder=desc_placeholder)
+        row.prop(pm, "description_is_expr", text="", icon=ic('SCRIPTPLUGINS'))
+
+        # Poll condition
         row = layout.row(align=True)
         sub = row.row(align=True)
         sub.alert = pm.name in pm.poll_methods and pm.poll_methods[pm.name] is None

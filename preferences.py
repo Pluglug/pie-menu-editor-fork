@@ -918,7 +918,7 @@ class PMEPreferences(AddonPreferences):
             if pm.mode == 'MODAL' and data.mode == 'COMMAND':
                 lh.prop(tpr, "modal_item_show", "", ic_eye(tpr.modal_item_show))
 
-            icon = 'ERROR' if data.has_errors(CC.W_PMI_SYNTAX) else 'NONE'
+            icon = 'ERROR' if data.has_errors(CC.W_PMI_SYNTAX) else ic('CONSOLE')
             lh.prop(data, "cmd", "", icon)
 
             if (
@@ -935,7 +935,7 @@ class PMEPreferences(AddonPreferences):
             if pm.mode == 'MODAL':
                 lh.prop(tpr, "modal_item_show", "", ic_eye(tpr.modal_item_show))
 
-            icon = 'ERROR' if data.has_errors(CC.W_PMI_SYNTAX) else 'NONE'
+            icon = 'ERROR' if data.has_errors(CC.W_PMI_SYNTAX) else ic('RNA')
             lh.prop(data, "prop", "", icon)
 
             lh.lt(subcol)
@@ -1001,7 +1001,7 @@ class PMEPreferences(AddonPreferences):
 
         elif data_mode == 'CUSTOM':
             lh.row(subcol)
-            icon = 'ERROR' if data.has_errors(CC.W_PMI_SYNTAX) else 'NONE'
+            icon = 'ERROR' if data.has_errors(CC.W_PMI_SYNTAX) else ic('SYSTEM')
             lh.prop(data, "custom", "", icon)
 
         if (
@@ -1027,6 +1027,36 @@ class PMEPreferences(AddonPreferences):
             lh.row(align=False)
             lh.operator(PME_OT_pmi_cmd_generate.bl_idname, "Clear", clear=True)
             lh.operator(PME_OT_pmi_cmd_generate.bl_idname, "Apply", 'FILE_TICK')
+
+        # Phase 9-X (#102): Description field for COMMAND mode fallback tooltip
+        # Shown after operator args UI (or instead of it for non-operators)
+        if data_mode == 'COMMAND' and pm.mode in ('PMENU', 'RMENU', 'DIALOG'):
+            is_operator = bool(data.kmi.idname)
+            # For operators: hide if description is empty, show disabled with note if filled
+            # For non-operators: always show as editable field (no box, continuous with cmd field)
+            if not is_operator or data.description:
+                if is_operator:
+                    # Operator with existing description: show in separate box with note
+                    desc_col = mode_col.box().column(align=True)
+                    lh.row(desc_col, align=True)
+                else:
+                    # Non-operator: continue in subcol with small gap
+                    lh.lt(subcol)
+                    lh.sep()
+                    lh.row(align=True)
+                if data.has_errors(CC.W_PMI_DESC_SYNTAX):
+                    desc_icon = 'ERROR'
+                else:
+                    desc_icon = ic('CURRENT_FILE')
+                if data.description_is_expr:
+                    desc_placeholder = "return 'Description'"
+                else:
+                    desc_placeholder = "Description"
+                lh.prop(data, "description", "", desc_icon, placeholder=desc_placeholder, enabled=not is_operator)
+                lh.prop(data, "description_is_expr", "", ic('SCRIPTPLUGINS'), enabled=not is_operator)
+                if is_operator:
+                    lh.row(desc_col, enabled=False)
+                    lh.label("Unused: operator provides its own tooltip")
 
         if pm.mode == 'MODAL':
             if data.mode == 'COMMAND':

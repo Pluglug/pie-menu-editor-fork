@@ -31,6 +31,7 @@ from . import keymap_helper as KH
 from . import pme
 from .core.schema import schema
 from .ui import tag_redraw
+from .ui.descriptions import SLOT_POLL, SLOT_DESCRIPTION, SLOT_DESCRIPTION_IS_EXPR
 # NOTE: schema is now in core/schema.py (Phase 8-C rename from core/schema.py)
 # Import directly from core.schema for early loading and proper initialization
 from .operators import WM_OT_pme_user_pie_menu_call
@@ -152,6 +153,51 @@ class PMIItem(PropertyGroup):
     icon: StringProperty(description="Icon")
     enabled: BoolProperty(
         name="Enable/Disable", description="Enable/Disable", default=True
+    )
+
+    # Phase 9-X (#102): Dynamic description for COMMAND mode (fallback only)
+    # Used by WM_OT_pme_user_command_exec.description() classmethod
+    # When Blender operator is directly callable, Blender's description is used instead
+    description: StringProperty(
+        name="Description",
+        description=SLOT_DESCRIPTION,
+        default="",
+        maxlen=CC.MAX_STR_LEN,
+    )
+
+    # Placeholder for preserving \n during escape (used by _update_description_is_expr)
+    _NEWLINE_PLACEHOLDER = "\x00NL\x00"
+
+    def _update_description_is_expr(self, context):
+        """Auto-convert between static text and expression format."""
+        if not self.description:
+            return
+
+        if self.description_is_expr:
+            # Static → Expression: wrap with return 'xxx'
+            text = self.description.strip()
+            if not text.startswith("return "):
+                # Preserve \n by using placeholder
+                temp = text.replace("\\n", self._NEWLINE_PLACEHOLDER)
+                temp = temp.replace("\\", "\\\\").replace("'", "\\'")
+                escaped = temp.replace(self._NEWLINE_PLACEHOLDER, "\\n")
+                self.description = f"return '{escaped}'"
+        else:
+            # Expression → Static: try to extract simple string
+            text = self.description.strip()
+            if text.startswith("return '") and text.endswith("'"):
+                inner = text[8:-1]
+                # Preserve \n by using placeholder
+                temp = inner.replace("\\n", self._NEWLINE_PLACEHOLDER)
+                temp = temp.replace("\\'", "'").replace("\\\\", "\\")
+                inner = temp.replace(self._NEWLINE_PLACEHOLDER, "\\n")
+                self.description = inner
+
+    description_is_expr: BoolProperty(
+        name="Expr",
+        description=SLOT_DESCRIPTION_IS_EXPR,
+        default=False,
+        update=_update_description_is_expr,
     )
 
     def get_pmi_label(self):
@@ -368,6 +414,50 @@ class PMItem(PropertyGroup):
         options={'HIDDEN'},
     )
 
+    # Phase 9-X (#102): Dynamic description for PM tooltip
+    # Used by WM_OT_pme_user_pie_menu_call.description() classmethod
+    description: StringProperty(
+        name="Description",
+        description=SLOT_DESCRIPTION,
+        default="",
+        maxlen=CC.MAX_STR_LEN,
+    )
+
+    # Placeholder for preserving \n during escape (used by _update_description_is_expr)
+    _NEWLINE_PLACEHOLDER = "\x00NL\x00"
+
+    def _update_description_is_expr(self, context):
+        """Auto-convert between static text and expression format."""
+        if not self.description:
+            return
+
+        if self.description_is_expr:
+            # Static → Expression: wrap with return 'xxx'
+            text = self.description.strip()
+            if not text.startswith("return "):
+                # Preserve \n by using placeholder
+                temp = text.replace("\\n", self._NEWLINE_PLACEHOLDER)
+                temp = temp.replace("\\", "\\\\").replace("'", "\\'")
+                escaped = temp.replace(self._NEWLINE_PLACEHOLDER, "\\n")
+                self.description = f"return '{escaped}'"
+        else:
+            # Expression → Static: try to extract simple string
+            text = self.description.strip()
+            if text.startswith("return '") and text.endswith("'"):
+                inner = text[8:-1]
+                # Preserve \n by using placeholder
+                temp = inner.replace("\\n", self._NEWLINE_PLACEHOLDER)
+                temp = temp.replace("\\'", "'").replace("\\\\", "\\")
+                inner = temp.replace(self._NEWLINE_PLACEHOLDER, "\\n")
+                self.description = inner
+
+    description_is_expr: BoolProperty(
+        name="Expr",
+        description=SLOT_DESCRIPTION_IS_EXPR,
+        default=False,
+        update=_update_description_is_expr,
+    )
+
     def update_keymap_item(self, context):
         if not self.ed.has_hotkey:
             return
@@ -509,7 +599,7 @@ class PMItem(PropertyGroup):
                 self.poll_methods[self.name] = None
 
     poll_cmd: StringProperty(
-        description=("Poll method\nTest if the item can be called/displayed or not"),
+        description=SLOT_POLL,
         default=CC.DEFAULT_POLL,
         maxlen=CC.MAX_STR_LEN,
         update=update_poll_cmd,

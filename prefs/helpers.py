@@ -21,12 +21,16 @@ class PMIClipboard:
         self.icon = pmi.icon
         self.text = pmi.text
         self.name = pmi.name
+        self.description = pmi.description
+        self.description_is_expr = pmi.description_is_expr
 
     def paste(self, pm, pmi):
         pmi.name = self.name
         pmi.icon = self.icon
         pmi.mode = self.mode
         pmi.text = self.text
+        pmi.description = self.description
+        pmi.description_is_expr = self.description_is_expr
 
     def clear(self):
         self.pm_mode = None
@@ -34,6 +38,8 @@ class PMIClipboard:
         self.icon = None
         self.text = None
         self.name = None
+        self.description = ""
+        self.description_is_expr = False
 
     def has_data(self):
         return self.mode is not None

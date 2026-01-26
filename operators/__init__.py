@@ -187,6 +187,30 @@ class WM_OT_pm_select(Operator):
 # PME_OT_pm_search_and_select moved to operators/search.py
 
 
+def _evaluate_description_expr(expr_text: str) -> str | None:
+    """Evaluate description expression (return statement style).
+
+    Like poll_cmd, uses 'return' statement.
+    Returns None on error or if expression returns None.
+
+    Example:
+        ao = C.active_object; return f'{ao.name}' if ao else None
+    """
+    exec_globals = pme.context.gen_globals()
+    try:
+        code = compile("def _get_desc():" + expr_text, "<description>", "exec")
+        exec(code, exec_globals)
+        result = exec_globals["_get_desc"]()
+        return str(result) if result is not None else None
+    except Exception:
+        return None
+
+
+def _format_description_text(text: str) -> str:
+    """Convert user-facing escape sequences to display text."""
+    return text.replace("\\n", "\n") if text else text
+
+
 class WM_OT_pme_user_command_exec(Operator):
     bl_idname = "wm.pme_user_command_exec"
     bl_label = ""
@@ -203,6 +227,32 @@ class WM_OT_pme_user_command_exec(Operator):
         maxlen=MAX_STR_LEN,
         options={'SKIP_SAVE', 'HIDDEN'},
     )
+
+    # Phase 9-X (#102): Dynamic description for COMMAND mode fallback
+    # This is only used when Blender operator is NOT directly callable
+    # (e.g., has positional args, or is complex Python code)
+    @classmethod
+    def description(cls, context, properties):
+        """Return dynamic tooltip based on pmi.description field."""
+        pr = get_prefs()
+        pm = pr.pie_menus.get(properties.menu)
+        if not pm:
+            return "Execute python code"
+
+        # Find pmi by slot name
+        for pmi in pm.pmis:
+            if pmi.name == properties.slot:
+                if pmi.description:
+                    if pmi.description_is_expr:
+                        result = _evaluate_description_expr(pmi.description)
+                        if result is not None:
+                            return _format_description_text(result)
+                        # Fallback on error or None
+                    else:
+                        return _format_description_text(pmi.description)
+                break
+
+        return "Execute python code"
 
     def execute(self, context):
         pme.context.exec_operator = self
@@ -1151,6 +1201,24 @@ class WM_OT_pme_user_pie_menu_call(Operator):
     invoke_mode: StringProperty(options={'SKIP_SAVE'})
     keymap: StringProperty(options={'HIDDEN', 'SKIP_SAVE'})
     slot: IntProperty(default=-1, options={'SKIP_SAVE'})
+
+    # Phase 9-X (#102): Dynamic description for PM tooltip
+    @classmethod
+    def description(cls, context, properties):
+        """Return dynamic tooltip based on the target menu's description field."""
+        pr = get_prefs()
+        pm = pr.pie_menus.get(properties.pie_menu_name)
+        if not pm:
+            return "Call PME menu"
+        if pm.description:
+            if pm.description_is_expr:
+                result = _evaluate_description_expr(pm.description)
+                if result is not None:
+                    return _format_description_text(result)
+                # Fallback on error or None
+            else:
+                return _format_description_text(pm.description)
+        return f"Call {pm.name}"
 
     # @staticmethod
     # def restore_pie_menu_prefs():

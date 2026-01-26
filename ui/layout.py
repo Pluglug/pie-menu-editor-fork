@@ -348,6 +348,7 @@ class LayoutHelper:
         enabled=True,
         active=True,
         alert=False,
+        placeholder="",
     ):
 
         if data is None:
@@ -387,6 +388,7 @@ class LayoutHelper:
                 full_event=full_event,
                 emboss=emboss,
                 index=index,
+                placeholder=placeholder,
             )
         else:
             self.layout.prop(
@@ -403,6 +405,7 @@ class LayoutHelper:
                 full_event=full_event,
                 emboss=emboss,
                 index=index,
+                placeholder=placeholder,
             )
 
         if not enabled or not active or alert:
@@ -427,6 +430,7 @@ class LayoutHelper:
         enabled=True,
         active=True,
         alert=False,
+        placeholder="",
     ):
         p = data.bl_rna.properties[prop]
         tp = p.__class__.__name__
@@ -490,6 +494,7 @@ class LayoutHelper:
                         enabled,
                         active,
                         alert,
+                        placeholder,
                     )
 
                 self.restore()
@@ -523,6 +528,7 @@ class LayoutHelper:
                         enabled,
                         active,
                         alert,
+                        placeholder,
                     )
                 return
 
@@ -542,6 +548,7 @@ class LayoutHelper:
             enabled,
             active,
             alert,
+            placeholder,
         )
 
     def restore(self):
