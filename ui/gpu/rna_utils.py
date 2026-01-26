@@ -495,3 +495,184 @@ def format_value(value: Any, precision: int = 2) -> str:
         return ", ".join(format_value(v, precision) for v in value)
     else:
         return str(value)
+
+
+UI_PRECISION_FLOAT_MAX = 6
+UI_PRECISION_FLOAT_SCALE = 0.01
+
+
+_SUBTYPE_UNIT_CATEGORY: dict[str, str] = {
+    "ANGLE": "ROTATION",
+    "TRANSLATION": "LENGTH",
+    "DISTANCE": "LENGTH",
+    "DISTANCE_DIAMETER": "LENGTH",
+    "DISTANCE_CAMERA": "CAMERA",
+    "LENGTH": "LENGTH",
+    "XYZ_LENGTH": "LENGTH",
+    "VELOCITY": "VELOCITY",
+    "ACCELERATION": "ACCELERATION",
+    "AREA": "AREA",
+    "VOLUME": "VOLUME",
+    "MASS": "MASS",
+    "CAMERA": "CAMERA",
+    "POWER": "POWER",
+    "TEMPERATURE": "TEMPERATURE",
+    "COLOR_TEMPERATURE": "COLOR_TEMPERATURE",
+    "WAVELENGTH": "WAVELENGTH",
+    "FREQUENCY": "FREQUENCY",
+    "TIME": "TIME",
+    "TIME_ABSOLUTE": "TIME_ABSOLUTE",
+    "ROTATION": "ROTATION",
+    "ANGLE": "ROTATION",
+    "EULER": "ROTATION",
+    "AXISANGLE": "ROTATION",
+}
+
+
+def _integer_digits(value: float) -> int:
+    if value == 0.0:
+        return 0
+    from math import floor, log10, fabs
+    return int(floor(log10(fabs(value)))) + 1
+
+
+def _calc_float_precision(prec: int, value: float) -> int:
+    from math import fabs, pow
+
+    pow10_neg = [1e0, 1e-1, 1e-2, 1e-3, 1e-4, 1e-5, 1e-6]
+    max_pow = 10000000.0
+
+    value = fabs(value)
+    if (value < pow10_neg[prec]) and (value > (1.0 / max_pow)):
+        value_i = int(round(value * max_pow))
+        if value_i != 0:
+            prec_span = 3
+            test_prec = 0
+            prec_min = -1
+            dec_flag = 0
+            i = UI_PRECISION_FLOAT_MAX
+            while i and value_i:
+                if value_i % 10:
+                    dec_flag |= 1 << i
+                    prec_min = i
+                value_i //= 10
+                i -= 1
+
+            test_prec = prec_min
+            dec_flag = (dec_flag >> (prec_min + 1)) & ((1 << prec_span) - 1)
+            while dec_flag:
+                test_prec += 1
+                dec_flag >>= 1
+            prec = max(test_prec, prec)
+
+    return max(0, min(UI_PRECISION_FLOAT_MAX, prec))
+
+
+def _unit_settings_from_context():
+    try:
+        return bpy.context.scene.unit_settings if bpy.context and bpy.context.scene else None
+    except Exception:
+        return None
+
+
+def _should_use_units(unit_settings, unit_category: str | None) -> bool:
+    if unit_category is None or unit_category == "NONE":
+        return False
+    if unit_category == "TIME":
+        return False
+    if unit_settings is None:
+        return False
+    if unit_settings.system == "NONE":
+        return unit_category in {"ROTATION", "TIME_ABSOLUTE"}
+    if unit_category == "ROTATION" and unit_settings.system_rotation == "RADIANS":
+        return False
+    return True
+
+
+def _scale_value_for_units(value: float, unit_settings, unit_category: str) -> float:
+    if unit_settings is None or unit_settings.system == "NONE":
+        return value
+    scale = float(unit_settings.scale_length) if getattr(unit_settings, "scale_length", 0.0) else 1.0
+    if unit_category in {"LENGTH", "VELOCITY", "ACCELERATION"}:
+        return value * scale
+    if unit_category in {"AREA", "POWER"}:
+        return value * (scale ** 2)
+    if unit_category in {"VOLUME", "MASS"}:
+        return value * (scale ** 3)
+    # CAMERA/WAVELENGTH/ROTATION/TIME/etc. do not scale by scene unit scale.
+    return value
+
+
+def _calc_display_precision(value: float,
+                            precision: int,
+                            step: float,
+                            unit_settings,
+                            unit_category: str | None,
+                            max_value: Optional[float]) -> int:
+    from math import floor
+
+    # Hide fraction when integer value and integer step (unitless or time).
+    if unit_category in {None, "NONE", "TIME"}:
+        step_scaled = step * UI_PRECISION_FLOAT_SCALE
+        if floor(value) == value and floor(step_scaled) == step_scaled:
+            return 0
+
+    prec = precision
+    if prec == -1:
+        if max_value is not None and max_value < 10.001:
+            prec = 3
+        else:
+            prec = 2
+    else:
+        prec = max(0, min(UI_PRECISION_FLOAT_MAX, prec))
+
+    if unit_category == "ROTATION" and unit_settings and unit_settings.system_rotation == "RADIANS":
+        if prec < 5:
+            prec = 5
+
+    return _calc_float_precision(prec, value)
+
+
+def format_numeric_value(value: float,
+                         subtype: str = "NONE",
+                         precision: int = 2,
+                         step: float = 1.0,
+                         max_value: Optional[float] = None) -> str:
+    """サブタイプに応じて数値を Blender 互換でフォーマット。"""
+    subtype = (subtype or "NONE").upper()
+    value = float(value) + 0.0  # normalize negative zero
+
+    unit_category = _SUBTYPE_UNIT_CATEGORY.get(subtype)
+    unit_settings = _unit_settings_from_context()
+    prec = _calc_display_precision(value, precision, step, unit_settings, unit_category, max_value)
+
+    # Special subtypes
+    if subtype == "PERCENTAGE":
+        return f"{value:.{prec}f}%"
+    if subtype in {"PIXEL", "PIXEL_DIAMETER"}:
+        return f"{value:.{prec}f} px"
+    if subtype == "FACTOR":
+        try:
+            display_type = bpy.context.preferences.system.factor_display_type
+        except Exception:
+            display_type = "FACTOR"
+        if display_type == "PERCENTAGE":
+            return f"{value * 100:.{max(0, prec - 2)}f}"
+        return f"{value:.{prec}f}"
+
+    # Units
+    if _should_use_units(unit_settings, unit_category):
+        unit_system = unit_settings.system
+        split_unit = bool(getattr(unit_settings, "use_separate", False))
+        try:
+            from bpy.utils import units
+            value_scaled = _scale_value_for_units(value, unit_settings, unit_category)
+            return units.to_string(unit_system, unit_category, value_scaled,
+                                   precision=prec, split_unit=split_unit)
+        except Exception:
+            pass
+
+    # Unit-less fallback (apply integer digit adjustment like Blender).
+    int_digits = _integer_digits(value)
+    prec_adj = max(0, min(UI_PRECISION_FLOAT_MAX, prec - int_digits))
+    return f"{value:.{prec_adj}f}"

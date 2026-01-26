@@ -45,6 +45,7 @@ class VectorItem(LayoutItem):
     max_val: float = float('inf')
     step: float = 0.01
     precision: int = 3
+    subtype: str = "NONE"
     text: str = ""
     vertical: bool = False
     on_change: Optional[Callable[[tuple[float, ...]], None]] = None
@@ -78,6 +79,7 @@ class VectorItem(LayoutItem):
                 max_val=self.max_val,
                 step=self.step,
                 precision=self.precision,
+                subtype=self.subtype,
                 text=label,
                 on_change=make_on_change(i),
                 enabled=self.enabled,
@@ -100,7 +102,8 @@ class VectorItem(LayoutItem):
         self._ensure_items(style)
 
         item_height = style.scaled_item_height()
-        spacing = style.scaled_spacing()
+        # Blender の vector サブ項目は連結されるため内部ギャップは 0
+        spacing = 0.0
         item_count = len(self._items)
 
         if self.vertical:
@@ -165,7 +168,8 @@ class VectorItem(LayoutItem):
         - ウィジェットは残りの領域に配置（整列される）
         """
         item_height = style.scaled_item_height()
-        spacing = style.scaled_spacing()
+        # Blender の vector サブ項目は連結されるため内部ギャップは 0
+        spacing = 0.0
 
         # 固定比率でラベル領域を確保（VectorItem 用: 約22%）
         if self.text:
@@ -175,12 +179,20 @@ class VectorItem(LayoutItem):
             # ラベル領域の幅を固定比率で確保
             label_region_width = self.width * self.LABEL_FACTOR
 
-            # テキストを描画（ラベル領域内で左寄せ）
-            text_w, text_h = BLFDrawing.get_text_dimensions(label_text, text_size)
+            # テキストを描画（ラベル領域内で左寄せ + クリップ/省略）
             text_color = style.text_color if enabled else style.text_color_disabled
+            text_w, text_h = BLFDrawing.get_text_dimensions(label_text, text_size)
             text_y = self.y - (item_height + text_h) / 2
-            text_x = self.x  # 左寄せ
-            BLFDrawing.draw_text(text_x, text_y, label_text, text_color, text_size)
+            padding = style.scaled_padding()
+            label_text_area = max(0.0, label_region_width - padding * 2)
+            display_text = BLFDrawing.get_text_with_ellipsis(
+                label_text, label_text_area, text_size
+            )
+            text_x = self.x + padding
+            clip_rect = BLFDrawing.calc_clip_rect(
+                self.x, self.y, label_region_width, item_height, 0
+            )
+            BLFDrawing.draw_text_clipped(text_x, text_y, display_text, text_color, text_size, clip_rect)
 
             widget_start_x = self.x + label_region_width
             remaining_width = self.width - label_region_width

@@ -28,13 +28,16 @@ class SliderItem(LayoutItem):
         min_val: 最小値
         max_val: 最大値
         precision: 表示精度（小数点以下の桁数）
+        step: ステップ値（表示精度に使用）
         text: ラベルテキスト（空の場合は値のみ表示）
         on_change: 値変更時のコールバック
     """
     value: float = 0.0
     min_val: float = 0.0
     max_val: float = 1.0
+    step: float = 0.01
     precision: int = 2
+    subtype: str = "NONE"
     text: str = ""
     on_change: Optional[Callable[[float], None]] = None
 
@@ -54,7 +57,15 @@ class SliderItem(LayoutItem):
 
     def _get_display_text(self) -> str:
         """表示用テキストを生成"""
-        value_str = f"{self.value:.{self.precision}f}"
+        from ..rna_utils import format_numeric_value
+
+        value_str = format_numeric_value(
+            self.value,
+            self.subtype,
+            self.precision,
+            step=self.step,
+            max_value=self.max_val,
+        )
         if self.text:
             return f"{self.text}: {value_str}"
         return value_str
@@ -164,6 +175,8 @@ class SliderItem(LayoutItem):
 
         display_text = self._get_display_text()
         text_size = style.scaled_text_size()
+        available_width = max(0.0, self.width - style.scaled_padding() * 2)
+        display_text = BLFDrawing.get_text_with_ellipsis(display_text, available_width, text_size)
         text_w, text_h = BLFDrawing.get_text_dimensions(display_text, text_size)
 
         # 中央揃え
@@ -217,6 +230,8 @@ class SliderItem(LayoutItem):
         text_color = style.button_text_color if enabled else style.text_color_disabled
         display_text = self._get_display_text()
         text_size = style.scaled_text_size()
+        available_width = max(0.0, self.width - style.scaled_padding() * 2)
+        display_text = BLFDrawing.get_text_with_ellipsis(display_text, available_width, text_size)
         text_w, text_h = BLFDrawing.get_text_dimensions(display_text, text_size)
         text_x = self.x + (self.width - text_w) / 2
         text_y = self.y - (self.height + text_h) / 2
@@ -246,6 +261,7 @@ class NumberItem(LayoutItem):
     max_val: float = float('inf')
     step: float = 0.01
     precision: int = 2
+    subtype: str = "NONE"
     text: str = ""
     show_buttons: bool = False
     on_change: Optional[Callable[[float], None]] = None
@@ -267,7 +283,15 @@ class NumberItem(LayoutItem):
 
     def _get_display_text(self) -> str:
         """表示用テキストを生成"""
-        value_str = f"{self.value:.{self.precision}f}"
+        from ..rna_utils import format_numeric_value
+
+        value_str = format_numeric_value(
+            self.value,
+            self.subtype,
+            self.precision,
+            step=self.step,
+            max_value=self.max_val,
+        )
         if self.text:
             return f"{self.text}: {value_str}"
         return value_str
@@ -371,13 +395,15 @@ class NumberItem(LayoutItem):
         if not enabled:
             text_color = tuple(c * 0.5 for c in text_color[:3]) + (text_color[3],)
 
-        display_text = self._get_display_text()
-        text_size = style.scaled_text_size()
-        text_w, text_h = BLFDrawing.get_text_dimensions(display_text, text_size)
-
         # 中央揃え（ボタンを考慮）
         text_area_x = self.x + button_width
         text_area_width = self.width - button_width * 2
+
+        display_text = self._get_display_text()
+        text_size = style.scaled_text_size()
+        available_width = max(0.0, text_area_width - style.scaled_padding() * 2)
+        display_text = BLFDrawing.get_text_with_ellipsis(display_text, available_width, text_size)
+        text_w, text_h = BLFDrawing.get_text_dimensions(display_text, text_size)
         text_x = text_area_x + (text_area_width - text_w) / 2
         text_y = self.y - (self.height + text_h) / 2
 
@@ -452,6 +478,8 @@ class NumberItem(LayoutItem):
         text_color = style.button_text_color if enabled else style.text_color_disabled
         display_text = self._get_display_text()
         text_size = style.scaled_text_size()
+        available_width = max(0.0, self.width - style.scaled_padding() * 2)
+        display_text = BLFDrawing.get_text_with_ellipsis(display_text, available_width, text_size)
         text_w, text_h = BLFDrawing.get_text_dimensions(display_text, text_size)
         text_x = self.x + (self.width - text_w) / 2
         text_y = self.y - (self.height + text_h) / 2

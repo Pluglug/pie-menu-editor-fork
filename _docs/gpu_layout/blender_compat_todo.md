@@ -821,6 +821,10 @@ case PROP_BOOLEAN: {
 ※ テキスト長に応じてラベル幅が変動
 ```
 
+#### 2026-01-25 更新
+- Vector 内部の **X/Y/Z 間のギャップ**を 0 に変更（Blender の連結表示に近づけた）
+- Vector ラベルを **固定比率領域内でクリップ/省略表示**に変更
+
 #### 調査項目
 - [ ] `uiLayoutItemFlow` でのベクトルプロパティ幅計算
 - [ ] ColorItem で実装済みの固定比率ロジックを VectorItem に適用可能か
@@ -851,6 +855,21 @@ Location: X: 0.00000  Y: 0.00000  Z: 0.00000   ← 単位なし、桁数固定
 Scale:    X: 1.000    Y: 1.000    Z: 1.000
 Rotation: X: 0.00000  Y: 0.00000  Z: 0.00000   ← 度数表示なし
 ```
+
+#### 2026-01-25 更新
+- Number/Slider/Vector に `subtype` を伝播
+- `TRANSLATION`/`EULER` などは **単位付きフォーマット**を適用（best-effort）
+  - `bpy.utils.units.to_string()` が利用可能な場合は Blender の表示に追従
+  - 利用不可時は簡易フォールバック（Rotation は °、Translation は m）
+
+#### 2026-01-26 更新
+- Blender の `ui_but_calc_float_precision()` 相当ロジックを実装
+  - step と値に基づいた **小数桁の自動決定**（`UI_PRECISION_FLOAT_MAX` 互換）
+  - `precision=-1` 時の上限判定（`max_value < 10.001` → 3桁）
+  - 回転がラジアン表示の時は最小 5 桁
+- `PERCENTAGE` / `PIXEL(_DIAMETER)` / `FACTOR` の表示を Blender と同様に調整
+- `DISTANCE_CAMERA` / `DISTANCE_DIAMETER` / `CAMERA` などの単位カテゴリを追加
+- Number/Slider の表示に `step` / `max_val` を渡すよう修正
 
 #### 調査項目
 - [ ] `RNA_property_subtype()` で取得できるサブタイプ一覧
