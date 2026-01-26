@@ -18,6 +18,7 @@ from ..items import (
     ColorItem,
     RadioGroupItem,
     MenuButtonItem,
+    VectorItem,
 )
 
 if TYPE_CHECKING:
@@ -27,6 +28,44 @@ if TYPE_CHECKING:
 class LayoutInteractionMixin:
     """Mixin methods."""
 
+
+    def _register_number_item(self, item: NumberItem, layout_key, tag: str) -> HitRect:
+        manager = self._ensure_hit_manager()
+
+        def on_hover_enter():
+            item._hovered = True
+
+        def on_hover_leave():
+            item._hovered = False
+
+        def on_drag_start(mouse_x: float, mouse_y: float):
+            item._dragging = True
+
+        def on_drag(dx: float, dy: float, mouse_x: float, mouse_y: float):
+            # ドラッグ移動量から値を更新
+            item.set_value_from_delta(dx)
+
+        def on_drag_end(inside: bool):
+            item._dragging = False
+
+        rect = HitRect(
+            x=item.x,
+            y=item.y,
+            width=item.width,
+            height=item.height,
+            item=item,  # update_positions() で位置同期するため必須
+            tag=tag,
+            draggable=True,
+            on_hover_enter=on_hover_enter,
+            on_hover_leave=on_hover_leave,
+            on_press=on_drag_start,
+            on_drag=on_drag,
+            on_release=on_drag_end,
+        )
+        rect.layout_key = layout_key
+        manager.register(rect)
+        rect.item_id = str(id(item))
+        return rect
 
     def handle_event(self, event: Event, region=None) -> bool:
         """
@@ -92,6 +131,18 @@ class LayoutInteractionMixin:
 
 
     def _register_interactive_item(self, item: LayoutItem) -> None:
+        if isinstance(item, VectorItem):
+            # VectorItem は子ウィジェットのみヒット対象
+            item._ensure_items(self.style)
+            base_path = item.layout_path or f"{self._layout_path}.item[{id(item)}]"
+            for index, child in enumerate(item.get_child_items()):
+                if not isinstance(child, NumberItem):
+                    continue
+                child_key = self._make_layout_key(f"{base_path}.vec[{index}]")
+                tag = f"{item.text} {child.text}".strip() or "vector"
+                self._register_number_item(child, child_key, tag)
+            return
+
         if not isinstance(item, (ButtonItem, ToggleItem, SliderItem, NumberItem, CheckboxItem, ColorItem, RadioGroupItem, MenuButtonItem)):
             return
 
@@ -253,39 +304,7 @@ class LayoutInteractionMixin:
             rect.item_id = str(id(item))
         elif isinstance(item, NumberItem):
             # 数値フィールド: ドラッグで値を変更（dx に応じて）
-            def on_hover_enter():
-                item._hovered = True
-
-            def on_hover_leave():
-                item._hovered = False
-
-            def on_drag_start(mouse_x: float, mouse_y: float):
-                item._dragging = True
-
-            def on_drag(dx: float, dy: float, mouse_x: float, mouse_y: float):
-                # ドラッグ移動量から値を更新
-                item.set_value_from_delta(dx)
-
-            def on_drag_end(inside: bool):
-                item._dragging = False
-
-            rect = HitRect(
-                x=item.x,
-                y=item.y,
-                width=item.width,
-                height=item.height,
-                item=item,  # update_positions() で位置同期するため必須
-                tag=item.text or "number",
-                draggable=True,
-                on_hover_enter=on_hover_enter,
-                on_hover_leave=on_hover_leave,
-                on_press=on_drag_start,
-                on_drag=on_drag,
-                on_release=on_drag_end,
-            )
-            rect.layout_key = layout_key
-            manager.register(rect)
-            rect.item_id = str(id(item))
+            rect = self._register_number_item(item, layout_key, item.text or "number")
         elif isinstance(item, MenuButtonItem):
             # メニューボタン: クリックでドロップダウンを開く
             def on_hover_enter():

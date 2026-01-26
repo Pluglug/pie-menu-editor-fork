@@ -151,16 +151,27 @@ class VectorItem(LayoutItem):
         enabled = state.enabled if state else self.enabled
 
         if self.vertical:
-            self._draw_vertical(style, state, enabled)
+            self._draw_vertical(style, enabled)
         else:
-            self._draw_horizontal(style, state, enabled)
+            self._draw_horizontal(style, enabled)
+
+    def sync_child_layout(self, style: GPULayoutStyle, *, enabled: Optional[bool] = None) -> None:
+        """子ウィジェットのレイアウトだけを同期（ヒットテスト用）"""
+        if not self.visible:
+            return
+
+        self._ensure_items(style)
+        effective_enabled = self.enabled if enabled is None else enabled
+
+        if self.vertical:
+            self._layout_vertical(style, effective_enabled)
+        else:
+            self._layout_horizontal(style, effective_enabled)
 
     # VectorItem 用のラベル領域比率（use_property_split の 0.4 より小さく）
     LABEL_FACTOR: float = 0.22
 
-    def _draw_horizontal(
-        self, style: GPULayoutStyle, state: Optional[ItemRenderState], enabled: bool
-    ) -> None:
+    def _draw_horizontal(self, style: GPULayoutStyle, enabled: bool) -> None:
         """水平レイアウトで描画
 
         Blender UILayout 準拠:
@@ -168,9 +179,6 @@ class VectorItem(LayoutItem):
         - ウィジェットは残りの領域に配置（整列される）
         """
         item_height = style.scaled_item_height()
-        # Blender の vector サブ項目は連結されるため内部ギャップは 0
-        spacing = 0.0
-
         # 固定比率でラベル領域を確保（VectorItem 用: 約22%）
         if self.text:
             text_size = style.scaled_text_size()
@@ -194,6 +202,22 @@ class VectorItem(LayoutItem):
             )
             BLFDrawing.draw_text_clipped(text_x, text_y, display_text, text_color, text_size, clip_rect)
 
+        for child in self._layout_horizontal(style, enabled):
+            child.draw(style)
+
+    def _draw_vertical(self, style: GPULayoutStyle, enabled: bool) -> None:
+        """垂直レイアウトで描画"""
+        for child in self._layout_vertical(style, enabled):
+            child.draw(style)
+
+    def _layout_horizontal(self, style: GPULayoutStyle, enabled: bool) -> list[NumberItem]:
+        """水平レイアウトで子アイテムの位置を更新"""
+        item_height = style.scaled_item_height()
+        # Blender の vector サブ項目は連結されるため内部ギャップは 0
+        spacing = 0.0
+
+        if self.text:
+            label_region_width = self.width * self.LABEL_FACTOR
             widget_start_x = self.x + label_region_width
             remaining_width = self.width - label_region_width
         else:
@@ -202,45 +226,44 @@ class VectorItem(LayoutItem):
 
         # 残り幅を NumberItem で均等分割
         item_count = len(self._items)
+        if item_count <= 0:
+            return []
 
-        if item_count > 0:
-            item_width = (remaining_width - spacing * (item_count - 1)) / item_count
-            current_x = widget_start_x
+        remaining_width = max(0.0, remaining_width)
+        item_width = (remaining_width - spacing * (item_count - 1)) / item_count
+        current_x = widget_start_x
 
-            for i, item in enumerate(self._items):
-                # 位置とサイズを設定
-                item.x = current_x
-                item.y = self.y
-                item.width = item_width
-                item.height = item_height
-                item.enabled = enabled
+        for i, item in enumerate(self._items):
+            # 位置とサイズを設定
+            item.x = current_x
+            item.y = self.y
+            item.width = item_width
+            item.height = item_height
+            item.enabled = enabled
 
-                # 値を同期
-                if i < len(self.value):
-                    item.value = self.value[i]
+            # 値を同期
+            if i < len(self.value):
+                item.value = self.value[i]
 
-                # corners を設定（align=True スタイル: 端のみ角丸）
-                if item_count == 1:
-                    item.corners = self.corners
-                elif i == 0:
-                    # 最初の要素: 左側のみ角丸
-                    item.corners = (self.corners[0], self.corners[1], False, False)
-                elif i == item_count - 1:
-                    # 最後の要素: 右側のみ角丸
-                    item.corners = (False, False, self.corners[2], self.corners[3])
-                else:
-                    # 中間要素: 角丸なし
-                    item.corners = (False, False, False, False)
+            # corners を設定（align=True スタイル: 端のみ角丸）
+            if item_count == 1:
+                item.corners = self.corners
+            elif i == 0:
+                # 最初の要素: 左側のみ角丸
+                item.corners = (self.corners[0], self.corners[1], False, False)
+            elif i == item_count - 1:
+                # 最後の要素: 右側のみ角丸
+                item.corners = (False, False, self.corners[2], self.corners[3])
+            else:
+                # 中間要素: 角丸なし
+                item.corners = (False, False, False, False)
 
-                # 描画
-                item.draw(style, state)
+            current_x += item_width + spacing
 
-                current_x += item_width + spacing
+        return self._items
 
-    def _draw_vertical(
-        self, style: GPULayoutStyle, state: Optional[ItemRenderState], enabled: bool
-    ) -> None:
-        """垂直レイアウトで描画"""
+    def _layout_vertical(self, style: GPULayoutStyle, enabled: bool) -> list[NumberItem]:
+        """垂直レイアウトで子アイテムの位置を更新"""
         item_height = style.scaled_item_height()
         spacing = style.scaled_spacing()
         item_count = len(self._items)
@@ -271,10 +294,9 @@ class VectorItem(LayoutItem):
                 # 中間要素: 角丸なし
                 item.corners = (False, False, False, False)
 
-            # 描画
-            item.draw(style, state)
-
             current_y -= item_height + spacing
+
+        return self._items
 
     def get_child_items(self) -> list[LayoutItem]:
         """子ウィジェットを返す（イベント処理用）"""

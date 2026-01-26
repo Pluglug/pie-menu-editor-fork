@@ -6,11 +6,13 @@
 
 ---
 
-## 1. Vector のヒットエリア実装
+## 1. Vector のヒットエリア実装 ✅ 完了
 
-- [ ] VectorItem の子ウィジェット (NumberItem) に確実に hit する
-- [ ] vertical/horizontal 両方で当たり判定が崩れないことを確認
-- [ ] use_property_split のラベル領域は hit 対象外
+- [x] VectorItem の子ウィジェット (NumberItem) に確実に hit する
+- [x] vertical/horizontal 両方で当たり判定が崩れないことを確認
+- [x] use_property_split のラベル領域は hit 対象外
+
+> 完了日: 2026-01-26
 
 ### 変更候補
 - `ui/gpu/layout/interaction.py`

@@ -8,7 +8,7 @@ from __future__ import annotations
 from typing import Optional
 
 from ..style import Direction, Alignment, Size, BoxConstraints
-from ..items import LayoutItem
+from ..items import LayoutItem, VectorItem
 
 
 class LayoutFlowMixin:
@@ -937,6 +937,9 @@ class LayoutFlowMixin:
 
 
     def _update_hit_positions_recursive(self) -> None:
+        for element in self._elements:
+            if isinstance(element, VectorItem):
+                element.sync_child_layout(self.style, enabled=element.enabled)
         if self._hit_manager:
             self._hit_manager.update_positions(self.style)
         for element in self._elements:
