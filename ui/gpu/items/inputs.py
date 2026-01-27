@@ -24,13 +24,13 @@ def _scale_drag_step_for_units(step: float, subtype: str) -> float:
 
     if unit_category in {"LENGTH", "VELOCITY", "ACCELERATION"} and unit_settings.system != "NONE":
         scale = float(getattr(unit_settings, "scale_length", 1.0)) or 1.0
-        step = step / scale
+        step = step * scale
     elif unit_category in {"AREA", "POWER"} and unit_settings.system != "NONE":
         scale = float(getattr(unit_settings, "scale_length", 1.0)) or 1.0
-        step = step / (scale ** 2)
+        step = step * (scale ** 2)
     elif unit_category in {"VOLUME", "MASS"} and unit_settings.system != "NONE":
         scale = float(getattr(unit_settings, "scale_length", 1.0)) or 1.0
-        step = step / (scale ** 3)
+        step = step * (scale ** 3)
 
     if unit_category == "ROTATION" and unit_settings.system_rotation != "RADIANS":
         step = radians(step)
@@ -54,18 +54,21 @@ def _snap_value(value: float,
     unit_settings = _unit_settings_from_context()
 
     fac = 1.0
-    if unit_settings is not None and unit_settings.system != "NONE":
-        scale = float(getattr(unit_settings, "scale_length", 1.0)) or 1.0
-        if unit_category in {"LENGTH", "VELOCITY", "ACCELERATION"}:
-            fac = 1.0 / scale
-        elif unit_category in {"AREA", "POWER"}:
-            fac = 1.0 / (scale ** 2)
-        elif unit_category in {"VOLUME", "MASS"}:
-            fac = 1.0 / (scale ** 3)
+    if unit_settings is not None:
+        if unit_category == "ROTATION" and unit_settings.system_rotation != "RADIANS":
+            fac = radians(1.0)
+        elif unit_settings.system != "NONE":
+            scale = float(getattr(unit_settings, "scale_length", 1.0)) or 1.0
+            if unit_category in {"LENGTH", "VELOCITY", "ACCELERATION"}:
+                fac = 1.0 / scale
+            elif unit_category in {"AREA", "POWER"}:
+                fac = 1.0 / (scale ** 2)
+            elif unit_category in {"VOLUME", "MASS"}:
+                fac = 1.0 / (scale ** 3)
 
-    value_unit = value * fac
-    min_unit = min_val * fac
-    max_unit = max_val * fac
+    value_unit = value / fac
+    min_unit = min_val / fac
+    max_unit = max_val / fac
     softrange = max_unit - min_unit
     if softrange <= 0:
         return value
@@ -77,7 +80,7 @@ def _snap_value(value: float,
 
     if is_int:
         snap = 100 if small else 10
-        return round(value_unit / snap) * snap / fac
+        return round(value_unit / snap) * snap * fac
 
     if softrange < 2.10:
         snap = 0.01 if small else 0.1
@@ -86,7 +89,7 @@ def _snap_value(value: float,
     else:
         snap = 1.0 if small else 10.0
 
-    return round(value_unit / snap) * snap / fac
+    return round(value_unit / snap) * snap * fac
 
 if TYPE_CHECKING:
     from ..interactive import ItemRenderState
