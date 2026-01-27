@@ -119,10 +119,14 @@ class HitRect:
     on_click: Optional[Callable[[], None]] = None
     on_press: Optional[Callable[[float, float], None]] = None  # (mouse_x, mouse_y)
     on_release: Optional[Callable[[bool], None]] = None  # bool = inside
+    on_focus_enter: Optional[Callable[[], None]] = None
+    on_focus_leave: Optional[Callable[[], None]] = None
+    on_key: Optional[Callable[[Event], bool]] = None
 
     # ドラッグ
     draggable: bool = False
     on_drag: Optional[Callable[[float, float, float, float], None]] = None  # (dx, dy, abs_x, abs_y)
+    focusable: bool = False
 
     def contains(self, px: float, py: float) -> bool:
         """点が矩形内にあるかどうか"""
@@ -228,6 +232,7 @@ class HitTestManager:
         self._rects: list[HitRect] = []
         self._state = InteractionState()
         self._ui_state = UIState()  # 集中状態管理
+        self._focused_rect: Optional[HitRect] = None
 
     # パネル間ドラッグのグローバルロック
     _drag_owner_uid: Optional[str] = None
@@ -254,6 +259,11 @@ class HitTestManager:
     def pressed(self) -> Optional[HitRect]:
         """現在プレス中の HitRect"""
         return self._state.pressed
+
+    @property
+    def focused(self) -> Optional[HitRect]:
+        """現在フォーカス中の HitRect"""
+        return self._focused_rect
 
     @property
     def ui_state(self) -> UIState:
@@ -360,6 +370,8 @@ class HitTestManager:
                 self._state.hovered = None
             if self._state.pressed is rect:
                 self._state.pressed = None
+            if self._focused_rect is rect:
+                self.set_focus(None)
             # ドラッグ中の場合もクリア
             if self._state.dragging_rect is rect:
                 self._state.is_dragging = False
@@ -392,6 +404,7 @@ class HitTestManager:
 
         # UIState もリセット
         self._ui_state.clear()
+        self._focused_rect = None
         if self._panel_uid and self._drag_owner_uid == self._panel_uid:
             self._set_drag_owner_uid(None)
 
@@ -415,8 +428,23 @@ class HitTestManager:
         self._ui_state.clear()
         if preserve_hovered:
             self._ui_state.hovered_id = hovered_id
+        self._focused_rect = None
         if self._panel_uid and self._drag_owner_uid == self._panel_uid:
             self._set_drag_owner_uid(None)
+
+    def set_focus(self, rect: Optional[HitRect]) -> None:
+        """フォーカスを設定（変更時に enter/leave を呼ぶ）"""
+        if rect is self._focused_rect:
+            return
+
+        if self._focused_rect and self._focused_rect.on_focus_leave:
+            self._focused_rect.on_focus_leave()
+
+        self._focused_rect = rect
+        self._ui_state.focused_id = rect.state_key() if rect else None
+
+        if rect and rect.on_focus_enter:
+            rect.on_focus_enter()
 
     def _locked_by_other_panel(self) -> bool:
         if not self._drag_owner_uid:
@@ -487,6 +515,9 @@ class HitTestManager:
         self._state.mod_ctrl = bool(getattr(event, "ctrl", False))
         self._state.mod_alt = bool(getattr(event, "alt", False))
 
+        if self._handle_key_event(event):
+            return True
+
         if event.type == 'MOUSEMOVE':
             return self._handle_mouse_move(mouse_x, mouse_y)
 
@@ -538,7 +569,13 @@ class HitTestManager:
         """マウスプレスを処理"""
         hit = self.hit_test(x, y)
         if hit is None:
+            self.set_focus(None)
             return False
+
+        if hit.focusable:
+            self.set_focus(hit)
+        else:
+            self.set_focus(None)
 
         self._state.pressed = hit
         self._state.drag_start_x = x
@@ -583,6 +620,22 @@ class HitTestManager:
             self._set_drag_owner_uid(None)
 
         return True
+
+    def _handle_key_event(self, event: Event) -> bool:
+        """フォーカス中のキーイベントを処理"""
+        if self._focused_rect is None or not self._focused_rect.on_key:
+            return False
+
+        if event.type == 'TEXTINPUT':
+            return bool(self._focused_rect.on_key(event))
+
+        if event.value not in {'PRESS', 'REPEAT'}:
+            return False
+
+        if event.type in {'MOUSEMOVE', 'LEFTMOUSE', 'RIGHTMOUSE', 'MIDDLEMOUSE'}:
+            return False
+
+        return bool(self._focused_rect.on_key(event))
 
     # ─────────────────────────────────────────────────────────────────────────
     # ユーティリティ

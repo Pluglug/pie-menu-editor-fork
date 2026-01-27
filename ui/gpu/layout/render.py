@@ -11,6 +11,7 @@ from ..items import (
     ToggleItem,
     SliderItem,
     NumberItem,
+    TextInputItem,
     CheckboxItem,
     ColorItem,
     RadioGroupItem,
@@ -79,7 +80,7 @@ class LayoutRenderMixin:
                 element.draw()
             else:
                 # LayoutItem
-                if self._hit_manager and isinstance(element, (ButtonItem, ToggleItem, SliderItem, NumberItem, CheckboxItem, ColorItem, RadioGroupItem)):
+                if self._hit_manager and isinstance(element, (ButtonItem, ToggleItem, SliderItem, NumberItem, TextInputItem, CheckboxItem, ColorItem, RadioGroupItem)):
                     # インタラクティブなアイテムには状態を渡す
                     layout_key = self._get_layout_key_for_item(element)
                     state = self._hit_manager.get_render_state(layout_key.as_id(), element.enabled)

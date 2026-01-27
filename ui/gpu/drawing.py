@@ -1332,8 +1332,8 @@ class IconDrawing:
         shader = cls.get_image_shader()
 
         # DEBUG: 縦長問題の調査
-        if abs(width - height) > 0.01:
-            print(f"[IconDrawing] NON-SQUARE: w={width:.2f}, h={height:.2f}, diff={height-width:.2f}")
+        # if abs(width - height) > 0.01:
+        #     print(f"[IconDrawing] NON-SQUARE: w={width:.2f}, h={height:.2f}, diff={height-width:.2f}")
 
         # 頂点座標（左上から時計回り）
         # Blender の座標系: 左下原点、Y は上が正

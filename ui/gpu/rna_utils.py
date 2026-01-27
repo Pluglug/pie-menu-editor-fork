@@ -775,3 +775,109 @@ def format_numeric_value(value: float,
     int_digits = _integer_digits(value)
     prec_adj = max(0, min(UI_PRECISION_FLOAT_MAX, prec - int_digits))
     return f"{value:.{prec_adj}f}"
+
+
+def _eval_number_string(text: str) -> Optional[float]:
+    try:
+        return float(eval(text, {"__builtins__": {}}, {}))
+    except Exception:
+        try:
+            return float(text)
+        except Exception:
+            return None
+
+
+def _string_contains_unit(text: str) -> bool:
+    for ch in text:
+        if ch.isalpha():
+            return True
+        if ch in {"°", "'", "\""}:
+            return True
+    return False
+
+
+def _unscale_value_for_units(value: float, unit_settings, unit_category: str) -> float:
+    if unit_settings is None or unit_settings.system == "NONE":
+        return value
+    scale = float(unit_settings.scale_length) if getattr(unit_settings, "scale_length", 0.0) else 1.0
+    if unit_category in {"LENGTH", "VELOCITY", "ACCELERATION"}:
+        return value / scale
+    if unit_category in {"AREA", "POWER"}:
+        return value / (scale ** 2)
+    if unit_category in {"VOLUME", "MASS"}:
+        return value / (scale ** 3)
+    return value
+
+
+def parse_numeric_input(text: str,
+                        subtype: str = "NONE",
+                        *,
+                        is_int: bool = False) -> Optional[float]:
+    """入力文字列を Blender 互換で数値へ変換（単位/Factor/Percentage対応）。"""
+    text = (text or "").strip()
+    if text == "":
+        return 0.0
+
+    subtype = (subtype or "NONE").upper()
+    unit_category = _SUBTYPE_UNIT_CATEGORY.get(subtype)
+    unit_settings = _unit_settings_from_context()
+
+    if subtype == "FACTOR":
+        if text.endswith("%"):
+            value = _eval_number_string(text[:-1])
+            if value is None:
+                return None
+            value /= 100.0
+            return float(round(value)) if is_int else value
+        value = _eval_number_string(text)
+        if value is None:
+            return None
+        try:
+            display_type = bpy.context.preferences.system.factor_display_type
+        except Exception:
+            display_type = "FACTOR"
+        if display_type == "PERCENTAGE":
+            value /= 100.0
+        return float(round(value)) if is_int else value
+
+    if subtype == "PERCENTAGE":
+        if text.endswith("%"):
+            value = _eval_number_string(text[:-1])
+            if value is None:
+                return None
+            return float(round(value)) if is_int else value
+        value = _eval_number_string(text)
+        if value is None:
+            return None
+        return float(round(value)) if is_int else value
+
+    if unit_category and _should_use_units(unit_settings, unit_category):
+        if _string_contains_unit(text):
+            try:
+                from bpy.utils import units
+                unit_system = unit_settings.system if unit_settings else "NONE"
+                value = units.to_value(unit_system, unit_category, text)
+            except Exception:
+                return None
+            value = _unscale_value_for_units(value, unit_settings, unit_category)
+            return float(round(value)) if is_int else value
+
+        value = _eval_number_string(text)
+        if value is None:
+            return None
+
+        preferred_unit = _get_preferred_unit(unit_settings, unit_category)
+        if preferred_unit:
+            value = value * preferred_unit.scalar + preferred_unit.bias
+
+        if unit_category == "ROTATION" and unit_settings and unit_settings.system_rotation != "RADIANS":
+            from math import radians
+            value = radians(value)
+
+        value = _unscale_value_for_units(value, unit_settings, unit_category)
+        return float(round(value)) if is_int else value
+
+    value = _eval_number_string(text)
+    if value is None:
+        return None
+    return float(round(value)) if is_int else value

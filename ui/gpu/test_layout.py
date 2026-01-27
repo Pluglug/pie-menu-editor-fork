@@ -747,6 +747,9 @@ class TEST_OT_gpu_interactive(Operator):
             # 数値プロパティ（スライダー）
             layout.prop(context.scene.render, "resolution_percentage", slider=True)
 
+            # 文字列プロパティ（TextInput）
+            layout.prop(context.scene.render, "filepath", text="Output Path")
+
             # Enum プロパティ（展開表示）
             layout.prop(context.scene.render, "engine", expand=True)
 

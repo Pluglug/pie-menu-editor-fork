@@ -181,7 +181,8 @@ class GPUPanelMixin:
             if (event.type in self.gpu_close_on or
                     (self.gpu_debug_hittest_toggle_key and
                      event.type == self.gpu_debug_hittest_toggle_key)):
-                key_targets_panel = self._is_panel_target(context, event)
+                if not self._has_focused_input():
+                    key_targets_panel = self._is_panel_target(context, event)
 
         # gpu_close_on で指定されたイベントで閉じる
         if key_targets_panel and event.type in self.gpu_close_on and event.value == 'PRESS':
@@ -331,6 +332,12 @@ class GPUPanelMixin:
             mouse_y = event.mouse_region_y
 
         return self._manager.contains_point(mouse_x, mouse_y)
+
+    def _has_focused_input(self) -> bool:
+        layout = self._layout
+        if layout and layout.hit_manager and layout.hit_manager.focused:
+            return True
+        return False
 
     def _rebuild_layout(self, context: 'Context', region: Optional['Region'] = None) -> None:
         """GPULayout を再構築し、draw_panel() を呼び出す

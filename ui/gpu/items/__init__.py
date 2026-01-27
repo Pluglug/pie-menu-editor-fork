@@ -7,6 +7,7 @@ from __future__ import annotations
 
 from .base import LayoutItem
 from .text import LabelItem, SeparatorItem, PropDisplayItem
+from .text_input import TextInputItem, TextEditState
 from .buttons import ButtonItem, ToggleItem, CheckboxItem, RadioOption, RadioGroupItem
 from .containers import BoxItem
 from .inputs import SliderItem, NumberItem, ColorItem
@@ -19,6 +20,8 @@ __all__ = [
     "LabelItem",
     "SeparatorItem",
     "PropDisplayItem",
+    "TextInputItem",
+    "TextEditState",
     "ButtonItem",
     "ToggleItem",
     "CheckboxItem",

@@ -10,6 +10,8 @@ from math import isfinite, radians
 from typing import TYPE_CHECKING, Callable, Optional
 
 from ..style import GPULayoutStyle, WidgetType
+from ..rna_utils import UI_PRECISION_FLOAT_MAX, parse_numeric_input
+from .text_input import TextEditState
 from ..drawing import GPUDrawing, BLFDrawing
 from .base import LayoutItem
 
@@ -124,6 +126,8 @@ class SliderItem(LayoutItem):
     # 状態（layout 側から設定される）
     _hovered: bool = field(default=False, repr=False)
     _dragging: bool = field(default=False, repr=False)
+    _editing: bool = field(default=False, repr=False)
+    _edit_state: Optional[TextEditState] = field(default=None, repr=False)
 
     def calc_size(self, style: GPULayoutStyle) -> tuple[float, float]:
         """スライダーのサイズを計算"""
@@ -164,6 +168,105 @@ class SliderItem(LayoutItem):
     def set_value(self, value: float) -> None:
         """ValueWidget Protocol 準拠"""
         self.value = max(self.min_val, min(self.max_val, value))
+
+    def begin_text_edit(self) -> None:
+        if not self.enabled:
+            return
+        edit_text = self._get_edit_text()
+        self._editing = True
+        self._edit_state = TextEditState.begin(edit_text, select_all=True)
+
+    def end_text_edit(self, *, confirm: bool) -> None:
+        if not getattr(self, "_editing", False) or getattr(self, "_edit_state", None) is None:
+            return
+        if confirm:
+            new_value = parse_numeric_input(
+                self._edit_state.text,
+                self.subtype,
+                is_int=self.is_int,
+            )
+            if new_value is not None:
+                new_value = max(self.min_val, min(self.max_val, new_value))
+                if new_value != self.value:
+                    self.value = new_value
+                    if self.on_change:
+                        self.on_change(new_value)
+        self._editing = False
+        self._edit_state = None
+
+    def handle_key_event(self, event) -> bool:
+        if not getattr(self, "_editing", False) or getattr(self, "_edit_state", None) is None:
+            return False
+        if event.type in {'RET', 'NUMPAD_ENTER'}:
+            self.end_text_edit(confirm=True)
+            return True
+        if event.type == 'ESC':
+            self.end_text_edit(confirm=False)
+            return True
+        handled = self._edit_state.handle_key_event(event)
+        return handled
+
+    def _get_edit_text(self) -> str:
+        from ..rna_utils import format_numeric_value
+
+        if self.is_int:
+            return str(int(round(self.value)))
+        text = format_numeric_value(
+            self.value,
+            self.subtype,
+            UI_PRECISION_FLOAT_MAX,
+            step=self.step,
+            max_value=self.max_val,
+        )
+        if "." in text:
+            text = text.rstrip("0").rstrip(".")
+        return text
+
+    def _ensure_cursor_visible(self, style: GPULayoutStyle) -> None:
+        if getattr(self, "_edit_state", None) is None:
+            return
+        text_size = style.scaled_text_size()
+        cursor_x, _ = BLFDrawing.get_text_dimensions(
+            self._edit_state.text[:self._edit_state.cursor], text_size
+        )
+        padding = style.scaled_padding()
+        area_width = max(0.0, self.width - padding * 2)
+        if area_width <= 0:
+            return
+        if cursor_x - self._edit_state.scroll_x > area_width - 2:
+            self._edit_state.scroll_x = cursor_x - (area_width - 2)
+        elif cursor_x - self._edit_state.scroll_x < 0:
+            self._edit_state.scroll_x = cursor_x
+
+    def _draw_text_edit(self, style: GPULayoutStyle, wcol, enabled: bool) -> None:
+        if getattr(self, "_edit_state", None) is None:
+            return
+
+        self._ensure_cursor_visible(style)
+        text_value = self._edit_state.text
+        text_size = style.scaled_text_size()
+        text_h = BLFDrawing.get_text_dimensions("Wg", text_size)[1]
+        text_y = self.y - (self.height + text_h) / 2
+        padding = style.scaled_padding()
+        text_x = self.x + padding - self._edit_state.scroll_x
+        clip_rect = BLFDrawing.calc_clip_rect(
+            self.x + padding, self.y, self.width - padding * 2, self.height, 0
+        )
+
+        if self._edit_state.has_selection():
+            sel_start, sel_end = self._edit_state.selection_range()
+            start_w, _ = BLFDrawing.get_text_dimensions(text_value[:sel_start], text_size)
+            end_w, _ = BLFDrawing.get_text_dimensions(text_value[:sel_end], text_size)
+            sel_x = text_x + start_w
+            sel_w = max(1.0, end_w - start_w)
+            GPUDrawing.draw_rect(sel_x, self.y, sel_w, self.height, style.highlight_color)
+
+        text_color = wcol.text_sel if enabled else tuple(c * 0.5 for c in wcol.text_sel[:3]) + (wcol.text_sel[3],)
+        BLFDrawing.draw_text_clipped(text_x, text_y, text_value, text_color, text_size, clip_rect)
+
+        cursor_w, _ = BLFDrawing.get_text_dimensions(text_value[:self._edit_state.cursor], text_size)
+        cursor_x = text_x + cursor_w
+        GPUDrawing.draw_rect(cursor_x, self.y, max(1.0, style.ui_scale(1)), self.height, text_color)
 
     def set_value_from_position(self,
                                 x: float,
@@ -216,13 +319,14 @@ class SliderItem(LayoutItem):
         # 状態の判定
         hovered = state.hovered if state else self._hovered
         dragging = state.pressed if state else self._dragging
+        editing = getattr(self, "_editing", False)
         enabled = state.enabled if state else self.enabled
 
         # 角丸半径を計算（Blender 準拠: roundness × height × 0.5）
         radius = int(wcol.roundness * self.height * 0.5)
 
         # === 1. 背景描画 ===
-        if dragging:
+        if editing or dragging:
             bg_color = wcol.inner_sel
         elif hovered:
             # ホバー時は inner を少し明るく
@@ -486,6 +590,7 @@ class NumberItem(LayoutItem):
         # 状態の判定
         hovered = state.hovered if state else self._hovered
         dragging = state.pressed if state else self._dragging
+        editing = getattr(self, "_editing", False)
         enabled = state.enabled if state else self.enabled
 
         # 角丸半径を計算（Blender 準拠: roundness × height × 0.5）
@@ -509,7 +614,7 @@ class NumberItem(LayoutItem):
         )
 
         # === 2. アウトライン描画 ===
-        base_outline = wcol.outline_sel if dragging else wcol.outline
+        base_outline = wcol.outline_sel if (editing or dragging) else wcol.outline
         outline_color = base_outline if enabled else tuple(c * 0.5 for c in base_outline[:3]) + (base_outline[3],)
         GPUDrawing.draw_rounded_rect_outline(
             self.x, self.y, self.width, self.height,
@@ -517,6 +622,10 @@ class NumberItem(LayoutItem):
             line_width=style.line_width(),
             corners=self.corners
         )
+
+        if editing and getattr(self, "_edit_state", None) is not None:
+            self._draw_text_edit(style, wcol, enabled)
+            return
 
         # === 3. 増減ボタン描画（オプション） ===
         button_width = 0

@@ -136,7 +136,7 @@ class LayoutPropMixin:
             - Int/Float → NumberItem / SliderItem
             - Float[3-4] (COLOR) → ColorItem
             - Enum → RadioGroupItem (expand=True) / ラベル表示
-            - String → ラベル表示（TextInputItem は未実装）
+            - String → TextInputItem
 
         使用例:
             # Boolean プロパティ

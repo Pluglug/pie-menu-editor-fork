@@ -14,6 +14,7 @@ from ..items import (
     ToggleItem,
     SliderItem,
     NumberItem,
+    TextInputItem,
     CheckboxItem,
     ColorItem,
     RadioGroupItem,
@@ -31,6 +32,9 @@ class LayoutInteractionMixin:
 
     def _register_number_item(self, item: NumberItem, layout_key, tag: str) -> HitRect:
         manager = self._ensure_hit_manager()
+        drag_threshold = float(self.style.ui_scale(3))
+        drag_distance = 0.0
+        drag_started = False
 
         def on_hover_enter():
             item._hovered = True
@@ -39,9 +43,21 @@ class LayoutInteractionMixin:
             item._hovered = False
 
         def on_drag_start(mouse_x: float, mouse_y: float):
-            item._dragging = True
+            nonlocal drag_distance, drag_started
+            drag_distance = 0.0
+            drag_started = False
+            item._dragging = False
+            if hasattr(item, "end_text_edit"):
+                item.end_text_edit(confirm=True)
 
         def on_drag(dx: float, dy: float, mouse_x: float, mouse_y: float):
+            nonlocal drag_distance, drag_started
+            drag_distance += abs(dx) + abs(dy)
+            if not drag_started and drag_distance < drag_threshold:
+                return
+            if not drag_started:
+                drag_started = True
+                item._dragging = True
             # ドラッグ移動量から値を更新
             state = manager.state
             item.set_value_from_delta(
@@ -52,7 +68,21 @@ class LayoutInteractionMixin:
             )
 
         def on_drag_end(inside: bool):
+            nonlocal drag_started
             item._dragging = False
+            if not drag_started and inside:
+                if hasattr(item, "begin_text_edit"):
+                    item.begin_text_edit()
+            drag_started = False
+
+        def on_focus_leave():
+            if hasattr(item, "end_text_edit"):
+                item.end_text_edit(confirm=True)
+
+        def on_key(event):
+            if hasattr(item, "handle_key_event"):
+                return item.handle_key_event(event)
+            return False
 
         rect = HitRect(
             x=item.x,
@@ -67,6 +97,9 @@ class LayoutInteractionMixin:
             on_press=on_drag_start,
             on_drag=on_drag,
             on_release=on_drag_end,
+            on_focus_leave=on_focus_leave,
+            on_key=on_key,
+            focusable=True,
         )
         rect.layout_key = layout_key
         manager.register(rect)
@@ -149,7 +182,7 @@ class LayoutInteractionMixin:
                 self._register_number_item(child, child_key, tag)
             return
 
-        if not isinstance(item, (ButtonItem, ToggleItem, SliderItem, NumberItem, CheckboxItem, ColorItem, RadioGroupItem, MenuButtonItem)):
+        if not isinstance(item, (ButtonItem, ToggleItem, SliderItem, NumberItem, TextInputItem, CheckboxItem, ColorItem, RadioGroupItem, MenuButtonItem)):
             return
 
         manager = self._ensure_hit_manager()
@@ -184,6 +217,42 @@ class LayoutInteractionMixin:
             rect.item_id = str(id(item))
             # ColorItem用のフラグを設定（update_positions()で使用）
             rect._is_color_bar = True
+        elif isinstance(item, TextInputItem):
+            def on_hover_enter():
+                item._hovered = True
+
+            def on_hover_leave():
+                item._hovered = False
+
+            def on_press(mouse_x: float, mouse_y: float):
+                if item._editing:
+                    item.set_cursor_from_mouse(mouse_x, self.style)
+                else:
+                    item.begin_editing(select_all=True)
+
+            def on_focus_leave():
+                item.end_editing(confirm=True)
+
+            def on_key(event):
+                return item.handle_key_event(event)
+
+            rect = HitRect(
+                x=item.x,
+                y=item.y,
+                width=item.width,
+                height=item.height,
+                item=item,
+                tag=item.text or "text",
+                on_hover_enter=on_hover_enter,
+                on_hover_leave=on_hover_leave,
+                on_press=on_press,
+                on_focus_leave=on_focus_leave,
+                on_key=on_key,
+                focusable=True,
+            )
+            rect.layout_key = layout_key
+            manager.register(rect)
+            rect.item_id = str(id(item))
         elif isinstance(item, RadioGroupItem):
             # ラジオボタングループ: ホバーとクリックで個々のボタンを判定
             # style への参照をクロージャでキャプチャ

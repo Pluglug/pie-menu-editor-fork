@@ -25,6 +25,7 @@ from .items import (
     RadioGroupItem,
     RadioOption,
     MenuButtonItem,
+    TextInputItem,
 )
 
 
@@ -369,6 +370,20 @@ class WidgetFactory:
             enabled=ctx.enabled and ctx.active,
         )
 
+    @staticmethod
+    def _create_text(info: PropertyInfo, value: Any, ctx: WidgetContext) -> TextInputItem:
+        def on_confirm(new_value: str):
+            if ctx.set_value:
+                ctx.set_value(bpy.context, new_value)
+
+        return TextInputItem(
+            value=str(value) if value is not None else "",
+            text="" if ctx.icon_only else ctx.text,
+            max_length=0,
+            on_confirm=on_confirm,
+            enabled=ctx.enabled and ctx.active,
+        )
+
     # ─────────────────────────────────────────────────────────────────────────
     # Creator Registry
     # ─────────────────────────────────────────────────────────────────────────
@@ -386,5 +401,5 @@ WidgetFactory._creators = {
     WidgetHint.VECTOR: WidgetFactory._create_vector,
     WidgetHint.RADIO: WidgetFactory._create_radio,
     WidgetHint.MENU: WidgetFactory._create_menu,
-    # TEXT は後で追加
+    WidgetHint.TEXT: WidgetFactory._create_text,
 }
