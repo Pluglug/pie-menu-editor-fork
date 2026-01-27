@@ -43,16 +43,41 @@ def _snap_value(value: float,
                 min_val: float,
                 max_val: float,
                 is_int: bool,
-                small: bool) -> float:
+                small: bool,
+                subtype: str) -> float:
     if not isfinite(min_val) or not isfinite(max_val):
         return value
-    softrange = max_val - min_val
+
+    from ..rna_utils import _SUBTYPE_UNIT_CATEGORY, _unit_settings_from_context
+
+    unit_category = _SUBTYPE_UNIT_CATEGORY.get((subtype or "NONE").upper())
+    unit_settings = _unit_settings_from_context()
+
+    fac = 1.0
+    if unit_settings is not None and unit_settings.system != "NONE":
+        scale = float(getattr(unit_settings, "scale_length", 1.0)) or 1.0
+        if unit_category in {"LENGTH", "VELOCITY", "ACCELERATION"}:
+            fac = 1.0 / scale
+        elif unit_category in {"AREA", "POWER"}:
+            fac = 1.0 / (scale ** 2)
+        elif unit_category in {"VOLUME", "MASS"}:
+            fac = 1.0 / (scale ** 3)
+
+    value_unit = value * fac
+    min_unit = min_val * fac
+    max_unit = max_val * fac
+    softrange = max_unit - min_unit
     if softrange <= 0:
         return value
 
+    if softrange >= 21.0:
+        if not (unit_category == "ROTATION" and unit_settings and
+                getattr(unit_settings, "system_rotation", "RADIANS") != "RADIANS"):
+            softrange = 20.0
+
     if is_int:
         snap = 100 if small else 10
-        return round(value / snap) * snap
+        return round(value_unit / snap) * snap / fac
 
     if softrange < 2.10:
         snap = 0.01 if small else 0.1
@@ -61,7 +86,7 @@ def _snap_value(value: float,
     else:
         snap = 1.0 if small else 10.0
 
-    return round(value / snap) * snap
+    return round(value_unit / snap) * snap / fac
 
 if TYPE_CHECKING:
     from ..interactive import ItemRenderState
@@ -163,6 +188,7 @@ class SliderItem(LayoutItem):
                 max_val=self.max_val,
                 is_int=self.is_int,
                 small=shift,
+                subtype=self.subtype,
             )
         if self.is_int:
             new_value = round(new_value)
@@ -410,6 +436,7 @@ class NumberItem(LayoutItem):
                 max_val=self.max_val,
                 is_int=self.is_int,
                 small=shift,
+                subtype=self.subtype,
             )
         if self.is_int:
             new_value = round(new_value)

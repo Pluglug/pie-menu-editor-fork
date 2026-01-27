@@ -501,6 +501,14 @@ UI_PRECISION_FLOAT_MAX = 6
 UI_PRECISION_FLOAT_SCALE = 0.01
 
 
+@dataclass(frozen=True)
+class _PreferredUnitDef:
+    scalar: float
+    bias: float
+    suffix: str
+    no_space: bool = False
+
+
 _SUBTYPE_UNIT_CATEGORY: dict[str, str] = {
     "ANGLE": "ROTATION",
     "TRANSLATION": "LENGTH",
@@ -527,6 +535,94 @@ _SUBTYPE_UNIT_CATEGORY: dict[str, str] = {
     "EULER": "ROTATION",
     "AXISANGLE": "ROTATION",
 }
+
+
+_PREFERRED_LENGTH_UNITS: dict[str, _PreferredUnitDef] = {
+    "KILOMETERS": _PreferredUnitDef(1000.0, 0.0, "km"),
+    "HECTOMETERS": _PreferredUnitDef(100.0, 0.0, "hm"),
+    "DEKAMETERS": _PreferredUnitDef(10.0, 0.0, "dam"),
+    "METERS": _PreferredUnitDef(1.0, 0.0, "m"),
+    "DECIMETERS": _PreferredUnitDef(0.1, 0.0, "dm"),
+    "CENTIMETERS": _PreferredUnitDef(0.01, 0.0, "cm"),
+    "MILLIMETERS": _PreferredUnitDef(0.001, 0.0, "mm"),
+    "MICROMETERS": _PreferredUnitDef(1e-6, 0.0, "um"),
+    "NANOMETERS": _PreferredUnitDef(1e-9, 0.0, "nm"),
+    "PICOMETERS": _PreferredUnitDef(1e-12, 0.0, "pm"),
+    "MILES": _PreferredUnitDef(1609.344, 0.0, "mi"),
+    "FURLONGS": _PreferredUnitDef(201.168, 0.0, "fur"),
+    "CHAINS": _PreferredUnitDef(20.1168, 0.0, "ch"),
+    "YARDS": _PreferredUnitDef(0.9144, 0.0, "yd"),
+    "FEET": _PreferredUnitDef(0.3048, 0.0, "ft"),
+    "INCHES": _PreferredUnitDef(0.0254, 0.0, "in"),
+    "THOU": _PreferredUnitDef(0.0000254, 0.0, "thou"),
+}
+
+_PREFERRED_MASS_UNITS: dict[str, _PreferredUnitDef] = {
+    "TONNES": _PreferredUnitDef(1000.0, 0.0, "t"),
+    "QUINTALS": _PreferredUnitDef(100.0, 0.0, "ql"),
+    "KILOGRAMS": _PreferredUnitDef(1.0, 0.0, "kg"),
+    "HECTOGRAMS": _PreferredUnitDef(0.1, 0.0, "hg"),
+    "DEKAGRAMS": _PreferredUnitDef(0.01, 0.0, "dag"),
+    "GRAMS": _PreferredUnitDef(0.001, 0.0, "g"),
+    "MILLIGRAMS": _PreferredUnitDef(1e-6, 0.0, "mg"),
+    "CENTUM_WEIGHTS": _PreferredUnitDef(45.359237, 0.0, "cwt"),
+    "STONES": _PreferredUnitDef(6.35029318, 0.0, "st"),
+    "POUNDS": _PreferredUnitDef(0.45359237, 0.0, "lb"),
+    "OUNCES": _PreferredUnitDef(0.028349523125, 0.0, "oz"),
+}
+
+_PREFERRED_TIME_UNITS: dict[str, _PreferredUnitDef] = {
+    "DAYS": _PreferredUnitDef(86400.0, 0.0, "d"),
+    "HOURS": _PreferredUnitDef(3600.0, 0.0, "h"),
+    "MINUTES": _PreferredUnitDef(60.0, 0.0, "min"),
+    "SECONDS": _PreferredUnitDef(1.0, 0.0, "s"),
+    "MILLISECONDS": _PreferredUnitDef(0.001, 0.0, "ms"),
+    "MICROSECONDS": _PreferredUnitDef(0.000001, 0.0, "us"),
+}
+
+_PREFERRED_TEMPERATURE_UNITS: dict[str, _PreferredUnitDef] = {
+    "KELVIN": _PreferredUnitDef(1.0, 0.0, "K", no_space=True),
+    "CELSIUS": _PreferredUnitDef(1.0, 273.15, "C", no_space=True),
+    "FAHRENHEIT": _PreferredUnitDef(0.555555555555, 459.67, "F", no_space=True),
+}
+
+
+def _get_preferred_unit(unit_settings, unit_category: str | None) -> Optional[_PreferredUnitDef]:
+    if unit_settings is None or unit_category is None:
+        return None
+
+    unit_id = None
+    if unit_category == "LENGTH":
+        unit_id = getattr(unit_settings, "length_unit", None)
+    elif unit_category == "MASS":
+        unit_id = getattr(unit_settings, "mass_unit", None)
+    elif unit_category in {"TIME", "TIME_ABSOLUTE"}:
+        unit_id = getattr(unit_settings, "time_unit", None)
+    elif unit_category in {"TEMPERATURE", "COLOR_TEMPERATURE"}:
+        unit_id = getattr(unit_settings, "temperature_unit", None)
+
+    if not isinstance(unit_id, str) or unit_id == "ADAPTIVE":
+        return None
+
+    if unit_category == "LENGTH":
+        return _PREFERRED_LENGTH_UNITS.get(unit_id)
+    if unit_category == "MASS":
+        return _PREFERRED_MASS_UNITS.get(unit_id)
+    if unit_category in {"TIME", "TIME_ABSOLUTE"}:
+        return _PREFERRED_TIME_UNITS.get(unit_id)
+    if unit_category in {"TEMPERATURE", "COLOR_TEMPERATURE"}:
+        return _PREFERRED_TEMPERATURE_UNITS.get(unit_id)
+    return None
+
+
+def _format_preferred_unit(value: float, prec: int, unit_def: _PreferredUnitDef) -> str:
+    value_conv = (value / unit_def.scalar) - unit_def.bias
+    text = f"{value_conv:.{prec}f}"
+    if prec > 0:
+        text = text.rstrip("0").rstrip(".")
+    if unit_def.no_space:
+        return f"{text}{unit_def.suffix}"
+    return f"{text} {unit_def.suffix}"
 
 
 def _integer_digits(value: float) -> int:
@@ -662,11 +758,14 @@ def format_numeric_value(value: float,
 
     # Units
     if _should_use_units(unit_settings, unit_category):
+        preferred_unit = _get_preferred_unit(unit_settings, unit_category)
+        value_scaled = _scale_value_for_units(value, unit_settings, unit_category)
+        if preferred_unit:
+            return _format_preferred_unit(value_scaled, prec, preferred_unit)
         unit_system = unit_settings.system
         split_unit = bool(getattr(unit_settings, "use_separate", False))
         try:
             from bpy.utils import units
-            value_scaled = _scale_value_for_units(value, unit_settings, unit_category)
             return units.to_string(unit_system, unit_category, value_scaled,
                                    precision=prec, split_unit=split_unit)
         except Exception:

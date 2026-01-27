@@ -30,7 +30,7 @@
 - [x] Shift/Ctrl/Alt など修飾キー時の倍率調整
 - [x] unit のスケール差（length, angle など）を反映
 
-> 実装日: 2026-01-26（実機比較はこれから）
+> 実装日: 2026-01-26（Ctrl スナップ調整を追加、実機比較はこれから）
 
 ### 参考
 - Blender: `ui_get_but_step_unit()`
@@ -59,11 +59,13 @@
 
 ---
 
-## 4. preferred unit (length_unit など) 対応
+## 4. preferred unit (length_unit など) 対応 ✅ 実装
 
-- [ ] `unit_settings.length_unit` / `mass_unit` / `time_unit` / `temperature_unit` を反映
-- [ ] 表示用の preferred unit を選択可能にする
-- [ ] `bpy.utils.units.to_string()` では拾えないため自前の補正が必要
+- [x] `unit_settings.length_unit` / `mass_unit` / `time_unit` / `temperature_unit` を反映
+- [x] 表示用の preferred unit を選択可能にする
+- [x] `bpy.utils.units.to_string()` では拾えないため自前の補正が必要
+
+> 実装日: 2026-01-27（preferred unit の強制表示）
 
 ### 参考
 - Blender: `BKE_unit_value_as_string()` / `PreferredUnits`
