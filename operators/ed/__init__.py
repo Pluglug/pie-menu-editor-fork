@@ -69,6 +69,11 @@ from .keymap import (
     PME_OT_pm_hotkey_convert,
 )
 
+# GPU Layout operators
+from .gpu_ops import (
+    PME_OT_gpu_enum_select,
+)
+
 __all__ = [
     # Tags
     "PME_OT_tags_filter",
@@ -110,4 +115,6 @@ __all__ = [
     "PME_OT_keymap_add",
     "PME_OT_pm_open_mode_select",
     "PME_OT_pm_hotkey_convert",
+    # GPU Layout
+    "PME_OT_gpu_enum_select",
 ]

@@ -223,6 +223,10 @@ debug/
 # Aider
 .aider*
 
+# Temporary files
+tmpclaude-*
+nul
+
 # ----------------------------------------------------------------------------------------
 # Development Tools
 # ----------------------------------------------------------------------------------------
@@ -256,3 +260,7 @@ debug.log
 # Backup exports (user data, not source)
 backups/
 exports/
+
+# GPU icons (generated from Blender SVG sources)
+# Regenerate with: python tools/blender_icon_fetch.py
+ui/gpu/icons/
