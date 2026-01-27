@@ -2,7 +2,7 @@
 bl_info = {
     "name": "Pie Menu Editor Fork (PME2 Experimental)",
     "author": "pluglug (maintainer), original author: roaoao",
-    "version": (2, 0, 0, 5),
+    "version": (2, 0, 0, 6),
     "blender": (4, 5, 0),
     "warning": "Alpha build. Use in separate portable Blender. May break PME prefs.",
     "tracker_url": "https://github.com/Pluglug/pie-menu-editor-fork/issues",
