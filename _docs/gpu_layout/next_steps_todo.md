@@ -83,3 +83,39 @@
 - [ ] unit_settings の切替（metric/imperial + split + preferred unit）
 
 ---
+
+## 6. Drag キャンセル (右クリック/ESC)
+
+- [ ] Number/Slider ドラッグ中に右クリック or ESC で変更をキャンセル
+- [ ] キャンセル時はドラッグ開始時の値へ復帰
+- [ ] ドラッグ中の on_change を抑制しない（Blender と同様に即時反映 + キャンセルで巻き戻し）
+
+### 変更候補
+- `ui/gpu/interactive.py`
+- `ui/gpu/layout/interaction.py`
+- `ui/gpu/items/inputs.py`
+
+### 受け入れ基準
+- ドラッグ中の RMB/ESC で値が元に戻る
+- RMB/ESC 以外のリリースは確定
+
+---
+
+## 7. マルチ編集 (align=True の縦ドラッグ / Alt オフセット)
+
+- [ ] align=True 列で縦ドラッグ → 複数 Number/Slider を選択
+- [ ] 選択後、横ドラッグで一括変更
+- [ ] 横ドラッグせずに離すと一括テキスト編集を開始
+- [ ] Alt ドラッグ時に選択オブジェクト全体へオフセット適用
+
+### 変更候補
+- `ui/gpu/interactive.py`
+- `ui/gpu/layout/interaction.py`
+- `ui/gpu/items/inputs.py`
+- `ui/gpu/layout/flow.py` (align グループ/領域判定)
+
+### 受け入れ基準
+- Blender と同様に複数フィールドを選択・一括編集可能
+- Alt で選択オブジェクトへ同一オフセットが適用される
+
+---
