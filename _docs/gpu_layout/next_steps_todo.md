@@ -6,6 +6,13 @@
 
 ---
 
+## 0. キー入力スコープのメモ (2026-01-27)
+
+- パネル外のキーは PASS_THROUGH を基本にする（hover/drag 時のみ処理）
+- 次段階: focus/active 状態を導入して TextInput へルーティング
+
+---
+
 ## 1. Vector のヒットエリア実装 ✅ 完了
 
 - [x] VectorItem の子ウィジェット (NumberItem) に確実に hit する
@@ -56,6 +63,25 @@
 ### 受け入れ基準
 - Enter/ESC で確定/キャンセル
 - `1m 20cm` のような入力が有効
+
+### 調査メモ (Blender)
+- Text edit 本体: `source/blender/editors/interface/interface_handlers.cc`
+  - `ui_textedit_begin/end`, `ui_textedit_insert_buf`, `ui_textedit_move`, `ui_textedit_delete` で
+    カーソル/選択/Undo/IME を処理。
+- 数値入力パース: `source/blender/editors/interface/interface.cc`
+  - `button_string_eval_number()` → `ui_number_from_string_*()` を分岐（units/factor/percentage）。
+- 単位付き数値パース: `source/blender/editors/util/numinput.cc`
+  - `user_string_to_number()` は **ユニット付き文字列**のみ `BKE_unit_replace_string` を使い、
+    **ユニット無し**は `BKE_unit_apply_preferred_unit()` を適用後に `unit_scale` で戻す。
+- Python API: `source/blender/python/intern/bpy_utils_units.cc`
+  - `bpy.utils.units.to_value(system, category, str_input, str_ref_unit=None)` が
+    `BKE_unit_replace_string` + Python eval を内包（ユニット付きの式入力に有効）。
+
+### IME について
+- Blender C 実装は `WM_IME_COMPOSITE_*` と `wmIMEData` に依存（`interface_handlers.cc`）。
+- Python からは IME composition data を直接扱えないため、
+  **確定文字列 (`TEXTINPUT`) のみ対応**に留まる見込み。
+  変換中の下線表示や候補ウィンドウ位置追従は C 側 API 追加が必要。
 
 ---
 

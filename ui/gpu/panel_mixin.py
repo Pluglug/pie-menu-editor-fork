@@ -176,14 +176,22 @@ class GPUPanelMixin:
             self._cancel_impl(context)
             return {'CANCELLED'}
 
+        key_targets_panel = False
+        if event.value == 'PRESS':
+            if (event.type in self.gpu_close_on or
+                    (self.gpu_debug_hittest_toggle_key and
+                     event.type == self.gpu_debug_hittest_toggle_key)):
+                key_targets_panel = self._is_panel_target(context, event)
+
         # gpu_close_on で指定されたイベントで閉じる
-        if event.type in self.gpu_close_on and event.value == 'PRESS':
+        if key_targets_panel and event.type in self.gpu_close_on and event.value == 'PRESS':
             self._cancel_impl(context)
             return {'CANCELLED'}
 
         if (self.gpu_debug_hittest_toggle_key and
                 event.type == self.gpu_debug_hittest_toggle_key and
-                event.value == 'PRESS'):
+                event.value == 'PRESS' and
+                key_targets_panel):
             # NOTE: #117 global debug toggle is deferred to avoid premature design coupling.
             self._debug_hittest = not self._debug_hittest
             return {'RUNNING_MODAL'}
@@ -300,6 +308,29 @@ class GPUPanelMixin:
                 if r.type == 'WINDOW':
                     return r
         return None
+
+    def _is_panel_target(self, context: 'Context', event: 'Event') -> bool:
+        """キー入力を処理すべきパネル対象かどうか"""
+        if not self._manager:
+            return False
+
+        layout = self._layout
+        if layout and layout.hit_manager and layout.hit_manager.state.is_dragging:
+            return True
+
+        region = self._get_window_region(context)
+        if region is not None:
+            mouse_x = event.mouse_x - region.x
+            mouse_y = event.mouse_y - region.y
+            if (mouse_x < 0 or mouse_y < 0 or
+                    mouse_x > region.width or mouse_y > region.height):
+                mouse_x = event.mouse_region_x
+                mouse_y = event.mouse_region_y
+        else:
+            mouse_x = event.mouse_region_x
+            mouse_y = event.mouse_region_y
+
+        return self._manager.contains_point(mouse_x, mouse_y)
 
     def _rebuild_layout(self, context: 'Context', region: Optional['Region'] = None) -> None:
         """GPULayout を再構築し、draw_panel() を呼び出す
