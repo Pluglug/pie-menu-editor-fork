@@ -22,18 +22,18 @@ def draw_with_support(self, context):
     sub = row.row()
     sub.alignment = 'LEFT'
     sub.label(
-        text="PME2 is in the works — stay tuned!",
+        text="Pie Menu Editor 2 is now available!",
         icon='INFO',
     )
-    # Right: support button
+    # Right: upgrade button
     sub = row.row()
     sub.alignment = 'RIGHT'
     op = sub.operator(
         "wm.url_open",
-        text="Support on Ko-fi",
+        text="Upgrade to PME2",
         icon='FUND',
     )
-    op.url = "https://ko-fi.com/Pluglug"
+    op.url = "https://pluglug.gumroad.com/l/pie-menu-editor-fork"
 
     # Call original draw
     if _original_draw is not None:

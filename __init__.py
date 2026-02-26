@@ -4,8 +4,8 @@ bl_info = {
     "version": (1, 19, 2),
     "blender": (3, 2, 0),
     "tracker_url": "http://blenderartists.org/forum/showthread.php?392910",
-    # "wiki_url": (
-    #     "https://archive.blender.org/wiki/2015/index.php/User:Raa/Addons/Pie_Menu_Editor/"),
+    "wiki_url": (
+        "https://archive.blender.org/wiki/2015/index.php/User:Raa/Addons/Pie_Menu_Editor/"),
     "doc_url": "https://pluglug.github.io/pme-docs",
     "category": "User Interface",
 }
@@ -153,7 +153,7 @@ if not bpy.app.background:
             except:
                 pass
 
-        importlib.import_module("pie_menu_editor." + mod)
+        importlib.import_module(__name__ + "." + mod)
 
     from .addon import get_prefs, temp_prefs
     from . import property_utils
