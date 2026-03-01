@@ -3,7 +3,8 @@
 > [!WARNING]
 > This repository is an archive of the PME 1.x maintenance line.
 > Maintenance ended on February 28, 2026.
-> Active development now continues as **Pie Menu Editor Fork 2.x**.
+> This repository does not contain the active 2.x development line.
+> Active development now continues separately as **Pie Menu Editor Fork 2.x**.
 
 ## Overview
 
@@ -19,15 +20,14 @@ That maintenance role has now concluded, and this repository remains as the publ
 
 ## Current Direction
 
-It has been a long time since we last saw any visible activity from roaoao.
+roaoao has not returned to active development for some time.
 
-Hoping that he might return, I continued reaching out through last year, but I did not receive a reply. After thinking seriously about what my role as a maintainer should mean, I decided not to leave PME indefinitely in a waiting state.
+Since that return could no longer be reasonably expected, I decided to move the project forward myself for the users who still depend on PME.
 
-Instead, I chose to begin a new chapter focused on the people who are still using PME and the ideas they are building with it.
+Maintenance of the PME 1.x line ended on February 28, 2026.
+Ongoing development has moved to **Pie Menu Editor Fork 2.x**, which is being developed as a paid add-on for long-term professional maintenance and improvement.
 
-To mark PME's 10th anniversary in 2026, development has moved to **Pie Menu Editor Fork 2.x** as a major new version and long-term development line.
-
-Pie Menu Editor Fork 2.x is a paid add-on. The goal is not to end PME, but to keep it going as a professional tool that can remain in active use for years to come.
+Pie Menu Editor Fork 2.x is a separate commercial continuation, not a free continuation of this archived PME 1.x maintenance line.
 
 - **Current product** → [Purchase Pie Menu Editor Fork 2.x on Gumroad](https://pluglug.gumroad.com/l/pie-menu-editor-fork)
 
@@ -42,7 +42,9 @@ This repository is preserved for:
 The archived source now lives under `src/pie_menu_editor`.
 For legacy Blender use, take that directory as the add-on itself, or create a junction from your Blender add-ons folder to it.
 
-The existing PME 1.x line remains available as-is.
+This repository remains available for existing PME 1.x users as-is.
+It should not be confused with Pie Menu Editor Fork 2.x itself.
+
 Going forward, only critical fixes may be considered when truly necessary.
 Regular development effort is now focused on Pie Menu Editor Fork 2.x.
 
