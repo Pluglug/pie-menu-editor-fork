@@ -39,6 +39,9 @@ This repository is preserved for:
 - legacy PME 1.x users
 - source review under the GPL license
 
+The archived source now lives under `src/pie_menu_editor`.
+For legacy Blender use, take that directory as the add-on itself, or create a junction from your Blender add-ons folder to it.
+
 The existing PME 1.x line remains available as-is.
 Going forward, only critical fixes may be considered when truly necessary.
 Regular development effort is now focused on Pie Menu Editor Fork 2.x.
