@@ -29,7 +29,9 @@ Ongoing development has moved to **Pie Menu Editor Fork 2.x**, which is being de
 
 Pie Menu Editor Fork 2.x is a separate commercial continuation, not a free continuation of this archived PME 1.x maintenance line.
 
-- **Current product** → [Purchase Pie Menu Editor Fork 2.x on Gumroad](https://pluglug.gumroad.com/l/pie-menu-editor-fork)
+- **Current product**
+  - [Buy on Gumroad](https://pluglug.gumroad.com/l/pie-menu-editor-fork)
+  - [Buy on Lemon Squeezy](https://pluglug.lemonsqueezy.com/checkout/buy/9d63c2a5-2fea-4b9f-90e4-a48b613f9e3e?logo=0)
 
 ## Status of This Repository
 
